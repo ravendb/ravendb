@@ -98,6 +98,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Where":
                 case "Count":
                 case "SingleOrDefault":
+                case "TakeWhile":
+                case "SkipWhile":
                     return ModifyLambdaForBools(node);
             }
 

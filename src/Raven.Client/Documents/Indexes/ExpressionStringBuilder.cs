@@ -1760,6 +1760,8 @@ namespace Raven.Client.Documents.Indexes
                     case "Reverse":
                     case "Take":
                     case "Skip":
+                    case "TakeWhile":
+                    case "SkipWhile":
                     case "OfType":
                         return true;
                 }

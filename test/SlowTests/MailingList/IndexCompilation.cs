@@ -115,7 +115,11 @@ namespace SlowTests.MailingList
                 Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
                 AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
                 AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
-                Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()
+                Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count(),
+                TakeWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                TakeWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 1).Select(x => x.Quantity).FirstOrDefault(),
+                SkipWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                SkipWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 0).Select(x => x.Quantity).FirstOrDefault()
             };
 
             Assert.Equal(expectedResult.SmallestQuantity, first.SmallestQuantity);
@@ -126,6 +130,11 @@ namespace SlowTests.MailingList
             Assert.Equal(expectedResult.AggregateWithSeedAndSelector, first.AggregateWithSeedAndSelector);
 
             Assert.Equal(expectedResult.Join, first.Join);
+
+            Assert.Equal(expectedResult.TakeWhile, first.TakeWhile);
+            Assert.Equal(expectedResult.TakeWhileIndexWithIndex, first.TakeWhileIndexWithIndex);
+            Assert.Equal(expectedResult.SkipWhile, first.SkipWhile);
+            Assert.Equal(expectedResult.SkipWhileIndexWithIndex, first.SkipWhileIndexWithIndex);
         }
 
         public class TypedThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
@@ -143,6 +152,14 @@ namespace SlowTests.MailingList
                 public int AggregateWithSeedAndSelector { get; set; }
 
                 public int Join { get; set; }
+
+                public int TakeWhile { get; set; }
+
+                public int TakeWhileIndexWithIndex { get; set; }
+
+                public int SkipWhile { get; set; }
+
+                public int SkipWhileIndexWithIndex { get; set; }
             }
 
             public TypedThenByIndex()
@@ -155,7 +172,11 @@ namespace SlowTests.MailingList
                                     Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
                                     AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
                                     AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
-                                    Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()
+                                    Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count(),
+                                    TakeWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                                    TakeWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 1).Select(x => x.Quantity).FirstOrDefault(),
+                                    SkipWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                                    SkipWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 0).Select(x => x.Quantity).FirstOrDefault()
                                 };
 
                 StoreAllFields(FieldStorage.Yes);
@@ -168,15 +189,21 @@ namespace SlowTests.MailingList
             {
                 return new IndexDefinition
                 {
-                    Maps = { "from order in docs.Orders select new { " +
-                             "SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
-                             "LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
-                             "Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2)," +
-                             "AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2)," +
-                             "AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)," +
-                             "Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()" +
-                             "}" },
-
+                    Maps =
+                    {
+                        "from order in docs.Orders select new { " +
+                        "SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                        "LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                        "Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2)," +
+                        "AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2)," +
+                        "AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)," +
+                        "Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()," +
+                        "TakeWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count()," +
+                        "TakeWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 1).Select(x => x.Quantity).FirstOrDefault()," +
+                        "SkipWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count()," +
+                        "SkipWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 0).Select(x => x.Quantity).FirstOrDefault()" +
+                        "}"
+                    },
                     Fields =
                     {
                         {nameof(TypedThenByIndex.Result.SmallestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
@@ -185,6 +212,10 @@ namespace SlowTests.MailingList
                         {nameof(TypedThenByIndex.Result.AggregateWithSeed), new IndexFieldOptions {Storage = FieldStorage.Yes}},
                         {nameof(TypedThenByIndex.Result.AggregateWithSeedAndSelector), new IndexFieldOptions {Storage = FieldStorage.Yes}},
                         {nameof(TypedThenByIndex.Result.Join), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.TakeWhile), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.TakeWhileIndexWithIndex), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.SkipWhile), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.SkipWhileIndexWithIndex), new IndexFieldOptions {Storage = FieldStorage.Yes}}
                     }
                 };
             }
