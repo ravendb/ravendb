@@ -49,6 +49,12 @@ namespace Raven.Server.ServerWide.Commands
                 azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName);
             }
 
+            var googleCloudSettings = configuration.GoogleCloudSettings;
+            if (googleCloudSettings != null)
+            {
+                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName);
+            }
+
             var ftpSettings = configuration.FtpSettings;
             if (ftpSettings?.Url != null)
             {
