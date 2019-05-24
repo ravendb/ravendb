@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
@@ -21,6 +23,140 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 new AccommodationFlightGeoNodePriceCalendarIndex().Execute(store);
+            }
+        }
+
+        [Fact]
+        public void CanCompileTypedIndexWithMethodExtensions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new TypedThenByIndex().Execute(store);
+
+                var order = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine {Quantity = 7, Discount = 4},
+                        new OrderLine {Quantity = 50, Discount = 4},
+                        new OrderLine {Quantity = 20, Discount = 4},
+                        new OrderLine {Quantity = 3, Discount = 4},
+                        new OrderLine {Quantity = 7, Discount = 4}
+                    }
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(order);
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<TypedThenByIndex.Result, TypedThenByIndex>()
+                        .ProjectInto<TypedThenByIndex.Result>()
+                        .ToList();
+
+                    AssertResults(result, order);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCompileIndexWithMethodExtensions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new ThenByIndex().Execute(store);
+
+                var order = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine {Quantity = 7, Discount = 4},
+                        new OrderLine {Quantity = 50, Discount = 4},
+                        new OrderLine {Quantity = 20, Discount = 4},
+                        new OrderLine {Quantity = 3, Discount = 4},
+                        new OrderLine {Quantity = 7, Discount = 4}
+                    }
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(order);
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<TypedThenByIndex.Result, ThenByIndex>()
+                        .ProjectInto<TypedThenByIndex.Result>()
+                        .ToList();
+
+                    AssertResults(result, order);
+                }
+            }
+        }
+
+        private static void AssertResults(List<TypedThenByIndex.Result> result, Order order)
+        {
+            Assert.Equal(1, result.Count);
+
+            var first = result.First();
+
+            var expectedResult = new TypedThenByIndex.Result
+            {
+                SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()
+            };
+
+            Assert.Equal(expectedResult.SmallestQuantity, first.SmallestQuantity);
+            Assert.Equal(expectedResult.LargestQuantity, first.LargestQuantity);
+        }
+
+        public class TypedThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
+        {
+            public class Result
+            {
+                public int SmallestQuantity { get; set; }
+
+                public int LargestQuantity { get; set; }
+            }
+
+            public TypedThenByIndex()
+            {
+                Map = orders => from order in orders
+                                select new Result
+                                {
+                                    SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                                    LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()
+                                };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        public class ThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Maps = { "from order in docs.Orders select new { " +
+                             "SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                             "LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                             "}" },
+
+                    Fields =
+                    {
+                        {nameof(TypedThenByIndex.Result.SmallestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.LargestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                    }
+                };
             }
         }
 
