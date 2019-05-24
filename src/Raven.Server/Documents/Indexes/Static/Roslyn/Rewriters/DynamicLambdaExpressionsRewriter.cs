@@ -106,6 +106,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Aggregate":
                 case "Join":
                     return Visit(ModifyLambdaForAggregate(node));
+                case "TakeWhile":
+                case "SkipWhile":
+                    return Visit(ModifyLambdaForTakeSkipWhile(node));
             }
 
             return node;
@@ -194,6 +197,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static SyntaxNode ModifyLambdaForAggregate(LambdaExpressionSyntax node)
         {
             var cast = node is SimpleLambdaExpressionSyntax ? "Func<dynamic, dynamic>" : "Func<dynamic, dynamic, dynamic>";
+            return SyntaxFactory.ParseExpression($"({cast})({node})");
+        }
+
+        private static SyntaxNode ModifyLambdaForTakeSkipWhile(LambdaExpressionSyntax node)
+        {
+            var cast = node is SimpleLambdaExpressionSyntax ? "Func<dynamic, bool>" : "Func<dynamic, int, bool>";
             return SyntaxFactory.ParseExpression($"({cast})({node})");
         }
 
