@@ -103,6 +103,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return Visit(ModifyLambdaForBools(node));
                 case "Zip":
                     return Visit(ModifyLambdaForZip(node));
+                case "Aggregate":
+                    return Visit(ModifyLambdaForAggregate(node));
             }
 
             return node;
@@ -186,6 +188,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static SyntaxNode ModifyLambdaForZip(LambdaExpressionSyntax node)
         {
             return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})");
+        }
+
+        private static SyntaxNode ModifyLambdaForAggregate(LambdaExpressionSyntax node)
+        {
+            var cast = node is SimpleLambdaExpressionSyntax ? "Func<dynamic, dynamic>" : "Func<dynamic, dynamic, dynamic>";
+            return SyntaxFactory.ParseExpression($"({cast})({node})");
         }
 
         private static CastExpressionSyntax GetAsCastExpression(CSharpSyntaxNode expressionBody)
