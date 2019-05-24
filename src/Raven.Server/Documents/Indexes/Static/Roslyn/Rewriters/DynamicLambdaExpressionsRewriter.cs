@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Zip":
                     return Visit(ModifyLambdaForZip(node));
                 case "Aggregate":
+                case "Join":
                     return Visit(ModifyLambdaForAggregate(node));
             }
 

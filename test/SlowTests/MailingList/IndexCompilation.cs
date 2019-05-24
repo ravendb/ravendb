@@ -115,6 +115,7 @@ namespace SlowTests.MailingList
                 Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
                 AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
                 AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
+                Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()
             };
 
             Assert.Equal(expectedResult.SmallestQuantity, first.SmallestQuantity);
@@ -123,6 +124,8 @@ namespace SlowTests.MailingList
             Assert.Equal(expectedResult.Aggregate, first.Aggregate);
             Assert.Equal(expectedResult.AggregateWithSeed, first.AggregateWithSeed);
             Assert.Equal(expectedResult.AggregateWithSeedAndSelector, first.AggregateWithSeedAndSelector);
+
+            Assert.Equal(expectedResult.Join, first.Join);
         }
 
         public class TypedThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
@@ -138,6 +141,8 @@ namespace SlowTests.MailingList
                 public int AggregateWithSeed { get; set; }
 
                 public int AggregateWithSeedAndSelector { get; set; }
+
+                public int Join { get; set; }
             }
 
             public TypedThenByIndex()
@@ -149,7 +154,8 @@ namespace SlowTests.MailingList
                                     LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
                                     Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
                                     AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
-                                    AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)
+                                    AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
+                                    Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()
                                 };
 
                 StoreAllFields(FieldStorage.Yes);
@@ -167,7 +173,8 @@ namespace SlowTests.MailingList
                              "LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
                              "Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2)," +
                              "AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2)," +
-                             "AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)" +
+                             "AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)," +
+                             "Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()" +
                              "}" },
 
                     Fields =
@@ -176,7 +183,8 @@ namespace SlowTests.MailingList
                         {nameof(TypedThenByIndex.Result.LargestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
                         {nameof(TypedThenByIndex.Result.Aggregate), new IndexFieldOptions {Storage = FieldStorage.Yes}},
                         {nameof(TypedThenByIndex.Result.AggregateWithSeed), new IndexFieldOptions {Storage = FieldStorage.Yes}},
-                        {nameof(TypedThenByIndex.Result.AggregateWithSeedAndSelector), new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                        {nameof(TypedThenByIndex.Result.AggregateWithSeedAndSelector), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.Join), new IndexFieldOptions {Storage = FieldStorage.Yes}},
                     }
                 };
             }
