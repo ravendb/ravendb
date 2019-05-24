@@ -1216,9 +1216,8 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
+                using (var currentDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context))
                 {
-                    var currentDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
-
                     if (addDatabaseCommand.RaftCommandIndex != null)
                     {
                         if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.RaftCommandIndex != 0)
@@ -1316,6 +1315,9 @@ namespace Raven.Server.ServerWide
 
                         foreach (var periodicBackup in periodicBackups)
                         {
+                            if (periodicBackup.Name == null)
+                                continue;
+                            
                             if (periodicBackup.Name.Equals(ServerWideBackupConfiguration.ConfigurationName))
                             {
                                 periodicBackups.Remove(periodicBackup);
@@ -2698,9 +2700,7 @@ namespace Raven.Server.ServerWide
                     {
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string name);
-
-                            if (name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+                            if (IsServerWideBackup(backup))
                             {
                                 if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
                                     oldTaskId = taskId;
@@ -2755,9 +2755,7 @@ namespace Raven.Server.ServerWide
                     var removedServerWideBackup = false;
                     foreach (BlittableJsonReaderObject backup in backups)
                     {
-                        backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string name);
-
-                        if (name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+                        if (IsServerWideBackup(backup))
                         {
                             removedServerWideBackup = true;
                             continue;
@@ -2783,6 +2781,12 @@ namespace Raven.Server.ServerWide
             }
 
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
+        }
+
+        private bool IsServerWideBackup(BlittableJsonReaderObject backup)
+        {
+            return backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string name) &&
+                   name != null && name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase);
         }
 
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)

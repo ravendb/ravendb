@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public virtual bool HasSettings()
         {
             return GetBackupConfigurationScript != null && 
-                   string.IsNullOrWhiteSpace(GetBackupConfigurationScript.Command) == false;
+                   string.IsNullOrWhiteSpace(GetBackupConfigurationScript.Exec) == false;
         }
 
         public virtual bool WasEnabled(BackupSettings other)
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.Backups
             TimeoutInMs = 10_000;
         }
 
-        public string Command { get; set; }
+        public string Exec { get; set; }
 
         public string Arguments { get; set; }
 
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             return new DynamicJsonValue
             {
-                [nameof(Command)] = Command,
+                [nameof(Exec)] = Exec,
                 [nameof(Arguments)] = Arguments,
                 [nameof(TimeoutInMs)] = TimeoutInMs
             };

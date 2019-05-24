@@ -173,7 +173,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         GetBackupConfigurationScript = new GetBackupConfigurationScript
                         {
-                            Command = command,
+                            Exec = command,
                             Arguments = scriptPath
                         }
                     }
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTask = record.PeriodicBackups.First();
                 Assert.Null(backupTask.LocalSettings.FolderPath);
                 Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript);
-                Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript.Command);
+                Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript.Exec);
                 Assert.NotNull(backupTask.LocalSettings.GetBackupConfigurationScript.Arguments);
 
                 var backupTaskId = backupTask.TaskId;

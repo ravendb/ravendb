@@ -185,7 +185,8 @@ namespace Raven.Client.ServerWide
             {
                 if (periodicBackup.TaskId == backupTaskId)
                 {
-                    if (periodicBackup.Name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+                    if (periodicBackup.Name != null && 
+                        periodicBackup.Name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException($"Can't update task id: {periodicBackup.TaskId}, name: '{periodicBackup.Name}', " +
                                                             $"because it is a server wide backup task.");
 

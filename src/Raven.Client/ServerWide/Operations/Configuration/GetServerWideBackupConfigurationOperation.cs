@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
         private class GetServerWideBackupConfigurationCommand : RavenCommand<ServerWideBackupConfiguration>
         {
-            public override bool IsReadRequest => false;
+            public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
