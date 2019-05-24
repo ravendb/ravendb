@@ -111,11 +111,18 @@ namespace SlowTests.MailingList
             var expectedResult = new TypedThenByIndex.Result
             {
                 SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
-                LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()
+                LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
+                AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
+                AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
             };
 
             Assert.Equal(expectedResult.SmallestQuantity, first.SmallestQuantity);
             Assert.Equal(expectedResult.LargestQuantity, first.LargestQuantity);
+
+            Assert.Equal(expectedResult.Aggregate, first.Aggregate);
+            Assert.Equal(expectedResult.AggregateWithSeed, first.AggregateWithSeed);
+            Assert.Equal(expectedResult.AggregateWithSeedAndSelector, first.AggregateWithSeedAndSelector);
         }
 
         public class TypedThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
@@ -125,6 +132,12 @@ namespace SlowTests.MailingList
                 public int SmallestQuantity { get; set; }
 
                 public int LargestQuantity { get; set; }
+
+                public int Aggregate { get; set; }
+
+                public int AggregateWithSeed { get; set; }
+
+                public int AggregateWithSeedAndSelector { get; set; }
             }
 
             public TypedThenByIndex()
@@ -133,7 +146,10 @@ namespace SlowTests.MailingList
                                 select new Result
                                 {
                                     SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
-                                    LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()
+                                    LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                                    Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
+                                    AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
+                                    AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)
                                 };
 
                 StoreAllFields(FieldStorage.Yes);
@@ -149,12 +165,18 @@ namespace SlowTests.MailingList
                     Maps = { "from order in docs.Orders select new { " +
                              "SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
                              "LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                             "Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2)," +
+                             "AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2)," +
+                             "AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)" +
                              "}" },
 
                     Fields =
                     {
                         {nameof(TypedThenByIndex.Result.SmallestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
-                        {nameof(TypedThenByIndex.Result.LargestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                        {nameof(TypedThenByIndex.Result.LargestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.Aggregate), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.AggregateWithSeed), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.AggregateWithSeedAndSelector), new IndexFieldOptions {Storage = FieldStorage.Yes}}
                     }
                 };
             }
