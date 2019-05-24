@@ -31,16 +31,24 @@ namespace Raven.Client.Documents.Operations.Backups
 
     public class GetBackupConfigurationScript
     {
+        public GetBackupConfigurationScript()
+        {
+            TimeoutInMs = 10_000;
+        }
+
         public string Command { get; set; }
 
         public string Arguments { get; set; }
+
+        public int TimeoutInMs { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Command)] = Command,
-                [nameof(Arguments)] = Arguments
+                [nameof(Arguments)] = Arguments,
+                [nameof(TimeoutInMs)] = TimeoutInMs
             };
         }
     }
