@@ -280,20 +280,20 @@ namespace Raven.Server.Documents.PeriodicBackup
             _configuration.FtpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x));
         }
 
-        private async Task<T> GetBackupConfigurationFromScript<T>(T originalBackupSettings, Func<BlittableJsonReaderObject, T> resultConvertFunc)
+        private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> resultConvertFunc)
                 where T : BackupSettings
         {
-            if (originalBackupSettings == null)
+            if (backupSettings == null)
                 return null;
 
-            if (originalBackupSettings.GetBackupConfigurationScript == null || originalBackupSettings.Disabled)
-                return originalBackupSettings;
+            if (backupSettings.GetBackupConfigurationScript == null || backupSettings.Disabled)
+                return backupSettings;
 
-            if (string.IsNullOrEmpty(originalBackupSettings.GetBackupConfigurationScript.Command))
-                return originalBackupSettings;
+            if (string.IsNullOrEmpty(backupSettings.GetBackupConfigurationScript.Exec))
+                return backupSettings;
 
-            var command = originalBackupSettings.GetBackupConfigurationScript.Command;
-            var arguments = originalBackupSettings.GetBackupConfigurationScript.Arguments;
+            var command = backupSettings.GetBackupConfigurationScript.Exec;
+            var arguments = backupSettings.GetBackupConfigurationScript.Arguments;
 
             var startInfo = new ProcessStartInfo
             {
@@ -320,7 +320,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var readErrors = process.StandardError.ReadToEndAsync();
                 var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
-                const int waitTimeInMs = 10_000;
+                var timeoutInMs = backupSettings.GetBackupConfigurationScript.TimeoutInMs;
 
                 string GetStdError()
                 {
@@ -336,19 +336,19 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    readStdOut.Wait(waitTimeInMs);
-                    readErrors.Wait(waitTimeInMs);
+                    readStdOut.Wait(timeoutInMs);
+                    readErrors.Wait(timeoutInMs);
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {waitTimeInMs}ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}", e);
                 }
 
-                if (process.WaitForExit(waitTimeInMs) == false)
+                if (process.WaitForExit(timeoutInMs) == false)
                 {
                     process.Kill();
 
-                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {waitTimeInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
                 }
 
                 if (process.ExitCode != 0)
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
                 }
 
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     ms.Position = 0;
                     var configuration = await context.ReadForMemoryAsync(ms, "backup-configuration-from-script");
