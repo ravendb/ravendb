@@ -107,7 +107,11 @@ namespace Raven.Server.Smuggler.Migration
                 buildInfo.TryGet(nameof(BuildInfo.FullVersion), out string fullVersion);
 
                 MajorVersion version;
-                if ((buildVersion >= 40 && buildVersion <= 49) || buildVersion > 40000)
+                if ((buildVersion >= 50 && buildVersion <= 59) || (buildVersion > 50000 && buildVersion < 59999))
+                {
+                    version = MajorVersion.V5;
+                }
+                else if ((buildVersion >= 40 && buildVersion <= 49) || (buildVersion > 40000 && buildVersion < 49999))
                 {
                     version = MajorVersion.V4;
                 }
@@ -167,7 +171,7 @@ namespace Raven.Server.Smuggler.Migration
                     databases = new List<DatabaseMigrationSettings>();
 
                 var operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
-                if (_buildMajorVersion != MajorVersion.V4)
+                if (_buildMajorVersion != MajorVersion.V4 && _buildMajorVersion != MajorVersion.V5)
                 {
                     operateOnTypes |= DatabaseItemType.LegacyAttachments;
                 }
@@ -225,7 +229,7 @@ namespace Raven.Server.Smuggler.Migration
 
             try
             {
-                return buildMajorVersion == MajorVersion.V4
+                return (buildMajorVersion == MajorVersion.V4 || buildMajorVersion == MajorVersion.V5)
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
                     : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, _skipServerCertificateValidation, isLegacyOAuthToken, _serverStore.ServerShutdown);
             }
@@ -298,6 +302,7 @@ namespace Raven.Server.Smuggler.Migration
                                     migrator = new Migrator_V3(options, parameters, _buildMajorVersion, _buildVersion);
                                     break;
                                 case MajorVersion.V4:
+                                case MajorVersion.V5:
                                     migrator = new Importer(options, parameters, _buildVersion);
                                     break;
                                 default:

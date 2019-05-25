@@ -29,6 +29,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
                     return indexDefinition;
                 case BuildVersionType.V4:
+                case BuildVersionType.V5:
                     type = ReadIndexType(reader, out reader);
                     switch (type)
                     {

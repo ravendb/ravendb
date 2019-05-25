@@ -642,16 +642,21 @@ namespace Raven.Server.Smuggler.Documents
             if (_options.SkipRevisionCreation)
                 item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
 
-            if (buildType == BuildVersionType.V4)
+            switch (buildType)
             {
-                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
+                case BuildVersionType.V4:
+                case BuildVersionType.V5:
+                {
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
 
-                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false)
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false)
+                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
 
-                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
+                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
+                    break;
+                }
             }
         }
 
