@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -31,7 +32,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     Name = "💩"
                 };
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/poo", user, 0));
+
+                var operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/poo", user, 0));
+
+                //make sure that the PutCompareExchangeValueOperation succeeds
+                //because otherwise we might have NRE at the Assert.Equal() calls
+                Assert.True(operationResult.Successful,"Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
 
                 var config = new PeriodicBackupConfiguration
                 {
@@ -52,7 +58,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     Name = "💩🤡"
                 };
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
+
+                operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
+                Assert.True(operationResult.Successful,"Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
 
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
@@ -91,6 +99,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/poo"));
                         var user3 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/pooclown"));
+                        
+                        //precaution, those shouldn't be null
+                        Assert.NotNull(user1);
+                        Assert.NotNull(user3);
+                        
                         Assert.Equal(user.Name, user1.Value.Name);
                         Assert.Equal(user2.Name, user3.Value.Name);
                     }
