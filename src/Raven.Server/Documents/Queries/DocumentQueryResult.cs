@@ -80,4 +80,44 @@ namespace Raven.Server.Documents.Queries
             return explanation.ToString();
         }
     }
+
+    public class IdsQueryResult : QueryResultServerSide<string>
+    {
+        public Queue<string> Ids { get; } = new Queue<string>();
+
+        public override bool SupportsInclude => false;
+
+        public override bool SupportsHighlighting => false;
+
+        public override bool SupportsExplanations => false;
+
+        public override bool SupportsExceptionHandling => false;
+
+        public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
+        {
+            throw new NotSupportedException($"{nameof(IdsQueryResult)} doesn't support {nameof(AddCounterIncludes)}");
+        }
+
+        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes() => throw new NotSupportedException($"{nameof(IdsQueryResult)} doesn't support {nameof(GetCounterIncludes)}");
+
+        public override void AddResult(string result)
+        {
+            Ids.Enqueue(result);
+        }
+
+        public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
+        {
+            throw new NotSupportedException($"{nameof(IdsQueryResult)} doesn't support {nameof(AddHighlightings)}");
+        }
+
+        public override void AddExplanation(ExplanationResult explanation)
+        {
+            throw new NotSupportedException($"{nameof(IdsQueryResult)} doesn't support {nameof(AddExplanation)}");
+        }
+
+        public override void HandleException(Exception e)
+        {
+            throw new NotSupportedException($"{nameof(IdsQueryResult)} doesn't support {nameof(HandleException)}");
+        }
+    }
 }

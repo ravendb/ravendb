@@ -90,12 +90,23 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        private async Task<IOperationResult> ExecuteOperation<T>(IndexQueryServerSide query, Index index, QueryOperationOptions options,
-    DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func, OperationCancelToken token)
-    where T : TransactionOperationsMerger.MergedTransactionCommand
+        private async Task<IOperationResult> ExecuteOperation<T>(
+            IndexQueryServerSide query,
+            Index index,
+            QueryOperationOptions options,
+            DocumentsOperationContext context,
+            Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func,
+            OperationCancelToken token)
+        where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             if (index.Type.IsMapReduce())
                 throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");
+
+            onProgress(new DeterminateProgress
+            {
+                Total = 0,
+                Processed = 0
+            });
 
             query = ConvertToOperationQuery(query, options);
 
@@ -104,18 +115,11 @@ namespace Raven.Server.Documents.Queries
             Queue<string> resultIds;
             try
             {
-                var results = await index.Query(query, context, token).ConfigureAwait(false);
+                var results = await index.QueryForIds(query, context, token).ConfigureAwait(false);
                 if (options.AllowStale == false && results.IsStale)
                     throw new InvalidOperationException("Cannot perform bulk operation. Query is stale.");
 
-                resultIds = new Queue<string>(results.Results.Count);
-
-                foreach (var document in results.Results)
-                {
-                    token.Delay();
-
-                    resultIds.Enqueue(document.Id.ToString());
-                }
+                resultIds = results.Ids;
             }
             finally // make sure to close tx if DocumentConflictException is thrown
             {
@@ -144,7 +148,7 @@ namespace Raven.Server.Documents.Queries
                             subCommand.AfterExecute = details => result.Details.Add(details);
 
                         return subCommand;
-                    }, rateGate, token, 
+                    }, rateGate, token,
                         maxTransactionSize: 16 * Constants.Size.Megabyte,
                         batchSize: batchSize);
 

@@ -169,5 +169,14 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
+
+        protected override Task QueryIdsInternal(
+            IdsQueryResult resultToFill,
+            IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index and doesn't support {nameof(QueryIdsInternal)}", _e);
+        }
     }
 }

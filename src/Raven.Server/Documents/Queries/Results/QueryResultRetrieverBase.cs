@@ -44,7 +44,15 @@ namespace Raven.Server.Documents.Queries.Results
         private QueryTimingsScope _projectionStorageScope;
         private QueryTimingsScope _functionScope;
 
-        protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
+        protected QueryResultRetrieverBase(
+            DocumentDatabase database, 
+            IndexQueryServerSide query, 
+            QueryTimingsScope queryTimings, 
+            FieldsToFetch fieldsToFetch, 
+            DocumentsStorage documentsStorage, 
+            JsonOperationContext context, 
+            bool reduceResults, 
+            IncludeDocumentsCommand includeDocumentsCommand)
         {
             _database = database;
             _query = query;

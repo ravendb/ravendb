@@ -81,7 +81,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> Query(
+            IndexQueryServerSide query, 
+            QueryTimingsScope queryTimings, 
+            FieldsToFetch fieldsToFetch, 
+            Reference<int> totalResults, 
+            Reference<int> skippedResults, 
+            IQueryResultRetriever retriever, 
+            DocumentsOperationContext documentsContext, 
+            Func<string, SpatialField> getSpatialField, 
+            CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -293,7 +302,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _highlighterQuery = _highlighter.GetFieldQuery(luceneQuery);
         }
 
-        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> IntersectQuery(
+            IndexQueryServerSide query, 
+            FieldsToFetch fieldsToFetch, 
+            Reference<int> totalResults, 
+            Reference<int> skippedResults, 
+            IQueryResultRetriever retriever, 
+            DocumentsOperationContext documentsContext, 
+            Func<string, SpatialField> getSpatialField, 
+            CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
 

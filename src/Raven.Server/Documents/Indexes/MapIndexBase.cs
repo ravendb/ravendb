@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -8,6 +9,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -93,6 +95,49 @@ namespace Raven.Server.Documents.Indexes
 
             _statsInstance = stats;
             _stats.BloomStats = stats.For(IndexingOperation.Map.Bloom, start: false);
+        }
+
+        protected override async Task QueryIdsInternal(
+            IdsQueryResult resultToFill,
+            IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
+        {
+            QueryInternalPreparation(query);
+
+            using (var marker = MarkQueryAsRunning(query, token))
+            using (var queryContext = await OpenTransactionsForNonStaleResultIfNeeded(query, documentsContext, marker))
+            {
+                FillQueryResult(resultToFill, queryContext.IsStale, query.Metadata, documentsContext, queryContext.Context);
+
+                using (var reader = IndexPersistence.OpenIndexReader(queryContext.Context.Transaction.InnerTransaction))
+                using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
+                {
+                    var fieldsToFetch = new FieldsToFetch(new SelectField[0], Definition);
+                    var retriever = new MapQueryIdsRetriever(DocumentDatabase, query, queryScope, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch);
+
+                    var documents = ReaderQuery(
+                        query,
+                        documentsContext,
+                        token,
+                        reader,
+                        retriever,
+                        fieldsToFetch,
+                        queryScope,
+                        out var totalResults,
+                        out var skippedResults);
+
+
+                    foreach (var document in documents)
+                    {
+                        resultToFill.TotalResults = totalResults.Value;
+                        resultToFill.AddResult(document.Result.Id);
+                    }
+
+                    resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
+                    resultToFill.SkippedResults = skippedResults.Value;
+                }
+            }
         }
 
         private class MapStats

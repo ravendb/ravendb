@@ -2288,168 +2288,239 @@ namespace Raven.Server.Documents.Indexes
                 throw new NotSupportedException("Explanations are not supported by this type of query.");
 
             using (var marker = MarkQueryAsRunning(query, token))
+            using (var queryArea = await OpenTransactionsForNonStaleResultIfNeeded(query, documentsContext, marker))
             {
-                var queryDuration = Stopwatch.StartNew();
-                AsyncWaitForIndexing wait = null;
-                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+                FillQueryResult(resultToFill, queryArea.IsStale, query.Metadata, documentsContext, queryArea.Context);
 
-                var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
-
-                while (true)
+                using (var reader = IndexPersistence.OpenIndexReader(queryArea.Context.Transaction.InnerTransaction))
+                using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
                 {
-                    AssertIndexState();
-                    marker.HoldLock();
+                    QueryTimingsScope gatherScope = null;
+                    QueryTimingsScope fillScope = null;
 
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
-                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
-                    var frozenAwaiter = GetIndexingBatchAwaiter();
-                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                    using (var indexTx = indexContext.OpenReadTransaction())
+                    if (queryScope != null && query.Metadata.Includes?.Length > 0)
                     {
-                        documentsContext.OpenReadTransaction();
-                        // we have to open read tx for mapResults _after_ we open index tx
-
-                        bool isStale;
-                        using (stalenessScope?.Start())
-                        {
-                            if (query.WaitForNonStaleResults && cutoffEtag == null)
-                                cutoffEtag = GetCutoffEtag(documentsContext);
-
-                            isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
-                            if (WillResultBeAcceptable(isStale, query, wait) == false)
-                            {
-                                documentsContext.CloseTransaction();
-
-                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
-
-                                if (wait == null)
-                                    wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
-
-                                marker.ReleaseLock();
-
-                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
-                                continue;
-                            }
-                        }
-
-                        FillQueryResult(resultToFill, isStale, query.Metadata, documentsContext, indexContext);
-
-                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
-                        {
-                            using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
-                            {
-                                QueryTimingsScope gatherScope = null;
-                                QueryTimingsScope fillScope = null;
-
-                                if (queryScope != null && query.Metadata.Includes?.Length > 0)
-                                {
-                                    var includesScope = queryScope.For(nameof(QueryTimingsScope.Names.Includes), start: false);
-                                    gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
-                                    fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
-                                }
-
-                                var totalResults = new Reference<int>();
-                                var skippedResults = new Reference<int>();
-                                IncludeCountersCommand includeCountersCommand = null;
-
-                                var fieldsToFetch = new FieldsToFetch(query, Definition);
-
-                                var includeDocumentsCommand = new IncludeDocumentsCommand(
-                                    DocumentDatabase.DocumentsStorage, documentsContext,
-                                    query.Metadata.Includes,
-                                    fieldsToFetch.IsProjection);
-
-                                if (query.Metadata.HasCounters)
-                                {
-                                    includeCountersCommand = new IncludeCountersCommand(
-                                        DocumentDatabase,
-                                        documentsContext,
-                                        query.Metadata.CounterIncludes.Counters);
-                                }
-
-                                var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
-
-                                IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
-
-                                if (query.Metadata.HasMoreLikeThis)
-                                {
-                                    documents = reader.MoreLikeThis(
-                                        query,
-                                        retriever,
-                                        documentsContext,
-                                        token.Token);
-                                }
-                                else if (query.Metadata.HasIntersect)
-                                {
-                                    documents = reader.IntersectQuery(
-                                        query,
-                                        fieldsToFetch,
-                                        totalResults,
-                                        skippedResults,
-                                        retriever,
-                                        documentsContext,
-                                        GetOrAddSpatialField,
-                                        token.Token);
-                                }
-                                else
-                                {
-                                    documents = reader.Query(
-                                        query,
-                                        queryScope,
-                                        fieldsToFetch,
-                                        totalResults,
-                                        skippedResults,
-                                        retriever,
-                                        documentsContext,
-                                        GetOrAddSpatialField,
-                                        token.Token);
-                                }
-
-                                try
-                                {
-                                    foreach (var document in documents)
-                                    {
-                                        resultToFill.TotalResults = totalResults.Value;
-                                        resultToFill.AddResult(document.Result);
-
-                                        if (document.Highlightings != null)
-                                            resultToFill.AddHighlightings(document.Highlightings);
-
-                                        if (document.Explanation != null)
-                                            resultToFill.AddExplanation(document.Explanation);
-
-                                        using (gatherScope?.Start())
-                                            includeDocumentsCommand.Gather(document.Result);
-
-                                        includeCountersCommand?.Fill(document.Result);
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    if (resultToFill.SupportsExceptionHandling == false)
-                                        throw;
-
-                                    resultToFill.HandleException(e);
-                                }
-
-                                using (fillScope?.Start())
-                                    includeDocumentsCommand.Fill(resultToFill.Includes);
-
-                                if (includeCountersCommand != null)
-                                    resultToFill.AddCounterIncludes(includeCountersCommand);
-
-                                resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
-                                resultToFill.SkippedResults = skippedResults.Value;
-                                resultToFill.IncludedPaths = query.Metadata.Includes;
-                            }
-                        }
-
-                        return;
+                        var includesScope = queryScope.For(nameof(QueryTimingsScope.Names.Includes), start: false);
+                        gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
+                        fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                     }
+
+                    IncludeCountersCommand includeCountersCommand = null;
+
+                    var fieldsToFetch = new FieldsToFetch(query, Definition);
+
+                    var includeDocumentsCommand = new IncludeDocumentsCommand(
+                        DocumentDatabase.DocumentsStorage, documentsContext,
+                        query.Metadata.Includes,
+                        fieldsToFetch.IsProjection);
+
+                    if (query.Metadata.HasCounters)
+                    {
+                        includeCountersCommand = new IncludeCountersCommand(
+                            DocumentDatabase,
+                            documentsContext,
+                            query.Metadata.CounterIncludes.Counters);
+                    }
+
+                    var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
+
+                    var documents = ReaderQuery(
+                        query,
+                        documentsContext,
+                        token,
+                        reader,
+                        retriever,
+                        fieldsToFetch,
+                        queryScope,
+                        out var totalResults,
+                        out var skippedResults);
+
+                    try
+                    {
+                        foreach (var document in documents)
+                        {
+                            resultToFill.TotalResults = totalResults.Value;
+                            resultToFill.AddResult(document.Result);
+
+                            if (document.Highlightings != null)
+                                resultToFill.AddHighlightings(document.Highlightings);
+
+                            if (document.Explanation != null)
+                                resultToFill.AddExplanation(document.Explanation);
+
+                            using (gatherScope?.Start())
+                                includeDocumentsCommand.Gather(document.Result);
+
+                            includeCountersCommand?.Fill(document.Result);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (resultToFill.SupportsExceptionHandling == false)
+                            throw;
+
+                        resultToFill.HandleException(e);
+                    }
+
+                    using (fillScope?.Start())
+                        includeDocumentsCommand.Fill(resultToFill.Includes);
+
+                    if (includeCountersCommand != null)
+                        resultToFill.AddCounterIncludes(includeCountersCommand);
+
+                    resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
+                    resultToFill.SkippedResults = skippedResults.Value;
+                    resultToFill.IncludedPaths = query.Metadata.Includes;
+                }
+
+                return;
+            }
+        }
+
+        protected class QueryContext : IDisposable
+        {
+            public TransactionOperationContext Context;
+            public bool IsStale;
+            public IDisposable ReturnContextToPool { get; set; }
+
+            public void Dispose()
+            {
+                using (ReturnContextToPool)
+                {
+                    Context.CloseTransaction();
                 }
             }
+        }
+
+        public async Task<IdsQueryResult> QueryForIds(IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            var result = new IdsQueryResult();
+            await QueryIdsInternal(result, query, documentsContext, token);
+            return result;
+        }
+
+        protected abstract Task QueryIdsInternal(
+            IdsQueryResult resultToFill,
+            IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token);
+
+        protected IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> ReaderQuery(
+            IndexQueryServerSide query, 
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token,
+            IndexReadOperation reader,
+            IQueryResultRetriever retriever, 
+            FieldsToFetch fieldsToFetch, 
+            QueryTimingsScope queryScope, 
+            out Reference<int> totalResults,
+            out Reference<int> skippedResults)
+        {
+            IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
+            totalResults = new Reference<int>();
+            skippedResults = new Reference<int>();
+            if (query.Metadata.HasMoreLikeThis)
+            {
+                documents = reader.MoreLikeThis(
+                    query,
+                    retriever,
+                    documentsContext,
+                    token.Token);
+            }
+            else if (query.Metadata.HasIntersect)
+            {
+                documents = reader.IntersectQuery(
+                    query,
+                    fieldsToFetch,
+                    totalResults,
+                    skippedResults,
+                    retriever,
+                    documentsContext,
+                    GetOrAddSpatialField,
+                    token.Token);
+            }
+            else
+            {
+                documents = reader.Query(
+                    query,
+                    queryScope,
+                    fieldsToFetch,
+                    totalResults,
+                    skippedResults,
+                    retriever,
+                    documentsContext,
+                    GetOrAddSpatialField,
+                    token.Token);
+            }
+
+            return documents;
+        }
+
+        protected async Task<QueryContext> OpenTransactionsForNonStaleResultIfNeeded(
+            IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext,
+            QueryDoneRunning marker)
+        {
+            var queryContext = new QueryContext();
+
+            var queryDuration = Stopwatch.StartNew();
+            AsyncWaitForIndexing wait = null;
+            (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+
+            var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
+
+            while (true)
+            {
+                AssertIndexState();
+                marker.HoldLock();
+
+                // we take the awaiter _before_ the indexing transaction happens, 
+                // so if there are any changes, it will already happen to it, and we'll 
+                // query the index again. This is important because of: 
+                // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                var frozenAwaiter = GetIndexingBatchAwaiter();
+                try
+                {
+                    queryContext.ReturnContextToPool = _contextPool.AllocateOperationContext(out queryContext.Context);
+                    queryContext.Context.OpenReadTransaction();
+
+                    documentsContext.OpenReadTransaction();
+                    // we have to open read tx for mapResults _after_ we open index tx
+
+                    using (stalenessScope?.Start())
+                    {
+                        if (query.WaitForNonStaleResults && cutoffEtag == null)
+                            cutoffEtag = GetCutoffEtag(documentsContext);
+
+                        queryContext.IsStale = IsStale(documentsContext, queryContext.Context, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                        if (WillResultBeAcceptable(queryContext.IsStale, query, wait) == false)
+                        {
+                            documentsContext.CloseTransaction();
+
+                            Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                            if (wait == null)
+                                wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
+
+                            marker.ReleaseLock();
+
+                            await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                            queryContext.Dispose();
+                            continue;
+                        }
+
+                        break;
+                    }
+                }
+                catch
+                {
+                    queryContext.Dispose();
+                    throw;
+                }
+            }
+
+            return queryContext;
         }
 
         private async Task IndexEntriesQueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
@@ -2532,7 +2603,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void QueryInternalPreparation(IndexQueryServerSide query)
+        protected void QueryInternalPreparation(IndexQueryServerSide query)
         {
             AssertIndexState();
 
@@ -2881,7 +2952,7 @@ namespace Raven.Server.Documents.Indexes
             result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
         }
 
-        private void FillQueryResult<TResult, TInclude>(QueryResultBase<TResult, TInclude> result, bool isStale, QueryMetadata q,
+        protected void FillQueryResult<TResult, TInclude>(QueryResultBase<TResult, TInclude> result, bool isStale, QueryMetadata q,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             result.IndexName = Name;
@@ -2892,7 +2963,7 @@ namespace Raven.Server.Documents.Indexes
             result.NodeTag = DocumentDatabase.ServerStore.NodeTag;
         }
 
-        private QueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
+        protected QueryDoneRunning MarkQueryAsRunning(IIndexQuery query, OperationCancelToken token)
         {
             var queryStartTime = DateTime.UtcNow;
             var queryId = Interlocked.Increment(ref _numberOfQueries);
@@ -3683,7 +3754,7 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        protected struct QueryDoneRunning : IDisposable
+        protected class QueryDoneRunning : IDisposable
         {
             private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
 

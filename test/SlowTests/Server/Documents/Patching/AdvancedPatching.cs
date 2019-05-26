@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Lucene.Net.Analysis;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Sparrow.Json;
 using Xunit;
-//using Raven.Server.Documents.Patch;
 
 namespace SlowTests.Server.Documents.Patching
 {
@@ -197,7 +200,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-      
+
         [Fact]
         public async Task CanPatchUsingRavenJObjectVars()
         {
@@ -842,9 +845,175 @@ this.Value = another.Value;
                 {
                     var documents = await commands.GetAsync(0, 10);
                     Assert.Equal(3, documents.Count());
-
+                
                     dynamic jsonDocument = await commands.GetAsync("NewItem/3");
                     Assert.Equal(1, (int)jsonDocument.CopiedValue);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PatchByIndex_WhenDoneByIntersect_ShouldPatchAllTheRelevantDocuments()
+        {
+            var owner = Guid.NewGuid().ToString();
+
+            using (var store = GetDocumentStore())
+            {
+                string[] shouldPatched;
+                using (var session = store.OpenAsyncSession())
+                {
+                    shouldPatched = new[] { "posts/1", "posts/4" };
+                    var posts = new[]
+                    {
+                        new Post { Id = "posts/1", Title = "We", Desc = "prototype" },
+                        new Post { Id = "posts/2", Title = "doduckl", Desc = "prototype your idea" },
+                        new Post { Id = "posts/3", Title = "We do", Desc = "love programming" },
+                        new Post { Id = "posts/4", Title = "We", Desc = "prototype" },
+                        new Post { Id = "posts/5", Title = "We love doduck", Desc = "challange" },
+                    };
+
+                    foreach (var post in posts)
+                    {
+                        await session.StoreAsync(post);
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await Server
+                    .ServerStore
+                    .DatabasesLandlord
+                    .TryGetOrCreateResourceStore(new StringSegment(store.Database));
+
+                await database.IndexStore.CreateIndex(new MapIndexDefinition(new IndexDefinition()
+                {
+                    Name = "Posts/ByTitle",
+                    Maps = new HashSet<string>()
+                    {
+                        "from p in docs.Posts select new { p.Title, p.Desc }"
+                    },
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        {
+                            "Title", new IndexFieldOptions()
+                            {
+                                Analyzer = typeof(SimpleAnalyzer).FullName,
+                                Indexing = FieldIndexing.Search,
+                                Storage = FieldStorage.Yes
+                            }
+                        },
+                        {
+                            "Desc", new IndexFieldOptions()
+                            {
+                                Analyzer = typeof(SimpleAnalyzer).FullName,
+                                Indexing = FieldIndexing.Search,
+                                Storage = FieldStorage.Yes
+                            }
+                        }
+                    }
+                }, new HashSet<string>()
+                {
+                    "Posts"
+                }, new[] { "Title", "Desc" }, false));
+
+                WaitForIndexing(store);
+
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
+                    "from index 'Posts/ByTitle'" +
+                                "where intersect(Title = 'We', Desc = 'prototype' )" +
+                                "update { this.Desc = \"Patched\"}"
+                    ));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+
+                using (var session = store.OpenSession())
+                {
+                    var posts = session.Query<Post>().ToArray();
+                    foreach (var post in posts)
+                    {
+                        if (shouldPatched.Contains(post.Id))
+                            Assert.Equal("Patched", post.Desc);
+                        else
+                            Assert.NotEqual("Patched", post.Desc);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PatchByIndex_WhenDoneByMoreLikeThis_ShouldPatchAllTheRelevantDocuments()
+        {
+            var owner = Guid.NewGuid().ToString();
+
+            using (var store = GetDocumentStore())
+            {
+                string[] shouldPatched;
+                using (var session = store.OpenAsyncSession())
+                {
+                    shouldPatched = new[] { "posts/3", "posts/5" };
+                    var posts = new[]
+                    {
+                        new Post { Id = "posts/1", Title = "doduck do", Desc = "prototype" },
+                        new Post { Id = "posts/2", Title = "doduckl", Desc = "prototype your idea" },
+                        new Post { Id = "posts/3", Title = "We do", Desc = "love programming" },
+                        new Post { Id = "posts/4", Title = "We", Desc = "prototype" },
+                        new Post { Id = "posts/5", Title = "We love doduck", Desc = "challange" },
+                    };
+
+                    foreach (var post in posts)
+                    {
+                        await session.StoreAsync(post);
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await Server
+                    .ServerStore
+                    .DatabasesLandlord
+                    .TryGetOrCreateResourceStore(new StringSegment(store.Database));
+
+                await database.IndexStore.CreateIndex(new MapIndexDefinition(new IndexDefinition()
+                {
+                    Name = "Posts/ByTitle",
+                    Maps = new HashSet<string>()
+                    {
+                        "from p in docs.Posts select new { p.Title }"
+                    },
+                    Fields = new Dictionary<string, IndexFieldOptions>()
+                    {
+                        {
+                            "Title", new IndexFieldOptions()
+                            {
+                                Analyzer = typeof(SimpleAnalyzer).FullName,
+                                Indexing = FieldIndexing.Search,
+                                Storage = FieldStorage.Yes
+                            }
+                        }
+                    }
+                }, new HashSet<string>()
+                {
+                    "Posts"
+                }, new[] { "Title" }, false));
+
+                WaitForIndexing(store);
+
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
+                    "from index 'Posts/ByTitle'" +
+                                "where morelikethis(id() = 'posts/1', '{ \"Fields\" : [ \"Title\" ] }')" +
+                                "update { this.Desc = \"Patched\"}"
+                    ));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+
+                using (var session = store.OpenSession())
+                {
+                    var posts = session.Query<Post>().ToArray();
+                    foreach (var post in posts)
+                    {
+                        if (shouldPatched.Contains(post.Id))
+                            Assert.Equal("Patched", post.Desc);
+                        else
+                            Assert.NotEqual("Patched", post.Desc);
+                    }
                 }
             }
         }

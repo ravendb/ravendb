@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Raven.Client;
@@ -18,6 +18,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -138,6 +139,15 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override Task QueryIdsInternal(
+            IdsQueryResult resultToFill,
+            IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
         {
             throw new NotImplementedException();
         }

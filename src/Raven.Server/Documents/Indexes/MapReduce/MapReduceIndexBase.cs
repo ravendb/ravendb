@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -341,6 +343,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _stats.GetMapEntries = stats.For(IndexingOperation.Reduce.GetMapEntries, start: false);
             _stats.RemoveResult = stats.For(IndexingOperation.Reduce.RemoveMapResult, start: false);
             _stats.PutResult = stats.For(IndexingOperation.Reduce.PutMapResult, start: false);
+        }
+
+        protected override Task QueryIdsInternal(
+            IdsQueryResult resultToFill,
+            IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
+        {
+            throw new NotSupportedException($"Index {Name} is MapReduce index and doesn't support {nameof(QueryIdsInternal)}");
         }
 
         private class MapPhaseStats
