@@ -10,6 +10,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Xunit;
 
@@ -92,6 +93,7 @@ namespace SlowTests.Issues
             private class GetStudioConfigurationCommand : RavenCommand<StudioConfiguration>
             {
                 public override bool IsReadRequest => false;
+                
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
@@ -129,7 +131,7 @@ namespace SlowTests.Issues
                 return new PutStudioConfigurationCommand(conventions, context, _configuration);
             }
 
-            private class PutStudioConfigurationCommand : RavenCommand
+            private class PutStudioConfigurationCommand : RavenCommand, IRaftCommand
             {
                 private readonly BlittableJsonReaderObject _configuration;
 
@@ -145,6 +147,7 @@ namespace SlowTests.Issues
                     _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
                 }
 
+
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}/admin/configuration/studio";
@@ -158,6 +161,8 @@ namespace SlowTests.Issues
                         })
                     };
                 }
+
+                public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
             }
         }
 
@@ -175,7 +180,7 @@ namespace SlowTests.Issues
                 return new PutServerWideStudioConfigurationCommand(conventions, context, _configuration);
             }
 
-            private class PutServerWideStudioConfigurationCommand : RavenCommand
+            private class PutServerWideStudioConfigurationCommand : RavenCommand, IRaftCommand
             {
                 private readonly BlittableJsonReaderObject _configuration;
 
@@ -191,6 +196,7 @@ namespace SlowTests.Issues
                     _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
                 }
 
+
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/admin/configuration/studio";
@@ -204,6 +210,8 @@ namespace SlowTests.Issues
                         })
                     };
                 }
+
+                public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
             }
         }
 
@@ -217,6 +225,7 @@ namespace SlowTests.Issues
             private class GetServerWideStudioConfigurationCommand : RavenCommand<ServerWideStudioConfiguration>
             {
                 public override bool IsReadRequest => false;
+                
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {

@@ -14,7 +14,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<ArgumentException>(() => session.Advanced.Attachments.GetNames(new { }));
-                    Assert.Contains("is not associated with the session. Use documentId instead or track the entity in the session", e.Message);
+                    Assert.Contains("is not associated with the session. You need to track the entity in the session.", e.Message);
                 }
             }
         }

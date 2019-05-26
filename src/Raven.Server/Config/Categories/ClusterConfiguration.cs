@@ -94,5 +94,10 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Cluster.CompareExchangeTombstonesCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CompareExchangeTombstonesCleanupInterval { get; set; }
+
+        [Description("Maximum number of log entires to keep in the history log table.")]
+        [DefaultValue(2048)]
+        [ConfigurationEntry("Cluster.LogHistoryMaxEntries", ConfigurationEntryScope.ServerWideOnly)]
+        public int LogHistoryMaxEntries { get; set; }
     }
 }

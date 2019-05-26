@@ -1,9 +1,11 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ConnectionStrings
@@ -22,7 +24,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
             return new PutConnectionStringCommand(conventions, _connectionString);
         }
 
-        private class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>
+        private class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly T _connectionString;
@@ -59,6 +61,8 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
                 Result = JsonDeserializationClient.PutConnectionStringResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 

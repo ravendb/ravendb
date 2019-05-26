@@ -10,12 +10,12 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
     {
         public T ConnectionString { get; protected set; }
 
-        protected PutConnectionStringCommand() : base(null)
+        protected PutConnectionStringCommand()
         {
             // for deserialization
         }
 
-        protected PutConnectionStringCommand(T connectionString, string databaseName) : base(databaseName)
+        protected PutConnectionStringCommand(T connectionString, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             ConnectionString = connectionString;
         }
@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             // for deserialization
         }
 
-        public PutRavenConnectionStringCommand(RavenConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
+        public PutRavenConnectionStringCommand(RavenConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
         {
             
         }
@@ -52,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             // for deserialization
         }
 
-        public PutSqlConnectionStringCommand(SqlConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
+        public PutSqlConnectionStringCommand(SqlConnectionString connectionString, string databaseName, string uniqueRequestId) : base(connectionString, databaseName, uniqueRequestId)
         {
 
         }

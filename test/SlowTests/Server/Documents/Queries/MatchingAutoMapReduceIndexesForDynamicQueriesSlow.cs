@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
@@ -64,7 +65,7 @@ namespace SlowTests.Server.Documents.Queries
 
         protected void add_index(IndexDefinitionBase definition)
         {
-            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
+            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()));
         }
 
         protected Index get_index(string name)

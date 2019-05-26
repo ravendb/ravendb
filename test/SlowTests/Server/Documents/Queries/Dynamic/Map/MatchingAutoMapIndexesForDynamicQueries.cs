@@ -325,7 +325,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where Name = 'arek'"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')"));
@@ -347,7 +347,7 @@ where search(Name, 'arek')"));
                 var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where Name = 'arek'"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where exact(Name = 'arek')"));
@@ -370,7 +370,7 @@ where exact(Name = 'arek')"));
 where search(Name, 'arek')"));
 
                 var definition = mapping.CreateAutoIndexDefinition();
-                db.IndexStore.CreateIndex(definition).Wait();
+                db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
 where search(Name, 'arek')
@@ -386,7 +386,7 @@ include highlight(Name, 18, 2)
                 mapping.ExtendMappingBasedOn(definition);
 
                 definition = mapping.CreateAutoIndexDefinition();
-                db.IndexStore.CreateIndex(definition).Wait();
+                db.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()).Wait();
 
                 result = matcher.Match(mapping, null);
 
@@ -396,7 +396,7 @@ include highlight(Name, 18, 2)
 
         private void add_index(AutoMapIndexDefinition definition)
         {
-            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
+            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()));
         }
 
         private Index get_index(string name)

@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
         public Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSession(entity);
+                ThrowEntityNotInSessionOrMissingId(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
             return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);

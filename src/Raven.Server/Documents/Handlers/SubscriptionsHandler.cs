@@ -98,9 +98,6 @@ namespace Raven.Server.Documents.Handlers
                         using (context.OpenReadTransaction())
                         {
                             var first = true;
-
-                            sp.Start();
-
                             var lastEtag = startEtag;
                             foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
                             {
@@ -137,13 +134,14 @@ namespace Raven.Server.Documents.Handlers
                                 }
 
                                 if (sp.Elapsed >= timeLimit)
-                                {                                    
                                     break;
-                                }
 
                                 lastEtag = itemDetails.Doc.Etag;
                             }
-                            
+
+                            if (startEtag == lastEtag)
+                                break;
+
                             startEtag = lastEtag;
                         }
                     }
@@ -191,7 +189,7 @@ namespace Raven.Server.Documents.Handlers
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var mentor = options.MentorNode;
-                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled, mentor: mentor);
+                var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor: mentor);
 
                 var name = options.Name ?? subscriptionId.ToString();
 
@@ -223,7 +221,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
-            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName);
+            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
 
             await NoContent();
         }

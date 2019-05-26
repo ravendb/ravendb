@@ -405,6 +405,7 @@ namespace Raven.Server.Web.System
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
+                GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: BeforeSetupConfiguration,
                 fillJson: (json, readerObject, index) =>
                 {
@@ -679,7 +680,7 @@ namespace Raven.Server.Web.System
 
             ServerStore.EnsureNotPassive();
 
-            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type);
+            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetRaftRequestIdFromQuery());
             await ServerStore.Cluster.WaitForIndexNotification(index);
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -787,7 +788,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
-            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
+            await DatabaseConfigurations((_, databaseName, connectionString, guid) => ServerStore.PutConnectionString(_, databaseName, connectionString, guid), "put-connection-string", GetRaftRequestIdFromQuery());
         }
 
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
@@ -796,7 +797,7 @@ namespace Raven.Server.Web.System
             var configurationName = GetStringQueryString("configurationName"); // etl task name
             var transformationName = GetStringQueryString("transformationName");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName), "etl-reset");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName, guid), "etl-reset", GetRaftRequestIdFromQuery());
         }
 
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
@@ -806,31 +807,35 @@ namespace Raven.Server.Web.System
 
             if (id == null)
             {
-                await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
-                    beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+                await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) => ServerStore.AddEtl(_, databaseName, etlConfiguration, guid), "etl-add", 
+                    GetRaftRequestIdFromQuery(), beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
             }
 
             string etlConfigurationName = null;
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) =>
+            await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
             {
-                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration);
+                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
                 etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
                 return task;
 
-            }, "etl-update", fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+            }, "etl-update", 
+                GetRaftRequestIdFromQuery(),
+                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
 
             // Reset scripts if needed
             var scriptsToReset = HttpContext.Request.Query["reset"];
+            var raftRequestId = GetRaftRequestIdFromQuery();
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 foreach (var script in scriptsToReset)
                 {
-                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script);
+                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script, $"{raftRequestId}/{script}");
                 }
             }
         }
@@ -1251,7 +1256,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name);
+                var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name, GetRaftRequestIdFromQuery());
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -1281,7 +1286,8 @@ namespace Raven.Server.Web.System
                 ServerStore.LicenseManager.AssertCanAddExternalReplication();
 
                 ExternalReplication watcher = null;
-                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, out watcher), "update_external_replication",
+                await DatabaseConfigurations((_, databaseName, blittableJson, guid) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, guid, out watcher), "update_external_replication",
+                    GetRaftRequestIdFromQuery(),
                     fillJson: (json, _, index) =>
                     {
                         using (context.OpenReadTransaction())
@@ -1328,14 +1334,16 @@ namespace Raven.Server.Web.System
                 long index;
 
                 var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, context);
+                var raftRequestId = GetRaftRequestIdFromQuery();
+
                 try
                 {
-                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name);
+                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name, $"{raftRequestId}/delete-ongoing-task");
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 finally
                 {
-                    await action.Complete();
+                    await action.Complete($"{raftRequestId}/complete");
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -1404,13 +1412,14 @@ namespace Raven.Server.Web.System
                 }
             }
 
-            public async Task Complete()
+            public async Task Complete(string raftRequestId)
             {
                 if (_deletingEtl.Name != null)
                 {
                     foreach (var transformation in _deletingEtl.Transformations)
                     {
-                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation);
+                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation,
+                            $"{raftRequestId}/{transformation}");
                         await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
                     }
                 }

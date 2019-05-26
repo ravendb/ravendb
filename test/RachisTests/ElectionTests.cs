@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -111,7 +112,7 @@ namespace RachisTests
 
             foreach (var invalidCommand in invalidCommands)
             {
-                await Assert.ThrowsAsync<TimeoutException>(() => invalidCommand);
+                await Assert.ThrowsAsync<NotLeadingException>(() => invalidCommand);
 
                 Assert.True(invalidCommand.IsCompleted);
                 Assert.NotEqual(TaskStatus.RanToCompletion, invalidCommand.Status);

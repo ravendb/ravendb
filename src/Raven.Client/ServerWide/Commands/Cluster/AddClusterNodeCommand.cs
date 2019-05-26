@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands.Cluster
 {
-    internal class AddClusterNodeCommand : RavenCommand
+    internal class AddClusterNodeCommand : RavenCommand, IRaftCommand
     {
         private readonly string _url;
         private readonly string _tag;
@@ -34,5 +35,7 @@ namespace Raven.Client.ServerWide.Commands.Cluster
 
             return request;
         }
+
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
 }

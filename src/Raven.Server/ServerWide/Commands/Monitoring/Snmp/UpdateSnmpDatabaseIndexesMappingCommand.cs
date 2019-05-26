@@ -17,13 +17,12 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
         public List<string> Indexes { get; set; }
 
         public UpdateSnmpDatabaseIndexesMappingCommand()
-            : base(null)
         {
             // for deserialization
         }
 
-        public UpdateSnmpDatabaseIndexesMappingCommand(string databaseName, List<string> indexes)
-            : base(databaseName)
+        public UpdateSnmpDatabaseIndexesMappingCommand(string databaseName, List<string> indexes, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             Indexes = indexes;
         }

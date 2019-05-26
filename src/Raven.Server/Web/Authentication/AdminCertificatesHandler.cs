@@ -68,7 +68,7 @@ namespace Raven.Server.Web.Authentication
                         Documents.Operations.Operations.OperationType.CertificateGeneration,
                         async onProgress =>
                         {
-                            certs = await GenerateCertificateInternal(certificate, ServerStore);
+                            certs = await GenerateCertificateInternal(certificate, ServerStore, GetRaftRequestIdFromQuery());
 
                             return ClientCertificateGenerationResult.Instance;
                         },
@@ -82,7 +82,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore)
+        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore, string raftRequestId)
         {
             ValidateCertificateDefinition(certificate, serverStore);
 
@@ -114,7 +114,7 @@ namespace Raven.Server.Web.Authentication
                 NotAfter = selfSignedCertificate.NotAfter
             };
 
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, raftRequestId));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             var ms = new MemoryStream();
@@ -250,7 +250,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx);
+                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx, GetRaftRequestIdFromQuery());
                 }
                 catch (Exception e)
                 {
@@ -262,7 +262,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx)
+        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx, string raftRequestId)
         {
             var collection = new X509Certificate2Collection();
 
@@ -343,7 +343,7 @@ namespace Raven.Server.Web.Authentication
                 }
                 else
                 {
-                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef));
+                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef, $"{raftRequestId}/{certKey}"));
                     await serverStore.Cluster.WaitForIndexNotification(putResult.Index);
                 }
 
@@ -689,7 +689,7 @@ namespace Raven.Server.Web.Authentication
                         Thumbprint = existingCertificate.Thumbprint,
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
                         NotAfter = existingCertificate.NotAfter
-                    }));
+                    }, GetRaftRequestIdFromQuery()));
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 
                 NoContentStatus();
@@ -911,7 +911,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    var success = Server.RefreshClusterCertificate(true);
+                    var success = Server.RefreshClusterCertificate(true, GetRaftRequestIdFromQuery());
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -949,7 +949,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    Server.RefreshClusterCertificate(replaceImmediately);
+                    Server.RefreshClusterCertificate(replaceImmediately, GetRaftRequestIdFromQuery());
                 }
                 catch (Exception e)
                 {
@@ -1013,7 +1013,7 @@ namespace Raven.Server.Web.Authentication
 
                         var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
 
-                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately);
+                        var replicationTask = Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, GetRaftRequestIdFromQuery());
 
                         await Task.WhenAny(replicationTask, timeoutTask);
                         if (replicationTask.IsCompleted == false)
@@ -1109,6 +1109,8 @@ namespace Raven.Server.Web.Authentication
             if (ServerStore.CurrentRachisState == RachisState.Passive)
                 throw new AuthorizationException("RavenDB is in passive state. Cannot apply certificates to the cluster.");
 
+            var raftRequestId = GetRaftRequestIdFromQuery();
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 List<string> localStateKeys;
@@ -1127,7 +1129,8 @@ namespace Raven.Server.Web.Authentication
                             if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.Certificate.Thumbprint)
                                 continue;
 
-                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition)).Wait(ServerStore.ServerShutdown);
+                            ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"))
+                                .Wait(ServerStore.ServerShutdown);
                         }
                     }
                 }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
                     {
                         Name = "LastName",
                     }
-                }));
+                }), Guid.NewGuid().ToString());
 
                 autoIndex.SetState(IndexState.Idle);
 
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
                     {
                         Name = "FirstName",
                     }
-                }));
+                }), Guid.NewGuid().ToString());
 
                 autoIndex.SetState(IndexState.Idle);
 
@@ -93,7 +94,7 @@ namespace SlowTests.Issues
                     {
                         Name = "Location",
                     }
-                }));
+                }), Guid.NewGuid().ToString());
 
                 autoIndex.SetState(IndexState.Idle);
 

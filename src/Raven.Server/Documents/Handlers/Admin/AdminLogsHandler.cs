@@ -4,6 +4,7 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -45,9 +46,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var configuration = JsonDeserializationServer.Parameters.SetLogsConfigurationParameters(json);
 
                 if (configuration.RetentionTime == null)
-                    configuration.RetentionTime = ServerStore.Configuration.Logs.RetentionTime.AsTimeSpan;
+                    configuration.RetentionTime = ServerStore.Configuration.Logs.RetentionTime?.AsTimeSpan;
 
-                LoggingSource.Instance.SetupLogMode(configuration.Mode, Server.Configuration.Logs.Path.FullPath, configuration.RetentionTime.Value);
+                LoggingSource.Instance.SetupLogMode(
+                    configuration.Mode, 
+                    Server.Configuration.Logs.Path.FullPath, 
+                    configuration.RetentionTime,
+                    configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
+                    configuration.Compress);
             }
 
             NoContentStatus();

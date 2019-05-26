@@ -8,11 +8,12 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class BatchCommand : RavenCommand<BatchCommandResult>, IDisposable
+    public class BatchCommand : RavenCommand<BatchCommandResult>, IRaftCommand, IDisposable
     {
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly List<Stream> _attachmentStreams;
@@ -121,7 +122,7 @@ namespace Raven.Client.Documents.Commands.Batches
             if (_options == null)
                 return;
 
-            sb.AppendLine("?");
+            sb.Append("?");
 
             var replicationOptions = _options.ReplicationOptions;
             if (replicationOptions != null)
@@ -159,5 +160,7 @@ namespace Raven.Client.Documents.Commands.Batches
             foreach (var command in _commands)
                 command?.Dispose();
         }
+
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
 }

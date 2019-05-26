@@ -436,7 +436,7 @@ namespace RachisTests
                 var res = await documentDatabase.ServerStore.ModifyDatabaseRevisions(context,
                     defaultDatabase,
                     EntityToBlittable.ConvertCommandToBlittable(configuration,
-                        context));
+                        context), Guid.NewGuid().ToString());
 
                 foreach (var s in Servers)// need to wait for it on all servers
                 {

@@ -15,13 +15,12 @@ namespace Raven.Server.ServerWide.Commands
         public string Prefix { get; set; }
 
         public IncrementClusterIdentityCommand()
-            : base(null)
         {
             // for deserialization
         }
 
-        public IncrementClusterIdentityCommand(string databaseName, string prefix)
-            : base(databaseName)
+        public IncrementClusterIdentityCommand(string databaseName, string prefix, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             Prefix = prefix;
         }

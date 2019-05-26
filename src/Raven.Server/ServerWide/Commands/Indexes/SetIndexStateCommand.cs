@@ -12,13 +12,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public IndexState State;
 
-        public SetIndexStateCommand() : base(null)
+        public SetIndexStateCommand()
         {
             // for deserialization
         }
 
-        public SetIndexStateCommand([NotNull] string name, IndexState state, string databaseName)
-            : base(databaseName)
+        public SetIndexStateCommand([NotNull] string name, IndexState state, string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             if (string.IsNullOrEmpty(name))
                 throw new RachisApplyException($"Index name cannot be null or empty");

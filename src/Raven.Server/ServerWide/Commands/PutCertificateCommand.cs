@@ -14,7 +14,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public PutCertificateCommand(string name, CertificateDefinition value)
+        public PutCertificateCommand(string name, CertificateDefinition value, string uniqueRequestId) : base(uniqueRequestId)
         {
             Name = name;
             Value = value;

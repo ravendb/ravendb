@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
@@ -58,7 +59,7 @@ namespace FastTests.Server
             }
         }
 
-        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>, IDisposable
+        public class PutDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>, IRaftCommand, IDisposable
         {
             private readonly BlittableJsonReaderObject databaseDocument;
 
@@ -93,6 +94,7 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
@@ -113,6 +115,7 @@ namespace FastTests.Server
             }
 
             public override bool IsReadRequest => true;
+            
         }
     }
 }

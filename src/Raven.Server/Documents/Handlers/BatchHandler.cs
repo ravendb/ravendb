@@ -183,8 +183,10 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
+            var raftRequestId = GetRaftRequestIdFromQuery();
+
             var record = ServerStore.LoadDatabaseRecord(Database.Name, out _);
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, record.Topology.DatabaseTopologyIdBase64, command.ParsedCommands, options);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, record.Topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)

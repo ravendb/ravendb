@@ -10,11 +10,11 @@ namespace Raven.Server.ServerWide.Commands
     {
         public ClientConfiguration Configuration { get; set; }
 
-        public EditDatabaseClientConfigurationCommand() : base(null)
+        public EditDatabaseClientConfigurationCommand()
         {
         }
 
-        public EditDatabaseClientConfigurationCommand(ClientConfiguration configuration, string databaseName) : base(databaseName)
+        public EditDatabaseClientConfigurationCommand(ClientConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }

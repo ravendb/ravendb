@@ -12,7 +12,9 @@ namespace Raven.Server.ServerWide.Commands
         public string DatabaseName;
         public bool ErrorOnDatabaseDoesNotExists;
 
-        protected UpdateDatabaseCommand(string databaseName)
+        protected UpdateDatabaseCommand() { }
+
+        protected UpdateDatabaseCommand(string databaseName, string uniqueRequestId) : base(uniqueRequestId)
         {
             DatabaseName = databaseName;
         }
@@ -25,6 +27,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var djv = base.ToJson(context);
             djv[nameof(DatabaseName)] = DatabaseName;
+            djv[nameof(ErrorOnDatabaseDoesNotExists)] = ErrorOnDatabaseDoesNotExists;
 
             FillJson(djv);
 

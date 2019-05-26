@@ -73,7 +73,7 @@ namespace FastTests.Utils
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
-                var (index, _) = await serverStore.ModifyDatabaseRevisions(context, database, configurationJson);
+                var (index, _) = await serverStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 return index;
             }
         }

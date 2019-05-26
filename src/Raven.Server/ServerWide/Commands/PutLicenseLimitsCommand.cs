@@ -11,7 +11,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public PutLicenseLimitsCommand(string name, LicenseLimits licenseLimits)
+        public PutLicenseLimitsCommand(string name, LicenseLimits licenseLimits, string uniqueRequestId) : base(uniqueRequestId)
         {
             Name = name;
             Value = licenseLimits;

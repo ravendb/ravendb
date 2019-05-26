@@ -6,6 +6,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -27,7 +28,7 @@ namespace Raven.Client.ServerWide.Operations
             return new CreateDatabaseCommand(_databaseRecord, _replicationFactor);
         }
 
-        internal class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
+        internal class CreateDatabaseCommand : RavenCommand<DatabasePutResult>, IRaftCommand
         {
             private readonly DatabaseRecord _databaseRecord;
             private readonly int _replicationFactor;
@@ -73,6 +74,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

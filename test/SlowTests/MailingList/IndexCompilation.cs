@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
@@ -21,6 +23,227 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 new AccommodationFlightGeoNodePriceCalendarIndex().Execute(store);
+            }
+        }
+
+        [Fact]
+        public void CanCompileTypedIndexWithMethodExtensions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new TypedThenByIndex().Execute(store);
+
+                var order = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine {Quantity = 7, Discount = 4},
+                        new OrderLine {Quantity = 50, Discount = 4},
+                        new OrderLine {Quantity = 20, Discount = 4},
+                        new OrderLine {Quantity = 3, Discount = 4},
+                        new OrderLine {Quantity = 7, Discount = 4}
+                    }
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(order);
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<TypedThenByIndex.Result, TypedThenByIndex>()
+                        .ProjectInto<TypedThenByIndex.Result>()
+                        .ToList();
+
+                    AssertResults(result, order);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCompileIndexWithMethodExtensions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new ThenByIndex().Execute(store);
+
+                var order = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine {Quantity = 7, Discount = 4},
+                        new OrderLine {Quantity = 50, Discount = 4},
+                        new OrderLine {Quantity = 20, Discount = 4},
+                        new OrderLine {Quantity = 3, Discount = 4},
+                        new OrderLine {Quantity = 7, Discount = 4}
+                    }
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(order);
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<TypedThenByIndex.Result, ThenByIndex>()
+                        .ProjectInto<TypedThenByIndex.Result>()
+                        .ToList();
+
+                    AssertResults(result, order);
+                }
+            }
+        }
+
+        private static void AssertResults(List<TypedThenByIndex.Result> result, Order order)
+        {
+            Assert.Equal(1, result.Count);
+
+            var first = result.First();
+
+            var expectedResult = new TypedThenByIndex.Result
+            {
+                SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
+                AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
+                AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
+                Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count(),
+                GroupJoin = order.Lines.GroupJoin(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => y).Count(),
+                TakeWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                TakeWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 1).Select(x => x.Quantity).FirstOrDefault(),
+                SkipWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                SkipWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 0).Select(x => x.Quantity).FirstOrDefault(),
+                LongCount = order.Lines.LongCount(),
+                LongCountWithPredicate = order.Lines.LongCount(x => x.Quantity > 7)
+            };
+
+            Assert.Equal(expectedResult.SmallestQuantity, first.SmallestQuantity);
+            Assert.Equal(expectedResult.LargestQuantity, first.LargestQuantity);
+
+            Assert.Equal(expectedResult.Aggregate, first.Aggregate);
+            Assert.Equal(expectedResult.AggregateWithSeed, first.AggregateWithSeed);
+            Assert.Equal(expectedResult.AggregateWithSeedAndSelector, first.AggregateWithSeedAndSelector);
+
+            Assert.Equal(expectedResult.Join, first.Join);
+            Assert.Equal(expectedResult.GroupJoin, first.GroupJoin);
+
+            Assert.Equal(expectedResult.TakeWhile, first.TakeWhile);
+            Assert.Equal(expectedResult.TakeWhileIndexWithIndex, first.TakeWhileIndexWithIndex);
+            Assert.Equal(expectedResult.SkipWhile, first.SkipWhile);
+            Assert.Equal(expectedResult.SkipWhileIndexWithIndex, first.SkipWhileIndexWithIndex);
+
+            Assert.Equal(expectedResult.LongCount, first.LongCount);
+            Assert.Equal(expectedResult.LongCountWithPredicate, first.LongCountWithPredicate);
+        }
+
+        public class TypedThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
+        {
+            public class Result
+            {
+                public int SmallestQuantity { get; set; }
+
+                public int LargestQuantity { get; set; }
+
+                public int Aggregate { get; set; }
+
+                public int AggregateWithSeed { get; set; }
+
+                public int AggregateWithSeedAndSelector { get; set; }
+
+                public int Join { get; set; }
+
+                public int GroupJoin { get; set; }
+
+                public int TakeWhile { get; set; }
+
+                public int TakeWhileIndexWithIndex { get; set; }
+
+                public int SkipWhile { get; set; }
+
+                public int SkipWhileIndexWithIndex { get; set; }
+
+                public long LongCount { get; set; }
+
+                public long LongCountWithPredicate { get; set; }
+            }
+
+            public TypedThenByIndex()
+            {
+                Map = orders => from order in orders
+                                select new
+                                {
+                                    SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                                    LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault(),
+                                    Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2),
+                                    AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2),
+                                    AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500),
+                                    Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count(),
+                                    GroupJoin = order.Lines.GroupJoin(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => y).Count(),
+                                    TakeWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                                    TakeWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 1).Select(x => x.Quantity).FirstOrDefault(),
+                                    SkipWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count(),
+                                    SkipWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 0).Select(x => x.Quantity).FirstOrDefault(),
+                                    ToLookup = order.Lines.ToLookup(x => x.Quantity),
+                                    ToLookupWithElementSelector = order.Lines.ToLookup(x => x.Quantity, o => o.Discount),
+                                    LongCount = order.Lines.LongCount(),
+                                    LongCountWithPredicate = order.Lines.LongCount(x => x.Quantity > 7)
+                                };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        public class ThenByIndex : AbstractIndexCreationTask<Order, TypedThenByIndex.Result>
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Maps =
+                    {
+                        "from order in docs.Orders select new { " +
+                        "SmallestQuantity = order.Lines.OrderBy(x => x.Discount).ThenBy(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                        "LargestQuantity = order.Lines.OrderBy(x => x.Discount).ThenByDescending(x => x.Quantity).Select(x => x.Quantity).FirstOrDefault()," +
+                        "Aggregate = order.Lines.Select(x => x.Quantity).Aggregate((q1, q2) => q1 + q2)," +
+                        "AggregateWithSeed = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2)," +
+                        "AggregateWithSeedAndSelector = order.Lines.Select(x => x.Quantity).Aggregate(13, (q1, q2) => q1 + q2, x => x + 500)," +
+                        "Join = order.Lines.Join(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => x).Count()," +
+                        "GroupJoin = order.Lines.GroupJoin(order.Lines, x => x.Quantity, y => y.Quantity, (x, y) => y).Count()," +
+                        "TakeWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count()," +
+                        "TakeWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 1).Select(x => x.Quantity).FirstOrDefault()," +
+                        "SkipWhile = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile(x => x.Quantity > 10).Count()," +
+                        "SkipWhileIndexWithIndex = order.Lines.OrderByDescending(x => x.Quantity).TakeWhile((x, c) => x.Quantity > 10 && c == 0).Select(x => x.Quantity).FirstOrDefault()," +
+                        "ToLookup = order.Lines.ToLookup(x => x.Quantity)," +
+                        "ToLookupWithElementSelector = order.Lines.ToLookup(x => x.Quantity, o => o.Discount)," +
+                        "LongCount = order.Lines.LongCount()," +
+                        "LongCountWithPredicate = order.Lines.LongCount(x => x.Quantity > 7)" +
+                        "}"
+                    },
+                    Fields =
+                    {
+                        {nameof(TypedThenByIndex.Result.SmallestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.LargestQuantity), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.Aggregate), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.AggregateWithSeed), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.AggregateWithSeedAndSelector), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.Join), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.GroupJoin), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.TakeWhile), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.TakeWhileIndexWithIndex), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.SkipWhile), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.SkipWhileIndexWithIndex), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.LongCount), new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                        {nameof(TypedThenByIndex.Result.LongCountWithPredicate), new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                    }
+                };
             }
         }
 

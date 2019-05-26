@@ -6,6 +6,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow;
 
 namespace Raven.Client.ServerWide.Operations.Logs
 {
@@ -17,6 +18,8 @@ namespace Raven.Client.ServerWide.Operations.Logs
         {
             public LogMode Mode { get; set; }
             public TimeSpan? RetentionTime { get; set; }
+            public Size? RetentionSize { get; set; }
+            public bool Compress { get; set; }
         }
 
         public SetLogsConfigurationOperation(Parameters parameters)

@@ -8,12 +8,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public PullReplicationAsSink PullReplicationAsSink;
 
-        public UpdatePullReplicationAsSinkCommand() : base(null)
+        public UpdatePullReplicationAsSinkCommand()
         {
 
         }
 
-        public UpdatePullReplicationAsSinkCommand(string databaseName) : base(databaseName)
+        public UpdatePullReplicationAsSinkCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
 
         }

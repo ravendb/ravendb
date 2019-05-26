@@ -6,6 +6,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -29,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ModifyConflictSolverCommand(conventions, _database, this);
         }
 
-        private class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>
+        private class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>, IRaftCommand
         {
             private readonly ModifyConflictSolverOperation _solver;
             private readonly DocumentConventions _conventions;
@@ -75,6 +76,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

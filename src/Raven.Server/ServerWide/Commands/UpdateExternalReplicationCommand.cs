@@ -8,12 +8,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public ExternalReplication Watcher;
 
-        public UpdateExternalReplicationCommand() : base(null)
+        public UpdateExternalReplicationCommand()
         {
 
         }
 
-        public UpdateExternalReplicationCommand(string databaseName) : base(databaseName)
+        public UpdateExternalReplicationCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
 
         }

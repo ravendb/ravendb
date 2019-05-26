@@ -14,6 +14,10 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
+        public CleanUpClusterStateCommand(string uniqueRequestId) : base(uniqueRequestId)
+        {
+        }
+
         public unsafe Dictionary<string, long> Clean(TransactionOperationContext context, long index)
         {
             var affectedDatabases = new Dictionary<string, long>();

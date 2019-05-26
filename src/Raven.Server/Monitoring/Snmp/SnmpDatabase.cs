@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib.Pipeline;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide;
@@ -150,7 +152,7 @@ namespace Raven.Server.Monitoring.Snmp
                             var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(_databaseName, new List<string>
                             {
                                 change.Name
-                            }));
+                            }, RaftIdGenerator.NewId()));
 
                             await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
@@ -193,7 +195,7 @@ namespace Raven.Server.Monitoring.Snmp
                 {
                     context.CloseTransaction();
 
-                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes));
+                    var result = await database.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabaseIndexesMappingCommand(database.Name, missingIndexes, RaftIdGenerator.NewId()));
                     await database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                     context.OpenReadTransaction();

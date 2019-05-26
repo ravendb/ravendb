@@ -11,8 +11,10 @@ using Sparrow.Logging;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 
@@ -52,9 +54,9 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false, string mentor = null)
+        public async Task<long> PutSubscription(SubscriptionCreationOptions options, string raftRequestId, long? subscriptionId = null, bool? disabled = false, string mentor = null)
         {
-            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor)
+            var command = new PutSubscriptionCommand(_db.Name, options.Query, mentor, raftRequestId)
             {
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
@@ -81,7 +83,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {
-            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
+            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
             {
                 ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
@@ -99,7 +101,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task UpdateClientConnectionTime(long id, string name, string mentorNode = null)
         {
-            var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
+            var command = new UpdateSubscriptionClientConnectionTime(_db.Name, RaftIdGenerator.NewId())
             {
                 NodeTag = _serverStore.NodeTag,
                 HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
@@ -151,9 +153,9 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task DeleteSubscription(string name)
+        public async Task DeleteSubscription(string name, string raftRequestId)
         {
-            var command = new DeleteSubscriptionCommand(_db.Name, name);
+            var command = new DeleteSubscriptionCommand(_db.Name, name, raftRequestId);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 

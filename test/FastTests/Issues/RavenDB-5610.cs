@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -16,7 +17,7 @@ namespace FastTests.Issues
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                var index = await database.IndexStore.CreateIndex(indexDefinition);
+                var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                 Assert.NotNull(index);
 
                 var options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
@@ -51,14 +52,14 @@ namespace FastTests.Issues
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                var index = await database.IndexStore.CreateIndex(indexDefinition);
+                var index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                 Assert.NotNull(index);
                 Assert.Equal(33, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                index = await database.IndexStore.CreateIndex(indexDefinition);
+                index = await database.IndexStore.CreateIndex(indexDefinition, Guid.NewGuid().ToString());
                 Assert.NotNull(index);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 

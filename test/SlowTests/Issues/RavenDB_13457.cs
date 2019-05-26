@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -11,7 +10,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -20,8 +18,8 @@ using Xunit;
 namespace SlowTests.Issues
 {
     public class RavenDB_13457 : ClusterTestBase
-    {       
-        public class UserIndex : AbstractIndexCreationTask<User>
+    {
+        private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
             {
@@ -29,7 +27,7 @@ namespace SlowTests.Issues
                                select new
                                {
                                    user.Name
-                               };                
+                               };
             }
         }
 
@@ -41,8 +39,8 @@ namespace SlowTests.Issues
 
             var leader = await CreateRaftClusterAndGetLeader(nodesCount);
             var result = await CreateDatabaseInCluster(db, nodesCount, leader.WebUrl);
-          
-            using (var store = 
+
+            using (var store =
                 new DocumentStore
                 {
                     Urls = new[] { leader.WebUrl },
@@ -50,7 +48,7 @@ namespace SlowTests.Issues
                     Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
                     {
                         ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin,
-                        MaxNumberOfRequestsPerSession = 5                        
+                        MaxNumberOfRequestsPerSession = 5
                     }
                 }.Initialize())
             {
@@ -63,7 +61,7 @@ namespace SlowTests.Issues
                         return record.Topology.Members.Count == nodesCount;
                     }
                 }, TimeSpan.FromSeconds(10));
-                                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User
@@ -83,7 +81,7 @@ namespace SlowTests.Issues
                             {
                                 Name = "Samson"
                             });
-                            await session.SaveChangesAsync(); 
+                            await session.SaveChangesAsync();
                         }
                     }
                 });
@@ -92,7 +90,7 @@ namespace SlowTests.Issues
                 for (var i = 0; i < nodesCount; i++)
                 {
                     using (var session = store.OpenSession())
-                    {                     
+                    {
                         Raven.Client.Http.ServerNode serverNode = await session.Advanced.GetCurrentSessionNode();
                         Assert.True(usedUrls.Add(serverNode.Url.ToLower()));
                     }
@@ -103,7 +101,9 @@ namespace SlowTests.Issues
                 // now, we modify the values and make sure that we received them
                 store.Maintenance.Server.Send(
                     new PutServerWideClientConfigurationOperation(
+#pragma warning disable 618
                         new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, PrettifyGeneratedLinqExpressions = false, ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.None }));
+#pragma warning restore 618
 
 
                 Assert.True(SpinWait.SpinUntil(() =>
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                 }, TimeSpan.FromSeconds(10)));
 
 
-                
+
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -140,14 +140,16 @@ namespace SlowTests.Issues
                         usedUrls.Add(serverNode1.Url.ToLower());
                     }
                 }
-                Assert.Equal(1, usedUrls.Count);                
+                Assert.Equal(1, usedUrls.Count);
 
 
                 // now we want to disable the client configuration and use the "default" ones
 
                 store.Maintenance.Server.Send(
                         new PutServerWideClientConfigurationOperation(
+#pragma warning disable 618
                             new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, PrettifyGeneratedLinqExpressions = false, ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.None, Disabled = true }));
+#pragma warning restore 618
 
                 using (var session = store.OpenSession())
                 {
@@ -219,7 +221,9 @@ namespace SlowTests.Issues
                     Database = db,
                     Conventions = new Raven.Client.Documents.Conventions.DocumentConventions
                     {
+#pragma warning disable 618
                         PrettifyGeneratedLinqExpressions = true
+#pragma warning restore 618
                     }
                 }.Initialize())
             {
@@ -254,7 +258,9 @@ namespace SlowTests.Issues
                 // now, we modify the values and make sure that we received them
                 store.Maintenance.Server.Send(
                     new PutServerWideClientConfigurationOperation(
-                        new ClientConfiguration { PrettifyGeneratedLinqExpressions = false}));
+#pragma warning disable 618
+                        new ClientConfiguration { PrettifyGeneratedLinqExpressions = false }));
+#pragma warning restore 618
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -273,7 +279,9 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Server.Send(
                         new PutServerWideClientConfigurationOperation(
+#pragma warning disable 618
                             new ClientConfiguration { PrettifyGeneratedLinqExpressions = false, Disabled = true }));
+#pragma warning restore 618
 
                 using (var session = store.OpenSession())
                 {

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -37,7 +38,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ReorderDatabaseMembersCommand(_database, order);
         }
 
-        private class ReorderDatabaseMembersCommand : RavenCommand
+        private class ReorderDatabaseMembersCommand : RavenCommand, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly BlittableJsonReaderObject _orderBlittable;
@@ -68,6 +69,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
     }

@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
@@ -55,7 +56,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new SetIndexLockCommand(conventions, context, _parameters);
         }
 
-        private class SetIndexLockCommand : RavenCommand
+        private class SetIndexLockCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _parameters;
 
@@ -84,6 +85,8 @@ namespace Raven.Client.Documents.Operations.Indexes
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
         public class Parameters

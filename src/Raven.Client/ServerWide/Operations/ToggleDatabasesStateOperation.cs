@@ -5,6 +5,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -48,7 +49,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ToggleDatabaseStateCommand(conventions, context, _parameters, _disable);
         }
 
-        private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>
+        private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>, IRaftCommand
         {
             private readonly bool _disable;
             private readonly BlittableJsonReaderObject _parameters;
@@ -95,6 +96,7 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
         public class Parameters

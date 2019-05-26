@@ -16,6 +16,11 @@ namespace Raven.Server.ServerWide
                                                           $"because the cluster version is '{ClusterCommandsVersionManager.CurrentClusterMinimalVersion}', " +
                                                           $"while this command can be applied in cluster with minimum version of {ClusterCommandsVersionManager.ClusterCommandsVersions[commandName]}");
             }
+
+            if (cmd.UniqueRequestId == null)
+            {
+               RejectPutClusterCommandException.Throw($"The command {commandName} doesn't contain the raft request unique identifier.");
+            }
         }
 
         public override void AssertEntryBeforeSendToFollower(BlittableJsonReaderObject entry, int version, string follower)

@@ -18,6 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -220,6 +221,8 @@ namespace Raven.Server.ServerWide
                 return;
             }
 
+            ValidateGuid(cmd, type);
+            object result = null;
             var sw = Stopwatch.StartNew();
             try
             {
@@ -230,6 +233,7 @@ namespace Raven.Server.ServerWide
                         var errors = ExecuteClusterTransaction(context, cmd, index);
                         if (errors != null)
                         {
+                            result = errors;
                             leader?.SetStateOf(index, errors);
                         }
                         break;
@@ -264,13 +268,14 @@ namespace Raven.Server.ServerWide
                         DeleteMultipleValues(context, type, cmd, index, leader);
                         break;
                     case nameof(CleanCompareExchangeTombstonesCommand):
-                        ClearCompareExchangeTombstones(context, type, cmd, index, out bool hasMore);
+                        ClearCompareExchangeTombstones(context, type, cmd, index, out var hasMore);
+                        result = hasMore;
                         leader?.SetStateOf(index, hasMore);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
                             throw new RachisApplyException(errorMessage);
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
                         SetIndexForBackup(context, cmd, index, type);
                         break;
@@ -334,8 +339,8 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(AddOrUpdateCompareExchangeCommand):
                     case nameof(RemoveCompareExchangeCommand):
-                        ExecuteCompareExchange(context, type, cmd, index, out var removeItem);
-                        leader?.SetStateOf(index, removeItem);
+                        ExecuteCompareExchange(context, type, cmd, index, out result);
+                        leader?.SetStateOf(index, result);
                         SetIndexForBackup(context, cmd, index, type);
                         break;
                     case nameof(InstallUpdatedServerCertificateCommand):
@@ -388,19 +393,25 @@ namespace Raven.Server.ServerWide
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
                         if (addedNodes != null)
+                        {
+                            result = addedNodes;
                             leader?.SetStateOf(index, addedNodes);
+                        }
                         break;
                     default:
                         var massage = $"The command '{type}' is unknown and cannot be executed on server with version '{ServerVersion.FullVersion}'.{Environment.NewLine}" +
                                       "Updating this node version to match the rest should resolve this issue.";
                         throw new UnknownClusterCommand(massage);
                 }
+
+                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, result, null);
             }
             catch (Exception e) when (ExpectedException(e))
             {
                 if (_parent.Log.IsInfoEnabled)
                     _parent.Log.Info($"Failed to execute command of type '{type}' on database '{DatabaseName}'", e);
 
+                _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, e);
                 NotifyLeaderAboutError(index, leader, e);
             }
             catch (Exception e)
@@ -499,10 +510,7 @@ namespace Raven.Server.ServerWide
                 if (databaseRecordJson == null)
                     return;
 
-                databaseRecordJson.Modifications = new DynamicJsonValue
-                {
-                    [nameof(DatabaseRecord.EtagForBackup)] = index
-                };
+                databaseRecordJson.Modifications = new DynamicJsonValue {[nameof(DatabaseRecord.EtagForBackup)] = index};
 
                 using (var old = databaseRecordJson)
                 {
@@ -510,6 +518,15 @@ namespace Raven.Server.ServerWide
                 }
 
                 UpdateValue(index, items, keyLowered, key, databaseRecordJson);
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void ValidateGuid(BlittableJsonReaderObject cmd, string type)
+        {
+            if (cmd.TryGet(nameof(CommandBase.UniqueRequestId), out string guid) == false)
+            {
+                throw new ArgumentNullException($"Guid is not provided in the command {type}.");
             }
         }
 
@@ -1203,9 +1220,70 @@ namespace Raven.Server.ServerWide
                                                            " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                     }
 
+                    VerifyUnchangedTasks();
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                     SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
                     return addDatabaseCommand.Record.Topology.Members;
+
+                    void VerifyUnchangedTasks()
+                    {
+                        if (addDatabaseCommand.IsRestore)
+                            return;
+
+                        var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
+                        using (var dbDoc = Read(context, dbId, out _))
+                        {
+                            var tasksList = new List<string>
+                            {
+                                nameof(DatabaseRecord.PeriodicBackups),
+                                nameof(DatabaseRecord.ExternalReplications),
+                                nameof(DatabaseRecord.SinkPullReplications),
+                                nameof(DatabaseRecord.HubPullReplications),
+                                nameof(DatabaseRecord.RavenEtls),
+                                nameof(DatabaseRecord.SqlEtls)
+                            };
+
+                            if (dbDoc == null)
+                            {
+                                foreach (var task in tasksList)
+                                {
+                                    if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
+                                    {
+                                        throw new RachisInvalidOperationException(
+                                            $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use a dedicated operation to update the {task} configuration.");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // compare tasks configurations of both db records
+                                foreach (var task in tasksList)
+                                {
+                                    var hasChanges = false;
+
+                                    if (dbDoc.TryGet(task, out BlittableJsonReaderArray oldDbRecordVal))
+                                    {
+                                        if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray newDbRecordVal) == false && oldDbRecordVal.Length > 0)
+                                        {
+                                            hasChanges = true;
+                                        }
+                                        else if (oldDbRecordVal.Equals(newDbRecordVal) == false)
+                                        {
+                                            hasChanges = true;
+                                        }
+                                    }
+                                    else if (databaseRecordAsJson.TryGet(task, out BlittableJsonReaderArray newDbRecordObject) && newDbRecordObject.Length > 0)
+                                    {
+                                        hasChanges = true;
+                                    }
+
+                                    if (hasChanges)
+                                        throw new RachisInvalidOperationException(
+                                            $"Cannot update {task} configuration with DatabaseRecord. Please use a dedicated operation to update the {task} configuration.");
+                                }
+                            }
+                        }
+                    }
                 }
             }
             catch (Exception e)
@@ -1476,7 +1554,7 @@ namespace Raven.Server.ServerWide
 
         public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
-            var djv = new RemoveNodeFromClusterCommand
+            var djv = new RemoveNodeFromClusterCommand(RaftIdGenerator.NewId())
             {
                 RemovedNode = nodeTag
             }.ToJson(context);
@@ -1666,28 +1744,43 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private readonly (ByteString Entry, int Version)[] _snapshotEntries =
+        private enum SnapshotEntryType
         {
-            (Items.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
-            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
-            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion),
+            Command,
+            Core
+        }
 
-            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
-            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion),
+        private readonly (ByteString Name, int Version, SnapshotEntryType Type)[] _snapshotEntries =
+        {
+            (Items.Content, ClusterCommandsVersionManager.Base40CommandsVersion, SnapshotEntryType.Command),
+            (CompareExchange.Content, ClusterCommandsVersionManager.Base40CommandsVersion,SnapshotEntryType.Command),
+            (Identities.Content, ClusterCommandsVersionManager.Base40CommandsVersion,SnapshotEntryType.Command),
 
-            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion),
-            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion)
+            (TransactionCommands.Content, ClusterCommandsVersionManager.Base41CommandsVersion,SnapshotEntryType.Command),
+            (TransactionCommandsCountPerDatabase.Content, ClusterCommandsVersionManager.Base41CommandsVersion,SnapshotEntryType.Command),
+
+            (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
+            (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
+            (RachisLogHistory.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core)
         };
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             for (int i = 0; i < _snapshotEntries.Length; i++)
             {
-                var tuple = _snapshotEntries[i];
-                if (tuple.Entry.Match(slice.Content) == false)
+                var entry = _snapshotEntries[i];
+                if (entry.Name.Match(slice.Content) == false)
                     continue;
 
-                return ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= tuple.Version;
+                switch (entry.Type)
+                {
+                    case SnapshotEntryType.Command:
+                        return ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= entry.Version;
+                    case SnapshotEntryType.Core:
+                        return ClusterCommandsVersionManager.ClusterEngineVersion >= entry.Version;
+                    default:
+                        throw new ArgumentOutOfRangeException($"Unknown type '{entry.Type}'");
+                }
             }
 
             return false;

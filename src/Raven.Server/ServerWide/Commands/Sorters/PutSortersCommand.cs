@@ -10,13 +10,13 @@ namespace Raven.Server.ServerWide.Commands.Sorters
     {
         public List<SorterDefinition> Sorters = new List<SorterDefinition>();
 
-        public PutSortersCommand() : base(null)
+        public PutSortersCommand()
         {
             // for deserialization
         }
 
-        public PutSortersCommand(string databaseName)
-            : base(databaseName)
+        public PutSortersCommand(string databaseName, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
         }
 

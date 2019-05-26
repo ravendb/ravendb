@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
@@ -22,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Configuration
             return new PutClientConfigurationCommand(conventions, context, _configuration);
         }
 
-        private class PutClientConfigurationCommand : RavenCommand
+        private class PutClientConfigurationCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 
@@ -51,6 +52,8 @@ namespace Raven.Client.Documents.Operations.Configuration
                     })
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }
