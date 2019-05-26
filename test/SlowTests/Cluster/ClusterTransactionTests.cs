@@ -36,7 +36,8 @@ namespace SlowTests.Cluster
 
             customSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
             customSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+            customSettings[RavenConfiguration.GetKey(x => x.Server.SendTimeout)] = "30000";
+            customSettings[RavenConfiguration.GetKey(x => x.Server.ReceiveTimeout)] = "30000";
 
             return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
         }

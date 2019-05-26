@@ -61,13 +61,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.TimeBeforeMovingToRehabInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToRehabGraceTime{ get; set; }
         
-        [Description("Tcp connection read/write timeout. (obsolete, use Server.Tcp.SendTimeout and Server.Tcp.ReceiveTimeout instead")]
-        [DefaultValue(15 * 1000)]
-        [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Server.Tcp.SendTimeout", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [ConfigurationEntry("Cluster.TcpTimeoutInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)] //changed to ServerWideOrPerDatabase to prevent incompatibility
-        public TimeSetting TcpConnectionTimeout { get; set; }
-
         [Description("Tcp connection send buffer size in bytes")]
         [DefaultValue(32 * 1024)]
         [SizeUnit(SizeUnit.Bytes)]

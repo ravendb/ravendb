@@ -171,7 +171,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var firstIteration = true;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
                 var receiveFromWorkerTimeout = _parent.Config.ReceiveFromWorkerTimeout.AsTimeSpan;
-                var tcpTimeout = _parent.Config.TcpConnectionTimeout.AsTimeSpan;
+                var tcpTimeout = _parent._server.Server.Configuration.Server.SendTimeout.AsTimeSpan;
                 
                 if (tcpTimeout < receiveFromWorkerTimeout)
                 {
