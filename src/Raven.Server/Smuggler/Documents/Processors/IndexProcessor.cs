@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -58,11 +59,11 @@ namespace Raven.Server.Smuggler.Documents.Processors
             {
                 case IndexType.AutoMap:
                     var autoMapIndexDefinition = (AutoMapIndexDefinition)definition;
-                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapIndexDefinition));
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapIndexDefinition, RaftIdGenerator.NewId()));
                     break;
                 case IndexType.AutoMapReduce:
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)definition;
-                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapReduceIndexDefinition));
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(autoMapReduceIndexDefinition, RaftIdGenerator.NewId()));
                     break;
                 case IndexType.Map:
                 case IndexType.MapReduce:
@@ -76,7 +77,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
                             indexDefinitionField.Value.Analyzer = null;
                         }
                     }
-                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(indexDefinition));
+                    AsyncHelpers.RunSync(() => database.IndexStore.CreateIndex(indexDefinition, RaftIdGenerator.NewId()));
                     break;
                 default:
                     throw new NotSupportedException(indexType.ToString());

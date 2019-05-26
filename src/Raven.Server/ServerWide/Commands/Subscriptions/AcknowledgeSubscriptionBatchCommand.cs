@@ -19,9 +19,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public DateTime LastTimeServerMadeProgressWithDocuments;
 
         // for serialization
-        private AcknowledgeSubscriptionBatchCommand() : base(null) { }
+        private AcknowledgeSubscriptionBatchCommand() { }
 
-        public AcknowledgeSubscriptionBatchCommand(string databaseName) : base(databaseName)
+        public AcknowledgeSubscriptionBatchCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
         }
 

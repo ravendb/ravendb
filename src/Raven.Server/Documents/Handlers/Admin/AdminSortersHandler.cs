@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (input.TryGet("Sorters", out BlittableJsonReaderArray sorters) == false)
                     ThrowRequiredPropertyNameInRequest("Sorters");
 
-                var command = new PutSortersCommand(Database.Name);
+                var command = new PutSortersCommand(Database.Name, GetRaftRequestIdFromQuery());
                 foreach (var sorterToAdd in sorters)
                 {
                     var sorterDefinition = JsonDeserializationServer.SorterDefinition((BlittableJsonReaderObject)sorterToAdd);
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 auditLog.Info($"Sorter {name} DELETE by {clientCert?.Subject} {clientCert?.Thumbprint}");
             }
 
-            var command = new DeleteSorterCommand(name, Database.Name);
+            var command = new DeleteSorterCommand(name, Database.Name, GetRaftRequestIdFromQuery());
             var index = (await ServerStore.SendToLeaderAsync(command)).Index;
 
             await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);

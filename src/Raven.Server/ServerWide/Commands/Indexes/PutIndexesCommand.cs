@@ -17,13 +17,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public string Source { get; set; }
 
-        public PutIndexesCommand() : base(null)
+        public PutIndexesCommand()
         {
             // for deserialization
         }
 
-        public PutIndexesCommand(string databaseName, string source, DateTime createdAt)
-            : base(databaseName)
+        public PutIndexesCommand(string databaseName, string source, DateTime createdAt, string uniqueRequestId)
+            : base(databaseName, uniqueRequestId)
         {
             Source = source;
             CreatedAt = createdAt;

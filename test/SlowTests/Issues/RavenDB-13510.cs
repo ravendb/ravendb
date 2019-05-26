@@ -97,11 +97,25 @@ namespace SlowTests.Issues
 
                 await SetupReplicationAsync(storeA, storeB);
                 EnsureReplicating(storeA, storeB);
-
-                databaseB = await GetDocumentDatabaseInstanceFor(storeB);
-
+                
                 Assert.Equal(oldPutsCount * 2, databaseB.Metrics.Counters.PutsPerSec.Count);
                 Assert.True(databaseB.Metrics.Counters.BytesPutsPerSec.Count >= oldBytesPutsCount * 2);
+
+                oldPutsCount = databaseB.Metrics.Counters.PutsPerSec.Count;
+
+                // increment a single counter
+                using (var session = storeA.OpenSession())
+                {
+                    session.CountersFor("users/0").Increment("myCounter1");
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+
+                // ensure that on the replicated node counter metrics
+                // show a single write (and not entire counter group)   
+
+                Assert.Equal(oldPutsCount + 1, databaseB.Metrics.Counters.PutsPerSec.Count);
             }
         }
     }

@@ -11,12 +11,12 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public string TransformationName { get; set; }
 
-        private RemoveEtlProcessStateCommand() : base(null)
+        public RemoveEtlProcessStateCommand()
         {
             // for deserialization
         }
 
-        public RemoveEtlProcessStateCommand(string databaseName, string configurationName, string transformationName) : base(databaseName)
+        public RemoveEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;

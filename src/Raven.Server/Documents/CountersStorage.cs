@@ -887,7 +887,7 @@ namespace Raven.Server.Documents
         {
             LazyStringValue deletedLocalCounter = null;
             localCounterValues = null;
-            changeType = CounterChangeTypes.Put;
+            changeType = CounterChangeTypes.None;
             var counterName = incomingCountersProp.Name;
 
             if (localCounters.TryGetMember(incomingCountersProp.Name, out object localVal))
@@ -932,7 +932,7 @@ namespace Raven.Server.Documents
                         }
 
                         // blob + blob => put counter
-                        InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
+                        changeType = InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
                         return true;
                     }
 
@@ -971,7 +971,6 @@ namespace Raven.Server.Documents
                                     // conflict => resolve to raw blob and merge change vectors 
                                     MergeBlobAndDeleteVector(context, dbIdsHolder, localCounterValues, deletedCv);
 
-                                    changeType = CounterChangeTypes.None;
                                     localCounters.Modifications = localCounters.Modifications ?? new DynamicJsonValue(localCounters);
                                     localCounters.Modifications[counterName] = localCounterValues;
                                     return true;
@@ -1052,7 +1051,7 @@ namespace Raven.Server.Documents
             return localDbIdsList;
         }
 
-        private void InternalPutCounter(
+        private CounterChangeTypes InternalPutCounter(
             DocumentsOperationContext context,
             BlittableJsonReaderObject counters,
             string counterName,
@@ -1064,6 +1063,8 @@ namespace Raven.Server.Documents
             var existingCount = existingCounter.Length / SizeOfCounterValues;
             var sourceCount = source.Length / SizeOfCounterValues;
             var modified = false;
+
+            var changeType = existingCount == 0 ? CounterChangeTypes.Put : CounterChangeTypes.None;
 
             for (var index = 0; index < sourceCount; index++)
             {
@@ -1077,6 +1078,11 @@ namespace Raven.Server.Documents
                     var localValuePtr = (CounterValues*)existingCounter.Ptr + localDbIdIndex;
                     if (localValuePtr->Etag >= sourceValue->Etag)
                         continue;
+
+                    if (changeType == CounterChangeTypes.None)
+                    {
+                        changeType = CounterChangeTypes.Increment;
+                    }
 
                     localValuePtr->Value = sourceValue->Value;
                     localValuePtr->Etag = sourceValue->Etag;
@@ -1093,9 +1099,16 @@ namespace Raven.Server.Documents
 
             if (modified)
             {
+                if (changeType == CounterChangeTypes.None)
+                {
+                    changeType = CounterChangeTypes.Increment;
+                }
+
                 counters.Modifications = counters.Modifications ?? new DynamicJsonValue(counters);
                 counters.Modifications[counterName] = existingCounter;
             }
+
+            return changeType;
         }
 
         private BlittableJsonReaderObject.RawBlob AddPartialValueToExistingCounter(DocumentsOperationContext context,

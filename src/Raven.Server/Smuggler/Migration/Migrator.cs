@@ -9,6 +9,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
@@ -354,7 +355,7 @@ namespace Raven.Server.Smuggler.Migration
                     }
                 };
 
-                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId());
                 await _serverStore.Cluster.WaitForIndexNotification(index);
             }
         }

@@ -63,7 +63,7 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Subs1",
                     ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
                     Query = "from Users"
-                }, subscriptionState.SubscriptionId, true);
+                }, Guid.NewGuid().ToString(), subscriptionState.SubscriptionId, true);
 
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
 
@@ -124,7 +124,7 @@ namespace SlowTests.Client.Subscriptions
                     ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
                     Query = "from Users as u select {Name:'Jorgen'}"
 
-                }, subscriptionState.SubscriptionId);
+                }, Guid.NewGuid().ToString(), subscriptionState.SubscriptionId);
 
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
 

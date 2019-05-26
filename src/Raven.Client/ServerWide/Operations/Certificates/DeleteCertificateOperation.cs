@@ -2,6 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
@@ -20,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new DeleteCertificateCommand(_thumbprint);
         }
 
-        private class DeleteCertificateCommand : RavenCommand
+        private class DeleteCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly string _thumbprint;
 
@@ -38,6 +39,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Method = HttpMethod.Delete
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

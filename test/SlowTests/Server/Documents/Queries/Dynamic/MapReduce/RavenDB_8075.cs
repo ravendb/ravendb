@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
@@ -19,7 +20,7 @@ where search(Artist, ""Rapper"")
 order by Count as long desc
 select count() as Count, Artist"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from LastFms
@@ -45,7 +46,7 @@ select count() as Count, Artist"));
 from LastFms
 where search(Artist, ""Chri"") and Genre = ""jazz"""));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from LastFms

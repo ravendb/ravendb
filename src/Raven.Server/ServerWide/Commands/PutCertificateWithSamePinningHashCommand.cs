@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public PutCertificateWithSamePinningHashCommand(string name, CertificateDefinition value) : base(name, value)
+        public PutCertificateWithSamePinningHashCommand(string name, CertificateDefinition value, string uniqueRequestId) : base(name, value, uniqueRequestId)
         {
 
         }

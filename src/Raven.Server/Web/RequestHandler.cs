@@ -21,6 +21,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -248,6 +249,27 @@ namespace Raven.Server.Web
         protected bool IsWebsocketRequest()
         {
             return HttpContext.WebSockets.IsWebSocketRequest;
+        }
+
+        protected string GetRaftRequestIdFromQuery()
+        {
+            var guid = GetStringQueryString("raft-request-id", required: false);
+
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion))
+            {
+                if (clientVersion.Build <= 42_009) // TODO: what should be the behaviour with the nightly version 
+                {
+                    guid = guid ?? RaftIdGenerator.DontCareId;
+                }
+            }
+
+#if DEBUG
+            return guid;
+#endif
+
+#pragma warning disable 0162
+            return guid ?? RaftIdGenerator.NewId();
+#pragma warning restore 0162
         }
 
         protected string GetStringFromHeaders(string name)

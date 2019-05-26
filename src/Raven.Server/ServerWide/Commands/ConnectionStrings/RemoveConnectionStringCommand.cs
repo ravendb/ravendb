@@ -10,12 +10,12 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
     {
         public string ConnectionStringName { get; protected set; }
 
-        protected RemoveConnectionStringCommand() : base(null)
+        protected RemoveConnectionStringCommand()
         {
             // for deserialization
         }
 
-        protected RemoveConnectionStringCommand(string connectionStringName, string databaseName) : base(databaseName)
+        protected RemoveConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             ConnectionStringName = connectionStringName;
         }
@@ -33,7 +33,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             // for deserialization
         }
 
-        public RemoveRavenConnectionStringCommand(string connectionStringName, string databaseName) : base(connectionStringName, databaseName)
+        public RemoveRavenConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
         {
             
         }
@@ -52,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             // for deserialization
         }
 
-        public RemoveSqlConnectionStringCommand(string connectionStringName, string databaseName) : base(connectionStringName, databaseName)
+        public RemoveSqlConnectionStringCommand(string connectionStringName, string databaseName, string uniqueRequestId) : base(connectionStringName, databaseName, uniqueRequestId)
         {
 
         }

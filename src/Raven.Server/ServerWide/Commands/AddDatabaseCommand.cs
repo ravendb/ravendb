@@ -14,6 +14,12 @@ namespace Raven.Server.ServerWide.Commands
         public bool Encrypted;
         public bool IsRestore;
 
+        public AddDatabaseCommand() { }
+
+        public AddDatabaseCommand(string uniqueRequestId) : base(uniqueRequestId)
+        {
+        }
+
         public override object FromRemote(object remoteResult)
         {
             var rc = new List<string>();

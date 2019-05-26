@@ -27,6 +27,9 @@ namespace Raven.Client.Documents.Session
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
+            if (entity is string)
+                throw new ArgumentException($"{nameof(GetNames)} requires a tracked entity object, other types such as documentId are not valid.", nameof(entity));
+            
             if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSession(entity);
 
@@ -71,20 +74,25 @@ namespace Raven.Client.Documents.Session
         public void Store(object entity, string name, Stream stream, string contentType = null)
         {
             if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
-                ThrowEntityNotInSession(entity);
+                ThrowEntityNotInSessionOrMissingId(entity);
 
             Store(document.Id, name, stream, contentType);
         }
 
-        protected void ThrowEntityNotInSession(object entity)
+        protected void ThrowEntityNotInSessionOrMissingId(object entity)
         {
             throw new ArgumentException($"{entity} is not associated with the session. Use documentId instead or track the entity in the session.", nameof(entity));
+        }
+
+        protected void ThrowEntityNotInSession(object entity)
+        {
+            throw new ArgumentException($"{entity} is not associated with the session. You need to track the entity in the session.", nameof(entity));
         }
 
         public void Delete(object entity, string name)
         {
             if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
-                ThrowEntityNotInSession(entity);
+                ThrowEntityNotInSessionOrMissingId(entity);
 
             Delete(document.Id, name);
         }
@@ -132,10 +140,10 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(destinationEntity));
 
             if (DocumentsByEntity.TryGetValue(sourceEntity, out DocumentInfo sourceDocument) == false)
-                ThrowEntityNotInSession(sourceEntity);
+                ThrowEntityNotInSessionOrMissingId(sourceEntity);
 
             if (DocumentsByEntity.TryGetValue(destinationEntity, out DocumentInfo destinationDocument) == false)
-                ThrowEntityNotInSession(destinationEntity);
+                ThrowEntityNotInSessionOrMissingId(destinationEntity);
 
             Move(sourceDocument.Id, sourceName, destinationDocument.Id, destinationName);
         }
@@ -183,10 +191,10 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(destinationEntity));
 
             if (DocumentsByEntity.TryGetValue(sourceEntity, out DocumentInfo sourceDocument) == false)
-                ThrowEntityNotInSession(sourceEntity);
+                ThrowEntityNotInSessionOrMissingId(sourceEntity);
 
             if (DocumentsByEntity.TryGetValue(destinationEntity, out DocumentInfo destinationDocument) == false)
-                ThrowEntityNotInSession(destinationEntity);
+                ThrowEntityNotInSessionOrMissingId(destinationEntity);
 
             Copy(sourceDocument.Id, sourceName, destinationDocument.Id, destinationName);
         }

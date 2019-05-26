@@ -63,7 +63,8 @@ namespace Raven.Server.Documents.Handlers
         {
             await DatabaseConfigurations(
                 ServerStore.ModifyDatabaseRevisions,
-                "read-revisions-config",
+                "read-revisions-config", 
+                GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
                 {
                     if (configuration == null || 

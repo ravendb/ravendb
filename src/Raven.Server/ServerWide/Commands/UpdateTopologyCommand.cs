@@ -7,12 +7,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public DatabaseTopology Topology;
 
-        public UpdateTopologyCommand() : base(null)
+        public UpdateTopologyCommand()
         {
             //
         }
 
-        public UpdateTopologyCommand(string databaseName) : base(databaseName)
+        public UpdateTopologyCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
         }
 

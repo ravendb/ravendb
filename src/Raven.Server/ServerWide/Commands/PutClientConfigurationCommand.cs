@@ -11,7 +11,7 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public PutClientConfigurationCommand(ClientConfiguration value)
+        public PutClientConfigurationCommand(ClientConfiguration value, string uniqueRequestId) : base(uniqueRequestId)
         {
             Name = Constants.Configuration.ClientId;
             Value = value;

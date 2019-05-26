@@ -5,6 +5,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Sorters
@@ -26,7 +27,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             return new PutSortersCommand(conventions, context, _sortersToAdd);
         }
 
-        private class PutSortersCommand : RavenCommand
+        private class PutSortersCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject[] _sortersToAdd;
 
@@ -72,6 +73,7 @@ namespace Raven.Client.Documents.Operations.Sorters
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

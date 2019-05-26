@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicArray : DynamicObject, IEnumerable<object>
+    public class DynamicArray : DynamicObject, IOrderedEnumerable<object>
     {
         private readonly IEnumerable<object> _inner;
 
@@ -333,6 +333,33 @@ namespace Raven.Server.Documents.Indexes.Static
         public IEnumerable<dynamic> OrderByDescending(Func<IGrouping<dynamic, dynamic>, dynamic> comparable)
         {
             return new DynamicArray(_inner.Cast<DynamicGrouping>().OrderByDescending(comparable));
+        }
+
+        public IOrderedEnumerable<object> CreateOrderedEnumerable<TKey>(Func<object, TKey> keySelector, IComparer<TKey> comparer, bool descending)
+        {
+            return descending ?
+                new DynamicArray(_inner.OrderByDescending(keySelector, comparer)) :
+                new DynamicArray(_inner.OrderBy(keySelector, comparer));
+        }
+
+        public IEnumerable<dynamic> ThenBy(Func<dynamic, dynamic> comparable)
+        {
+            return new DynamicArray(Enumerable.ThenBy(this, comparable));
+        }
+
+        public IEnumerable<dynamic> ThenBy(Func<dynamic, dynamic> comparable, IComparer<dynamic> comparer)
+        {
+            return new DynamicArray(Enumerable.ThenBy(this, comparable, comparer));
+        }
+
+        public IEnumerable<dynamic> ThenByDescending(Func<dynamic, dynamic> keySelector)
+        {
+            return new DynamicArray(Enumerable.ThenByDescending(this, keySelector));
+        }
+
+        public IEnumerable<dynamic> ThenByDescending(Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
+        {
+            return new DynamicArray(Enumerable.ThenByDescending(this, keySelector, comparer));
         }
 
         public dynamic GroupBy(Func<dynamic, dynamic> keySelector)

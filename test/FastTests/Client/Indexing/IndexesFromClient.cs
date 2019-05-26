@@ -30,7 +30,8 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {new AutoIndexField {Name = "Name1"}}),
+                    Guid.NewGuid().ToString());
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
@@ -49,7 +50,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }), Guid.NewGuid().ToString());
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
@@ -68,8 +69,8 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
-                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name2" } }));
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }), Guid.NewGuid().ToString());
+                await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name2" } }), Guid.NewGuid().ToString());
 
                 var status = await store.Maintenance.SendAsync(new GetIndexingStatusOperation());
 
@@ -500,7 +501,7 @@ namespace FastTests.Client.Indexing
                     }, new HashSet<string>()
                     {
                         "Posts"
-                    }, new[] { "Title", "Desc" }, false));
+                    }, new[] { "Title", "Desc" }, false), Guid.NewGuid().ToString());
 
                     WaitForIndexing(store);
 

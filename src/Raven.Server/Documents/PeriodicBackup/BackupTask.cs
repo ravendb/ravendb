@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -948,7 +949,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                var command = new UpdatePeriodicBackupStatusCommand(_database.Name)
+                var command = new UpdatePeriodicBackupStatusCommand(_database.Name, RaftIdGenerator.NewId())
                 {
                     PeriodicBackupStatus = status
                 };

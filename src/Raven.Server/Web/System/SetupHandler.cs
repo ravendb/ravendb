@@ -15,7 +15,9 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -550,11 +552,9 @@ namespace Raven.Server.Web.System
                 
                 if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {
-                    var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration
-                    {
-                        Disabled = false,
-                        Environment = setupInfo.Environment
-                    }));
+                    var res = await ServerStore.PutValueInClusterAsync(
+                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration {Disabled = false, Environment = setupInfo.Environment},
+                            RaftIdGenerator.DontCareId));
                     await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                 }
                 

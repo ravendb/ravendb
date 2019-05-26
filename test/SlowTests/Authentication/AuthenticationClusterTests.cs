@@ -16,9 +16,11 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -324,7 +326,7 @@ exit 0";
                 leader.ServerCertificateChanged += (sender, args) => mre.Set();
 
                 // This will initiate the refresh cycle, and ask a new certificate from the executable 
-                leader.RefreshClusterCertificate(false);
+                leader.RefreshClusterCertificate(false, RaftIdGenerator.NewId());
 
                 Assert.True(mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2)), "Waited too long");
                 Assert.NotNull(leader.Certificate.Certificate.Thumbprint);

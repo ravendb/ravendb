@@ -1754,10 +1754,14 @@ namespace Raven.Client.Documents.Indexes
                     case "GroupBy":
                     case "OrderBy":
                     case "OrderByDescending":
+                    case "ThenBy":
+                    case "ThenByDescending":
                     case "DefaultIfEmpty":
                     case "Reverse":
                     case "Take":
                     case "Skip":
+                    case "TakeWhile":
+                    case "SkipWhile":
                     case "OfType":
                         return true;
                 }

@@ -43,7 +43,7 @@ namespace Raven.Server.Web.Studio
                             Disabled = false
                         }
                     }
-                }, Database.Name);
+                }, Database.Name, GetRaftRequestIdFromQuery());
 
                 var (index, _) = await ServerStore.SendToLeaderAsync(editRevisions);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);

@@ -30,9 +30,12 @@ using Raven.Server.ServerWide.Commands;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
+using System.Reflection;
 
 namespace Raven.Server.Rachis
 {
+
+
     public class RachisConsensus<TStateMachine> : RachisConsensus
         where TStateMachine : RachisStateMachine, new()
     {
@@ -226,7 +229,7 @@ namespace Raven.Server.Rachis
             };
         }
     }
-    
+
     public abstract class RachisConsensus : IDisposable
     {
         internal abstract RachisStateMachine GetStateMachine();
@@ -282,10 +285,10 @@ namespace Raven.Server.Rachis
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
         private static readonly Slice SnapshotRequestSlice;
-
         internal static readonly Slice EntriesSlice;
-        internal static readonly TableSchema LogsTable;
 
+        internal static readonly TableSchema LogsTable;
+        public readonly RachisLogHistory LogHistory;
         static RachisConsensus()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -349,7 +352,8 @@ namespace Raven.Server.Rachis
 
         protected RachisConsensus(int? seed = null)
         {
-            _rand = seed.HasValue ? new Random(seed.Value) : new Random();            
+            _rand = seed.HasValue ? new Random(seed.Value) : new Random();
+            LogHistory = new RachisLogHistory();
         }
 
         public abstract void Notify(Notification notification);
@@ -418,6 +422,8 @@ namespace Raven.Server.Rachis
                     SetClusterBase(_clusterId);
 
                     InitializeState(context);
+
+                    LogHistory.Initialize(tx, configuration, Log);
 
                     tx.Commit();
                 }
@@ -1115,7 +1121,7 @@ namespace Raven.Server.Rachis
             Debug.Assert(context.Transaction != null);
             
             ValidateTerm(term);
-            
+
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
             long lastIndex;
@@ -1138,6 +1144,9 @@ namespace Raven.Server.Rachis
                 tvb.Add((int)flags);
                 table.Insert(tvb);
             }
+
+            LogHistory.InsertHistoryLog(context, lastIndex, term, cmd);
+
             return lastIndex;
         }
 
@@ -1253,7 +1262,7 @@ namespace Raven.Server.Rachis
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
                 if (firstEntry.Index < lastCommitIndex)
                 {
-                    ThrowFatalError(firstEntry, lastCommitIndex, lastCommitTerm);
+                    ThrowFatalError(firstEntry, GetTermFor(context, firstEntry.Index), lastCommitIndex, lastCommitTerm);
                 }
                 var prevIndex = lastEntryIndex;
 
@@ -1286,6 +1295,8 @@ namespace Raven.Server.Rachis
                             // now we'll find the next item to delete, and do so until we run out of items 
                             // to write
                         } while (table.ReadByKey(key, out reader));
+
+                        LogHistory.CancelHistoryEntriesFrom(context, entry.Index, term, "We have found a divergence in the log, and we now need to cancel from this location forward.");
                     }
 
                     var nested = context.ReadObject(entry.Entry, "entry");
@@ -1307,6 +1318,8 @@ namespace Raven.Server.Rachis
                     {
                         nested.Dispose();
                     }
+
+                    LogHistory.InsertHistoryLog(context, entry.Index, entry.Term, entry.Entry);
                 }
             }
 
@@ -1314,11 +1327,12 @@ namespace Raven.Server.Rachis
             return (lastTopology, lastTopologyIndex);
         }
 
-        private void ThrowFatalError(RachisEntry firstEntry, long lastCommitIndex, long lastCommitTerm)
+        private void ThrowFatalError(RachisEntry firstEntry, long? myTermForTheIndex, long lastCommitIndex, long lastCommitTerm)
         {
             var message =
                 $"FATAL ERROR: got an append entries request with index={firstEntry.Index:#,#;;0} term={firstEntry.Term:#,#;;0} " +
-                $"while my commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}, this means something went wrong badly.";
+                $"while my term for this index is {myTermForTheIndex:#,#;;0}. " +
+                $"(last commit index={lastCommitIndex:#,#;;0} with term={lastCommitTerm:#,#;;0}), this means something went wrong badly.";
             if (Log.IsOperationsEnabled)
             {
                 Log.Operations(message);

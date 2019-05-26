@@ -12,9 +12,9 @@ namespace Raven.Server.ServerWide.Commands.Monitoring.Snmp
             Name = Constants.Monitoring.Snmp.DatabasesMappingKey;
         }
 
-        public UpdateSnmpDatabasesMappingCommand(List<string> databases)
-            : this()
+        public UpdateSnmpDatabasesMappingCommand(List<string> databases, string uniqueRequestId) : base(uniqueRequestId)
         {
+            Name = Constants.Monitoring.Snmp.DatabasesMappingKey;
             Value = databases;
         }
 

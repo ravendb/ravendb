@@ -1,9 +1,11 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Revisions
@@ -22,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Revisions
             return new ConfigureRevisionsCommand(_configuration);
         }
 
-        private class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>
+        private class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>, IRaftCommand
         {
             private readonly RevisionsConfiguration _configuration;
 
@@ -57,6 +59,8 @@ namespace Raven.Client.Documents.Operations.Revisions
 
                 Result = JsonDeserializationClient.ConfigureRevisionsOperationResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 

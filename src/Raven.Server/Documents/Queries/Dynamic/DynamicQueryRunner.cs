@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -142,7 +144,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     throw new IndexDoesNotExistException("Could not find index for a given query.");
 
                 var definition = map.CreateAutoIndexDefinition();
-                index = await _indexStore.CreateIndex(definition);
+                index = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());
                 hasCreatedAutoIndex = true;
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
@@ -150,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     query.WaitForNonStaleResultsTimeout = customStalenessWaitTimeout ?? TimeSpan.FromSeconds(15);
                 }
 
-                var t = CleanupSupersededAutoIndexes(index, map, token)
+                var t = CleanupSupersededAutoIndexes(index, map, RaftIdGenerator.NewId(), token)
                     .ContinueWith(task =>
                     {
                         if (task.Exception != null)
@@ -174,7 +176,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return (index, hasCreatedAutoIndex);
         }
 
-        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, CancellationToken token)
+        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, string raftRequestId, CancellationToken token)
         {
             if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
@@ -236,7 +238,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            await _indexStore.DeleteIndex(supersededIndex.Name);
+                            await _indexStore.DeleteIndex(supersededIndex.Name, $"{raftRequestId}/{supersededIndex.Name}");
                         }
                         catch (IndexDoesNotExistException)
                         {

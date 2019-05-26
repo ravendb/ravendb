@@ -9,7 +9,7 @@ class conflictResolutionScriptSyntax extends dialogViewModelBase {
 
 var maxRecord = 0;
 for (var i = 0; i < docs.length; i++) {
-    maxRecord = Math.max(docs[i].maxRecord, maxRecord);   
+    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);   
 }
 docs[0].MaxRecord = maxRecord;
 

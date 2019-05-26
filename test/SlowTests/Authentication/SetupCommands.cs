@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Commands;
@@ -12,6 +13,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Sparrow.Json;
 
@@ -29,6 +31,7 @@ namespace SlowTests.Authentication
             }
 
             public override bool IsReadRequest => false;
+            
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -52,7 +55,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        private class ForceRenewCertCommand : RavenCommand<ForceRenewResult>
+        private class ForceRenewCertCommand : RavenCommand<ForceRenewResult>, IRaftCommand
         {
             public ForceRenewCertCommand(DocumentConventions conventions, JsonOperationContext context)
             {
@@ -76,9 +79,11 @@ namespace SlowTests.Authentication
                     ThrowInvalidResponse();
                 Result = JsonDeserializationClient.ForceRenewResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        private class SetupLetsEncryptCommand : RavenCommand<byte[]>
+        private class SetupLetsEncryptCommand : RavenCommand<byte[]>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _payload;
 
@@ -114,6 +119,8 @@ namespace SlowTests.Authentication
 
                 Result = ms.ToArray();
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

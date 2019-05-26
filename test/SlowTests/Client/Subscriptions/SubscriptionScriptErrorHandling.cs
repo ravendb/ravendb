@@ -109,7 +109,7 @@ select project(d)
                     AsyncHelpers.RunSync(() => Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
                         EntityToBlittable.ConvertCommandToBlittable(configuration,
-                            context)));
+                            context), Guid.NewGuid().ToString()));
                 }
 
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions()

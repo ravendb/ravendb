@@ -12,9 +12,12 @@ using System.Threading.Tasks;
 using Jint;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
@@ -325,11 +328,21 @@ namespace Raven.Server.Utils.Cli
 
             LoggingSource.Instance.DisableConsoleLogging();
             var prevLogMode = LoggingSource.Instance.LogMode;
-            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+            SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
             Program.WriteServerStatsAndWaitForEsc(cli._server);
-            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+            SetupLogMode(prevLogMode, cli._server.Configuration.Logs);
             Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
+        }
+
+        private static void SetupLogMode(LogMode logMode, LogsConfiguration configuration)
+        {
+            LoggingSource.Instance.SetupLogMode(
+                logMode, 
+                configuration.Path.FullPath, 
+                configuration.RetentionTime?.AsTimeSpan,
+                configuration.RetentionSize?.GetValue(SizeUnit.Bytes),
+                configuration.Compress);
         }
 
         private static bool CommandTopThreads(List<string> args, RavenCli cli)
@@ -381,9 +394,9 @@ namespace Raven.Server.Utils.Cli
 
             LoggingSource.Instance.DisableConsoleLogging();
             var prevLogMode = LoggingSource.Instance.LogMode;
-            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+            SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
             Program.WriteThreadsInfoAndWaitForEsc(cli._server, maxTopThreads, updateIntervalInMs, cpuUsageThreshold);
-            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+            SetupLogMode(prevLogMode, cli._server.Configuration.Logs);
             Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
@@ -493,19 +506,19 @@ namespace Raven.Server.Utils.Cli
                 case "information":
                     if (withConsole)
                         LoggingSource.Instance.EnableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.Information, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+                    SetupLogMode(LogMode.Information, cli._server.Configuration.Logs);
                     WriteText("Logging set to ON (information)", ConsoleColor.Green, cli);
                     break;
                 case "off":
                 case "none":
                     LoggingSource.Instance.DisableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+                    SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
                     WriteText("Logging set to OFF (none)", ConsoleColor.DarkGreen, cli);
                     break;
                 case "operations":
                     if (withConsole)
                         LoggingSource.Instance.EnableConsoleLogging();
-                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath, cli._server.Configuration.Logs.RetentionTime.AsTimeSpan);
+                    SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
                     WriteText("Logging set to ON (operations)", ConsoleColor.DarkGreen, cli);
                     break;
                 case "http-off":
@@ -660,7 +673,7 @@ namespace Raven.Server.Utils.Cli
                     }
                     else
                     {
-                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef)).Result;
+                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(certDef.Thumbprint, certDef, RaftIdGenerator.NewId())).Result;
                         cli._server.ServerStore.Cluster.WaitForIndexNotification(putResult.Index).Wait();
                     }
                 }
@@ -736,7 +749,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password, cli._server.ServerStore, ctx, RaftIdGenerator.NewId()).Wait();
                 }
                 catch (Exception e)
                 {
@@ -774,7 +787,7 @@ namespace Raven.Server.Utils.Cli
             byte[] outputBytes;
             try
             {
-                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore).Result;
+                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore, RaftIdGenerator.NewId()).Result;
             }
             catch (Exception e)
             {
@@ -880,7 +893,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(certBytes, replaceImmediately);
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(certBytes, replaceImmediately, RaftIdGenerator.NewId());
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
@@ -911,7 +924,7 @@ namespace Raven.Server.Utils.Cli
 
             try
             {
-                cli._server.RefreshClusterCertificate(replaceImmediately);
+                cli._server.RefreshClusterCertificate(replaceImmediately, RaftIdGenerator.NewId());
             }
             catch (Exception e)
             {
@@ -1272,11 +1285,11 @@ namespace Raven.Server.Utils.Cli
                             return true;
                         case "log":
                             LoggingSource.Instance.EnableConsoleLogging();
-                            LoggingSource.Instance.SetupLogMode(LogMode.Information, _server.Configuration.Logs.Path.FullPath, _server.Configuration.Logs.RetentionTime.AsTimeSpan);
+                            SetupLogMode(LogMode.Information, _server.Configuration.Logs);
                             break;
                         case "logoff":
                             LoggingSource.Instance.DisableConsoleLogging();
-                            LoggingSource.Instance.SetupLogMode(LogMode.None, _server.Configuration.Logs.Path.FullPath, _server.Configuration.Logs.RetentionTime.AsTimeSpan);
+                            SetupLogMode(LogMode.None, _server.Configuration.Logs);
                             break;
                         case "h":
                         case "help":

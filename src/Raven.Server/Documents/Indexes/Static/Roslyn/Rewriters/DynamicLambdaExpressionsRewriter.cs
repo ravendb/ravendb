@@ -75,9 +75,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 case "Select":
                 case "ToDictionary":
+                case "ToLookup":
                 case "GroupBy":
                 case "OrderBy":
                 case "OrderByDescending":
+                case "ThenBy":
+                case "ThenByDescending":
                 case "Recurse":
                     return Visit(ModifyLambdaForSelect(node, invocation));
                 case "SelectMany":
@@ -97,10 +100,18 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Single":
                 case "Where":
                 case "Count":
+                case "LongCount":
                 case "SingleOrDefault":
                     return Visit(ModifyLambdaForBools(node));
                 case "Zip":
                     return Visit(ModifyLambdaForZip(node));
+                case "Aggregate":
+                case "Join":
+                case "GroupJoin":
+                    return Visit(ModifyLambdaForAggregate(node));
+                case "TakeWhile":
+                case "SkipWhile":
+                    return Visit(ModifyLambdaForTakeSkipWhile(node));
             }
 
             return node;
@@ -184,6 +195,18 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private static SyntaxNode ModifyLambdaForZip(LambdaExpressionSyntax node)
         {
             return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})");
+        }
+
+        private static SyntaxNode ModifyLambdaForAggregate(LambdaExpressionSyntax node)
+        {
+            var cast = node is SimpleLambdaExpressionSyntax ? "Func<dynamic, dynamic>" : "Func<dynamic, dynamic, dynamic>";
+            return SyntaxFactory.ParseExpression($"({cast})({node})");
+        }
+
+        private static SyntaxNode ModifyLambdaForTakeSkipWhile(LambdaExpressionSyntax node)
+        {
+            var cast = node is SimpleLambdaExpressionSyntax ? "Func<dynamic, bool>" : "Func<dynamic, int, bool>";
+            return SyntaxFactory.ParseExpression($"({cast})({node})");
         }
 
         private static CastExpressionSyntax GetAsCastExpression(CSharpSyntaxNode expressionBody)

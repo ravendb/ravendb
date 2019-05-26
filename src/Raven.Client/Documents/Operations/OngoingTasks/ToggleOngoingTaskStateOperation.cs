@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
@@ -36,7 +37,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return new ToggleTaskStateCommand(_taskId, _taskName, _type, _disable);
         }
 
-        private class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>
+        private class ToggleTaskStateCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
             private readonly long _taskId;
             private readonly string _taskName;
@@ -73,6 +74,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             }
 
             public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

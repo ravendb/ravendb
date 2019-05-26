@@ -25,5 +25,13 @@ namespace Raven.Server.ServerWide.Commands
             if (Names.Contains(ServerStore.LicenseStorageKey))
                 throw new RachisApplyException($"Attempted to use {nameof(DeleteMultipleValuesCommand)} to delete a license, use dedicated command for this.");
         }
+
+        public DeleteMultipleValuesCommand()
+        {
+        }
+
+        public DeleteMultipleValuesCommand(string uniqueRequestId) : base(uniqueRequestId)
+        {
+        }
     }
 }

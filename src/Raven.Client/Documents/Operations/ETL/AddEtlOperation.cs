@@ -1,10 +1,12 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.ETL
@@ -23,7 +25,7 @@ namespace Raven.Client.Documents.Operations.ETL
             return new AddEtlCommand(conventions, _configuration);
         }
 
-        private class AddEtlCommand : RavenCommand<AddEtlOperationResult>
+        private class AddEtlCommand : RavenCommand<AddEtlOperationResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly EtlConfiguration<T> _configuration;
@@ -60,6 +62,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
                 Result = JsonDeserializationClient.AddEtlOperationResult(response);
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 

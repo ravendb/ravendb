@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
@@ -30,7 +31,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             return new ReplaceClusterCertificateCommand(_certBytes, _replaceImmediately);
         }
 
-        private class ReplaceClusterCertificateCommand : RavenCommand
+        private class ReplaceClusterCertificateCommand : RavenCommand, IRaftCommand
         {
             private readonly byte[] _certBytes;
             private readonly bool _replaceImmediately;
@@ -64,6 +65,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                 return request;
             }
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

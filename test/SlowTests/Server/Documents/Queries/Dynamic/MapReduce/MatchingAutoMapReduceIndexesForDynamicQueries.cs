@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
+using System.Runtime.CompilerServices;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
@@ -327,7 +328,7 @@ group by Name
 where Name = 'arek'
 select Name, count()"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
@@ -356,7 +357,7 @@ group by Name
 where Name = 'arek'
 select Name, count()"));
 
-                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition(), Guid.NewGuid().ToString()).Wait();
 
                 mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"
 from Users
@@ -374,7 +375,7 @@ select Name, count()"));
 
         protected void add_index(IndexDefinitionBase definition)
         {
-            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));
+            AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()));
         }
 
         protected Index get_index(string name)

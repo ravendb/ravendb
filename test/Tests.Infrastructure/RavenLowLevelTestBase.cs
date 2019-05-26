@@ -133,7 +133,7 @@ namespace FastTests
                         {
                             try
                             {
-                                var (index, _) = await Server.ServerStore.DeleteDatabaseAsync(database, hardDelete: true, fromNodes: new[] { Server.ServerStore.NodeTag });
+                                var (index, _) = await Server.ServerStore.DeleteDatabaseAsync(database, hardDelete: true, fromNodes: new[] { Server.ServerStore.NodeTag }, Guid.NewGuid().ToString());
                                 await Server.ServerStore.Cluster.WaitForIndexNotification(index);
                             }
                             catch (DatabaseDoesNotExistException)

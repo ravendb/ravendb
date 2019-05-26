@@ -14,11 +14,11 @@ namespace Raven.Server.ServerWide.Commands
             databaseRecord.Revisions = Configuration;
         }
 
-        public EditRevisionsConfigurationCommand() : base(null)
+        public EditRevisionsConfigurationCommand()
         {
         }
 
-        public EditRevisionsConfigurationCommand(RevisionsConfiguration configuration, string databaseName) : base(databaseName)
+        public EditRevisionsConfigurationCommand(RevisionsConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
