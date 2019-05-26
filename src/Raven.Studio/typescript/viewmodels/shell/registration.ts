@@ -245,8 +245,7 @@ class registration extends dialogViewModelBase {
                 if (result.Error) {
                     this.renewError(result.Error);
                     this.renewMessage(null);
-                }
-                else {
+                } else {
                     this.renewError(null);
                     this.renewMessage(this.composeRenewMessage(result.SentToEmail, result.NewExpirationDate));
                 }
