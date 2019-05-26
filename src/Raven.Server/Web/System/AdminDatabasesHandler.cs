@@ -1108,6 +1108,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
+                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+
                 var configurationJson = JsonDeserializationCluster.ServerWideBackupConfiguration(configuration);
 
                 if (VerifyBackupFrequency(configurationJson.FullBackupFrequency) == null &&
