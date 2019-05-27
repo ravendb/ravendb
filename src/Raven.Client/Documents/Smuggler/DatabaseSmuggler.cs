@@ -54,9 +54,9 @@ namespace Raven.Client.Documents.Smuggler
                 try
                 {
                     var fileInfo = new FileInfo(toFile);
-                var directoryInfo = fileInfo.Directory;
-                if (directoryInfo != null && directoryInfo.Exists == false)
-                    directoryInfo.Create();
+                    var directoryInfo = fileInfo.Directory;
+                    if (directoryInfo != null && directoryInfo.Exists == false)
+                        directoryInfo.Create();
 
                     using (var fileStream = fileInfo.OpenWrite())
                         await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
@@ -67,9 +67,9 @@ namespace Raven.Client.Documents.Smuggler
                         Logger.Operations("Could not save export file.", e);
 
                     if (e is UnauthorizedAccessException || e is DirectoryNotFoundException || e is IOException)
-                        throw new InvalidOperationException($"Cannot export to selected path {toFile}, please ensure you selected proper filename.");
+                        throw new InvalidOperationException($"Cannot export to selected path {toFile}, please ensure you selected proper filename.", e);
 
-                    throw new InvalidOperationException($"Could not save export file {toFile}.");
+                    throw new InvalidOperationException($"Could not save export file {toFile}.", e);
                 }
             }, token);
         }
