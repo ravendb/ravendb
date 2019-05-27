@@ -1181,6 +1181,8 @@ more responsive application.
             DocumentsById.Clear();
             _knownMissingIds.Clear();
             _countersByDocId?.Clear();
+            DeferredCommands.Clear();
+            DeferredCommandsDictionary.Clear();
         }
 
         /// <summary>
