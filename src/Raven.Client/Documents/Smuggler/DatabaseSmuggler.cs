@@ -51,15 +51,26 @@ namespace Raven.Client.Documents.Smuggler
         {
             return ExportAsync(options, async stream =>
             {
-                var directoryName = Path.GetDirectoryName(toFile);
-                if (Directory.Exists(directoryName) == false)
-                    Directory.CreateDirectory(directoryName);
+                try
+                {
+                    var fileInfo = new FileInfo(toFile);
+                var directoryInfo = fileInfo.Directory;
+                if (directoryInfo != null && directoryInfo.Exists == false)
+                    directoryInfo.Create();
 
-                if (Directory.Exists(toFile))
-                    toFile = Path.Combine(directoryName, $"Dump of {_databaseName} {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm-ss", CultureInfo.InvariantCulture)}");
+                    using (var fileStream = fileInfo.OpenWrite())
+                        await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Could not save export file.", e);
 
-                using (var fileStream = File.OpenWrite(toFile))
-                    await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
+                    if (e is UnauthorizedAccessException || e is DirectoryNotFoundException || e is IOException)
+                        throw new InvalidOperationException($"Cannot export to selected path {toFile}, please ensure you selected proper filename.");
+
+                    throw new InvalidOperationException($"Could not save export file {toFile}.");
+                }
             }, token);
         }
 
