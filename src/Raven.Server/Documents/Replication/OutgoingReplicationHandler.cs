@@ -1100,6 +1100,12 @@ namespace Raven.Server.Documents.Replication
         OutgoingReplicationPerformanceStats[] GetReplicationPerformance();
     }
 
+    public interface IReportIncomingReplicationPerformance
+    {
+        string DestinationFormatted { get; }
+        IncomingReplicationPerformanceStats[] GetReplicationPerformance();
+    }
+
     internal class UpdateSiblingCurrentEtagDto : TransactionOperationsMerger.IReplayableCommandDto<OutgoingReplicationHandler.UpdateSiblingCurrentEtag>
     {
         public ReplicationMessageReply ReplicationBatchReply;
