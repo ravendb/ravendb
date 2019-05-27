@@ -1183,6 +1183,8 @@ more responsive application.
             _countersByDocId?.Clear();
             DeferredCommands.Clear();
             DeferredCommandsDictionary.Clear();
+            GetClusterSession()?.Clear();
+            PendingLazyOperations.Clear();
         }
 
         /// <summary>
