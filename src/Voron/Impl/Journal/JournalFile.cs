@@ -134,7 +134,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// Write a buffer of transactions (from lazy, usually) to the file
         /// </summary>
-        public void Write(long posBy4Kb, byte* p, int numberOf4Kbs)
+        public TimeSpan Write(long posBy4Kb, byte* p, int numberOf4Kbs)
         {
             int posBy4Kbs = 0;
             while (posBy4Kbs < numberOf4Kbs)
@@ -156,7 +156,7 @@ namespace Voron.Impl.Journal
                 _transactionHeaders.Add(*readTxHeader);
             }
 
-            JournalWriter.Write(posBy4Kb, p, numberOf4Kbs);
+            return JournalWriter.Write(posBy4Kb, p, numberOf4Kbs);
         }
 
         private static void MathFailure(int numberOf4Kbs)
@@ -167,7 +167,7 @@ namespace Voron.Impl.Journal
         /// <summary>
         /// write transaction's raw page data into journal
         /// </summary>
-        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
+        public UpdatePageTranslationTableAndUnusedPagesAction Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch, out TimeSpan writeToJournalDuration)
         {
             var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.BoxedInstanceInt64);
             var cur4KbPos = _writePosIn4Kb;
@@ -175,12 +175,12 @@ namespace Voron.Impl.Journal
             Debug.Assert(pages.NumberOf4Kbs > 0);
 
             UpdatePageTranslationTable(tx, _unusedPagesHashSetPool, ptt);
-            
+
             if (tx.IsLazyTransaction == false && (lazyTransactionScratch == null || lazyTransactionScratch.HasDataInBuffer() == false))
             {
                 try
                 {
-                    Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
+                    writeToJournalDuration = Write(cur4KbPos, pages.Base, pages.NumberOf4Kbs);
                 }
                 catch (Exception e)
                 {
@@ -207,7 +207,7 @@ namespace Voron.Impl.Journal
                 {
                     try
                     {
-                        lazyTransactionScratch.WriteBufferToFile(this, tx);
+                        writeToJournalDuration = lazyTransactionScratch.WriteBufferToFile(this, tx);
                     }
                     catch (Exception e)
                     {
@@ -218,6 +218,7 @@ namespace Voron.Impl.Journal
                 else
                 {
                     lazyTransactionScratch.EnsureHasExistingReadTransaction(tx);
+                    writeToJournalDuration = TimeSpan.Zero;
                 }
             }
 

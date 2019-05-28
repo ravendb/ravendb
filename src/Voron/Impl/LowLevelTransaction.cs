@@ -964,34 +964,27 @@ namespace Voron.Impl
         {
             // In the case of non-lazy transactions, we must flush the data from older lazy transactions
             // to ensure the sequentiality of the data.
-            Stopwatch sp = null;
-            if (_requestedCommitStats != null)
-            {
-                sp = Stopwatch.StartNew();
-            }
 
-            string journalFilePath;
-            CompressedPagesResult numberOfWrittenPages;
             try
             {
-                numberOfWrittenPages = _journal.WriteToJournal(this, out journalFilePath);
+                var numberOfWrittenPages = _journal.WriteToJournal(this, out var journalFilePath, out var writeToJournalDuration);
                 FlushedToJournal = true;
                 _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
+
+                if (_requestedCommitStats != null)
+                {
+                    _requestedCommitStats.WriteToJournalDuration = writeToJournalDuration;
+                    _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
+                    _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
+                    _requestedCommitStats.JournalFilePath = journalFilePath;
+                }
             }
             catch
             {
                 _disposed |= TxState.Errored;
                 throw;
-            }
-
-            if (_requestedCommitStats != null)
-            {
-                _requestedCommitStats.WriteToJournalDuration = sp.Elapsed;
-                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
-                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
-                _requestedCommitStats.JournalFilePath = journalFilePath;
             }
         }
 
@@ -1108,6 +1101,7 @@ namespace Voron.Impl
 
             RolledBack = true;
         }
+
         public void RetrieveCommitStats(out CommitStats stats)
         {
             _requestedCommitStats = stats = new CommitStats();
