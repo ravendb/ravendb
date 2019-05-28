@@ -16,3 +16,16 @@ rvn_get_system_information(struct SYSTEM_INFORMATION *sys_info, int32_t *detaile
 
     return SUCCESS;
 }
+
+int32_t
+rvn_get_path_disk_space(const char* path, uint64_t* total_free_bytes, uint64_t* total_size_bytes, int32_t* detailed_error_code)
+{
+    *detailed_error_code = 0;
+
+    if (!GetDiskFreeSpaceEx(path, NULL, total_size_bytes, total_free_bytes)) {
+        *detailed_error_code = GetLastError();
+        return FAIL_STAT_FILE;
+    }
+
+    return SUCCESS;
+}
