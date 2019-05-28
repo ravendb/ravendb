@@ -9,23 +9,28 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class SetDatabaseDynamicDistributionOperation : IServerOperation<bool>
+    public class SetDatabaseDynamicDistributionOperation : IServerOperation
     {
         private readonly bool _allowDynamicDistribution;
         private readonly string _databaseName;
 
         public SetDatabaseDynamicDistributionOperation(string databaseName, bool allowDynamicDistribution)
         {
+            if (string.IsNullOrEmpty(databaseName))
+            {
+                throw new ArgumentException("databaseName should not be null or empty");
+            }
             _allowDynamicDistribution = allowDynamicDistribution;
             _databaseName = databaseName;
         }
 
-        public RavenCommand<bool> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+
+        RavenCommand IServerOperation.GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new SetDatabaseDynamicDistributionCommand(_databaseName, _allowDynamicDistribution);
         }
 
-        private class SetDatabaseDynamicDistributionCommand : RavenCommand<bool>, IRaftCommand
+        private class SetDatabaseDynamicDistributionCommand : RavenCommand, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly bool _allowDynamicDistribution;
@@ -46,14 +51,6 @@ namespace Raven.Client.ServerWide.Operations
                 {
                     Method = HttpMethod.Post
                 };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                Result = _allowDynamicDistribution;
             }
 
             public string RaftUniqueRequestId => RaftIdGenerator.NewId();
