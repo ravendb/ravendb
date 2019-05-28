@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Tests.Infrastructure;
@@ -34,12 +36,17 @@ namespace SlowTests.Cluster
             {
                 store.Maintenance.Server.Send(new SetDatabaseDynamicDistribution(store.Database, true));
                 await DisposeAndRemoveServer(res.Servers.First());
-                var wait = (moveToRehabGraceTime + replicaTimeout) * 10 * 1000;
+                var wait = (moveToRehabGraceTime + replicaTimeout)* 10 * 1000;
+                if (Debugger.IsAttached)
+                {
+                    wait *= 10;
+                }
+                DatabaseTopology dbToplogy;
                 var condition = SpinWait.SpinUntil(() =>
                     {
-                        var dbToplogy = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName)).Topology;
+                        dbToplogy = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName)).Topology;
                         return dbToplogy.AllNodes.Contains(notInDbGroup.ServerStore.NodeTag);
-                    }, wait);
+                    }, wait);                
                 Assert.True(condition, $"Waited too long ({wait}ms)for database to move to a new node");
             }
 
