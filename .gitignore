@@ -119,4 +119,5 @@ temp
 /test/Tryouts/Databases/*
 bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Server/*.DotSettings
-/src/librvnpal/osxcross
+/src/Raven.Pal/osxcross
+/src/Raven.Pal/*.nativecodeanalysis.xml

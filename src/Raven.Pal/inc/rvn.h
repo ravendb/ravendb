@@ -97,6 +97,9 @@ rvn_discard_virtual_memory(void* address, int64_t size, int32_t* detailed_error_
 EXPORT int32_t
 rvn_test_storage_durability(const char *temp_file_name, int32_t *detailed_error_code);
 
+EXPORT int32_t
+rvn_get_path_disk_space(const char * path, uint64_t* total_free_bytes, uint64_t* total_size_bytes, int32_t* detailed_error_code);
+
 /* For internal use: */
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);
