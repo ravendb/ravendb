@@ -34,7 +34,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/configuration/server-wide/backup?name={_name}";
+                url = $"{node.Url}/admin/configuration/server-wide/backup?name={Uri.EscapeDataString(_name)}";
 
                 var request = new HttpRequestMessage
                 {
