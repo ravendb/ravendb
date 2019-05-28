@@ -690,8 +690,6 @@ namespace Raven.Server.Documents.Replication
                     continue;
                 }
                 externalReplication.ConnectionString = connectionString;
-                externalReplication.Database = connectionString.Database;
-                externalReplication.Url = connectionString.TopologyDiscoveryUrls?.First();
             }
             StartOutgoingConnections(newDestinations, external: true);
 
@@ -1019,10 +1017,18 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForFixedTopology(remoteDatabaseUrls,
                     pullReplicationAsSink.ConnectionString.Database, certificate, DocumentConventions.Default))
                 {
-                    var cmd = new GetTcpInfoForRemoteTaskCommand(ExternalReplicationTag , database, remoteTask);
-                    requestExecutor.Execute(cmd, ctx);
-                    pullReplicationAsSink.Url = requestExecutor.Url;
-                    pullReplicationAsSink.Database = database;
+                    var cmd = new GetTcpInfoForRemoteTaskCommand(ExternalReplicationTag, database, remoteTask);
+
+                    try
+                    {
+                        requestExecutor.Execute(cmd, ctx);
+                    }
+                    finally
+                    {
+                        pullReplicationAsSink.Url = requestExecutor.Url;
+                        pullReplicationAsSink.Database = database;
+                    }
+
                     return cmd.Result;
                 }
             }
@@ -1036,9 +1042,17 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var cmd = new GetTcpInfoCommand("external-replication", database);
-                requestExecutor.Execute(cmd, ctx);
-                exNode.Database = database;
-                exNode.Url = requestExecutor.Url;
+                try
+                {
+                    requestExecutor.Execute(cmd, ctx);
+                }
+                finally
+                {
+                    // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
+                    exNode.Database = database;
+                    exNode.Url = requestExecutor.Url;
+                }
+
                 return cmd.Result;
             }
         }
