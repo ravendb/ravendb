@@ -240,6 +240,10 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
                                 }
                                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
                             }
+                        })
+                        .fail(() => {
+                            // we failed to start the backup task
+                            this.backupNowInProgress(false);
                         });
                         // backupNowInProgress is set to false after operation is finished
                 }
