@@ -38,6 +38,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -1139,7 +1140,20 @@ namespace Raven.Server.Web.System
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson);
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
-                NoContentStatus();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (context.OpenReadTransaction())
+                {
+                    var backupName = ServerStore.Cluster.GetServerWideBackupNameByTaskId(context, newIndex);
+                    if (backupName == null)
+                        throw new InvalidOperationException($"Backup name is null for server wide backup with task id: {newIndex}");
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(PutServerWideBackupConfigurationResponse.Name));
+                    writer.WriteString(backupName);
+
+                    writer.WriteEndObject();
+                }
             }
 
             CrontabSchedule VerifyBackupFrequency(string backupFrequency)
@@ -1151,31 +1165,41 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteServerWideBackupConfigurationCommand()
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync();
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+            var name = GetStringQueryString("name", required: true);
 
-                NoContentStatus();
-            }
+            var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name);
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+            NoContentStatus();
         }
 
         [RavenAction("/admin/configuration/server-wide/backup", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetServerWideBackupConfigurationCommand()
         {
+            var name = GetStringQueryString("name", required: false);
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var blittable = ServerStore.Cluster.Read(context, ClusterStateMachine.BackupTemplateConfigurationName);
-                if (blittable == null)
+                var backups = ServerStore.Cluster.GetServerWideBackupConfigurations(context, name);
+
+                writer.WriteStartObject();
+
+                var isFirst = true;
+                writer.WritePropertyName(nameof(GetServerWideBackupConfigurationsResponse.Results));
+                writer.WriteStartArray();
+                foreach (var backup in backups)
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+                    writer.WriteObject(backup);
                 }
-                else
-                {
-                    context.Write(writer, blittable);
-                }
+
+                writer.WriteEndArray();
+                writer.WriteEndObject();
 
                 return Task.CompletedTask;
             }

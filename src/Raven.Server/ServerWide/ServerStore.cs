@@ -1489,9 +1489,9 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
-        public Task<(long Index, object Result)> DeleteServerWideBackupConfigurationAsync()
+        public Task<(long Index, object Result)> DeleteServerWideBackupConfigurationAsync(string configurationName)
         {
-            var command = new DeleteServerWideBackupConfigurationCommand();
+            var command = new DeleteServerWideBackupConfigurationCommand(configurationName);
 
             return SendToLeaderAsync(command);
         }

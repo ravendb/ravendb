@@ -8,28 +8,30 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 {
     public class DeleteServerWideBackupConfigurationOperation : IServerOperation
     {
-        public DeleteServerWideBackupConfigurationOperation()
+        private readonly string _name;
+
+        public DeleteServerWideBackupConfigurationOperation(string name)
         {
+            _name = name ?? throw new ArgumentNullException(nameof(name));
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutServerWideClientConfigurationCommand(conventions, context);
+            return new PutServerWideClientConfigurationCommand(_name);
         }
 
         private class PutServerWideClientConfigurationCommand : RavenCommand
         {
-            public PutServerWideClientConfigurationCommand(DocumentConventions conventions, JsonOperationContext context)
+            private readonly string _name;
+
+            public PutServerWideClientConfigurationCommand(string name)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
-                if (context == null)
-                    throw new ArgumentNullException(nameof(context));
+                _name = name ?? throw new ArgumentNullException(nameof(name));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/configuration/server-wide/backup";
+                url = $"{node.Url}/admin/configuration/server-wide/backup?name={_name}";
 
                 return new HttpRequestMessage
                 {

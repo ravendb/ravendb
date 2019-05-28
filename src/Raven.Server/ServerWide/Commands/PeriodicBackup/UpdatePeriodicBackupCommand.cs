@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             {
                 Configuration.Name = record.EnsureUniqueTaskName(Configuration.GetDefaultTaskName());
             }
-            else if (Configuration.Name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase))
+            else if (Configuration.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Can't update task name '{Configuration.Name}', because it is a server wide backup task");
             }

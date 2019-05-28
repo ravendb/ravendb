@@ -72,7 +72,7 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema IdentitiesSchema;
         public static readonly TableSchema CertificatesSchema;
 
-        public static string BackupTemplateConfigurationName = "server-wide/configuration/backup";
+        public static string ServerWideBackupConfigurationsKey = "server-wide/backup/configurations";
 
         public enum CompareExchangeTable
         {
@@ -366,7 +366,7 @@ namespace Raven.Server.ServerWide
                         ConfirmServerCertificateReplaced(context, cmd, index, serverStore);
                         break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
-                        UpdateValue<List<string>>(context, type, cmd, index, leader);
+                        UpdateValue<List<string>>(context, type, cmd, index);
                         break;
                     case nameof(PutLicenseCommand):
                         PutValue<License>(context, type, cmd, index);
@@ -375,11 +375,11 @@ namespace Raven.Server.ServerWide
                         PutValue<LicenseLimits>(context, type, cmd, index);
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
-                        PutValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, cmd, index);
+                        var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
                         break;
                     case nameof(DeleteServerWideBackupConfigurationCommand):
-                        DeleteValue(context, type, cmd, index, skipNotifyValueChanged: true);
+                        UpdateValue<string>(context, type, cmd, index, skipNotifyValueChanged: true);
                         DeleteServerWideBackupConfigurationFromAllDatabases(context, type, cmd, index);
                         break;
                     case nameof(PutCertificateWithSamePinningHashCommand):
@@ -1303,31 +1303,32 @@ namespace Raven.Server.ServerWide
 
                     BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded()
                     {
-                        var backupTemplate = Read(context, BackupTemplateConfigurationName);
-                        if (backupTemplate == null)
-                            return currentDatabaseRecord;
-
-                        var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(backupTemplate);
-                        PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(configuration, addDatabaseCommand.Name);
-
-                        var periodicBackups = addDatabaseCommand.Record.PeriodicBackups;
-                        long? oldTaskId = null;
-
-                        foreach (var periodicBackup in periodicBackups)
+                        if (items.ReadByKey(valueNameLowered, out _))
                         {
-                            if (periodicBackup.Name == null)
-                                continue;
-                            
-                            if (periodicBackup.Name.Equals(ServerWideBackupConfiguration.ConfigurationName))
-                            {
-                                periodicBackups.Remove(periodicBackup);
-                                oldTaskId = periodicBackup.TaskId;
-                                break;
-                            }
+                            // the backup tasks cannot be changed by modifying the database record
+                            // (only by using the dedicated UpdatePeriodicBackup command)
+                            return currentDatabaseRecord;
                         }
 
-                        configuration.TaskId = oldTaskId ?? index;
-                        periodicBackups.Add(configuration);
+                        var serverWideBackups = Read(context, ServerWideBackupConfigurationsKey);
+                        if (serverWideBackups == null)
+                            return currentDatabaseRecord;
+
+                        var propertyNames = serverWideBackups.GetPropertyNames();
+                        if (propertyNames.Length == 0)
+                            return currentDatabaseRecord;
+
+                        // add the server wide backup configurations
+                        foreach (var propertyName in propertyNames)
+                        {
+                            if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
+                                continue;
+
+                            var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
+                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name);
+                            addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
+                        }
+                        
                         return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
                     }
                 }
@@ -1373,7 +1374,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void DeleteValue(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
+        private void DeleteValue(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             Exception exception = null;
             DeleteValueCommand delCmd = null;
@@ -1393,9 +1394,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, delCmd?.AdditionalDebugInformation(exception));
-
-                if (skipNotifyValueChanged == false)
-                    NotifyValueChanged(context, type, index);
+                NotifyValueChanged(context, type, index);
             }
         }
 
@@ -1480,7 +1479,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private unsafe void UpdateValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe T UpdateValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
         {
             UpdateValueCommand<T> command = null;
             Exception exception = null;
@@ -1501,11 +1500,12 @@ namespace Raven.Server.ServerWide
                         previousValue = new BlittableJsonReaderObject(ptr, size, context);
                     }
 
-                    var newValue = command.GetUpdatedValue(context, previousValue);
+                    var newValue = command.GetUpdatedValue(context, previousValue, index);
                     if (newValue == null)
-                        return;
+                        return default;
 
                     UpdateValue(index, items, valueNameLowered, valueName, newValue);
+                    return command.Value;
                 }
             }
             catch (Exception e)
@@ -1516,11 +1516,55 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, command?.AdditionalDebugInformation(exception));
-                NotifyValueChanged(context, type, index);
+
+                if (skipNotifyValueChanged == false)
+                    NotifyValueChanged(context, type, index);
             }
         }
 
-        private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, bool skipNotifyValueChanged = false)
+        public string GetServerWideBackupNameByTaskId(TransactionOperationContext context, long taskId)
+        {
+            var configurationsBlittable = Read(context, ServerWideBackupConfigurationsKey);
+            if (configurationsBlittable == null)
+                return null;
+
+            foreach (var propertyName in configurationsBlittable.GetPropertyNames())
+            {
+                if (configurationsBlittable.TryGet(propertyName, out BlittableJsonReaderObject serverWideBackupBlittable) == false)
+                    continue;
+
+                if (serverWideBackupBlittable.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long taskIdFromBackup) == false)
+                    continue;
+
+                if (taskId == taskIdFromBackup)
+                {
+                    serverWideBackupBlittable.TryGet(nameof(ServerWideBackupConfiguration.Name), out string backupName);
+                    return backupName;
+                }
+            }
+
+            return null;
+        }
+
+        public IEnumerable<BlittableJsonReaderObject> GetServerWideBackupConfigurations(TransactionOperationContext context, string name)
+        {
+            var configurationsBlittable = Read(context, ServerWideBackupConfigurationsKey);
+            if (configurationsBlittable == null)
+                yield break;
+
+            foreach (var propertyName in configurationsBlittable.GetPropertyNames())
+            {
+                if (name != null && propertyName.Equals(name, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                if (configurationsBlittable.TryGet(propertyName, out BlittableJsonReaderObject serverWideBackupBlittable))
+                {
+                    yield return serverWideBackupBlittable;
+                }
+            }
+        }
+
+        private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             Exception exception = null;
             PutValueCommand<T> command = null;
@@ -1547,9 +1591,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, command.AdditionalDebugInformation(exception));
-
-                if (skipNotifyValueChanged == false)
-                    NotifyValueChanged(context, type, index);
+                NotifyValueChanged(context, type, index);
             }
         }
 
@@ -2677,11 +2719,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
         {
-            if (cmd.TryGet(nameof(PutServerWideBackupConfigurationCommand.Value), out BlittableJsonReaderObject configBlittable) == false)
-                throw new RachisInvalidOperationException($"Couldn't find the Value for command type: {type}");
+            if (serverWideBackupConfiguration == null)
+                throw new RachisInvalidOperationException($"Server wide backup configuration is null for commmand type: {type}");
 
+            if (serverWideBackupConfiguration.Name == null)
+                throw new RachisInvalidOperationException($"Server wide backup configuration name is null or empty for command type: {type}");
+
+            // the server wide backup name might have changed
+            var serverWideBlittable = context.ReadObject(serverWideBackupConfiguration.ToJson(), "server-wide-configuration");
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             const string dbKey = "db/";
@@ -2695,12 +2742,15 @@ namespace Raven.Server.ServerWide
                     long? oldTaskId = null;
 
                     var newBackups = new DynamicJsonArray();
+                    var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
+                    var databaseName = key.Substring(dbKey.Length);
+                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName);
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
                     {
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            if (IsServerWideBackup(backup))
+                            if (IsServerWideBackupWithTaskName(backup, periodicBackupConfiguration.Name))
                             {
                                 if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
                                     oldTaskId = taskId;
@@ -2714,11 +2764,8 @@ namespace Raven.Server.ServerWide
 
                     using (oldDatabaseRecord)
                     {
-                        var serverWideConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configBlittable);
-                        var databaseName = key.Substring(dbKey.Length);
-                        PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(serverWideConfiguration, databaseName);
-                        serverWideConfiguration.TaskId = oldTaskId ?? index;
-                        newBackups.Add(serverWideConfiguration.ToJson());
+                        periodicBackupConfiguration.TaskId = oldTaskId ?? index;
+                        newBackups.Add(periodicBackupConfiguration.ToJson());
 
                         oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                         {
@@ -2736,10 +2783,17 @@ namespace Raven.Server.ServerWide
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
+            if (cmd.TryGet(nameof(DeleteServerWideBackupConfigurationCommand.Value), out string backupNameToDelete) == false)
+                throw new RachisInvalidOperationException($"Cannot find backup name to delete for command: {type}");
+
+            if (string.IsNullOrWhiteSpace(backupNameToDelete))
+                throw new RachisInvalidOperationException($"Backup name to delete cannot be null or white space for command type: {type}");
+
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+            var databaseRecordTaskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(backupNameToDelete);
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -2755,7 +2809,7 @@ namespace Raven.Server.ServerWide
                     var removedServerWideBackup = false;
                     foreach (BlittableJsonReaderObject backup in backups)
                     {
-                        if (IsServerWideBackup(backup))
+                        if (IsServerWideBackupWithTaskName(backup, databaseRecordTaskName))
                         {
                             removedServerWideBackup = true;
                             continue;
@@ -2783,10 +2837,11 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
         }
 
-        private bool IsServerWideBackup(BlittableJsonReaderObject backup)
+        private bool IsServerWideBackupWithTaskName(BlittableJsonReaderObject backup, string backupNameToFind)
         {
-            return backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string name) &&
-                   name != null && name.Equals(ServerWideBackupConfiguration.ConfigurationName, StringComparison.OrdinalIgnoreCase);
+            return backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName) &&
+                   backupName != null &&
+                   backupNameToFind.Equals(backupName, StringComparison.OrdinalIgnoreCase);
         }
 
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)

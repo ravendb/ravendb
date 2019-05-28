@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -29,6 +30,10 @@ namespace Raven.Client.Documents.Operations
     }
 
     internal class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
+    {
+    }
+
+    internal class GetServerWideBackupConfigurationsResponse : ResultsResponse<ServerWideBackupConfiguration>
     {
     }
 }
