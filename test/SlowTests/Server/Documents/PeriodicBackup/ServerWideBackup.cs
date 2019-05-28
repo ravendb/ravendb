@@ -12,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.ServerWide.Commands;
 using Sparrow.Platform;
 using Xunit;
 
@@ -55,8 +56,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 };
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
-                var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation());
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+                Assert.NotNull(serverWideConfiguration);
+
                 ValidateServerWideConfiguration(serverWideConfiguration, putConfiguration);
 
                 // the configuration is applied to existing databases
@@ -79,20 +82,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 putConfiguration.S3Settings.RemoteFolderName += "/folder2";
                 putConfiguration.AzureSettings.RemoteFolderName += "/folder3";
                 putConfiguration.FtpSettings.Url += "/folder4";
+                putConfiguration.Name = serverWideConfiguration.Name;
 
-                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
-                serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation());
+                result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
                 ValidateServerWideConfiguration(serverWideConfiguration, putConfiguration);
 
                 record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(1, record1.PeriodicBackups.Count);
                 ValidateBackupConfiguration(serverWideConfiguration, record1.PeriodicBackups.First(), store.Database);
+
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(1, record2.PeriodicBackups.Count);
                 ValidateBackupConfiguration(serverWideConfiguration, record2.PeriodicBackups.First(), newDbName);
             }
         }
 
         [Fact]
-        public async Task UpdateOfServerWideBackupThroughUpdatePeriodicBackupFails()
+        public async Task UpdateServerWideBackupThroughUpdatePeriodicBackupFails()
         {
             using (var store = GetDocumentStore())
             {
@@ -116,17 +123,61 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 2 * * 1"
                 };
 
+                var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                var expectedError = $"Can't update task id: {currentBackupConfiguration.TaskId}, name: 'Server Wide Backup Configuration', because it is a server wide backup task";
+                var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server wide backup task";
                 Assert.Contains(expectedError, e.Message);
 
                 backupConfiguration.TaskId = 0;
                 backupConfiguration.Name = currentBackupConfiguration.Name;
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                Assert.Contains("Can't update task name 'Server Wide Backup Configuration', because it is a server wide backup task", e.Message);
+                expectedError = $"Can't update task name '{taskName}', because it is a server wide backup task";
+                Assert.Contains(expectedError, e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
-                expectedError = $"Can't update task id: {serverWideBackupTaskId}, name: 'Server Wide Backup Configuration', because it is a server wide backup task";
+                expectedError = $"Can't delete task id: {serverWideBackupTaskId}, name: '{taskName}', because it is a server wide backup task";
+                Assert.Contains(expectedError, e.Message);
+            }
+        }
+
+        [Fact]
+        public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
+                var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
+                var backupConfiguration = new PeriodicBackupConfiguration
+                {
+                    Disabled = true,
+                    TaskId = currentBackupConfiguration.TaskId,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
+                var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
+                var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server wide backup task";
+                Assert.Contains(expectedError, e.Message);
+
+                backupConfiguration.TaskId = 0;
+                backupConfiguration.Name = currentBackupConfiguration.Name;
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
+                expectedError = $"Can't update task name '{taskName}', because it is a server wide backup task";
+                Assert.Contains(expectedError, e.Message);
+
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
+                expectedError = $"Can't delete task id: {serverWideBackupTaskId}, name: '{taskName}', because it is a server wide backup task";
                 Assert.Contains(expectedError, e.Message);
             }
         }
@@ -206,7 +257,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task CanDeleteServerWideBackup()
+        public async Task CanCreateMoreThanOneServerWideBackup()
         {
             using (var store = GetDocumentStore())
             {
@@ -219,23 +270,93 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
 
+                putConfiguration.FtpSettings = new FtpSettings
+                {
+                    Disabled = true,
+                    Url = "http://url:8080"
+                };
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                putConfiguration.AzureSettings = new AzureSettings
+                {
+                    Disabled = true,
+                    AccountKey = "test"
+                };
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                var serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(3, serverWideBackups.Length);
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(3, databaseRecord.PeriodicBackups.Count);
+
+                // update one of the tasks
+                var toUpdate = serverWideBackups[1];
+                toUpdate.BackupType = BackupType.Snapshot;
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(toUpdate));
+
+                serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(3, serverWideBackups.Length);
+
+                databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(3, databaseRecord.PeriodicBackups.Count);
+
+                // new database includes all server wide backups
+                var newDbName = store.Database + "-testDatabase";
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
+                databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(3, databaseRecord.PeriodicBackups.Count);
+            }
+        }
+
+        [Fact]
+        public async Task CanDeleteServerWideBackup()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                var result1 = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                var result2 = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
                 var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                Assert.Equal(1, record1.PeriodicBackups.Count);
+                Assert.Equal(2, record1.PeriodicBackups.Count);
+                var serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(2, serverWideBackups.Length);
 
                 // the configuration is applied to new databases
                 var newDbName = store.Database + "-testDatabase";
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
                 var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
-                Assert.Equal(1, record2.PeriodicBackups.Count);
+                Assert.Equal(2, record2.PeriodicBackups.Count);
 
-                await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation());
-                var serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation());
+                await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation(result1.Name));
+                var serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result1.Name));
                 Assert.Null(serverWideBackupConfiguration);
+                serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(1, serverWideBackups.Length);
 
                 // verify that the server wide backup was deleted from all databases
                 record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                Assert.Equal(0, record1.PeriodicBackups.Count);
+                Assert.Equal(1, record1.PeriodicBackups.Count);
+                Assert.Equal($"{ServerWideBackupConfiguration.NamePrefix}, {putConfiguration.GetDefaultTaskName()} #2", record1.PeriodicBackups.First().Name);
+                record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(1, record2.PeriodicBackups.Count);
+                Assert.Equal($"{ServerWideBackupConfiguration.NamePrefix}, {putConfiguration.GetDefaultTaskName()} #2", record2.PeriodicBackups.First().Name);
+                
+                await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation(result2.Name));
+                serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result2.Name));
+                Assert.Null(serverWideBackupConfiguration);
+                serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                Assert.Equal(0, serverWideBackups.Length);
 
+                record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(0, record1.PeriodicBackups.Count);
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(0, record2.PeriodicBackups.Count);
             }
@@ -243,8 +364,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private static void ValidateServerWideConfiguration(ServerWideBackupConfiguration serverWideConfiguration, ServerWideBackupConfiguration putConfiguration)
         {
-            Assert.Equal(ServerWideBackupConfiguration.ConfigurationName, serverWideConfiguration.Name);
-            Assert.Equal(putConfiguration.Name, serverWideConfiguration.Name);
+            Assert.Equal(serverWideConfiguration.Name, putConfiguration.Name ?? putConfiguration.GetDefaultTaskName());
             Assert.Equal(putConfiguration.Disabled, serverWideConfiguration.Disabled);
             Assert.Equal(putConfiguration.FullBackupFrequency, serverWideConfiguration.FullBackupFrequency);
             Assert.Equal(putConfiguration.IncrementalBackupFrequency, serverWideConfiguration.IncrementalBackupFrequency);
@@ -258,10 +378,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal(putConfiguration.FtpSettings.Url, serverWideConfiguration.FtpSettings.Url);
         }
 
-        private static void ValidateBackupConfiguration(ServerWideBackupConfiguration serverWideConfiguration, 
-            PeriodicBackupConfiguration backupConfiguration, string databaseName)
+        private static void ValidateBackupConfiguration(ServerWideBackupConfiguration serverWideConfiguration, PeriodicBackupConfiguration backupConfiguration, string databaseName)
         {
-            Assert.Equal(serverWideConfiguration.Name, backupConfiguration.Name);
+            Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(serverWideConfiguration.Name), backupConfiguration.Name);
             Assert.Equal(serverWideConfiguration.Disabled, backupConfiguration.Disabled);
             Assert.Equal(serverWideConfiguration.FullBackupFrequency, backupConfiguration.FullBackupFrequency);
             Assert.Equal(serverWideConfiguration.IncrementalBackupFrequency, backupConfiguration.IncrementalBackupFrequency);
