@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Replication
                 Database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
                 Database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
                 Database.ReplicationLoader.OutgoingReplicationConnectionErrored -= OutgoingReplicationConnectionFailed;
-                Database.ReplicationLoader.IncomingReplicationConnectionErrored += IncomingReplicationConnectionFailed;
+                Database.ReplicationLoader.IncomingReplicationConnectionErrored -= IncomingReplicationConnectionFailed;
 
                 foreach (var kvp in _incoming)
                     IncomingHandlerRemoved(kvp.Value.Handler);
