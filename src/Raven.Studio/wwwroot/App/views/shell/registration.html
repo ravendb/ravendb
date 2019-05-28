@@ -1,73 +1,112 @@
 <div class="modal-dialog prevent-close" role="document" id="licenseModal">
-
     <form class="form-horizontal" autocomplete="off" data-bind="submit: submit">
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="visible: dismissVisible() || canBeClosed()" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h3 class="modal-title" id="myModalLabel">
-                    Register license
+                    <span data-bind="visible: licenseType() === 'None'">Register License</span>
+                    <span data-bind="visible: !licenseExpired() && licenseType() !== 'None' && !renewWhenNotExpired()">Replace License</span>
+                    <span data-bind="visible: licenseExpired() && licenseType() !== 'None'">License Expired</span>
+                    <span data-bind="visible: renewWhenNotExpired">Renew License</span>
                 </h3>
             </div>
-            <img src="Content/img/license_multiple.png" class="img-responsive" />
             <div class="modal-body">
-                <section id="enterLicenseKey">
-                    <p class="text-center lead">
-                        <span data-bind="if: dismissVisible">
-                            <strong class="text-warning" data-bind="text: daysToRegister"></strong>
-                            day<span data-bind="if: daysToRegister() > 1">s</span> left to register
-                        </span>
-                        <span data-bind="if: error">
-                            <strong class="text-warning" data-bind="text: error"></strong>
-                        </span>
-                    </p>
-                    <p class="text-center ">
-                        Click here to <strong><a target="_blank" data-bind="attr: { 'href': registrationUrl }">obtain a license</a></strong>
-                    </p>
-
-                    <p class="text-center">Already got one?<br />Please paste your license key below.</p>
-                    <div class="form-horizontal">
+                <img src="Content/img/license_multiple.png" class="img-responsive licenseModalImg" data-bind="visible: !licenseExpired() && !renewWhenNotExpired()"/>
+                <div class="text-center lead">
+                    <span data-bind="if: dismissVisible">
+                        <strong class="text-warning" data-bind="text: daysToRegister"></strong>
+                        day<span data-bind="if: daysToRegister() > 1">s</span> left to register
+                    </span>
+                    <span data-bind="if: error">
+                        <strong class="text-warning" data-bind="text: error"></strong>
+                    </span>
+                    <div data-bind="visible: licenseExpired"> 
+                        Select one of the following options:
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="text-left padding padding-sm" id="renewLicense" data-bind="visible: renewWhenExpired() || renewWhenNotExpired()">
+                    <div><strong>Renew License</strong></div> 
+                    <small data-bind="visible: !renewMessage()">Click to renew the current existing license.<br>The license expiration date will be extended.</small>
+                    <small class="text-info" data-bind="visible: renewMessage, html: renewMessage"></small>
+                    <span data-bind="visible: renewError"><br><small class="text-danger" data-bind="text: renewError"></small></span>
+                    <div class="margin-bottom margin-bottom-lg">
+                        <button type="button" class="btn btn-info pull-right" 
+                                data-bind="click: renewLicense, disable: spinners.renewLicense() || spinners.activateLicense() || renewMessage(),
+                                           css: { 'btn-spinner': spinners.renewLicense },
+                                           attr: { 'title': renewMessage() ? 'Please check your mail for the renewed license' : 'Click to renew your license' }"> 
+                            <i class="icon-reset"></i>
+                            <span>Renew</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-left padding padding-sm" id="forceUpdate" data-bind="visible: forceUpdateWhenExpired">
+                    <div><strong>Force Update</strong></div>
+                    <small>Click to apply the new expiration date that was set for you.</small>
+                    <div class="margin-bottom margin-bottom-lg">
+                        <button type="button" class="btn btn-info pull-right" title="Click to apply the new expiration date" 
+                                data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate() || spinners.activateLicense(),
+                                           css: { 'btn-spinner': spinners.forceLicenseUpdate }">
+                            <i class="icon-force"></i>
+                            <span>Force</span>
+                        </button>
+                    </div>
+                </div>
+                <hr data-bind="visible: licenseExpired() || renewWhenNotExpired()"/>
+                <div class="padding padding-sm" id="enterLicenseKey" 
+                     data-bind="css: { 'text-left': licenseExpired() || renewWhenNotExpired(), 
+                                       'text-center': !licenseExpired() && !renewWhenNotExpired() }">
+                    <div>
+                        <strong>Submit License</strong>
+                    </div>
+                    <small class="text-info" data-bind="visible: renewMessage">
+                        Paste the renewed license key received in the email and click Submit.
+                    </small>
+                    <small data-bind="visible: !renewMessage() && !renewWhenNotExpired()">
+                        Click here to <strong><a target="_blank" data-bind="attr: { 'href': registrationUrl }">obtain a new license.</a></strong><br>
+                        Already got one? Paste your license key below and click Submit.
+                    </small>
+                    <small data-bind="visible: !renewMessage() && renewWhenNotExpired()">
+                        Paste here the renewed license key that you will receive in the email after clicking Renew.
+                    </small>
+                    <div data-bind="visible: letsEncryptMode() && licenseType() !== 'None'" class="text-warning">
+                        <i class="icon-warning"></i>
+                        <small>Your certificate is from Let's Encrypt and is bound to your current license id:</small><br>
+                        <strong class="text-warning" data-bind="text: licenseId"></strong><br>
+                        <small>In order to be able to renew your Let's Encrypt certificate in the future,</small><br>
+                        <small>the new license must have the same id as the current one.</small><br>
+                        <small>Please contact support if you need to replace the license with a new id.</small>
+                    </div>
+                    <div class="form-horizontal margin-top">
                         <div class="form-group" data-bind="validationElement: licenseKeyModel().key">
-                            <label for="inputLicenseKey" class="col-sm-1 control-label"></label>
-                            <div class="col-sm-10">
+                            <div class="col-sm-12">
                                 <textarea rows="9" class="form-control" id="inputLicenseKey" data-bind="textInput: licenseKeyModel().key"
                                           placeholder='e.g.
- {
-             "Id": "12345678-1234-1234-1234-123456789101",
-             "Name": "RavenDB License Owner",
-             "Keys": [
-                 "aBcDeFgHiJkLmNoPqRsTuVwXyZ",
-                 "~!@#$%^&*()_+=-0987654321`"
-             ]
- }'></textarea>
+{
+            "Id": "12345678-1234-1234-1234-123456789101",
+            "Name": "RavenDB License Owner",
+            "Keys": [
+                "aBcDeFgHiJkLmNoPqRsTuVwXyZ",
+                "~!@#$%^&*()_+=-0987654321`"
+            ]
+}'></textarea>
                             </div>
                         </div>
                     </div>
-                </section>
-            </div>
-            <div class="modal-footer">
-
-                <div class="btn-group" data-bind="visible: dismissVisible()">
-                    <button class="btn btn-default" data-bind="click: $root.dismiss.bind($root, 1)">
-                        <i class="icon-recent"></i>
-                        <span>Dismiss for 1 day</span>
+                    <button type="submit" title="Click to submit the new license"
+                            data-bind="disable: spinners.activateLicense() || spinners.forceLicenseUpdate(), css: { 'btn-spinner': spinners.activateLicense }"
+                            class="btn btn-primary pull-right">
+                        <i class="icon-check"></i>
+                        <span>Submit</span>
                     </button>
+                    <div data-bind="visible: dismissVisible()">
+                        <button class="btn btn-default pull-left" data-bind="click: $root.dismiss.bind($root, 1)">
+                            <i class="icon-recent"></i>
+                            <span>Dismiss for 1 day</span>
+                        </button>
+                    </div>
                 </div>
-
-                <!-- ko if: canForceUpdate -->
-                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, 
-                                disable: spinners.forceLicenseUpdate() || spinners.activateLicense(),
-                                css: { 'btn-spinner': spinners.forceLicenseUpdate }">
-                    <i class="icon-force"></i>
-                    <span>Force Update</span>
-                </button>
-                <!-- /ko -->
-
-                <button type="submit" data-bind="disable: spinners.activateLicense() || spinners.forceLicenseUpdate(), 
-                                                 css: { 'btn-spinner': spinners.activateLicense }"
-                        class="btn btn-primary">
-                    <i class="icon-check"></i>
-                    <span>Submit</span>
-                </button>
             </div>
         </div>
     </form>
