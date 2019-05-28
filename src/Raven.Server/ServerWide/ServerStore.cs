@@ -115,6 +115,8 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
+        public SemaphoreSlim ConcurrentBackupsSemaphore { get; }
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -154,6 +156,9 @@ namespace Raven.Server.ServerWide
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
             _server.ServerCertificateChanged += OnServerCertificateChanged;
+
+            var maxConcurrentBackupsTasks = Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue;
+            ConcurrentBackupsSemaphore = new SemaphoreSlim(maxConcurrentBackupsTasks);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)

@@ -27,6 +27,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.AllowedAwsRegions", ConfigurationEntryScope.ServerWideOnly)]
         public string[] AllowedAwsRegions { get; set; }
 
+        [Description("Maximum number of concurrent backup tasks")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Backup.MaxNumberOfConcurrentBackups", ConfigurationEntryScope.ServerWideOnly)]
+        public int? MaxNumberOfConcurrentBackups { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
             base.Initialize(settings, serverWideSettings, type, resourceName);
