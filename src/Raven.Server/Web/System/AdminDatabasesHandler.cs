@@ -1137,7 +1137,7 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson);
+                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -1167,7 +1167,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetStringQueryString("name", required: true);
 
-            var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name);
+            var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name, GetRaftRequestIdFromQuery());
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
             NoContentStatus();

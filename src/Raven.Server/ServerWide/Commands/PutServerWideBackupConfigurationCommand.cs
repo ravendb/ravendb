@@ -11,13 +11,14 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class PutServerWideBackupConfigurationCommand : UpdateValueCommand<ServerWideBackupConfiguration>
     {
-        public PutServerWideBackupConfigurationCommand()
+        protected PutServerWideBackupConfigurationCommand()
         {
-            Name = ClusterStateMachine.ServerWideBackupConfigurationsKey;
+            // for deserialization
         }
 
-        public PutServerWideBackupConfigurationCommand(ServerWideBackupConfiguration configuration) : this()
+        public PutServerWideBackupConfigurationCommand(ServerWideBackupConfiguration configuration, string uniqueRequestId) : base(uniqueRequestId)
         {
+            Name = ClusterStateMachine.ServerWideBackupConfigurationsKey;
             Value = configuration;
         }
 

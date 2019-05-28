@@ -5,6 +5,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
@@ -23,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             return new PutServerWideClientConfigurationCommand(context, _configuration);
         }
 
-        private class PutServerWideClientConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>
+        private class PutServerWideClientConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 
@@ -38,6 +39,8 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             }
 
             public override bool IsReadRequest => false;
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

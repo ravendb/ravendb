@@ -9,11 +9,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         protected DeleteServerWideBackupConfigurationCommand()
         {
-            Name = ClusterStateMachine.ServerWideBackupConfigurationsKey;
+            // for deserialization
         }
 
-        public DeleteServerWideBackupConfigurationCommand(string configurationName) : this()
+        public DeleteServerWideBackupConfigurationCommand(string configurationName, string uniqueRequestId) : base(uniqueRequestId)
         {
+            Name = ClusterStateMachine.ServerWideBackupConfigurationsKey;
             Value = configurationName;
         }
 
