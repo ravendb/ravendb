@@ -2,6 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
@@ -17,17 +18,21 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutServerWideClientConfigurationCommand(_name);
+            return new DeleteServerWideBackupConfigurationCommand(_name);
         }
 
-        private class PutServerWideClientConfigurationCommand : RavenCommand
+        private class DeleteServerWideBackupConfigurationCommand : RavenCommand, IRaftCommand
         {
             private readonly string _name;
 
-            public PutServerWideClientConfigurationCommand(string name)
+            public DeleteServerWideBackupConfigurationCommand(string name)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
             }
+
+            public override bool IsReadRequest => false;
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
