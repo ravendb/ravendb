@@ -83,10 +83,16 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (UpdateBackupTask())
             {
                 if (Disposed)
+                {
+                    newBackupTimer.Dispose();
                     return;
+                }
 
                 if (discardIfDisabled && BackupTimer == null)
+                {
+                    newBackupTimer.Dispose();
                     return;
+                }
 
                 BackupTimer?.Dispose();
                 BackupTimer = newBackupTimer;
