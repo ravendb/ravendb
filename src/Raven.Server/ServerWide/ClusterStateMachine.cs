@@ -1303,7 +1303,7 @@ namespace Raven.Server.ServerWide
 
                     BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded()
                     {
-                        if (items.ReadByKey(valueNameLowered, out _))
+                        if (items.ReadByKey(valueNameLowered, out _) && addDatabaseCommand.IsRestore == false)
                         {
                             // the backup tasks cannot be changed by modifying the database record
                             // (only by using the dedicated UpdatePeriodicBackup command)

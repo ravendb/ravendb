@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Orders;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -359,6 +360,97 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(0, record1.PeriodicBackups.Count);
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(0, record2.PeriodicBackups.Count);
+            }
+        }
+
+        [Fact]
+        public async Task SkipExportingTheServerWideBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                var serverWideBackupConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1",
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backup = record.PeriodicBackups.First();
+                var backupTaskId = backup.TaskId;
+
+                // save another backup task in the database record
+                var backupConfiguration = new PeriodicBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration));
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
+                    return status?.LastEtag;
+                }, 0);
+
+                Assert.Equal(0, value);
+
+                var backupDirectory = Directory.GetDirectories(backup.LocalSettings.FolderPath).First();
+                var databaseName = GetDatabaseName() + "restore";
+
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var restoreConfig = new RestoreBackupConfiguration
+                {
+                    BackupLocation = backupDirectory,
+                    DatabaseName = databaseName,
+                    LastFileNameToRestore = files.Last()
+                };
+
+                var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                store.Maintenance.Server.Send(restoreOperation)
+                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                // old server should have 2: 1 server wide and 1 regular backup
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    CreateDatabase = false,
+                    ModifyDatabaseName = s => databaseName,
+                }))
+                {
+                    var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
+                    Assert.Equal(2, record2.PeriodicBackups.Count);
+                }
+
+                // new server should have only one backup
+                var server = GetNewServer();
+                using (var store3 = GetDocumentStore(new Options
+                {
+                    CreateDatabase = false,
+                    ModifyDatabaseName = s => databaseName,
+                    Server = server
+                }))
+                {
+                    store3.Maintenance.Server.Send(restoreOperation)
+                        .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                    var record3 = await store3.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(1, record3.PeriodicBackups.Count);
+                }
             }
         }
 

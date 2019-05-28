@@ -10,10 +10,10 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -106,7 +106,28 @@ namespace Raven.Server.Smuggler.Documents
 
         public DatabaseRecord GetDatabaseRecord()
         {
-            return _database.ReadDatabaseRecord();
+            var databaseRecord = _database.ReadDatabaseRecord();
+
+            // filter server wide backup tasks;
+            var backupTasksToRemove = new List<int>();
+            for (var i = 0; i < databaseRecord.PeriodicBackups.Count; i++)
+            {
+                var periodicBackup = databaseRecord.PeriodicBackups[i];
+                if (periodicBackup.Name == null)
+                    continue;
+
+                if (periodicBackup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    backupTasksToRemove.Add(i);
+                }
+            }
+
+            foreach (var toRemove in backupTasksToRemove)
+            {
+                databaseRecord.PeriodicBackups.RemoveAt(toRemove);
+            }
+
+            return databaseRecord;
         }
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
