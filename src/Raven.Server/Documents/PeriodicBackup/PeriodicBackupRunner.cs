@@ -285,11 +285,62 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
                     return;
 
-                CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
+                StartBackupTaskAndRescheduleIfNeeded(periodicBackup, backupDetails.IsFullBackup);
             }
             catch (Exception e)
             {
                 _logger.Operations("Error during timer callback", e);
+            }
+        }
+
+        private void LongPeriodTimerCallback(object backupTaskDetails)
+        {
+            try
+            {
+                if (_cancellationToken.IsCancellationRequested)
+                    return;
+
+                var backupDetails = (BackupTaskDetails)backupTaskDetails;
+
+                if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
+                    return;
+
+                var remainingInterval = backupDetails.NextBackup - MaxTimerTimeout;
+                if (remainingInterval.TotalMilliseconds <= 0)
+                {
+                    StartBackupTaskAndRescheduleIfNeeded(periodicBackup, backupDetails.IsFullBackup);
+                    return;
+                }
+
+                periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus));
+            }
+            catch (Exception e)
+            {
+                _logger.Operations("Error during long timer callback", e);
+            }
+        }
+
+        private void StartBackupTaskAndRescheduleIfNeeded(PeriodicBackup periodicBackup, bool isFullBackup)
+        {
+            try
+            {
+                CreateBackupTask(periodicBackup, isFullBackup);
+            }
+            catch (MaxNumberOfConcurrentBackupsException e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Backup task will be retried in a minute", e);
+
+                // we'll retry in one minute
+                var backupTaskDetails = new BackupTaskDetails
+                {
+                    IsFullBackup = isFullBackup,
+                    TaskId = periodicBackup.Configuration.TaskId,
+                    NextBackup = TimeSpan.FromMinutes(1)
+                };
+
+                var timer = new Timer(TimerCallback, backupTaskDetails, backupTaskDetails.NextBackup, Timeout.InfiniteTimeSpan);
+                periodicBackup.UpdateTimer(timer);
             }
         }
 
@@ -351,14 +402,22 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (periodicBackup.UpdateBackupTask())
             {
+                if (periodicBackup.Disposed)
+                    throw new InvalidOperationException("Backup task was already disposed");
+
+                if (periodicBackup.RunningTask != null)
+                    return periodicBackup.RunningBackupTaskId ?? -1;
+
+                if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
+                {
+                    throw new MaxNumberOfConcurrentBackupsException(
+                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
+                        $"The task exceeds the maximum number of concurrent backup tasks configured. " +
+                        $"Current value of Backup.MaxNumberOfConcurrentBackups is: {_serverStore.Configuration.Backup.MaxNumberOfConcurrentBackups:#,#;;0}");
+                }
+
                 try
                 {
-                    if (periodicBackup.Disposed)
-                        throw new InvalidOperationException("Backup task was already disposed");
-
-                    if (periodicBackup.RunningTask != null)
-                        return periodicBackup.RunningBackupTaskId ?? -1;
-
                     var backupStatus = periodicBackup.BackupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId, periodicBackup.BackupStatus);
                     var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
 
@@ -368,7 +427,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
                         backupStatus.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
-                    // the local folder already includes a full backup or snapshot
+                        // the local folder already includes a full backup or snapshot
                     {
                         isFullBackup = true;
                     }
@@ -407,6 +466,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                             }
                             finally
                             {
+                                _serverStore.ConcurrentBackupsSemaphore.Release();
+
                                 periodicBackup.RunningTask = null;
                                 periodicBackup.RunningBackupTaskId = null;
                                 periodicBackup.CancelToken = null;
@@ -430,6 +491,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
+                    // releasing the semaphore because we failed to start the backup task
+                    _serverStore.ConcurrentBackupsSemaphore.Release();
+
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations(message, e);
@@ -463,33 +527,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (context.OpenReadTransaction())
             {
                 return _serverStore.Cluster.ReadDatabase(context, _database.Name);
-            }
-        }
-
-        private void LongPeriodTimerCallback(object backupTaskDetails)
-        {
-            try
-            {
-                if (_cancellationToken.IsCancellationRequested)
-                    return;
-
-                var backupDetails = (BackupTaskDetails)backupTaskDetails;
-
-                if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
-                    return;
-
-                var remainingInterval = backupDetails.NextBackup - MaxTimerTimeout;
-                if (remainingInterval.TotalMilliseconds <= 0)
-                {
-                    CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
-                    return;
-                }
-
-                periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus));
-            }
-            catch (Exception e)
-            {
-                _logger.Operations("Error during long timer callback", e);
             }
         }
 
