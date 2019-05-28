@@ -1009,7 +1009,18 @@ namespace Raven.Server.Documents.Replication
                     certificate, DocumentConventions.Default))
                 {
                     var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask);
-                    requestExecutor.Execute(cmd, ctx);
+
+                    try
+                    {
+                        requestExecutor.Execute(cmd, ctx);
+                    }
+                    catch
+                    {
+                        // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
+                        pullReplicationAsSink.Url = requestExecutor.Url;
+                        pullReplicationAsSink.Database = database;
+                    }
+
                     remoteDatabaseUrls = cmd.Result;
                 }
 
