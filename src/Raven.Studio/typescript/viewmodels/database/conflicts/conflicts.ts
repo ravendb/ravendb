@@ -230,7 +230,7 @@ class conflicts extends viewModelBase {
             delete meta['@change-vector'];
 
             const newDoc = new document(updatedDto);
-            const saveCommand = new saveDocumentCommand(this.documentId(), newDoc, this.activeDatabase());
+            const saveCommand = new saveDocumentCommand(this.documentId(), newDoc, this.activeDatabase(), true, false);
             this.isSaving(true);
             saveCommand
                 .execute()

@@ -42,7 +42,8 @@
             </div>
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
-                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode()">
+                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode()"
+                            title="Save changes. A revision will be created only if 'Settings | Document Revisions' is configured.">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
@@ -109,9 +110,6 @@
                             </li>
                         </ul>
                     </div>
-
-
-
                 </div>
             </div>
             <div class="clearfix" data-bind="visible: !isDeleteRevision() && !inDiffMode()">
@@ -225,11 +223,11 @@
                             <div class="badge" data-bind="text: $root.crudActionsProvider().countersCount() || ''"></div>
                         </button>
                     </div>
-                    <div class="btn-group" id="revisions_pane" role="group" data-bind="visible: revisionsEnabled">
-                        <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: _.partial(activateRevisions, false)">
+                    <div class="btn-group" id="revisions_pane" role="group">
+                        <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: _.partial(activateRevisions, false), disable: !$root.canViewRevisions()">
                             <div class="icon-revisions"></div>
                             Revisions
-                            <div class="badge" data-bind="text: $root.connectedDocuments.revisionsCount() || '+'"></div>
+                            <div class="badge" data-bind="text: $root.crudActionsProvider().revisionsCount() || ''"></div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
@@ -255,6 +253,16 @@
                         <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.crudActionsProvider().setCounter, null)">
                             <i class="icon-new-counter"></i>
                             <span>Add Counter</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-window-head" data-bind="visible: isRevisionsActive() && $root.canViewRevisions() && !$root.inReadOnlyMode(),
+                     attr: { title: $root.dirtyFlag().isDirty() ? 'Save your changes before creating a revision' : 'A revision will be created even if Revisions are Not configured for the collection' }">
+                    <div class="padding padding-xs margin-top margin-top-sm">
+                        <button type="button" class="btn btn-sm btn-primary btn-block" 
+                                data-bind="click: _.partial($root.forceCreateRevision, null), disable: $root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.isSaving }">
+                            <i class="icon-revisions"></i>
+                            <span>Create Revision</span>
                         </button>
                     </div>
                 </div>
