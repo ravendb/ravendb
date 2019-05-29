@@ -6,6 +6,11 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class DeleteCertificateCollectionFromClusterCommand : DeleteMultipleValuesCommand
     {
+        public DeleteCertificateCollectionFromClusterCommand() { }
+        public DeleteCertificateCollectionFromClusterCommand(string requestId) : base(requestId)
+        {
+        }
+
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             using (context.OpenReadTransaction())

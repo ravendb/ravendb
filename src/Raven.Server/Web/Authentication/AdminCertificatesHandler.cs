@@ -369,7 +369,7 @@ namespace Raven.Server.Web.Authentication
                             keysToDelete.Add(cert.Key);
                 }
 
-                await DeleteInternal(keysToDelete);
+                await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
@@ -413,7 +413,7 @@ namespace Raven.Server.Web.Authentication
                 if (definition != null)
                     keysToDelete.AddRange(definition.CollectionSecondaryKeys);
 
-                await DeleteInternal(keysToDelete);
+                await DeleteInternal(keysToDelete, GetRaftRequestIdFromQuery());
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
@@ -428,10 +428,10 @@ namespace Raven.Server.Web.Authentication
             return JsonDeserializationServer.CertificateDefinition(certificate);
         }
 
-        private async Task DeleteInternal(List<string> keys)
+        private async Task DeleteInternal(List<string> keys, string requestId)
         {
             // Delete from cluster
-            var res = await ServerStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand()
+            var res = await ServerStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand(requestId)
             {
                 Names = keys
             });

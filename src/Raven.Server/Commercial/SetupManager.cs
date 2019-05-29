@@ -536,7 +536,7 @@ namespace Raven.Server.Commercial
             if (existingCertificateKeys.Count == 0)
                 return;
 
-            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand()
+            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand(RaftIdGenerator.NewId())
             {
                 Names = existingCertificateKeys
             });
