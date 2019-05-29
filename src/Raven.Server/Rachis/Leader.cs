@@ -293,17 +293,6 @@ namespace Raven.Server.Rachis
                     _shutdownRequested
                 };
 
-                var noopCmd = new DynamicJsonValue
-                {
-                    ["Command"] = "noop"
-                };
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var tx = context.OpenWriteTransaction())
-                using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
-                {
-                    _engine.InsertToLeaderLog(context, Term, cmd, RachisEntryFlags.Noop);
-                    tx.Commit();
-                }
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
