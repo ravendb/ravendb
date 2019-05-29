@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes
                     .Take(_capacity / 4))
                 {
                     
-                    if(_regexCache.TryRemove(kv.Key, out _))
+                    if (_regexCache.TryRemove(kv.Key, out _))
                         countRemoved++;
                 }
                 Interlocked.Add(ref _count, -countRemoved);

@@ -320,7 +320,7 @@ namespace Voron.Data.BTrees
             bool? shouldGoToOverflowPage = null;
             if (page.LastMatch == 0) // this is an update operation
             {
-                if((nodeType & TreeNodeFlags.NewOnly) == TreeNodeFlags.NewOnly)
+                if ((nodeType & TreeNodeFlags.NewOnly) == TreeNodeFlags.NewOnly)
                     ThrowConcurrencyException();
                 
                 node = page.GetNode(page.LastSearchPosition);

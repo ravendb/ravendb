@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -25,9 +24,9 @@ namespace Raven.Client.Documents.Session
         }
         public async Task<IEnumerable<TimeSeriesValue>> GetAsync(string timeseries, DateTime from, DateTime to, CancellationToken token = default)
         {
-            if(Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache))
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache))
             {
-                if(cache.Values.TryGetValue(timeseries, out var series))
+                if (cache.Values.TryGetValue(timeseries, out var series))
                 {
                     //TODO: we need to properly handle this here, including merging multiple sections, getting just the values we need, etc.
                     return series.Values;
@@ -50,7 +49,7 @@ namespace Raven.Client.Documents.Session
             
             //TODO: if value exists, merge new values
 
-            if(Session.NoTracking == false)
+            if (Session.NoTracking == false)
             {
                 if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)
                 {

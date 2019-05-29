@@ -169,7 +169,7 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Dispose();
             _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
-            if(_innerBuffer == null)
+            if (_innerBuffer == null)
                 _innerBuffer = _context.GetMemory(32);
         }
 
@@ -467,7 +467,7 @@ namespace Sparrow.Json
             }
             finally
             {
-                if(buffer != null)
+                if (buffer != null)
                     _context.ReturnMemory(buffer);
             }
         }

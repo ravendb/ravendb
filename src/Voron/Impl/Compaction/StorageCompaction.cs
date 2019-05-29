@@ -150,7 +150,7 @@ namespace Voron.Impl.Compaction
                 {
                     token.ThrowIfCancellationRequested();
                     var treeName = rootIterator.CurrentKey.ToString();
-                    if(globalTableIndexesToSkipCopying.Contains(treeName))
+                    if (globalTableIndexesToSkipCopying.Contains(treeName))
                         continue;
                     var currentKey = rootIterator.CurrentKey.Clone(txr.Allocator);
                     var objectType = txr.GetRootObjectType(currentKey);

@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Queries.AST
 
                 if (i + 1 < Path.Length)
                 {
-                    if(Path[i+1].Recursive != null)
+                    if (Path[i+1].Recursive != null)
                     {
                         sb.Append(Path[i + 1].Recursive.Value);
                         continue;
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (Alias.Length != 0)
                 sp.Append(" as ").Append(Alias.Value).Append(" ");
 
-            if(Options?.Count > 0)
+            if (Options?.Count > 0)
             {
                 sp.Append("(");
                 foreach (var item in Options)
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Queries.AST
                             min = ValidateNumber(value);
                             break;
                         case ValueTokenType.String:
-                            if(Enum.TryParse(value.Value.ToString(), true, out type) == false)
+                            if (Enum.TryParse(value.Value.ToString(), true, out type) == false)
                                 throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
                             break;
                         default:
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string ToString()
         {
-            if(Recursive != null)
+            if (Recursive != null)
             {
                 if (EdgeType == EdgeType.Left)
                     return "<-" + Recursive.Value + "-";

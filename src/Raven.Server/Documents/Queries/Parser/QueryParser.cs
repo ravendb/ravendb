@@ -1232,7 +1232,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (isFunc == false)
             {
-                if(Scanner.TryScan("timeseries") == false)
+                if (Scanner.TryScan("timeseries") == false)
                     ThrowParseException("DECLARE clause found but missing 'function' keyword");
             }
 
@@ -1295,7 +1295,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private TimeSeriesFunction ParseTimeSeries(string name)
         {
-            if(Scanner.TryScan("timeseries") == false)// should never happen
+            if (Scanner.TryScan("timeseries") == false)// should never happen
                 ThrowParseException($"Expected to find timeseries token for {name}, but couldn't get it");
 
             if (Scanner.Identifier() == false) // should never happen
@@ -1316,14 +1316,13 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('{') == false)
                 ThrowParseException($"Failed to find opening parentheses {{ for {name}");
 
-
-            if(Scanner.TryScan("from") == false)
+            if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
 
             if (Field(out var source) == false)
                 ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
 
-            if(source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
+            if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
             {
                 source.Compound.RemoveAt(0);
             }
@@ -1359,7 +1358,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 select = SelectClauseExpressions("SELECT", false);
             }
-
 
             if (Scanner.TryScan('}') == false)
                 ThrowParseException($"Failed to find opening parentheses }} for {name}");

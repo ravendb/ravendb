@@ -107,7 +107,7 @@ namespace Sparrow.Json
                 {
                     if (copy[i].ThreadId == -1)
                     {
-                        if(Interlocked.CompareExchange(ref copy[i].ThreadId, currentThreadId, -1) == -1)
+                        if (Interlocked.CompareExchange(ref copy[i].ThreadId, currentThreadId, -1) == -1)
                         {
                             _releaser.ThreadIdHolders.Add(copy[i]);
                             return;
@@ -378,7 +378,7 @@ namespace Sparrow.Json
             while (true)
             {
                 var current = threadHeader.Head;
-                if(current == ContextStack.HeaderDisposed)
+                if (current == ContextStack.HeaderDisposed)
                 {
                     context.Dispose();
                     return;

@@ -785,7 +785,7 @@ namespace Raven.Server.Documents.Replication
                 var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);                
                 if (result.IsValid)
                 {
-                    if(context.LastReplicationEtagFrom == null)
+                    if (context.LastReplicationEtagFrom == null)
                         context.LastReplicationEtagFrom = new Dictionary<string, long>();
 
                     if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)

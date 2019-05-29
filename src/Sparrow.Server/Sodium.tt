@@ -16,9 +16,9 @@
 	var list = new List<(string Method, string Type, string[] ArgNames, string Signature)>();
 	foreach(var p in api)
 	{
-		if(string.IsNullOrWhiteSpace(p))
+		if (string.IsNullOrWhiteSpace(p))
 			continue;
-		if(p.StartsWith("#"))
+		if (p.StartsWith("#"))
 			continue;
 
 		var parts = p.Split('|');
@@ -43,7 +43,7 @@ namespace Sparrow
 #>
 		public static <#=method.Type #> <#=method.Signature #>
 		{
-			 if(PlatformDetails.RunningOnPosix)
+			 if (PlatformDetails.RunningOnPosix)
 			 {
 				<#=GenerateCall("Posix", method.Method, method.ArgNames, method.Type)#>;
 			 }
@@ -124,9 +124,9 @@ namespace Sparrow
 #>
 			public static <#=method.Type #> <#=method.Signature #>
 			{
-				 if(_is32bits)
+				 if (_is32bits)
 				 {
-					if(_isArm)
+					if (_isArm)
 					{
 						<#=GenerateCall("Arm", method.Method, method.ArgNames, method.Type)#>;
 					}
@@ -137,7 +137,7 @@ namespace Sparrow
 				 }
 				 else
 				 {
-			 		if(_isMac64)
+			 		if (_isMac64)
 					{
 						<#=GenerateCall("MacOsxX64",method.Method, method.ArgNames, method.Type)#>;
 					}
@@ -343,7 +343,7 @@ namespace Sparrow
 #>
 			public static <#=method.Type #> <#=method.Signature #>
 			{
-				 if(_is32bits)
+				 if (_is32bits)
 				 {
 					<#=GenerateCall("X86", method.Method, method.ArgNames, method.Type)#>;
 				 }

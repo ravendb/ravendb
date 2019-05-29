@@ -1,12 +1,11 @@
 //-----------------------------------------------------------------------
-// <copyright file="ISessionDocumentCounters.cs" company="Hibernating Rhinos LTD">
+// <copyright file="ISessionDocumentTimeSeries.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Session
 {

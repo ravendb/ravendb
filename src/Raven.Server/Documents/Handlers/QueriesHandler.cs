@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var item in results.Nodes)
                 {
                     var val = item.Value;
-                    if(val is Document d)
+                    if (val is Document d)
                     {
                         d.EnsureMetadata();
                         val = d.Data;

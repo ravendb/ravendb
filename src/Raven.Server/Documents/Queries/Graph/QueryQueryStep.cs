@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 return default;
 
             var key = GetQueryString;
-            if(_graphQueryPlan.IdenticalQueriesCount.ContainsKey(key))
+            if (_graphQueryPlan.IdenticalQueriesCount.ContainsKey(key))
             {                
                 if (_graphQueryPlan.QueryCache.TryGetValue(key, out var res))
                 {
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 _resultsById[result.Id] = match;
             }
             //If needed cache the results and update ref count
-            if(_shouldCacheResults)
+            if (_shouldCacheResults)
             {
                 var key = GetQueryString;
                 _graphQueryPlan.QueryCache.Add(key, results);
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (result == null)
                 return;
 
-            if(result is Document d && d.Id != null)
+            if (result is Document d && d.Id != null)
             {
                 graphDebugInfo.AddNode(d.Id.ToString(), d);
             }

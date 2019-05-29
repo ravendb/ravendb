@@ -75,7 +75,7 @@ namespace Raven.Server.NotificationCenter
 
                 if (watcher.Writer is NotificationCenterWebSocketWriter)
                 {
-                    if(_state.NumberOfClients == 0)
+                    if (_state.NumberOfClients == 0)
                     {
                         var copy = _state;
                         // we use interlocked here to make sure that other threads
@@ -107,7 +107,7 @@ namespace Raven.Server.NotificationCenter
                     if (watcher.Writer is NotificationCenterWebSocketWriter)
                     {
                         var copy = _state;
-                        if(Interlocked.Decrement(ref copy.NumberOfClients) == 0)
+                        if (Interlocked.Decrement(ref copy.NumberOfClients) == 0)
                         {
                             Interlocked.Exchange(ref _state, new State());
                             copy.AllWebSocketsRemoved.TrySetResult(null);

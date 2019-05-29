@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.AST
                     {
                         isImplicitAlias = withEdge.ImplicitAlias;
                     }
-                    else if(_query.WithDocumentQueries.TryGetValue(path.Alias, out var withQuery))
+                    else if (_query.WithDocumentQueries.TryGetValue(path.Alias, out var withQuery))
                     {
                         isImplicitAlias = withQuery.implicitAlias;
                     }

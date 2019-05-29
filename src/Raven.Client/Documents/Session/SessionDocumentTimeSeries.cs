@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="SessionDocumentCounters.cs" company="Hibernating Rhinos LTD">
+// <copyright file="SessionDocumentTimeSeries.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Session
         {
             _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, documentId);
         }
+
         public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity)
         {
             _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, entity);

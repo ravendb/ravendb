@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (Where != null && Where.Equals(ie.Where) == false)
                 return false;
 
-            if(OrderBy != null)
+            if (OrderBy != null)
             {
                 if (OrderBy.Count != ie.OrderBy.Count)
                     return false;

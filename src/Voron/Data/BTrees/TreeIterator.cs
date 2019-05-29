@@ -37,7 +37,7 @@ namespace Voron.Data.BTrees
 
         public int GetCurrentDataSize()
         {
-            if(_disposed)
+            if (_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
             return _tree.GetDataSize(Current);
         }
@@ -244,7 +244,7 @@ namespace Voron.Data.BTrees
             if (_disposed)
                 return;
             _disposed = true;
-            if(RequiredPrefix.HasValue)
+            if (RequiredPrefix.HasValue)
                 RequiredPrefix.Release(_tx.Allocator);
             if (MaxKey.HasValue)
                 MaxKey.Release(_tx.Allocator);

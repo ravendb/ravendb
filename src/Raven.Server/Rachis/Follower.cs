@@ -913,7 +913,7 @@ namespace Raven.Server.Rachis
 
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
-            if(_engine.CurrentState != RachisState.Passive)
+            if (_engine.CurrentState != RachisState.Passive)
                 _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             
             // if leader / candidate, this remove them from play and revert to follower mode

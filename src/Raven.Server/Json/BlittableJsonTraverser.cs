@@ -198,7 +198,7 @@ namespace Raven.Server.Json
             }
 
             consumed = path.IndexOfAny(_separators, 0);
-            if(consumed == -1)
+            if (consumed == -1)
                 return path;
             return path.Subsegment(0, consumed);
         }

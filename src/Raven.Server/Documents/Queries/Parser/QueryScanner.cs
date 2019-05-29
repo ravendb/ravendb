@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Queries.Parser
             _pos += a.Length;
             Column += a.Length;
 
-            if(TryPeek(b) == false)
+            if (TryPeek(b) == false)
             {
                 _pos += originPos;
                 Column += originCol;

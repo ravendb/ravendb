@@ -25,7 +25,7 @@ namespace Raven.Server.Json
 
             if (_mmapStream == null)
                 _mmapStream = new MmapStream(null, 0);
-            if(_reader == null)
+            if (_reader == null)
                 _reader = new LazyStringStreamReader(_mmapStream, Encodings.Utf8);
 
             _reader.DiscardBufferedData();

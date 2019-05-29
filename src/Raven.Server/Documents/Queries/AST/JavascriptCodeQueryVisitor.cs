@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitField(FieldExpression field)
         {
-            if(_knownAliases.Contains(field.Compound[0].Value) == false)
+            if (_knownAliases.Contains(field.Compound[0].Value) == false)
                 _sb.Append("this.");
 
             for (int i = 0; i < field.Compound.Count; i++)

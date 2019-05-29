@@ -361,7 +361,7 @@ namespace Sparrow.Json
 
 #if MEM_GUARD
 #if MEM_GUARD_STACK
-            if(allocation.FreedBy == null)
+            if (allocation.FreedBy == null)
                 allocation.FreedBy = Environment.StackTrace;
 #endif
             ElectricFencedMemory.Free(address);

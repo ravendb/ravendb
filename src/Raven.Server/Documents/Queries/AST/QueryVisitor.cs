@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitDeclaredFunctions(q.DeclaredFunctions);
             }
 
-            if(q.From.From != null)
+            if (q.From.From != null)
                 VisitFromClause(q.From.From, q.From.Alias, q.From.Filter, q.From.Index);
 
             if (q.GraphQuery != null)

@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.TimeSeries
 
 
                 byte lastByte = default;
-                if(copyRemainingBits)
+                if (copyRemainingBits)
                     lastByte = Buffer[Header->UncompressedBitsPosition >> 3];
 
                 Header->CompressedSize = (ushort)len;
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public ulong ReadValue(ref int bitsPosition, int bitsToRead)
         {
-            if(Header->CompressedSize != 0)
+            if (Header->CompressedSize != 0)
                 throw new ArgumentException($"Cannot read from a compressed bits buffer");
 
             if (bitsToRead > 64)

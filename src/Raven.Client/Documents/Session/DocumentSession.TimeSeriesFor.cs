@@ -7,7 +7,7 @@
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    /// Implements Unit of Work for accessing the RavenDB server
+    /// Provides an access to DocumentSession TimeSeries API.
     /// </summary>
     public partial class DocumentSession
     {

@@ -123,13 +123,13 @@ namespace Raven.Server.Documents.Queries.AST
 
                 var ticks = timestamp.Ticks;
 
-                if(Ticks != 0)
+                if (Ticks != 0)
                 {
                     ticks -= (ticks % Ticks);
                     return new DateTime(ticks,timestamp.Kind);
                 }
 
-                if(Months != 0)
+                if (Months != 0)
                 {
                     var yearsPortion = Math.Max(1, Months / 12);
                     var monthsRemaining = Months % 12;
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Queries.AST
             switch (char.ToLower(source[offset++]))
             {
                 case 's':
-                    if(TryConsumeMatch(source, ref offset, "seconds") == false)
+                    if (TryConsumeMatch(source, ref offset, "seconds") == false)
                         TryConsumeMatch(source, ref offset, "second");
 
                     range.Ticks += duration * 10_000_000;
@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (source.Length <= offset)
                 return false;
 
-            if(new StringSegment(source, offset-1 , source.Length - offset +1).StartsWith(additionalMatch, StringComparison.OrdinalIgnoreCase))
+            if (new StringSegment(source, offset-1 , source.Length - offset +1).StartsWith(additionalMatch, StringComparison.OrdinalIgnoreCase))
             {
                 offset += additionalMatch.Length-1;
                 return true;

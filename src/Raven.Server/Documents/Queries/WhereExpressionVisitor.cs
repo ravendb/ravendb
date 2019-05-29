@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries
                 return;
             }
 
-            if(expression is NegatedExpression ne)
+            if (expression is NegatedExpression ne)
             {
                 Visit(ne.Expression, parameters);
                 return;

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return base.VisitInvocationExpression(node);
                 }
 
-                if(node.Parent.Kind() == SyntaxKind.Argument)
+                if (node.Parent.Kind() == SyntaxKind.Argument)
                 {
                     // passed directly to a method? Don't need this
                     return base.VisitInvocationExpression(node);

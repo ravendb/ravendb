@@ -220,7 +220,7 @@ namespace Raven.Server.ServerWide
                 Sodium.randombytes_buf(pEntropy, Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
 
                 var actualKey = stackalloc byte[key.Length];
-                if(Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
                     throw new InvalidOperationException("Could not derive key for secret encryption");
                 
                 ulong cLen;
@@ -251,20 +251,20 @@ namespace Raven.Server.ServerWide
                 var br = new BinaryReader(ms);
                 var keyLen = br.ReadInt32();
                 var key = br.ReadBytes(keyLen);
-                if(key.Length != keyLen)
+                if (key.Length != keyLen)
                     throw new InvalidOperationException("Wrong size for key buffer: " + key.Length);
                 
                 var entrophyLen = br.ReadInt32();
-                if(entrophyLen != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+                if (entrophyLen != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
                     throw new InvalidOperationException("Wrong size for nonce len: " + entrophyLen);
               
                 var entropy = br.ReadBytes(entrophyLen);
-                if(entropy.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+                if (entropy.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
                     throw new InvalidOperationException("Wrong size for nonce buffer: " + entropy.Length );
               
                 var dataLen = br.ReadInt32();
                 var data = br.ReadBytes(dataLen);
-                if(data.Length != dataLen)
+                if (data.Length != dataLen)
                     throw new InvalidOperationException("Wrong size for data buffer: " + entropy.Length  + " but expected " + dataLen);
               
                 var plainKey = ProtectedData.Unprotect(key, entropy, DataProtectionScope.CurrentUser);
@@ -296,7 +296,7 @@ namespace Raven.Server.ServerWide
                 var pEntropy = pSecret + actualSecretLen;
                 
                 var actualKey = stackalloc byte[key.Length];
-                if(Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
                     throw new InvalidOperationException("Could not derive key for secret decryption");
             
                 ulong mLen;
@@ -699,7 +699,7 @@ namespace Raven.Server.ServerWide
                 // but if the size is zero, we'll generate a random key and save it to the specified
                 // file
 
-                if(key.Length == 0)
+                if (key.Length == 0)
                 {
                     key = Sodium.GenerateRandomBuffer(expectedKeySize);
                     File.WriteAllBytes(_config.MasterKeyPath, key);

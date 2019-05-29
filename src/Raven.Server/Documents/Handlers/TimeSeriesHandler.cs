@@ -1,13 +1,10 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
-using Raven.Server.Commercial;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;

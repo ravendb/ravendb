@@ -57,7 +57,7 @@ namespace Lucene.Net.Search.Vectorhighlight
                 // if the phrase violates the border of previous fragment, discard it and try next phrase
                 if (phraseInfo.StartOffset < startOffset)
                 {
-                    if(phraseInfo.EndOffset < startOffset)
+                    if (phraseInfo.EndOffset < startOffset)
                         continue;
                     startOffset = phraseInfo.StartOffset;
                 }

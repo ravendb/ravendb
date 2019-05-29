@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (!(item is DynamicBlittableJson dbj))
             {
                 //This is the case for map-reduce
-                if(item is BlittableJsonReaderObject bjr)
+                if (item is BlittableJsonReaderObject bjr)
                 {
                     jsItem = new BlittableObjectInstance(engine, null, bjr, null, null);
                     return true;

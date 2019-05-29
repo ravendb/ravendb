@@ -688,7 +688,7 @@ namespace Sparrow.Logging
             finally
             {
                 _readyToCompress.Set();
-                if(_compressLoggingThread?.Join(1000) == false)
+                if (_compressLoggingThread?.Join(1000) == false)
                     _tokenSource.Cancel();
             }
         }
@@ -734,7 +734,7 @@ namespace Sparrow.Logging
                     for (var i = 0; i < logFiles.Length - 1; i++)
                     {
                         var logFile = logFiles[i];
-                        if(Array.BinarySearch(logGzFiles, logFile) > 0)
+                        if (Array.BinarySearch(logGzFiles, logFile) > 0)
                             continue;
 
                         try

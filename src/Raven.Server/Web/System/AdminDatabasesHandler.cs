@@ -1399,7 +1399,7 @@ namespace Raven.Server.Web.System
                                 IOExtensions.DeleteFile(tmpFile);
                             else if (process.HasExited == false && string.IsNullOrEmpty(tmpFile) == false)
                             {
-                                if(ProcessExtensions.TryKill(process))
+                                if (ProcessExtensions.TryKill(process))
                                     IOExtensions.DeleteFile(tmpFile);
                                 else
                                 {

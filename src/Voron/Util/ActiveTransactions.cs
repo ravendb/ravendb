@@ -205,7 +205,7 @@ namespace Voron.Util
                             return;
                         }
                     }
-                    if(value == InvalidLowLevelTransaction)
+                    if (value == InvalidLowLevelTransaction)
                     {
                         compactionInProgress = true;
                     }

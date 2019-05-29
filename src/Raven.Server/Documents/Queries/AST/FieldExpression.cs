@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries.AST
             var sb = new StringBuilder();
             for (int i = start; i < Compound.Count; i++)
             {
-                if(i == start && Compound[i].Value == "[]") //field name starting from '[]' makes no sense
+                if (i == start && Compound[i].Value == "[]") //field name starting from '[]' makes no sense
                     continue;
                 sb.Append(Compound[i].Value);
                 if (i + 1 < Compound.Count && Compound[i + 1] != "[]")

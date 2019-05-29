@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.TimeSeries
         private StatefulTimeStampValue* Pointer;
         private int Length;
 
-
         public StatefulTimeStampValueSpan(StatefulTimeStampValue* pointer, int length)
         {
             Pointer = pointer;

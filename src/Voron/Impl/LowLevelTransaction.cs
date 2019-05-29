@@ -1163,7 +1163,7 @@ namespace Voron.Impl
 
             _forTestingPurposes?.ActionToCallDuringEnsurePagerStateReference?.Invoke();
 
-            if(_pagerStates.Contains(state))
+            if (_pagerStates.Contains(state))
             {
                 _lastState = state;
                 return;
