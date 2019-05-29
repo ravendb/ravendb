@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             foreach (var includedEdge in IncludedEdges)
             {
-                if(Right == null)
+                if (Right == null)
                 {
                     MergeAndAddResult(left, leftDoc, includedEdge.Key, includedEdge.Value, default);
                     continue;

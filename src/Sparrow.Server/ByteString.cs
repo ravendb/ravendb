@@ -329,7 +329,7 @@ namespace Sparrow.Server
         {
             EnsureIsNotBadPointer();
 
-            if(_pointer->Size < newSize || newSize < 0)
+            if (_pointer->Size < newSize || newSize < 0)
                 ThrowInvalidSize();
 
             _pointer->Length = newSize;
@@ -574,7 +574,7 @@ namespace Sparrow.Server
 
         public unsafe void Free(UnmanagedGlobalSegment memory)
         {
-            if(memory.Segment == null)
+            if (memory.Segment == null)
                 ThrowInvalidMemorySegment();
 
             if (_minSize > memory.Size)
@@ -1142,7 +1142,7 @@ namespace Sparrow.Server
         private SegmentInformation AllocateSegment(int size)
         {
             var memorySegment = Allocator.Allocate(size, AllocationFailed);
-            if(memorySegment.Segment == null)
+            if (memorySegment.Segment == null)
                 ThrowInvalidMemorySegmentOnAllocation();
 
             _totalAllocated += memorySegment.Size;

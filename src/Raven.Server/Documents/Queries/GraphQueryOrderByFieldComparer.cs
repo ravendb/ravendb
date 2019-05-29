@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Queries
                         yObject = yLazyStringValue;
                         break;
                     }
-                    else if(yResult is string yStringValue)
+                    else if (yResult is string yStringValue)
                     {
                         xObject = xLazyStringValue;
                         yObject = yStringValue;

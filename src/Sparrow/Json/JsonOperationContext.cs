@@ -163,7 +163,7 @@ namespace Sparrow.Json
             public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
                 where T : JsonOperationContext
             {
-                if(Length != Size)
+                if (Length != Size)
                     throw new InvalidOperationException("Cloned buffer must be of the same size");
 
 

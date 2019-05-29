@@ -40,7 +40,7 @@ namespace Voron.Data.BTrees
 
         public bool Seek(Slice key)
         {
-            if(_disposed)
+            if (_disposed)
                 throw new ObjectDisposedException("PageIterator");
             var current = _page.Search(_tx, key);
             if (current == null)

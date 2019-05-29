@@ -330,7 +330,7 @@ namespace Raven.Server.Rachis
                     // don't truncate if we are disposing an old peer
                     // otherwise he would not receive notification that he was 
                     // kick out of the cluster
-                    if(_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting. 
+                    if (_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting. 
                         continue;
                     
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();

@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitReturnStatement(ReturnStatement returnStatement)
         {
-            if(returnStatement.Argument == null)
+            if (returnStatement.Argument == null)
                 return;
             VisitExpression(returnStatement.Argument);
         }

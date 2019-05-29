@@ -309,7 +309,7 @@ namespace Voron.Data.Compression
 
             public void Dispose()
             {
-                if(_pager.Options.EncryptionEnabled)
+                if (_pager.Options.EncryptionEnabled)
                     Sodium.sodium_memzero(TempPage.TempPagePointer, (UIntPtr)TempPage.PageSize);
                 
                 // return it to the pool

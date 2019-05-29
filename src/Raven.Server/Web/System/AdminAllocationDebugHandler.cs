@@ -35,7 +35,7 @@ namespace Raven.Server.Web.System
                 var first = true;
                 foreach (var alloc in allocations.OrderByDescending(x=>x.Allocations))
                 {
-                    if(first == false)
+                    if (first == false)
                         writer.WriteComma();
 
                     first = false;

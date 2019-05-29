@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries
 
             public void Merge(Match other)
             {
-                if(other._inner == null)
+                if (other._inner == null)
                     return;
                 EnsureInnerInitialized();
                 foreach (var item in other._inner)
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Queries
             {
                 object result = default;
                 _inner?.TryGetValue(alias, out result);
-                if(result is Document d)
+                if (result is Document d)
                 {
                     d.EnsureMetadata();
                     return d;
@@ -242,11 +242,11 @@ namespace Raven.Server.Documents.Queries
                     if (item.Key.StartsWith("_"))
                         continue;
 
-                    if(item.Value is Document d)
+                    if (item.Value is Document d)
                     {
                         j[item.Key] = d.Data;
                     }
-                    else  if(item.Value is MatchCollection matches)
+                    else  if (item.Value is MatchCollection matches)
                     {
                         var array = new DynamicJsonArray();
                         foreach (var m in matches)
@@ -257,11 +257,11 @@ namespace Raven.Server.Documents.Queries
                         }
                         j[item.Key] = array;
                     }
-                    else if(item.Value is string s)
+                    else if (item.Value is string s)
                     {
                         j[item.Key] = s;
                     }
-                    else if(item.Value is BlittableJsonReaderBase b)
+                    else if (item.Value is BlittableJsonReaderBase b)
                     {
                         j[item.Key] = b;
                     }

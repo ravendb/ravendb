@@ -97,7 +97,7 @@ namespace Raven.Server.Utils
                         }
                     }
                 }
-                if(value is BlittableJsonReaderArray array)
+                if (value is BlittableJsonReaderArray array)
                 {
                     foreach (var item in array)
                     {

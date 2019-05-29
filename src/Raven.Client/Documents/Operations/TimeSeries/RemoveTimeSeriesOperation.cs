@@ -16,11 +16,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             if (input.TryGet(nameof(From), out DateTime from) == false || name == null)
                 throw new InvalidDataException($"Missing '{nameof(From)}' property");
-            
-           
+                     
             if (input.TryGet(nameof(To), out DateTime to) == false || name == null)
                 throw new InvalidDataException($"Missing '{nameof(To)}' property");
-
 
             var op = new RemoveTimeSeriesOperation
             {

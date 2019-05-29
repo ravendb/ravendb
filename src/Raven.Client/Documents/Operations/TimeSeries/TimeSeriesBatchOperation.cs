@@ -4,7 +4,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -24,20 +23,19 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public RavenCommand<Result> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new CounterBatchCommand(_timeSeriesBatch, conventions);
+            return new TimeSeriesBatchCommand(_timeSeriesBatch, conventions);
         }
 
-        public class CounterBatchCommand : RavenCommand<Result>
+        public class TimeSeriesBatchCommand : RavenCommand<Result>
         {
             private readonly DocumentConventions _conventions;
             private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
 
-            public CounterBatchCommand(DocumentTimeSeriesOperation tsBatch, DocumentConventions conventions)
+            public TimeSeriesBatchCommand(DocumentTimeSeriesOperation tsBatch, DocumentConventions conventions)
             {
                 _timeSeriesBatch = tsBatch ?? throw new ArgumentNullException(nameof(tsBatch));
                 _conventions = conventions;
             }
-
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -66,7 +64,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             public override bool IsReadRequest => false;
 
         }
-
 
     }
 }

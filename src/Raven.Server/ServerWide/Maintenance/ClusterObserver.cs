@@ -1312,7 +1312,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public bool? ReadRestoringInProgress()
             {
-                if(RawDatabase.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false)
+                if (RawDatabase.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false)
                     return null;
 
                 return dbState == DatabaseStateStatus.RestoreInProgress;

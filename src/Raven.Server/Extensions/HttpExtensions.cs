@@ -45,7 +45,7 @@ namespace Raven.Server.Extensions
 
         public static string GetClientRequestedNodeUrl(this HttpRequest request)
         {
-            if(request.Query.TryGetValue("localUrl", out var localUrl) && localUrl.Count > 0)
+            if (request.Query.TryGetValue("localUrl", out var localUrl) && localUrl.Count > 0)
             {
                 return localUrl[0];
             }

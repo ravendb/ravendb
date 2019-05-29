@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
@@ -482,7 +481,9 @@ namespace Raven.Server.Documents.TimeSeries
                         state[i].TrailingZeroes = (byte)trailingZeros;
                         state[i].LeadingZeroes = (byte)leadingZeros;
                     }
-                    values[i] = values[i] ^ xorValue;                }
+
+                    values[i] = values[i] ^ xorValue;
+                }
             }
 
             private int ReadTimeStamp(BitsBuffer bitsBuffer)

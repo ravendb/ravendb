@@ -42,7 +42,7 @@ namespace Voron.Util
             // In case of encryption, we don't want to decrypt the data for backup, 
             // so let's work directly with the underlying encrypted data (Inner pager).
          
-            if((_buffer.Length % Constants.Storage.PageSize) != 0)
+            if ((_buffer.Length % Constants.Storage.PageSize) != 0)
                 throw new ArgumentException("The buffer length must be a multiple of the page size");
 
             var steps = _buffer.Length/ Constants.Storage.PageSize;

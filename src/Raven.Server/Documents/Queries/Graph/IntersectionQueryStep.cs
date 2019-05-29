@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
-            if(_index >= _results.Count)
+            if (_index >= _results.Count)
             {
                 match = default;
                 return false;

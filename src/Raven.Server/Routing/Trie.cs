@@ -58,7 +58,7 @@ namespace Raven.Server.Routing
                 {
                     if (CurrentIndex < current.Key.Length)
                     {
-                        // if(current.Key[currentIndex] != term[i])
+                        // if (current.Key[currentIndex] != term[i])
                         if (CharEqualsAt(current.Key[CurrentIndex], term[i]) == false)
                         {
                             if (current.Key[CurrentIndex] == '$')

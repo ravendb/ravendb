@@ -131,7 +131,7 @@ namespace Voron.Impl.Journal
 
             for (var i = 0; i < current->PageCount; i++)
             {
-                if(pageInfoPtr[i].PageNumber > current->LastPageNumber)
+                if (pageInfoPtr[i].PageNumber > current->LastPageNumber)
                     throw new InvalidDataException($"Transaction {current->TransactionId} contains reference to page {pageInfoPtr[i].PageNumber} which is after the last allocated page {current->LastPageNumber}");
             }
 

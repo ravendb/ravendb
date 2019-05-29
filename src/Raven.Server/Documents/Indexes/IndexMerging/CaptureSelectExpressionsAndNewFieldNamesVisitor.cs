@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 name = expression.NameEquals.Name.Identifier.ValueText;
             }
 
-            else if(expression.Expression is MemberAccessExpressionSyntax memberAccess)
+            else if (expression.Expression is MemberAccessExpressionSyntax memberAccess)
             { 
                 name = memberAccess.Name.Identifier.ValueText;
             }
