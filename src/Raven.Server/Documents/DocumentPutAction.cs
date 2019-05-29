@@ -149,9 +149,10 @@ namespace Raven.Server.Documents
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
+                    
                     if (shouldVersion)
                     {
-                        if (ShouldVersionOldDocument(flags, oldDoc))
+                        if (ShouldVersionOldDocument(flags, oldDoc, nonPersistentFlags))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -251,7 +252,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc)
+        private static bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {
             if (oldDoc == null)
                 return false; // no document to version
@@ -262,6 +263,9 @@ namespace Raven.Server.Documents
             if (flags.Contain(DocumentFlags.Resolved))
                 return false; // we already versioned it with the a conflicted flag
 
+            if (nonPersistentDocumentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
+                return false; // no need to create 2 identical revisions
+            
             return true;
         }
 

@@ -41,8 +41,10 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
+            bool forceRevisionCreation = GetBoolValueQueryString("forceRevisionCreation", required: false) ?? false;
+            
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var command = new MergedBatchCommand(Database))
+            using (var command = new MergedBatchCommand(Database, forceRevisionCreation))
             {
                 var contentType = HttpContext.Request.ContentType;
                 if (contentType == null ||
@@ -179,7 +181,6 @@ namespace Raven.Server.Documents.Handlers
             // add sb to httpContext
             AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.BulkDocs);
         }
-
 
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
@@ -407,7 +408,6 @@ namespace Raven.Server.Documents.Handlers
             }
             return indexesToCheck;
         }
-
 
         public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
@@ -682,9 +682,12 @@ namespace Raven.Server.Documents.Handlers
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public bool IsClusterTransaction;
+            private readonly NonPersistentDocumentFlags _nonPersistentDocumentFlags = NonPersistentDocumentFlags.None;
 
-            public MergedBatchCommand(DocumentDatabase database) : base(database)
+            public MergedBatchCommand(DocumentDatabase database, bool forceRevisionCreation = false) : base(database)
             {
+                if (forceRevisionCreation)
+                    _nonPersistentDocumentFlags = NonPersistentDocumentFlags.ForceRevisionCreation;
             }
 
             public override string ToString()
@@ -706,7 +709,6 @@ namespace Raven.Server.Documents.Handlers
 
                 return sb.ToString();
             }
-
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
@@ -754,7 +756,7 @@ namespace Raven.Server.Documents.Handlers
                             DocumentsStorage.PutOperationResults putResult;
                             try
                             {
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, nonPersistentFlags: _nonPersistentDocumentFlags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {

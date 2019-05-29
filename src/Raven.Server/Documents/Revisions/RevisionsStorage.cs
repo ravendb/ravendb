@@ -255,6 +255,9 @@ namespace Raven.Server.Documents.Revisions
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
 
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
+                return true;
+
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromRevision))
                 return false;
 
@@ -1252,6 +1255,16 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        public long GetRevisionsCount(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                var count = CountOfRevisions(context, prefixSlice);
+                return count;
+            }
+        }
+        
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))

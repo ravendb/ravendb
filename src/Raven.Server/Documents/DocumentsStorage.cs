@@ -1572,7 +1572,6 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-
         public class CollectionStats
         {
             public string Name;
