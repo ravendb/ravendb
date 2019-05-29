@@ -364,7 +364,86 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task SkipExportingTheServerWideBackup()
+        public async Task SkipExportingTheServerWideBackup1()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                var serverWideBackupConfiguration1 = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1",
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+
+                var serverWideBackupConfiguration2 = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration1));
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration2));
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backup = record.PeriodicBackups.First();
+                var backupTaskId = backup.TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+
+                string backupDirectory = null;
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
+                    backupDirectory = status?.LocalBackup.BackupDirectory;
+                    return status?.LastEtag;
+                }, 0);
+
+                Assert.Equal(0, value);
+
+                var files = Directory.GetFiles(backupDirectory)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                var databaseName = GetDatabaseName() + "restore";
+                var restoreConfig = new RestoreBackupConfiguration
+                {
+                    BackupLocation = backupDirectory,
+                    DatabaseName = databaseName,
+                    LastFileNameToRestore = files.Last()
+                };
+
+                var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                store.Maintenance.Server.Send(restoreOperation)
+                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                // new server should have only 0 backups
+                var server = GetNewServer();
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    CreateDatabase = false,
+                    ModifyDatabaseName = s => databaseName,
+                    Server = server
+                }))
+                {
+                    store2.Maintenance.Server.Send(restoreOperation)
+                        .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                    var record2 = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(0, record2.PeriodicBackups.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SkipExportingTheServerWideBackup2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -398,22 +477,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
+                string backupDirectory = null;
                 var value = WaitForValue(() =>
                 {
                     var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
+                    backupDirectory = status?.LocalBackup.BackupDirectory;
                     return status?.LastEtag;
                 }, 0);
 
                 Assert.Equal(0, value);
-
-                var backupDirectory = Directory.GetDirectories(backup.LocalSettings.FolderPath).First();
-                var databaseName = GetDatabaseName() + "restore";
 
                 var files = Directory.GetFiles(backupDirectory)
                     .Where(BackupUtils.IsBackupFile)
                     .OrderBackups()
                     .ToArray();
 
+                var databaseName = GetDatabaseName() + "restore";
                 var restoreConfig = new RestoreBackupConfiguration
                 {
                     BackupLocation = backupDirectory,

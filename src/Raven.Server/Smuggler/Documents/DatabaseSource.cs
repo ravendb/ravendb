@@ -109,8 +109,7 @@ namespace Raven.Server.Smuggler.Documents
             var databaseRecord = _database.ReadDatabaseRecord();
 
             // filter server wide backup tasks;
-            var backupTasksToRemove = new List<int>();
-            for (var i = 0; i < databaseRecord.PeriodicBackups.Count; i++)
+            for (var i = databaseRecord.PeriodicBackups.Count - 1; i >= 0; i--)
             {
                 var periodicBackup = databaseRecord.PeriodicBackups[i];
                 if (periodicBackup.Name == null)
@@ -118,13 +117,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (periodicBackup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    backupTasksToRemove.Add(i);
+                    databaseRecord.PeriodicBackups.RemoveAt(i);
                 }
-            }
-
-            foreach (var toRemove in backupTasksToRemove)
-            {
-                databaseRecord.PeriodicBackups.RemoveAt(toRemove);
             }
 
             return databaseRecord;
