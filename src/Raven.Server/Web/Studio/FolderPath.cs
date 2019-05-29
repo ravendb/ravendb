@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Server.Config;
+using System.Runtime.InteropServices;
+using System.Linq;
+using Sparrow.Platform;
 
 namespace Raven.Server.Web.Studio
 {
@@ -20,7 +23,24 @@ namespace Raven.Server.Web.Studio
                 }
                 else if (string.IsNullOrWhiteSpace(path))
                 {
-                    folderPathOptions.List.AddRange(GetAvailableDrives());
+                    var availableDrives = GetAvailableDrives();
+
+                    if (PlatformDetails.RunningOnPosix == false)
+                    {
+                        // windows
+                        folderPathOptions.List.UnionWith(availableDrives);
+                    }
+                    else
+                    {
+                        var list = new HashSet<string>();
+
+                        foreach (var drive in availableDrives)
+                        {
+                           list.Add(Path.DirectorySeparatorChar + drive.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault());
+                        }
+
+                        folderPathOptions.List.UnionWith(list);
+                    }
                 }
                 else if (Directory.Exists(path))
                 {
@@ -107,9 +127,8 @@ namespace Raven.Server.Web.Studio
             return null;
         }
     }
-
     public class FolderPathOptions
     {
-        public List<string> List { get; } = new List<string>();
+        public SortedSet<string> List { get; } = new SortedSet<string>();
     }
 }
