@@ -1,113 +1,12 @@
 ﻿using System;
 using System.Linq;
+using FastTests;
 using Xunit;
 
-namespace FastTests.Server.Documents
+namespace SlowTests.Client.TimeSeries.Session
 {
-    public class TimeSeriesTests : RavenTestBase
+    public class TimeSeriesSessionTests : RavenTestBase
     {
-        public class TimeSeriesRangeAggregation
-        {
-            public long Count;
-            public double? Max, Min, Last, First;
-            public DateTime To, From;
-        }
-
-        public class TimeSeriesAggregation
-        {
-            public long Count { get; set; }
-            public TimeSeriesRangeAggregation[] Results { get; set; }
-        }
-
-        [Fact]
-        public void SetTheSameDatesWithDifferenTags()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var baseline = DateTime.Today;
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    var r = new Random(1335);
-                    for (int i = 0; i < 10_000; i++)
-                    {
-                        session.TimeSeriesFor("users/ayende")
-                            .Append("Heartrate", baseline.AddMilliseconds(i+100), "watches/a", 
-                            new double[] { r.Next(50, 120) });
-                    }
-
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(61), "watches/a", new[] { 59d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(61), "watches/b", new[] { 69d });
-
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(63), "watches/a", new[] { 79d });
-
-                    session.TimeSeriesFor("users/ayende")
-                       .Append("Heartrate", baseline.AddMinutes(63), "watches/b", new[] { 89d });
-
-                    session.SaveChanges();
-                }
-            }
-        }
-
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_Simple()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var baseline = DateTime.Today;
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
-                    session.SaveChanges();
-                }
-
-
-                using (var session = store.OpenSession())
-                {
-                    var agg = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
-    declare timeseries out(u) 
-    {
-        from u.Heartrate between $start and $end
-        group by 1h
-        select min(), max(), first(), last()
-    }
-    from @all_docs as u
-    where id() == 'users/ayende'
-    select out(u)
-")
-        .AddParameter("start", baseline)
-        .AddParameter("end", baseline.AddDays(1))
-        .First();
-                    Assert.Equal(3, agg.Count);
-
-                    Assert.Equal(1, agg.Results.Length);
-
-                    var val = agg.Results[0];
-
-
-                    Assert.Equal(59, val.First);
-                    Assert.Equal(59, val.Min);
-
-                    Assert.Equal(69, val.Last);
-                    Assert.Equal(79, val.Max);
-
-                    Assert.Equal(baseline.AddMinutes(60), val.From);
-                    Assert.Equal(baseline.AddMinutes(120), val.To);
-                }
-            }
-        }
 
         [Fact]
         public void CanCreateSimpleTimeSeries()
@@ -308,9 +207,6 @@ namespace FastTests.Server.Documents
             }
         }
 
-
-
-
         [Fact]
         public void CanStoreAndReadMultipleTimestamps()
         {
@@ -404,7 +300,6 @@ namespace FastTests.Server.Documents
             }
         }
 
-
         [Fact]
         public void CanStoreValuesOutOfOrder()
         {
@@ -473,6 +368,113 @@ namespace FastTests.Server.Documents
 
                         offset += 4;
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseLocalDateTimeWhenRequestingTimeSeriesRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline, "watches/fitbit", new[] { 0d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var timeSeriesFor = session.TimeSeriesFor("users/ayende");
+
+                    for (double i = 1; i < 10; i++)
+                    {
+                        timeSeriesFor
+                            .Append("Heartrate", baseline.AddMinutes(i), "watches/fitbit", new[] { i });
+                    }
+
+                    session.SaveChanges();
+                }
+
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var vals = session.TimeSeriesFor("users/ayende")
+                            .Get("Heartrate", baseline.AddMinutes(i), DateTime.MaxValue)
+                            .ToList();
+
+                        Assert.Equal(10 - i, vals.Count);
+
+                        for (double j = 0; j < vals.Count; j++)
+                        {
+                            Assert.Equal(new[] { j + i }, vals[(int)j].Values);
+                        }
+
+                    }
+                }
+
+
+                var maxTimeStamp = baseline.AddMinutes(9);
+
+                for (int i = 1; i < 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var vals = session.TimeSeriesFor("users/ayende")
+                            .Get("Heartrate", baseline, maxTimeStamp.AddMinutes(-i))
+                            .ToList();
+
+                        Assert.Equal(10 - i, vals.Count);
+
+                        for (double j = 0; j < vals.Count; j++)
+                        {
+                            Assert.Equal(new[] { j }, vals[(int)j].Values);
+                        }
+
+                    }
+                }
+
+
+            }
+        }
+
+        [Fact]
+        public void CanRequestNonExistingTimeSeriesRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline, "watches/fitbit", new[] { 58d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new[] { 60d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(-10), baseline.AddMinutes(-5))
+                        .ToList();
+
+                    Assert.Equal(0, vals.Count);
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(5), baseline.AddMinutes(10))
+                        .ToList();
+
+                    Assert.Equal(0, vals.Count);
                 }
             }
         }
