@@ -278,7 +278,7 @@ namespace Raven.Server.Rachis
                                             if (totalSize > Constants.Size.Megabyte)
                                                 break;
                                         }
-
+                                      
                                         appendEntries = new AppendEntries
                                         {
                                             ForceElections = ForceElectionsNow,
@@ -497,11 +497,10 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info($"{ToString()}: sending empty snapshot to {_tag}");
                     }
 
-                    var index = Math.Min(earliestIndexEntry, _followerMatchIndex);
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = index,
-                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, index),
+                        LastIncludedIndex = _followerMatchIndex,
+                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, _followerMatchIndex),
                         Topology = _engine.GetTopologyRaw(context)
                     });
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))

@@ -24,6 +24,10 @@ namespace Raven.Server.Rachis
             _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");
         }
 
+        public override string ToString()
+        {
+            return $"Elector {_engine.Tag} for {_connection.Source}";
+        }
         public void HandleVoteRequest()
         {
             try
@@ -52,15 +56,15 @@ namespace Raven.Server.Rachis
                         }
 
                         ClusterTopology clusterTopology;
-                        long lastIndex;
-                        long lastTerm;
+                        long lastLogIndex;
+                        long lastLogTerm;
                         string whoGotMyVoteIn;
                         long lastVotedTerm;
 
                         using (context.OpenReadTransaction())
                         {
-                            lastIndex = _engine.GetLastEntryIndex(context);
-                            lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
+                            lastLogIndex = _engine.GetLastEntryIndex(context);
+                            lastLogTerm = _engine.GetTermForKnownExisting(context, lastLogIndex);
                             (whoGotMyVoteIn, lastVotedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
 
                             clusterTopology = _engine.GetTopology(context);
@@ -124,6 +128,19 @@ namespace Raven.Server.Rachis
                             _connection.Dispose();
                             return;
                         }
+
+                        if (rv.LastLogTerm < lastLogTerm)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm}"
+                            });
+                            _connection.Dispose();
+                            return;
+                        }
+
 
                         if (rv.IsForcedElection == false &&
                             (
@@ -203,13 +220,13 @@ namespace Raven.Server.Rachis
                                 continue;
                             }
 
-                            if (lastTerm == rv.LastLogTerm && lastIndex > rv.LastLogIndex)
+                            if (lastLogTerm == rv.LastLogTerm && lastLogIndex > rv.LastLogIndex)
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = _engine.CurrentTerm,
                                     VoteGranted = false,
-                                    Message = $"My log {lastIndex} is more up to date than yours {rv.LastLogIndex}"
+                                    Message = $"My log {lastLogIndex} is more up to date than yours {rv.LastLogIndex}"
                                 });
                                 continue;
                             }
@@ -226,7 +243,7 @@ namespace Raven.Server.Rachis
                         HandleVoteResult result;
                         using (context.OpenWriteTransaction())
                         {
-                            result = ShouldGrantVote(context, lastIndex, rv, lastTerm);
+                            result = ShouldGrantVote(context, lastLogIndex, rv);
                             if (result.DeclineVote == false)
                             {
                                 _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
@@ -289,14 +306,30 @@ namespace Raven.Server.Rachis
             public long VotedTerm;
         }
 
-        private HandleVoteResult ShouldGrantVote(TransactionOperationContext context, long lastIndex, RequestVote rv, long lastTerm)
+        private HandleVoteResult ShouldGrantVote(TransactionOperationContext context, long lastIndex, RequestVote rv)
         {
             var result = new HandleVoteResult();
-            var lastEntryUnderWriteLock = _engine.GetLastEntryIndex(context);
-            if (lastEntryUnderWriteLock != lastIndex)
+            var lastLogIndexUnderWriteLock = _engine.GetLastEntryIndex(context);
+            var lastLogTermUnderWriteLock = _engine.GetTermFor(context, lastLogIndexUnderWriteLock);
+
+            if (lastLogIndexUnderWriteLock != lastIndex)
             {
                 result.DeclineVote = true;
                 result.DeclineReason = "Log was changed";
+                return result;
+            }
+
+            if (lastLogTermUnderWriteLock > rv.LastLogTerm)
+            {
+                result.DeclineVote = true;
+                result.DeclineReason = $"My last log term {lastLogTermUnderWriteLock}, is higher than yours {rv.LastLogTerm}.";
+                return result;
+            }
+
+            if (lastLogIndexUnderWriteLock > rv.LastLogIndex)
+            {
+                result.DeclineVote = true;
+                result.DeclineReason = $"Vote declined because my last log index {lastLogIndexUnderWriteLock} is more up to date than yours {rv.LastLogIndex}";
                 return result;
             }
 
@@ -309,16 +342,11 @@ namespace Raven.Server.Rachis
                 result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}";
                 return result;
             }
+
             if (votedTerm >= rv.Term)
             {
                 result.DeclineVote = true;
                 result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for another node in higher term: {votedTerm}";
-                return result;
-            }
-            if (lastTerm == rv.LastLogTerm && lastIndex > rv.LastLogIndex)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Vote declined because my log {lastIndex} is more up to date than yours {rv.LastLogIndex}";
                 return result;
             }
 
