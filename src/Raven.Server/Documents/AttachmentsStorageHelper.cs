@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer cryptoState))
             {
-                if(cryptoState.Length < (int)Sodium.crypto_generichash_statebytes())
+                if (cryptoState.Length < (int)Sodium.crypto_generichash_statebytes())
                     throw new InvalidOperationException("BUG: shouldn't happen, the size of a generic hash state was too large!");
 
                 InitComputeHash(cryptoState);
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
         private static unsafe void PartialComputeHash(JsonOperationContext.ManagedPinnedBuffer cryptoState, JsonOperationContext.ManagedPinnedBuffer buffer, int bufferRead)
         {
             var rc = Sodium.crypto_generichash_update(cryptoState.Pointer,buffer.Pointer,(ulong)bufferRead);
-            if(rc !=0)
+            if (rc !=0)
                 throw new InvalidOperationException("Unable to hash attachment: " + rc);
         }
     }

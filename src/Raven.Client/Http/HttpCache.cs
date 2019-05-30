@@ -310,7 +310,7 @@ namespace Raven.Client.Http
 
                     obj = item.Ptr != null ? new BlittableJsonReaderObject(item.Ptr, item.Size, context) : null;
 #if DEBUG
-                    if(obj != null)
+                    if (obj != null)
                     {
                         obj.BlittableValidation();
                     }

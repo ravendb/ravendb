@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Commands
                     pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(changeVector));
                 }
             }
-            if(_before.HasValue)
+            if (_before.HasValue)
                 pathBuilder.Append("&before=").Append(_before.Value.GetDefaultRavenFormat(_before.Value.Kind == DateTimeKind.Utc));
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);

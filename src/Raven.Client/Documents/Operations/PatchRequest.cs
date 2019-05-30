@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations
 
         protected bool Equals(PatchRequest other)
         {
-            if(other == null)
+            if (other == null)
                 return false;
             return string.Equals(Script, other.Script) && Values.Keys.SequenceEqual(other.Values.Keys);
         }

@@ -831,9 +831,9 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (hasExplicitAlias && !Scanner.TryScan("[]")) //optional qualifier on recursive alias
                             {
                                 //perhaps we have some bad syntax?
-                                if(Scanner.TryScan('['))
+                                if (Scanner.TryScan('['))
                                     ThrowInvalidQueryException("Expected to find the start of recursive clause or recursive clause options but found '['. Note that '[]' is an optional qualifier on the alias of the recursive clause.");
-                                if(Scanner.TryScan(']'))
+                                if (Scanner.TryScan(']'))
                                     ThrowInvalidQueryException("Expected to find the start of recursive clause or recursive clause options but found ']'. Note that '[]' is an optional qualifier on the alias of the recursive clause.");
                             }
 

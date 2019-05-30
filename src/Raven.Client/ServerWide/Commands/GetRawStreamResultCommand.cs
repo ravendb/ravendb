@@ -41,7 +41,7 @@ namespace Raven.Client.ServerWide.Commands
             if (_headerStream == null)
                 return requestMessage;
 
-            if(_headerStream.CanSeek) //just to make sure
+            if (_headerStream.CanSeek) //just to make sure
                 _headerStream.Position = 0; 
 
             requestMessage.Content = new StreamContent(_headerStream);

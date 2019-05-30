@@ -108,7 +108,7 @@ namespace Raven.Client.Util
 
         private void ThrowOnDisposed()
         {
-            if(_isDisposed)
+            if (_isDisposed)
                 throw new ObjectDisposedException("Cannot use WebsocketStream after it was disposed");
         }
 

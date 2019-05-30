@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Conventions
                 return;
             }
             var prop = typeof(DefaultContractResolver).GetProperty("DefaultMembersSearchFlags", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-            if(prop != null)
+            if (prop != null)
             {
                 prop.SetValue(this, MembersSearchFlag);
                 return;

@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.ETL
             if (TopologyDiscoveryUrls == null || TopologyDiscoveryUrls.Length == 0)
                 errors.Add($"{nameof(TopologyDiscoveryUrls)} cannot be empty");
 
-            if(TopologyDiscoveryUrls == null)
+            if (TopologyDiscoveryUrls == null)
                 return;
 
             for (int i = 0; i < TopologyDiscoveryUrls.Length; i++)

@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries.AST
                 if (query.From.From.Compound.Count == 0)
                     return; // reusing an alias defined explicitly before
 
-                if(existing.withQuery.From.From.Compound.Count == 0)
+                if (existing.withQuery.From.From.Compound.Count == 0)
                 {
                     // using an alias that is defined _later_ in the query
                     GraphQuery.WithDocumentQueries[alias] = (implicitAlias, query);

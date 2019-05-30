@@ -233,7 +233,7 @@ namespace Raven.Server.Commercial
                 else
                     _nonce = null;
 
-                if(response.IsSuccessStatusCode || hasNonce || _nonce == null )
+                if (response.IsSuccessStatusCode || hasNonce || _nonce == null )
                 {
                     return response; // either successful or no point in retry
                 }

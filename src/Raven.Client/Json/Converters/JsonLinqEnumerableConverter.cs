@@ -77,7 +77,7 @@ namespace Raven.Client.Json.Converters
             {
                 canConvert = false;
             }
-            else if(objectType.GetTypeInfo().IsClass == false)
+            else if (objectType.GetTypeInfo().IsClass == false)
             {
                 canConvert = false;
             }

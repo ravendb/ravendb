@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

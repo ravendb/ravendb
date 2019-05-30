@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 writer
                     .Append("from ");
-                if(CollectionName.IndexOfAny(_whiteSpaceChars) != -1)
+                if (CollectionName.IndexOfAny(_whiteSpaceChars) != -1)
                 {
                     if (CollectionName.IndexOf('"') != -1)
                     {
