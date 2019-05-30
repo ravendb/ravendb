@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Raven.Client;
+using Raven.Server.Documents;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Client.TimeSeries.Session
@@ -475,6 +478,109 @@ namespace SlowTests.Client.TimeSeries.Session
                         .ToList();
 
                     Assert.Equal(0, vals.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldHaveTimeSeriesFlagInMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "fitbit", new[] { 58d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.Contains(nameof(DocumentFlags.HasTimeSeries), flags);
+                }
+            }
+        }
+
+        [Fact]
+        public void TimeSeriesFlagShouldBeRemovedFromMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "fitbit", new [] { 58d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.Contains(nameof(DocumentFlags.HasTimeSeries), flags);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Remove("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.DoesNotContain(nameof(DocumentFlags.HasTimeSeries), flags);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGetTimeSeriesNames()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Nasdaq", DateTime.Now, "web", new[] { 7547.31 });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", DateTime.Today.AddMinutes(1), "fitbit", new[] { 58d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(2, tsNames.Count);
+
+                    // should be sorted
+                    Assert.Equal("Heartrate", tsNames[0]);
+                    Assert.Equal("Nasdaq", tsNames[1]);
                 }
             }
         }
