@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class saveDocumentCommand extends commandBase {
 
-    constructor(private id: string, private document: document, private db: database, private reportSaveProgress: boolean, private forceRevisionCreation: boolean) {
+    constructor(private id: string, private document: document, private db: database, private reportSaveProgress: boolean = true, private forceRevisionCreation: boolean = false) {
         super();
     }
 
@@ -26,14 +26,14 @@ class saveDocumentCommand extends commandBase {
         
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);
 
-        if (this.reportSaveProgress && !this.forceRevisionCreation) {
-            saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved " + result.Results[0]["@id"]));
-            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save " + this.id, response.responseText, response.statusText));
-        }
-
-        if (this.reportSaveProgress && this.forceRevisionCreation) {
-            saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Created revision for" + result.Results[0]["@id"]));
-            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to create revision for: " + this.id, response.responseText, response.statusText));
+        if (this.reportSaveProgress) {
+            if (this.forceRevisionCreation) {
+                saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Created revision for" + result.Results[0]["@id"]));
+                saveTask.fail((response: JQueryXHR) => this.reportError("Failed to create revision for: " + this.id, response.responseText, response.statusText));
+            } else {
+                saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved document: " + result.Results[0]["@id"]));
+                saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save document:" + this.id, response.responseText, response.statusText));
+            }
         }
 
         return saveTask;
