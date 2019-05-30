@@ -290,6 +290,34 @@ namespace Raven.Client.Documents.Session
             return counters.Select(x => x.ToString()).ToList();
         }
 
+        /// <summary>
+        /// Gets all time series names for the specified entity.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="instance">The instance.</param>
+        /// <returns></returns>
+        public List<string> GetTimeSeriesFor<T>(T instance)
+        {
+            if (instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
+            var documentInfo = GetDocumentInfo(instance);
+
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries,
+                    out BlittableJsonReaderArray bjra) == false)
+                return null;
+
+            var tsList = new List<string>(bjra.Length);
+
+            for (int i = 0; i < bjra.Length; i++)
+            {
+                var val = bjra.GetStringByIndex(i);
+                tsList.Add(val);
+            }
+
+            return tsList;
+        }
+
 
         /// <summary>
         /// Gets the Change Vector for the specified entity.
