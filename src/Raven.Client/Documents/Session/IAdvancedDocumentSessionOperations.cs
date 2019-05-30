@@ -129,6 +129,12 @@ namespace Raven.Client.Documents.Session
         List<string> GetCountersFor<T>(T instance);
 
         /// <summary>
+        ///     Gets all time series names for the specified entity.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        List<string> GetTimeSeriesFor<T>(T instance);
+
+        /// <summary>
         ///     Gets last modified date for the specified entity.
         ///     If the entity is transient, it will load the metadata from the store
         ///     and associate the current state of the entity with the metadata from the server.
