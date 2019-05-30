@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 
                 // test connection from remote to destination
                 result = await ServerStore.TestConnectionFromRemote(requestExecutor, ctx, nodeUrl);
-                if(result.Success == false)
+                if (result.Success == false)
                     throw new InvalidOperationException(result.Error);
 
                 var infoCmd = new GetNodeInfoCommand();

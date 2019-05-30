@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 var first = true;
                 foreach (var parameter in Options.Method.Parameters)
                 {
-                    if(first == false)
+                    if (first == false)
                         writer.Append(",");
                     first = false;
                     writer.Append("$");

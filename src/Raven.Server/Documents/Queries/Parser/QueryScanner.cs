@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             _tokenLength = _pos - _tokenStart;
             //This covers the cases where the identifier starts with either @@ or _@ but not _
-            if(_tokenLength == 1 && (_q[_tokenStart] == '@' || _tokenStart+1<_q.Length && _q[_tokenStart] == '_' && _q[_tokenStart+1] == '@'))
+            if (_tokenLength == 1 && (_q[_tokenStart] == '@' || _tokenStart+1<_q.Length && _q[_tokenStart] == '_' && _q[_tokenStart+1] == '@'))
                 throw new QueryParser.ParseException(Column + ":" + Line + " Illegal identifier detected starting with "+ _q[_tokenStart] + "@ in query: '" + Input + "'");
             Column += _tokenLength;
             return true;
@@ -487,7 +487,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     case '/':
                         // Detect // from the second /, we know that there is at least the { before us,
                         // so no need to do range check
-                        if(_q[_pos-1] == '/')
+                        if (_q[_pos-1] == '/')
                         {
                             for (; _pos < _q.Length; _pos++)
                             {

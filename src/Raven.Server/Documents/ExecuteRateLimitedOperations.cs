@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
             _commandToExecute = commandToExecute;
             _rateGate = rateGate;
             _token = token;
-            if(maxTransactionSize != null)
+            if (maxTransactionSize != null)
                 _maxTransactionSizeInPages = Math.Max(1, maxTransactionSize.Value / Constants.Storage.PageSize);
             _batchSize = batchSize;
             _cancellationToken = token.Token;

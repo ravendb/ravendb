@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
-            if(response == null)
+            if (response == null)
                 throw new InvalidOperationException("The index does not exists, failed to stream results");
 
             var state = new JsonParserState();

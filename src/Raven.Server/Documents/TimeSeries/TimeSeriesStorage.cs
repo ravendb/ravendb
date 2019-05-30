@@ -495,7 +495,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (readOnlySegment.NumberOfValues != values.Length)
                 {
-                    if(readOnlySegment.NumberOfValues > values.Length)
+                    if (readOnlySegment.NumberOfValues > values.Length)
                     {
                         using (context.Allocator.Allocate(readOnlySegment.NumberOfValues * sizeof(double), out ByteString fullValuesBuffer))
                         {

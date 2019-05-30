@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="SessionCountersBase.cs" company="Hibernating Rhinos LTD">
+// <copyright file="SessionTimeSeriesBase.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------

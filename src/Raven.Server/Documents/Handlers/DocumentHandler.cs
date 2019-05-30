@@ -569,7 +569,7 @@ namespace Raven.Server.Documents.Handlers
 
         protected override int ExecuteCmd(DocumentsOperationContext context)
         {
-            if(_shouldValidateAttachments)
+            if (_shouldValidateAttachments)
             {
                 if (_document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
                     && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
@@ -605,20 +605,20 @@ namespace Raven.Server.Documents.Handlers
 
         private void ValidateAttachments(BlittableJsonReaderArray attachments, DocumentsOperationContext context, string id)
         {
-            if(attachments == null)
+            if (attachments == null)
             {
                 throw new InvalidOperationException($"Can not put document (id={id}) with '{Constants.Documents.Metadata.Attachments}': null");
             }
 
             foreach (BlittableJsonReaderObject attachment in attachments)
             {
-                if(attachment.TryGet(nameof(AttachmentName.Hash), out string hash) == false || hash == null)
+                if (attachment.TryGet(nameof(AttachmentName.Hash), out string hash) == false || hash == null)
                 {
                     throw new InvalidOperationException($"Can not put document (id={id}) because it contains an attachment without an hash property.");
                 }
                 using (Slice.From(context.Allocator, hash, out var hashSlice))
                 {
-                    if(AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice) < 1)
+                    if (AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice) < 1)
                     {
                         throw new InvalidOperationException($"Can not put document (id={id}) because it contains an attachment with hash={hash} but no such attachment is stored.");
                     }

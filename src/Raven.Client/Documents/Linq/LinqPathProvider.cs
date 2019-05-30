@@ -360,7 +360,7 @@ namespace Raven.Client.Documents.Linq
             args = new object[mce.Arguments.Count];
             for (var index = 0; index < mce.Arguments.Count; index++)
             {
-                if(mce.Arguments[index].NodeType == ExpressionType.Lambda)
+                if (mce.Arguments[index].NodeType == ExpressionType.Lambda)
                 {
                     args[index] = ((LambdaExpression)mce.Arguments[index]).Compile();
                     continue;
