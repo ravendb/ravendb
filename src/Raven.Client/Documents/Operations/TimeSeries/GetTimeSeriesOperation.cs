@@ -38,6 +38,19 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 _docId = docId;
                 _timeseries = timeseries;
+
+                if (from.Kind == DateTimeKind.Local)
+                {
+                    //from = from.ToUniversalTime();
+                    from = DateTime.SpecifyKind(from, DateTimeKind.Unspecified);
+                }
+
+                if (to.Kind == DateTimeKind.Local)
+                {
+                    //to = to.ToUniversalTime();
+                    to = DateTime.SpecifyKind(to, DateTimeKind.Unspecified);
+                }
+
                 _from = from;
                 _to = to;
             }
@@ -56,8 +69,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     .Append(_from.ToString("o"))
                     .Append("&to=")
                     .Append(_to.ToString("o"));
-                ;
-
+                
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get
