@@ -25,7 +25,10 @@ namespace Raven.Server.Documents
         HasCounters = 0x800,
 
         FromClusterTransaction = 0x1000,
-        Reverted = 0x2000
+        Reverted = 0x2000,
+
+        HasTimeSeries = 0x4000
+
     }
 
     [Flags]
