@@ -50,6 +50,8 @@ namespace Raven.Client
 
             public const string ServerVersion = "Raven-Server-Version";
 
+            public const string StudioVersion = "Raven-Studio-Version";
+
             public const string IfNoneMatch = "If-None-Match";
             public const string TransferEncoding = "Transfer-Encoding";
             public const string ContentEncoding = "Content-Encoding";
