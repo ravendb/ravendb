@@ -15,6 +15,23 @@ namespace Voron.Impl.Paging
     public class CryptoTransactionState
     {
         public Dictionary<long, EncryptionBuffer> LoadedBuffers = new Dictionary<long, EncryptionBuffer>();
+        /// <summary>
+        /// Used for computing the total memory used by the transaction crypto buffers
+        /// </summary>
+        //TODO: we can optimize this by hiding the dictionary and computing the total size when we enter/remove a buffer
+        public long TotalCryptoBufferSize 
+        {
+            get
+            {
+                var total = 0;
+                foreach (var buffer in LoadedBuffers.Values)
+                {
+                    total += buffer.Size;
+                }
+
+                return total;
+            }
+        }
     }
 
     public unsafe class EncryptionBuffer

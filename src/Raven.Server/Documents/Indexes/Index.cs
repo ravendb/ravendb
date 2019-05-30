@@ -3396,6 +3396,8 @@ namespace Raven.Server.Documents.Indexes
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
 
+            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
+
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;
 

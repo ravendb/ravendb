@@ -87,6 +87,26 @@ namespace Voron.Impl
 
 
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
+
+        public long TotalEncryptionBufferSize
+        {
+            get
+            {
+                var cryptoTransactionStates = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
+                if (cryptoTransactionStates == null)
+                {
+                    return 0L;
+                }
+
+                var total = 0L;
+                foreach (var state in cryptoTransactionStates.Values)
+                {
+                    total += state.TotalCryptoBufferSize;
+                }
+
+                return total;
+            }
+        }
         public event Action<IPagerLevelTransactionState> OnDispose;
         public event Action AfterCommitWhenNewReadTransactionsPrevented;
 

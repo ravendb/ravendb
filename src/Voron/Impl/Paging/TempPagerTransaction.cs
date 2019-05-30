@@ -30,6 +30,26 @@ namespace Voron.Impl.Paging
             get; set;
         }
 
+        public long TotalEncryptionBufferSize
+        {
+            get
+            {
+                var cryptoTransactionStates = CryptoPagerTransactionState;
+                if (cryptoTransactionStates == null)
+                {
+                    return 0L;
+                }
+
+                var total = 0L;
+                foreach (var state in cryptoTransactionStates.Values)
+                {
+                    total += state.TotalCryptoBufferSize;
+                }
+
+                return total;
+            }
+        }
+
         public event Action<IPagerLevelTransactionState> OnDispose;
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
