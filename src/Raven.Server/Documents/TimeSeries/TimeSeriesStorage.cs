@@ -119,7 +119,6 @@ namespace Raven.Server.Documents.TimeSeries
                         return changeVector;
                 }
 
-
                 bool TryRemoveRange(ref TableValueReader reader)
                 {
                     var key = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
@@ -171,7 +170,6 @@ namespace Raven.Server.Documents.TimeSeries
                         return null;
                     }
                 }
-
 
                 void FilterSegment(TimeSeriesValuesSegment segment, DateTime baseline, Span<byte> key)
                 {
