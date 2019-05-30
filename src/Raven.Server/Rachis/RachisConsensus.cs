@@ -614,6 +614,16 @@ namespace Raven.Server.Rachis
                     throw new RachisInvalidOperationException("We cannot be elected for leadership if snapshot is requested.");
             }
 
+            if (rachisState == RachisState.LeaderElect)
+            {
+                var noopCmd = new DynamicJsonValue
+                {
+                    ["Type"] = $"Noop for {Tag} in term {expectedTerm}",
+                    ["Command"] = "noop"
+                };
+                InsertToLeaderLog(context, expectedTerm, context.ReadObject(noopCmd, "noop-cmd"), RachisEntryFlags.Noop);
+            }
+
             var sp = Stopwatch.StartNew();
             
             _currentLeader = null;
@@ -1248,7 +1258,7 @@ namespace Raven.Server.Rachis
 
                 var firstEntry = entries[firstIndexInEntriesThatWeHaveNotSeen];
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
-                if (firstEntry.Index < lastCommitIndex)
+                if (firstEntry.Index <= lastCommitIndex)
                 {
                     ThrowFatalError(firstEntry, lastCommitIndex, lastCommitTerm);
                 }

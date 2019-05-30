@@ -53,12 +53,12 @@ namespace Raven.Server.Rachis
         private void FollowerSteadyState()
         {
             var entries = new List<RachisEntry>();
-            long lastCommit = 0, lastTruncate = 0;
+            long lastCommit = 0, lastTruncate = 0, lastAcknowledgedIndex = 0;
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"{ToString()}: Entering steady state");
             }
-            
+
             while (true)
             {
                 entries.Clear();
@@ -118,8 +118,6 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    var lastLogIndex = appendEntries.PrevLogIndex;
-
                     // don't start write transaction for noop
                     if (lastCommit != appendEntries.LeaderCommit ||
                         lastTruncate != appendEntries.TruncateLogBefore ||
@@ -129,12 +127,12 @@ namespace Raven.Server.Rachis
                         {
                             // applying the leader state may take a while, we need to ping
                             // the server and let us know that we are still there
-                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);
+                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, appendEntries.PrevLogIndex);
                             try
                             {
                                 bool hasRemovedFromTopology;
 
-                                (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
+                                (hasRemovedFromTopology, lastAcknowledgedIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
                                     context,
                                     entries,
                                     appendEntries);
@@ -191,7 +189,7 @@ namespace Raven.Server.Rachis
                     _connection.Send(context, new AppendEntriesResponse
                     {
                         CurrentTerm = _term,
-                        LastLogIndex = lastLogIndex,
+                        LastLogIndex = lastAcknowledgedIndex,
                         Success = true
                     });
 
@@ -246,9 +244,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private (bool HasRemovedFromTopology, long LastLogIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, TransactionOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
+        private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, TransactionOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
         {
-            long lastLogIndex; 
             long lastTruncate;
             long lastCommit;
             
@@ -296,15 +293,15 @@ namespace Raven.Server.Rachis
                     }
                 }
 
-                lastLogIndex = _engine.GetLastEntryIndex(context);
-
                 var lastEntryIndexToCommit = Math.Min(
-                    lastLogIndex,
+                    _engine.GetLastEntryIndex(context),
                     appendEntries.LeaderCommit);
 
                 var lastAppliedIndex = _engine.GetLastCommitIndex(context);
+                var lastAppliedTerm = _engine.GetTermFor(context, lastEntryIndexToCommit);
 
-                if (lastEntryIndexToCommit > lastAppliedIndex)
+                // we start to commit only after we have any log with a term of the current leader
+                if (lastEntryIndexToCommit > lastAppliedIndex && lastAppliedTerm == appendEntries.Term)
                 {
                     lastAppliedIndex = _engine.Apply(context, lastEntryIndexToCommit, null, sp);
                 }
@@ -312,7 +309,7 @@ namespace Raven.Server.Rachis
                 lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
                 _engine.TruncateLogBefore(context, lastTruncate);
 
-                lastCommit = lastEntryIndexToCommit;
+                lastCommit = lastAppliedIndex;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"{ToString()}: Ready to commit in {sp.Elapsed}");
@@ -326,7 +323,9 @@ namespace Raven.Server.Rachis
                 _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
             }
 
-            return (HasRemovedFromTopology: removedFromTopology,  LastLogIndex: lastLogIndex,  LastTruncate: lastTruncate,  LastCommit: lastCommit);
+            var lastAcknowledgedIndex = entries.Count == 0 ? appendEntries.PrevLogIndex : entries[entries.Count - 1].Index;
+
+            return (HasRemovedFromTopology: removedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex,  LastTruncate: lastTruncate,  LastCommit: lastCommit);
         }
 
         public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
