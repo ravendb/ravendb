@@ -42,8 +42,8 @@
             </div>
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
-                    <button type="submit" class="btn btn-primary save-btn" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode()"
-                            title="Save changes. A revision will be created only if 'Settings | Document Revisions' is configured.">
+                    <button type="submit" class="btn btn-primary save-btn" 
+                            data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode(), attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
@@ -259,8 +259,8 @@
                 <div class="flex-window-head" data-bind="visible: isRevisionsActive() && $root.canViewRevisions() && !$root.inReadOnlyMode(),
                      attr: { title: $root.dirtyFlag().isDirty() ? 'Save your changes before creating a revision' : 'A revision will be created even if Revisions are Not configured for the collection' }">
                     <div class="padding padding-xs margin-top margin-top-sm">
-                        <button type="button" class="btn btn-sm btn-primary btn-block" 
-                                data-bind="click: _.partial($root.forceCreateRevision, null), disable: $root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.isSaving }">
+                        <button type="button" class="btn btn-sm btn-primary btn-block"
+                                data-bind="click: $root.forceCreateRevision, disable: $root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.isSaving }">
                             <i class="icon-revisions"></i>
                             <span>Create Revision</span>
                         </button>

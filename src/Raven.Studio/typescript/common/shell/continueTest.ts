@@ -28,7 +28,7 @@ class continueTest {
     continue() {
         const doc = document.empty();
         const db = databasesManager.default.getDatabaseByName(this.databaseName());
-        new saveDocumentCommand("Debug/Done", doc, db, false, false)
+        new saveDocumentCommand("Debug/Done", doc, db, false)
             .execute()
             .done(() => this.showContinueButton(false));
     }
