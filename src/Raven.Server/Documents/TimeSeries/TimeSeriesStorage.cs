@@ -150,6 +150,8 @@ namespace Raven.Server.Documents.TimeSeries
                         // we can remove the whole range here in one go...
 
                         table.Delete(reader.Id);
+
+                        RemoveTimeSeriesNameFromMetadata(context, documentId, name);
                     }
 
                     return true;
@@ -214,6 +216,61 @@ namespace Raven.Server.Documents.TimeSeries
                             table.Set(tvb);
                         }
 
+                    }
+                }
+
+                void RemoveTimeSeriesNameFromMetadata(DocumentsOperationContext ctx, string docId, string tsName)
+                {
+                    var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId);
+                    if (doc == null)
+                        return;
+
+                    var data = doc.Data;
+                    var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+
+                    BlittableJsonReaderArray tsNames = null;
+                    if (doc.TryGetMetadata(out var metadata))
+                    {
+                        metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out tsNames);
+                    }
+
+                    if (metadata == null || tsNames == null)
+                        return;
+
+                    var tsNamesList = new List<string>(tsNames.Length + 1);
+                    for (var i = 0; i < tsNames.Length; i++)
+                    {
+                        var val = tsNames.GetStringByIndex(i);
+                        if (val == null)
+                            continue;
+                        tsNamesList.Add(val);
+                    }
+
+                    var location = tsNames.BinarySearch(tsName, StringComparison.Ordinal);
+                    if (location < 0)
+                        return;
+
+                    tsNamesList.RemoveAt(~location);
+
+                    data.Modifications = new DynamicJsonValue(data);
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+
+                    if (tsNamesList.Count == 0)
+                    {
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+                        flags.Strip(DocumentFlags.HasTimeSeries);
+                    }
+                    else
+                    {
+                        metadata.Modifications[Constants.Documents.Metadata.TimeSeries] = tsNamesList;
+                    }
+
+                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+
+                    using (data)
+                    {
+                        var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags);
                     }
                 }
 
