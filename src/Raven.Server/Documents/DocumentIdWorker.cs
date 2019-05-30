@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _jsonParserState = null;
         }
 
-        public static ByteStringContext.ExternalScope GetSliceFromId<TTransaction>(
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice,
             byte? separator = null)
             where TTransaction : RavenTransaction
@@ -41,64 +41,57 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id);
 
-            var buffer = context.GetMemory(
-                maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
+            var internalScope = context.Allocator.Allocate(
+               maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length
                 + escapePositionsSize
-                + (separator != null ? 1 : 0));
+                + (separator != null ? 1 : 0),
+               out var buffer);
+
+            idSlice = new Slice(buffer);
 
             for (var i = 0; i < id.Length; i++)
             {
                 var ch = id[i];
                 if (ch > 127) // not ASCII, use slower mode
-                    goto UnlikelyUnicode;
+                {
+                    strLength = ReadFromUnicodeKey(id, buffer, maxStrSize, separator);
+                    goto Finish;
+                }
                 if ((ch >= 65) && (ch <= 90))
-                    buffer.Address[i] = (byte)(ch | 0x20);
+                    buffer.Ptr[i] = (byte)(ch | 0x20);
                 else
-                    buffer.Address[i] = (byte)ch;
+                    buffer.Ptr[i] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapePositionsIn(buffer.Address, ref strLength, escapePositionsSize);
+            _jsonParserState.FindEscapePositionsIn(buffer.Ptr, ref strLength, escapePositionsSize);
             if (separator != null)
             {
-                buffer.Address[strLength] = separator.Value;
+                buffer.Ptr[strLength] = separator.Value;
                 strLength++;
             }
-            return Slice.External(context.Allocator, buffer.Address, strLength, out idSlice);
-
-        UnlikelyUnicode:
-            return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, maxStrSize, separator);
+        Finish:
+            buffer.Truncate(strLength);
+            return internalScope;
         }
 
-        private static ByteStringContext.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
-            TransactionOperationContext<TTransaction> context,
+        private static int ReadFromUnicodeKey(
             string key,
-            out Slice keySlice,
-            byte* buffer, int byteCount,
+            ByteString buffer,
+            int maxByteCount,
             byte? separator)
-            where TTransaction : RavenTransaction
         {
-            fixed (char* pChars = key)
+            var destChars = (char*)(buffer.Ptr + maxByteCount);
+            for (var i = 0; i < key.Length; i++)
+                destChars[i] = char.ToLowerInvariant(key[i]);
+            var size = Encoding.GetBytes(destChars, key.Length, buffer.Ptr, maxByteCount);
+
+            if (separator != null)
             {
-                var destChars = (char*)buffer;
-                for (var i = 0; i < key.Length; i++)
-                    destChars[i] = char.ToLowerInvariant(pChars[i]);
-
-                var keyBytes = buffer + key.Length * sizeof(char);
-
-                var size = Encoding.GetBytes(destChars, key.Length, keyBytes, byteCount);
-
-                if (size > MaxIdSize)
-                    ThrowDocumentIdTooBig(key);
-
-                if (separator != null)
-                {
-                    keyBytes[size] = separator.Value;
-                    size++;
-                }
-
-                return Slice.External(context.Allocator, keyBytes, (ushort)(size), out keySlice);
+                buffer.Ptr[size] = separator.Value;
+                size++;
             }
+            return size;
         }
 
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
