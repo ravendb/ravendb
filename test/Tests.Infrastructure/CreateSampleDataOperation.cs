@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Tests.Infrastructure
@@ -13,7 +14,7 @@ namespace Tests.Infrastructure
             return new CreateSampleDataCommand();
         }
 
-        private class CreateSampleDataCommand : RavenCommand
+        private class CreateSampleDataCommand : RavenCommand, IRaftCommand
         {
             public override bool IsReadRequest => false;
 
@@ -26,6 +27,8 @@ namespace Tests.Infrastructure
                     Method = HttpMethod.Post
                 };
             }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }
