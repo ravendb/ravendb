@@ -874,24 +874,37 @@ namespace Voron.Impl
                   ? Task.Run(() => { CommitStage2_WriteToJournal(); return true; })
                   : NoWriteToJournalRequiredTask;
 
+            var usageIncremented = false;
+
             try
             {
+                _forTestingPurposes?.ActionToCallDuringBeginAsyncCommitAndStartNewTransaction?.Invoke();
+
                 _env.IncrementUsageOnNewTransaction();
+                usageIncremented = true;
+
                 _env.ActiveTransactions.Add(nextTx);
                 _env.WriteTransactionStarted();
+
 
                 return nextTx;
             }
             catch (Exception)
             {
-                // failure here means that we'll try to complete the current transaction normaly
+                // failure here means that we'll try to complete the current transaction normally
                 // then throw as if commit was called normally and the next transaction failed
 
-                _env.DecrementUsageOnTransactionCreationFailure();
+                try
+                {
+                    if (usageIncremented)
+                        _env.DecrementUsageOnTransactionCreationFailure();
 
-                EndAsyncCommit();
-
-                AsyncCommit = null;
+                    EndAsyncCommit();
+                }
+                finally
+                {
+                    AsyncCommit = null;
+                }
 
                 _disposed |= TxState.Errored;
 
@@ -1282,6 +1295,7 @@ namespace Voron.Impl
 
             internal Action ActionToCallDuringEnsurePagerStateReference;
             internal Action ActionToCallJustBeforeWritingToJournal;
+            internal Action ActionToCallDuringBeginAsyncCommitAndStartNewTransaction;
 
             public TestingStuff(LowLevelTransaction tx)
             {
@@ -1305,6 +1319,13 @@ namespace Voron.Impl
                 ActionToCallJustBeforeWritingToJournal = action;
 
                 return new DisposableAction(() => ActionToCallJustBeforeWritingToJournal = null);
+            }
+
+            internal IDisposable CallDuringBeginAsyncCommitAndStartNewTransaction(Action action)
+            {
+                ActionToCallDuringBeginAsyncCommitAndStartNewTransaction = action;
+
+                return new DisposableAction(() => ActionToCallDuringBeginAsyncCommitAndStartNewTransaction = null);
             }
 
             internal HashSet<PagerState> GetPagerStates()
