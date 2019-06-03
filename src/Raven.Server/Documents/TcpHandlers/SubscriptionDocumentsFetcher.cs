@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly SubscriptionState _subscription;
         private readonly SubscriptionPatchDocument _patch;
         // make sure that we don't use too much memory for subscription batch
-        private readonly Size _maximumAllowedMemory;
+        private readonly long _maximumAllowedMemory;
 
         public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
             bool revisions,
@@ -49,8 +49,9 @@ namespace Raven.Server.Documents.TcpHandlers
             _revisions = revisions;
             _subscription = subscription;
             _patch = patch;
-            _maximumAllowedMemory = new Size((PlatformDetails.Is32Bits ||
-                                              _db.Configuration.Storage.ForceUsing32BitsPager) ? 4 : 32, SizeUnit.Megabytes);
+            _maximumAllowedMemory = (PlatformDetails.Is32Bits || _db.Configuration.Storage.ForceUsing32BitsPager
+                ? 4
+                : 32)* Voron.Global.Constants.Size.Megabyte;
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag)
         {
             int numberOfDocs = 0;
-            Size size = new Size(0, SizeUnit.Megabytes);
+            long size = 0;
 
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     using (doc.Data)
                     {
-                        size.Add(doc.Data.Size, SizeUnit.Bytes);
+                        size += doc.Data.Size;
                         if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                         {
                             if (exception != null)
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size >= _maximumAllowedMemory)
+                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize>= _maximumAllowedMemory)
                         yield break;
                 }
             }
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag)
         {
             int numberOfDocs = 0;
-            Size size = new Size(0, SizeUnit.Megabytes);
+            long size = 0;
 
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
@@ -160,7 +161,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
-                    size.Add(item.Data.Size, SizeUnit.Bytes);
+                    size += item.Data.Size;
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (includesCmd != null && run != null)
@@ -209,7 +210,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size >= _maximumAllowedMemory)
+                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize >= _maximumAllowedMemory)
                         yield break;
                 }
             }
