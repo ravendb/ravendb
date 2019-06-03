@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Rachis;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -86,6 +87,75 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, record.Topology.ReplicationFactor);
 
                 Assert.True(WaitForDocument(store, "foo/bar"));
+            }
+        }
+
+        [Theory]
+        [InlineData("A")]
+        [InlineData("ONE")]
+        public async Task HardResetToNewClusterTest(string tag)
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var dbName = GetDatabaseName();
+            var dbName2 = GetDatabaseName();
+
+            var cluster = await CreateRaftCluster(2);
+            await CreateDatabaseInCluster(dbName, 2, cluster.Leader.WebUrl);
+            await CreateDatabaseInCluster(dbName2, 2, cluster.Leader.WebUrl);
+            var node = cluster.Nodes.First(x => x != cluster.Leader);
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+                Database = dbName,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            using (var store2 = new DocumentStore
+            {
+                Urls = new[] { node.WebUrl },
+                Database = dbName,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                var result = WaitForDocument(store2, "foo/bar");
+                Assert.True(result);
+
+                cluster.Leader.ServerStore.Engine.HardResetToNewCluster(tag);
+
+                var outgoingConnections = WaitForValue(() =>
+                {
+                    var dbInstance = cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName).Result;
+                    return dbInstance.ReplicationLoader.OutgoingHandlers.Count();
+                }, 0);
+
+                Assert.Equal(0, outgoingConnections);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "foo/bar/2");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("foo/bar");
+                    var user2 = await session.LoadAsync<User>("foo/bar/2");
+
+                    Assert.NotNull(user);
+                    Assert.Null(user2);
+                }
             }
         }
 
@@ -184,7 +254,7 @@ namespace RachisTests.DatabaseCluster
 
                 await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag));
                 Assert.True(await removed.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
-                    "Removed node wasn't move to passive state.");
+                    $"Removed node wasn't move to passive state ({removed.ServerStore.Engine.CurrentState})");
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
 
