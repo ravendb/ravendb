@@ -284,7 +284,12 @@ namespace SlowTests.SparrowTests
                     if (previous.Number == current.Number && Path.GetExtension(current.FileName) == ".gz")
                         continue;
 
-                    exceptions.Add(new Exception($"Log between {previous} and {current} is missing"));
+                    var justFileNames = list.Select(l => Path.GetFileName(l.FileName));
+                    var logsAroundError = string.Join(',', justFileNames);
+
+                    exceptions.Add(new Exception($"Log between {previous.FileName} and {current.FileName} is missing" +
+                                                 Environment.NewLine +
+                                                 $"{logsAroundError}"));
                 }
 
             }
