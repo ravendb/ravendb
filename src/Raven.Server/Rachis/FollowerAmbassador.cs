@@ -181,7 +181,7 @@ namespace Raven.Server.Rachis
 
                                     while (connectTask.Wait(1000) == false)
                                     {
-                                        if(_leader.Running == false)
+                                        if (_leader.Running == false)
                                             return;
 
                                         if (_running == false)
@@ -408,6 +408,15 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
+                        if (e is TopologyMismatchException)
+                        {
+                            if (_leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out _))
+                            {
+                                StatusMessage = "No longer in the topology";
+                                return;
+                            }
+                        }
+
                         // This is an unexpected exception which indicate the something is wrong with the connection.
                         // So we will retry to reconnect. 
                         _connection?.Dispose();

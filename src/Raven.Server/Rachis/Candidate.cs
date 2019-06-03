@@ -30,10 +30,16 @@ namespace Raven.Server.Rachis
             _engine = engine;
         }
 
+        public override string ToString()
+        {
+            return $"Candidate {_engine.Tag} ({Thread.CurrentThread.ManagedThreadId})";
+        }
+
         public long ElectionTerm { get; private set; }
 
         private void Run()
         {
+            var ambassadorsToRemove = new List<CandidateAmbassador>();
             try
             {
                 try
@@ -93,35 +99,35 @@ namespace Raven.Server.Rachis
 
                         _peersWaiting.Reset();
 
-                        bool removedFromTopology = false;
                         var trialElectionsCount = 1;
                         var realElectionsCount = 1;
                         foreach (var ambassador in _voters)
                         {
                             if (ambassador.NotInTopology)
                             {
-                                removedFromTopology = true;
-                                break;
+                                MoveCandidateToPassive("A leader node has indicated that I'm not in their topology, I was probably kicked out.");
+                                return;
                             }
+
+                            if (ambassador.TopologyMismatch)
+                            {
+                                ambassadorsToRemove.Add(ambassador);
+                                continue;
+                            }
+
                             if (ambassador.RealElectionWonAtTerm == ElectionTerm)
                                 realElectionsCount++;
                             if (ambassador.TrialElectionWonAtTerm == ElectionTerm)
                                 trialElectionsCount++;
                         }
 
-                        var majority = ((_voters.Count + 1) / 2) + 1;
-
-                        if (removedFromTopology)
+                        if (StillHavePeers(ambassadorsToRemove) == false)
                         {
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info(
-                                    $"Candidate {_engine.Tag}: A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
-                            }
-                            _engine.SetNewState(RachisState.Passive, this, _engine.CurrentTerm,
-                                "I just learned from the leader that I'm not in their topology, moving to passive state");
-                            break;
+                            MoveCandidateToPassive("I'm left alone in the cluster.");
+                            return;
                         }
+
+                        var majority = ((_voters.Count + 1) / 2) + 1;
 
                         if (realElectionsCount >= majority)
                         {
@@ -189,6 +195,39 @@ namespace Raven.Server.Rachis
                     // nothing to be done here
                 }
             }
+        }
+
+        private void MoveCandidateToPassive(string message)
+        {
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"{ToString()}: {message}");
+            }
+            _engine.SetNewState(RachisState.Passive, this, _engine.CurrentTerm, message);
+        }
+
+        private bool StillHavePeers(List<CandidateAmbassador> ambassadorsToRemove)
+        {
+            if (ambassadorsToRemove.Count > 0)
+            {
+                foreach (var candidateAmbassador in ambassadorsToRemove)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(
+                            $"{ToString()}: the node {candidateAmbassador.Tag} has a mismatched topology and on longer part of this cluster.");
+                    }
+
+                    _voters.Remove(candidateAmbassador);
+                }
+
+                ambassadorsToRemove.Clear();
+
+                if (_voters.Count == 0)
+                    return false;
+            }
+
+            return true;
         }
 
         private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
