@@ -872,7 +872,7 @@ namespace Raven.Server.Rachis
         {
             if (nodeTag != null)
             {
-                ValidateNodeTag(nodeTag);
+                RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
             using (_disposerLock.EnsureNotDisposed())
@@ -987,24 +987,7 @@ namespace Raven.Server.Rachis
                 return true;
             }
         }
-
-        public static void ValidateNodeTag(string nodeTag)
-        {
-            if (nodeTag.Equals("RAFT"))
-                ThrowInvalidNodeTag(nodeTag, "It is a reserved tag.");
-            if (nodeTag.Length > 4)
-                ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");
-            // Node tag must not contain ':' or '-' chars as they are in use in change vector.
-            // The following check covers that as well.
-            if (nodeTag.IsUpperLettersOnly() == false)
-                ThrowInvalidNodeTag(nodeTag, "Node tag must contain only upper case letters.");
-        }
-
-        public static void ThrowInvalidNodeTag(string nodeTag, string reason)
-        {
-            throw new ArgumentException($"Can't set the node tag to '{nodeTag}'. {reason}");
-        }
-
+        
         public override string ToString()
         {
             return $"Leader {_engine.Tag} in term {Term}";

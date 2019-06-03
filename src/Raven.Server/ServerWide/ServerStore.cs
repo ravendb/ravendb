@@ -640,7 +640,8 @@ namespace Raven.Server.ServerWide
             }
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
-            _engine.BeforeAppendToRaftLog += BeforeAppendToRaftLog;
+            _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
+
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, myUrl);
 
