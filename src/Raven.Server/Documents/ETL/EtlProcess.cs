@@ -36,6 +36,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Impl;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
@@ -360,7 +361,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context, EtlStatsScope stats)
+        public void Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
             using (stats.For(EtlOperations.Load))
             {
@@ -401,9 +402,9 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract int LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
+        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {
             if (currentItem.Type == EtlItemType.CounterGroup)
             {
@@ -459,7 +460,7 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            var totalAllocated = _threadAllocations.TotalAllocated;
+            var totalAllocated = _threadAllocations.TotalAllocated + ctx.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
             _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
             var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
 
