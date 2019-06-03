@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Replication
                                 if ((item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
                                      item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone) &&
                                     // We want to limit batch sizes to reasonable limits.
-                                    ((maxSizeToSend.HasValue && size > maxSizeToSend.Value.GetValue(SizeUnit.Bytes)) ||
+                                    ((maxSizeToSend.HasValue && size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize > maxSizeToSend.Value.GetValue(SizeUnit.Bytes)) ||
                                      (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
                                 {
                                     wasInterrupted = true;
@@ -295,11 +295,19 @@ namespace Raven.Server.Documents.Replication
                             var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
                             _log.Info(message);
                         }
-                        
-                        _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
+
+                        var msg = $"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
                                   $"and {_replicaAttachmentStreams.Count} attachment's streams " +
-                                  $"to replicate to {_parent.Node.FromString()}, " +
-                                  $"total size: {new Size(size, SizeUnit.Bytes)}");
+                                  $"to replicate to {_parent.Node.FromString()}, ";
+                                 
+                        var encryptionSize = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
+                        if (encryptionSize > 0)
+                        {
+                            msg += $"encryption buffer overhead size is {new Size(encryptionSize, SizeUnit.Bytes)}, ";
+                        }
+                        msg += $"total size: {new Size(size + encryptionSize, SizeUnit.Bytes)}";
+
+                        _log.Info(msg);
                     }
 
                     if (_orderedReplicaItems.Count == 0 && _countersToReplicate.Count == 0)
