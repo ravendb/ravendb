@@ -37,7 +37,7 @@ namespace SlowTests.Voron.Issues
                 var cryptoTxState = ((IPagerLevelTransactionState)tx.LowLevelTransaction).CryptoPagerTransactionState.Single().Value;
 
                 // explicitly change the order of items in dictionary so we'll apply the buffer of overflow page before the already freed one
-                cryptoTxState.ReverseBuffers();
+                cryptoTxState.SetBuffers(cryptoTxState.LoadedBuffers.Reverse().ToDictionary(x => x.Key, x => x.Value));
 
                 tx.Commit();
             }
