@@ -24,8 +24,6 @@ namespace Voron.Impl.Paging
         /// </summary>
         public long TotalCryptoBufferSize => _totalCryptoBufferSize;
 
-        public Dictionary<long, EncryptionBuffer> LoadedBuffers => _loadedBuffers;
-
         public void SetBuffers(Dictionary<long, EncryptionBuffer> loadedBuffers)
         {
             var total = 0L;
