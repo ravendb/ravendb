@@ -24,6 +24,20 @@ namespace Voron.Impl.Paging
         /// </summary>
         public long TotalCryptoBufferSize => _totalCryptoBufferSize;
 
+        public Dictionary<long, EncryptionBuffer> LoadedBuffers => _loadedBuffers;
+
+        public void SetBuffers(Dictionary<long, EncryptionBuffer> loadedBuffers)
+        {
+            var total = 0L;
+            foreach (var buffer in loadedBuffers.Values)
+            {
+                total += buffer.Size;
+            }
+
+            _loadedBuffers = loadedBuffers;
+            _totalCryptoBufferSize = total;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetValue(long i, out EncryptionBuffer value)
         {
@@ -51,10 +65,6 @@ namespace Voron.Impl.Paging
             return GetEnumerator();
         }
 
-        public void ReverseBuffers()
-        {
-            _loadedBuffers = _loadedBuffers.Reverse().ToDictionary(x => x.Key, x => x.Value);
-        }
     }
 
     public unsafe class EncryptionBuffer
