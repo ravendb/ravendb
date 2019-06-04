@@ -218,19 +218,16 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            if (e is RachisConcurrencyException == false && 
-                                RachisConsensus.IsExpectedException(e) == false)
-                                NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
-
+                            NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
                         finally
                         {
                             needNewConnection = true;
-                            _debugRecorder.Record("Connection obtained");
                         }
 
+                        _debugRecorder.Record("Connection obtained");
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected with {_tag}";
 
@@ -390,6 +387,10 @@ namespace Raven.Server.Rachis
                             _debugRecorder.Record("Cycle done");
                             _debugRecorder.Start();
                         }
+
+                        Status = AmbassadorStatus.Disconnected;
+                        StatusMessage = "Graceful shutdown";
+                        _debugRecorder.Record(StatusMessage);
                     }
                     catch (RachisConcurrencyException)
                     {
@@ -401,11 +402,6 @@ namespace Raven.Server.Rachis
                         // this is a rachis protocol violation exception, we must close this ambassador. 
                         throw;
                     }
-                    catch (Exception e) when (RachisConsensus.IsExpectedException(e))
-                    {
-                        // Those are expected exceptions which indicate that this ambassador is shutting down.
-                        throw;
-                    }
                     catch (Exception e)
                     {
                         // This is an unexpected exception which indicate the something is wrong with the connection.
@@ -413,20 +409,6 @@ namespace Raven.Server.Rachis
                         _connection?.Dispose();
                         NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
-                    }
-                    finally
-                    {
-                        if (Status == AmbassadorStatus.Connected)
-                        {
-                            StatusMessage = "Disconnected";
-                        }
-                        else
-                        {
-                            StatusMessage = "Disconnected due to :" + StatusMessage;
-                        }
-
-                        Status = AmbassadorStatus.Disconnected;
-                        _debugRecorder.Record(StatusMessage);
                     }
                 }
             }
