@@ -598,7 +598,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void SetNewStateInTx(TransactionOperationContext context,
+        internal void SetNewStateInTx(TransactionOperationContext context,
             RachisState rachisState,
             IDisposable parent,
             long expectedTerm,
