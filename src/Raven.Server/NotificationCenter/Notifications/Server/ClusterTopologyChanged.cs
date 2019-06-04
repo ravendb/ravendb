@@ -59,7 +59,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
                 Status = status,
                 CurrentTerm = term,
                 NodeLicenseDetails = nodeLicenseDetails,
-                IsPersistent = true
+                IsPersistent = false
             };
         }
     }
