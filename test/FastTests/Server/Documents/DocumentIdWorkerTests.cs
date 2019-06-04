@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -11,6 +13,28 @@ namespace FastTests.Server.Documents
 {
     public class DocumentIdWorkerTests : RavenTestBase
     {
+        [Fact]
+        public async Task GetLower_WhenStringAscii_ShouldNotModifyTheValueAcceptToLower()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                {
+                    for (var i = 32; i <= 127; i++)
+                    {
+                        using (var str = ctx.GetLazyString("Person@1" + (char)i))
+                        {
+                            using (DocumentIdWorker.GetLower(ctx.Allocator, str, out var lowerId))
+                            {
+                                Assert.Equal(str.ToLower(), lowerId.ToString());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         [Fact]
         public async Task GetSliceFromId_WhenStringAscii_ShouldNotModifyTheValueAcceptToLower()
         {
