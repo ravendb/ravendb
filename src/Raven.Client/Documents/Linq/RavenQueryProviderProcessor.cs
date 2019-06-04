@@ -77,7 +77,9 @@ namespace Raven.Client.Documents.Linq
             "GROUP",
             "ORDER",
             "INCLUDE",
-            "UPDATE"
+            "UPDATE",
+            "LIMIT",
+            "OFFSET"
         };
         private List<string> _projectionParameters { get; set; }
 
