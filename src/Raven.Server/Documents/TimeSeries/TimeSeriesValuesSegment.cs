@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.TimeSeries
                     else
                     {
                         tempBitsBuffer.AddValue(1, 1); // will write the tag index buffer here
-                        if(prevTagIndex == byte.MaxValue)
+                        if (prevTagIndex == byte.MaxValue)
                         {
                             tempBitsBuffer.AddValue(0, 1); // no tags here
                         }

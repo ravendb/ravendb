@@ -531,7 +531,9 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     // no matches for this series at all, need to create new segment
 
-                    return AppendNewSegment(values);
+                    var cv = AppendNewSegment(values);
+                    AddTimeSeriesNameToMetadata(context, documentId, name);
+                    return cv;
                 }
 
                 // we found the segment that should contain the new value, now we need to check if we need can append
@@ -733,7 +735,6 @@ namespace Raven.Server.Documents.TimeSeries
                     table.Insert(tvb);
                 }
 
-                AddTimeSeriesNameToMetadata(context, documentId, name);
                 return changeVector;
 
             }
