@@ -102,6 +102,134 @@ namespace SlowTests.MailingList
             }
         }
 
+        [Fact]
+        public void CanCompileIndexWithToDictionary()
+        {
+            const int countOfUsers = 20;
+            var listOfUsers = new List<User>();
+            using (var store = GetDocumentStore())
+            {
+                new ToDictionarySelectOrderBySumIndex().Execute(store);
+                var rnd = new System.Random();
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < countOfUsers; i++)
+                    {
+                        var u = new User
+                        {
+                            Id = $"{i}",
+                            LoginCountByDate = new Dictionary<DateTime, int>
+                            {
+                                {DateTime.UtcNow, rnd.Next(1, 100)},
+                                {DateTime.UtcNow.AddDays(1), rnd.Next(1, 100)},
+                                {DateTime.UtcNow.AddDays(-1), rnd.Next(1, 100)}
+                            },
+                            ListOfDecimals = new List<decimal>()
+                            {
+                                rnd.Next(1, 10),
+                                rnd.Next(20, 30),
+                                rnd.Next(40, 50),
+                                rnd.Next(60, 70)
+                            }
+                        };
+
+                        listOfUsers.Add(u);
+                        session.Store(u);
+                    }
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<ToDictionarySelectOrderBySumIndex.Result, ToDictionarySelectOrderBySumIndex>()
+                        .ProjectInto<ToDictionarySelectOrderBySumIndex.Result>()
+                        .ToList();
+                    Assert.Equal(countOfUsers, results.Count);
+                    for (int i = 0; i < countOfUsers; i++)
+                    {
+                        var expectedResult = new ToDictionarySelectOrderBySumIndex.Result()
+                        {
+                            Id = listOfUsers[i].Id,
+                            SelectSum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
+                            OrderBySum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
+                        };
+                        Assert.Equal(expectedResult.Id, results[i].Id);
+                        Assert.Equal(expectedResult.SelectSum, results[i].SelectSum);
+                        Assert.Equal(expectedResult.OrderBySum, results[i].OrderBySum);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCompileIndexWithDistinct()
+        {
+            const int countOfUsers = 20;
+            var listOfUsers = new List<User>();
+            using (var store = GetDocumentStore())
+            {
+                new DistinctSelectOrderBySumMapReduceIndex().Execute(store);
+                var rnd = new System.Random();
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < countOfUsers; i++)
+                    {
+                        var u = new User
+                        {
+                            Id = $"{i}",
+                            LoginCountByDate = new Dictionary<DateTime, int>
+                            {
+                                {DateTime.UtcNow, rnd.Next(1, 100)},
+                                {DateTime.UtcNow.AddDays(1), rnd.Next(1, 100)},
+                                {DateTime.UtcNow.AddDays(-1), rnd.Next(1, 100)}
+                            },
+                            ListOfDecimals = new List<decimal>()
+                            {
+                                rnd.Next(1, 10),
+                                rnd.Next(20, 30),
+                                rnd.Next(40, 50),
+                                rnd.Next(60, 70)
+                            }
+                        };
+                        listOfUsers.Add(u);
+                        session.Store(u);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<DistinctSelectOrderBySumMapReduceIndex.Result, DistinctSelectOrderBySumMapReduceIndex>()
+                        .ProjectInto<DistinctSelectOrderBySumMapReduceIndex.Result>()
+                        .ToList();
+
+                    Assert.Equal(countOfUsers, results.Count);
+
+                    for (int i = 0; i < countOfUsers; i++)
+                    {
+                        var expectedResult = new DistinctSelectOrderBySumMapReduceIndex.Result()
+                        {
+                            Id = listOfUsers[i].Id,
+                            SelectSum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
+                            OrderBySum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
+                            IdsWithDecimals = listOfUsers[i].ListOfDecimals.ToDictionary(k => k, k => 0),
+                            Items = new[] { listOfUsers[i].Id }
+                        };
+                        Assert.Equal(expectedResult.Id, results[i].Id);
+                        Assert.Equal(expectedResult.SelectSum, results[i].SelectSum);
+                        Assert.Equal(expectedResult.OrderBySum, results[i].OrderBySum);
+                        Assert.Equal(expectedResult.Items, results[i].Items);
+                    }
+                }
+            }
+        }
+
         private static void AssertResults(List<TypedThenByIndex.Result> result, Order order)
         {
             Assert.Equal(1, result.Count);
@@ -273,6 +401,86 @@ namespace SlowTests.MailingList
                                                };
             }
 
+        }
+
+        private class ToDictionarySelectOrderBySumIndex : AbstractIndexCreationTask<User, ToDictionarySelectOrderBySumIndex.Result>
+        {
+            public class Result
+            {
+                public string Id { get; set; }
+
+                public int SelectSum { get; set; }
+
+                public int OrderBySum { get; set; }
+
+                public Dictionary<decimal, int> IdsWithDecimals { get; set; }
+            }
+
+            public ToDictionarySelectOrderBySumIndex()
+            {
+                Map = users => from user in users
+                    select new Result
+                    {
+                        Id = user.Id,
+                        SelectSum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
+                        OrderBySum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
+                    };
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class DistinctSelectOrderBySumMapReduceIndex : AbstractIndexCreationTask<User, DistinctSelectOrderBySumMapReduceIndex.Result>
+        {
+            public class Result
+            {
+                public string Id { get; set; }
+
+                public int SelectSum { get; set; }
+
+                public int OrderBySum { get; set; }
+
+                public Dictionary<decimal, int> IdsWithDecimals { get; set; }
+
+                public IList<string> Items { get; set; } = new List<string>();
+            }
+
+            public DistinctSelectOrderBySumMapReduceIndex()
+            {
+                Map = users => from user in users
+                               select new Result
+                               {
+                                   Id = user.Id,
+                                   SelectSum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
+                                   OrderBySum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
+                                   IdsWithDecimals = user.ListOfDecimals.ToDictionary(i => i, i => 0),
+                                   Items = new[] { user.Id }
+                               };
+
+                Reduce = results => from result in results
+                    group result by new
+                    {
+                        result.Id,
+                        result.OrderBySum,
+                        result.SelectSum
+                    }
+                    into g
+                    let numbersDictionary = g.SelectMany(x => x.IdsWithDecimals).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
+                    select new Result
+                    {
+                        Id = g.Key.Id,
+                        SelectSum = g.Key.SelectSum,
+                        OrderBySum = g.Key.OrderBySum,
+                        IdsWithDecimals = numbersDictionary,
+                        Items = g.SelectMany(x => x.Items).Distinct().OrderBy(x => x).ToList()
+                    };
+            }
+        }
+
+        public class User
+        {
+            public string Id { get; set; }
+            public Dictionary<DateTime, int> LoginCountByDate { get; set; }
+            public List<decimal> ListOfDecimals { get; set; }
         }
 
         private class AccommodationFlightPriceCalendarAccommodationPrice
