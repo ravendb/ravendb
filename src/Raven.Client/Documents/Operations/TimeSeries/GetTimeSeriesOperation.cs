@@ -41,13 +41,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (from.Kind == DateTimeKind.Local)
                 {
-                    //from = from.ToUniversalTime();
                     from = DateTime.SpecifyKind(from, DateTimeKind.Unspecified);
                 }
 
                 if (to.Kind == DateTimeKind.Local)
                 {
-                    //to = to.ToUniversalTime();
                     to = DateTime.SpecifyKind(to, DateTimeKind.Unspecified);
                 }
 
