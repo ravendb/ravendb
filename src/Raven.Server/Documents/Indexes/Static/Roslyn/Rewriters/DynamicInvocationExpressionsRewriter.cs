@@ -74,46 +74,5 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             member = invocation.Expression as MemberAccessExpressionSyntax;
             return member?.ToString();
         }
-
-        private void HandleMethod(string method)
-        {
-            switch (method)
-            {
-                case "Select":
-                case "ToDictionary":
-                case "ToLookup":
-                case "GroupBy":
-                case "OrderBy":
-                case "OrderByDescending":
-                case "ThenBy":
-                case "ThenByDescending":
-                case "Recurse":
-                case "SelectMany":
-                case "Sum":
-                case "Average":
-                case "Max":
-                case "Min":
-                case "Any":
-                case "All":
-                case "First":
-                case "FirstOrDefault":
-                case "Last":
-                case "LastOfDefault":
-                case "Single":
-                case "Where":
-                case "Count":
-                case "LongCount":
-                case "SingleOrDefault":
-                case "Zip":
-                case "Aggregate":
-                case "Join":
-                case "GroupJoin":
-                case "TakeWhile":
-                case "SkipWhile":
-                    return;
-            }
-
-            return;
-        }
     }
 }
