@@ -1915,7 +1915,7 @@ namespace Raven.Server.ServerWide
 
             if (newTag != oldTag)
             {
-                UpdateClusterTopology(context, clusterTopology, newTag);
+                UpdateClusterTopology(context, clusterTopology, newTag, _parent.GetLastEntryIndex(context));
             }
 
             UpdateLicenseOnSwitchingToSingleLeader(context);
@@ -1948,7 +1948,7 @@ namespace Raven.Server.ServerWide
             PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
         }
 
-        private void UpdateClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag)
+        private void UpdateClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
         {
             _parent.UpdateNodeTag(context, newTag);
 
@@ -1960,7 +1960,8 @@ namespace Raven.Server.ServerWide
                 },
                 new Dictionary<string, string>(),
                 new Dictionary<string, string>(),
-                newTag
+                newTag,
+                index
             );
 
             _parent.SetTopology(context, topology);
