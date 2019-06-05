@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
@@ -11,7 +12,10 @@ using Lucene.Net.Store;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -191,18 +195,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _indexWriter.Commit(state);
             }
+            catch (EarlyOutOfMemoryException)
+            {
+                RecreateIndexWriter(state);
+                throw;
+            }
+            catch (DiskFullException)
+            {
+                RecreateIndexWriter(state);
+                throw;
+            }
             catch (SystemException e)
             {
                 if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
-                {
-                    RecreateIndexWriter(state);
-                    throw new OutOfMemoryException("Index writer hit OOM during commit", e);
-                }
+                    RecreateIndexWriteAndThrowOutOfMemory(state, e);
+
+                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
+                    RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
                 throw;
             }
 
             RecreateIndexWriter(state);
+        }
+
+        public void RecreateIndexWriteAndThrowOutOfMemory(IState state, Exception e)
+        {
+            RecreateIndexWriter(state);
+            throw new OutOfMemoryException("Index writer hit OOM during commit", e);
         }
 
         public long RamSizeInBytes()
