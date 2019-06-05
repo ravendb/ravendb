@@ -110,13 +110,12 @@ namespace Raven.Server.Documents.Patch
 
                 object documentInstance;
                 var args = _patch.Args;
-                BlittableJsonReaderObject originalDoc;
+                BlittableJsonReaderObject originalDoc = null;
                 if (originalDocument == null)
                 {
                     run = runIfMissing;
                     args = _patchIfMissing.Args;
                     documentInstance = runIfMissing.CreateEmptyObject();
-                    originalDoc = null;
                 }
                 else
                 {
@@ -147,6 +146,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (run.RefreshOriginalDocument)
                         {
+                            originalDocument?.Dispose();
                             originalDocument = _database.DocumentsStorage.Get(context, id);
                             documentInstance = UpdateOriginalDocument();
                         }
@@ -231,6 +231,7 @@ namespace Raven.Server.Documents.Patch
                         // here we need to use the _cloned_ version of the document, since the patch may
                         // change it
                         originalDoc = translated.Blittable;
+                        originalDocument.Dispose();
                         originalDocument.Data = null; // prevent access to this by accident
 
                         return translated;
