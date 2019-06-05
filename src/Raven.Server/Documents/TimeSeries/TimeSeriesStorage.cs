@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -295,8 +296,6 @@ namespace Raven.Server.Documents.TimeSeries
             private LazyStringValue _tag;
             private TimeSeriesValuesSegment _currentSegment;
 
-
-
             public Reader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
             {
                 _context = context;
@@ -346,6 +345,54 @@ namespace Raven.Server.Documents.TimeSeries
 
                 public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
 
+            }
+
+
+            internal class SeriesSummary
+            {
+                public SeriesSummary(int numberOfValues)
+                {
+                    Min = new double[numberOfValues];
+                    Max = new double[numberOfValues];
+                }
+
+                public int Count { get; set; }
+
+                public double[] Min { get; set; }
+
+                public double[] Max { get; set; }
+
+            }
+
+            internal SeriesSummary GetSummary()
+            {
+                if (Init() == false)
+                    return null;
+
+                InitializeSegment(out _, out _currentSegment);
+
+                var result = new SeriesSummary(_currentSegment.NumberOfValues);
+
+                do
+                {
+                    for (int i = 0; i < _currentSegment.NumberOfValues; i++)
+                    {
+                        if (result.Count == 0)
+                        {
+                            result.Min[i] = _currentSegment.SegmentValues.Span[i].Min;
+                            result.Max[i] = _currentSegment.SegmentValues.Span[i].Max;
+                            continue;
+                        }
+
+                        result.Min[i] = Math.Min(result.Min[i], _currentSegment.SegmentValues.Span[i].Min);
+                        result.Max[i] = Math.Max(result.Max[i], _currentSegment.SegmentValues.Span[i].Max);
+                    }
+
+                    result.Count += _currentSegment.SegmentValues.Span[0].Count;
+
+                } while (NextSegment(out _));
+
+                return result; 
             }
 
             public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
@@ -446,7 +493,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             private LazyStringValue SetTimestampTag()
             {
-                if(_tagPointer.Pointer == null)
+                if (_tagPointer.Pointer == null)
                 {
                     return null;
                 }
@@ -461,7 +508,7 @@ namespace Raven.Server.Documents.TimeSeries
                 using (Slice.From(_context.Allocator, key, keySize - sizeof(long), out var prefix))
                 using (Slice.From(_context.Allocator, key, keySize, out var current))
                 {
-                    foreach(var (nextKey, tvh) in _table.SeekByPrimaryKeyPrefix(prefix, current, 0))
+                    foreach (var (nextKey, tvh) in _table.SeekByPrimaryKeyPrefix(prefix, current, 0))
                     {
                         _tvr = tvh.Reader;
 
@@ -847,6 +894,12 @@ namespace Raven.Server.Documents.TimeSeries
                     _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags);
                 }
             }
+        }
+
+        internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
+        {
+            var reader = GetReader(context, documentId, name, DateTime.MinValue, DateTime.MaxValue);
+            return reader.GetSummary();
         }
 
         private (string ChangeVector, long NewEtag) GenerateChangeVector(DocumentsOperationContext context)
