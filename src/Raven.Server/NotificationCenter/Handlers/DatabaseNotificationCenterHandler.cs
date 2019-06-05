@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         await writer.WriteToWebSocket(action.ToJson());
                     }
-                    
+                    writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutRecentClusterTopologyConnectivity;
                     await writer.WriteNotifications(null);
                 }
             }

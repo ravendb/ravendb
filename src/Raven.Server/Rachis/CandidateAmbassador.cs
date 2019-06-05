@@ -155,17 +155,18 @@ namespace Raven.Server.Rachis
                             }
 
                             Debug.Assert(topology.TopologyId != null);
-                            _connection.Send(context, new RachisHello
-                            {
-                                TopologyId = topology.TopologyId,
-                                DebugSourceIdentifier = _engine.Tag,
-                                DebugDestinationIdentifier = _tag,
-                                ElectionTimeout = (int)_engine.ElectionTimeout.TotalMilliseconds,
-                                SendingThread = Thread.CurrentThread.ManagedThreadId,
-                                InitialMessageType = InitialMessageType.RequestVote,
-                                DestinationUrl = _url,
-                                SourceUrl = _engine.Url
-                            });
+                            _connection.Send(context,
+                                new RachisHello
+                                {
+                                    TopologyId = topology.TopologyId,
+                                    DebugSourceIdentifier = _engine.Tag,
+                                    DebugDestinationIdentifier = _tag,
+                                    ElectionTimeout = (int)_engine.ElectionTimeout.TotalMilliseconds,
+                                    SendingThread = Thread.CurrentThread.ManagedThreadId,
+                                    InitialMessageType = InitialMessageType.RequestVote,
+                                    DestinationUrl = _url,
+                                    SourceUrl = _engine.Url
+                                });
 
                             while (_candidate.Running)
                             {
@@ -176,15 +177,16 @@ namespace Raven.Server.Rachis
                                     _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                 {
                                     sp = Stopwatch.StartNew();
-                                    _connection.Send(context, new RequestVote
-                                    {
-                                        Source = _engine.Tag,
-                                        Term = currentElectionTerm,
-                                        IsForcedElection = false,
-                                        IsTrialElection = true,
-                                        LastLogIndex = lastLogIndex,
-                                        LastLogTerm = lastLogTerm
-                                    });
+                                    _connection.Send(context,
+                                        new RequestVote
+                                        {
+                                            Source = _engine.Tag,
+                                            Term = currentElectionTerm,
+                                            IsForcedElection = false,
+                                            IsTrialElection = true,
+                                            LastLogIndex = lastLogIndex,
+                                            LastLogTerm = lastLogTerm
+                                        });
 
                                     rvr = _connection.Read<RequestVoteResponse>(context);
 
@@ -237,15 +239,16 @@ namespace Raven.Server.Rachis
                                 }
 
                                 sp = Stopwatch.StartNew();
-                                _connection.Send(context, new RequestVote
-                                {
-                                    Source = _engine.Tag,
-                                    Term = currentElectionTerm,
-                                    IsForcedElection = _candidate.IsForcedElection,
-                                    IsTrialElection = false,
-                                    LastLogIndex = lastLogIndex,
-                                    LastLogTerm = lastLogTerm
-                                });
+                                _connection.Send(context,
+                                    new RequestVote
+                                    {
+                                        Source = _engine.Tag,
+                                        Term = currentElectionTerm,
+                                        IsForcedElection = _candidate.IsForcedElection,
+                                        IsTrialElection = false,
+                                        LastLogIndex = lastLogIndex,
+                                        LastLogTerm = lastLogTerm
+                                    });
 
                                 rvr = _connection.Read<RequestVoteResponse>(context);
                                 ClusterCommandsVersion = rvr.ClusterCommandsVersion ?? 400;
@@ -314,6 +317,13 @@ namespace Raven.Server.Rachis
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e) || e is RachisConcurrencyException)
                     {
                         NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, e);
+                        break;
+                    }
+                    catch (TopologyMismatchException e)
+                    {
+                        TopologyMismatch = true;
+                        NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, e);
+                        _candidate.WaitForChangeInState();
                         break;
                     }
                     catch (Exception e)
@@ -391,5 +401,6 @@ namespace Raven.Server.Rachis
         }
 
         public bool NotInTopology { get; private set; }
+        public bool TopologyMismatch { get; private set; }
     }
 }

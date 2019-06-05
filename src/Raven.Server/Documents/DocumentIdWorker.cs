@@ -110,16 +110,12 @@ namespace Raven.Server.Documents
             {
                 byte ch = str[i];
 
-                // PERF: Trick to avoid multiple compare instructions on hot loops. 
-                //       This is the same as (ch >= 65 && ch <= 90)
-                if (ch - 65 <= 90 - 65)
+                if (ch >= 65) // 65 = 'A'
                 {
-                    ch = (byte)(ch | 0x20);
-                }
-                else
-                {
-                    if (ch > 127) // not ASCII, use slower mode
-                        goto UnlikelyUnicode;
+                    if (ch <= 90) // 90 = 'Z'
+                        ch = (byte)(ch | 0x20); //Turn on the sixth bit to apply lower case 
+                    else if(ch > 127)
+                        goto UnlikelyUnicode; // not ASCII, use slower mode
                 }
 
                 pointer[i] = ch;
