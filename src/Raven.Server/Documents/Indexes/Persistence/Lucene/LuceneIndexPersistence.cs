@@ -195,7 +195,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 using (directory.SetTransaction(tx, out IState state))
                 {
                     CreateIndexStructure(directory, state);
-                    RecreateSuggestionsSearcher(tx, field.Key);
+                    var holder = _suggestionsIndexSearcherHolders[field.Key];
+                    holder.SetIndexSearcher(tx);
                 }
             }
         }
@@ -267,16 +268,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new LuceneSuggestionIndexReader(_index, directory, holder, readTransaction);
         }
 
-        internal IndexSearcherHolder RecreateSuggestionsSearcher(Transaction asOfTx, string fieldKey)
-        {
-            var holder = _suggestionsIndexSearcherHolders[fieldKey];
-            holder.SetIndexSearcher(asOfTx);
-            return holder;
-        }
-
         internal void RecreateSearcher(Transaction asOfTx)
         {
             _indexSearcherHolder.SetIndexSearcher(asOfTx);
+        }
+
+        internal void RecreateSuggestionsSearchers(Transaction asOfTx)
+        {
+            foreach (var suggestion in _suggestionsIndexSearcherHolders)
+            {
+                suggestion.Value.SetIndexSearcher(asOfTx);
+            }
         }
 
         internal LuceneIndexWriter EnsureIndexWriter(IState state)

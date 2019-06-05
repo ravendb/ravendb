@@ -230,5 +230,62 @@ namespace SlowTests.Tests.Suggestions
                 }
             }
         }
+
+        [Fact]
+        public void CanGetResultAfterAddingADocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Users_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jack Sparrow" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var suggestions = session.Query<User, Users_ByName>()
+                        .SuggestUsing(x => x.ByField(y => y.Name, new[] { "jac" }).WithOptions(new SuggestionOptions
+                        {
+                            Accuracy = 0.4f,
+                            PageSize = 5,
+                            Distance = StringDistanceTypes.JaroWinkler,
+                            SortMode = SuggestionSortMode.Popularity
+                        }))
+                        .Execute();
+
+                    Assert.Equal(1, suggestions["Name"].Suggestions.Count);
+                    Assert.Equal("jack", suggestions["Name"].Suggestions[0]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Will Turner" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var suggestions = session.Query<User, Users_ByName>()
+                        .SuggestUsing(x => x.ByField(y => y.Name, new[] { "wil" }).WithOptions(new SuggestionOptions
+                        {
+                            Accuracy = 0.4f,
+                            PageSize = 5,
+                            Distance = StringDistanceTypes.JaroWinkler,
+                            SortMode = SuggestionSortMode.Popularity
+                        }))
+                        .Execute();
+
+                    Assert.Equal(1, suggestions["Name"].Suggestions.Count);
+                    Assert.Equal("will", suggestions["Name"].Suggestions[0]);
+                }
+            }
+        }
     }
 }
