@@ -61,38 +61,47 @@ namespace Raven.Server.Documents.Queries
                 {
                     Id = key,
                     Etag = x.DeleteResult?.Etag
-                });
+                }, null);
             }, token);
         }
 
         protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, index, options, context, onProgress, (key, retrieveDetails) =>
-            {
-                var command = new PatchDocumentCommand(context, key,
-                    expectedChangeVector: null,
-                    skipPatchIfChangeVectorMismatch: false,
-                    patch: (patch, patchArgs),
-                    patchIfMissing: (null, null),
-                    database: Database,
-                    debugMode: false,
-                    isTest: false,
-                    collectResultsNeeded: true,
-                    returnDocument: false);
-
-                return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
+            return ExecuteOperation(query, index, options, context, onProgress, 
+                (key, retrieveDetails) =>
                 {
-                    Id = key,
-                    ChangeVector = x.PatchResult.ChangeVector,
-                    Status = x.PatchResult.Status
-                });
-            }, token);
+                    var command = new PatchDocumentCommand(context, key,
+                        expectedChangeVector: null,
+                        skipPatchIfChangeVectorMismatch: false,
+                        patch: (patch, patchArgs),
+                        patchIfMissing: (null, null),
+                        database: Database,
+                        debugMode: false,
+                        isTest: false,
+                        collectResultsNeeded: true,
+                        returnDocument: false);
+
+                    return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, 
+                        x => new BulkOperationResult.PatchDetails
+                        {
+                            Id = key,
+                            ChangeVector = x.PatchResult.ChangeVector,
+                            Status = x.PatchResult.Status
+                        }, 
+                        c => c.PatchResult.Dispose());
+                }, token);
         }
 
-        private async Task<IOperationResult> ExecuteOperation<T>(IndexQueryServerSide query, Index index, QueryOperationOptions options,
-    DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func, OperationCancelToken token)
-    where T : TransactionOperationsMerger.MergedTransactionCommand
+        private async Task<IOperationResult> ExecuteOperation<T>(
+            IndexQueryServerSide query, 
+            Index index, 
+            QueryOperationOptions options,
+            DocumentsOperationContext context, 
+            Action<DeterminateProgress> onProgress, 
+            Func<string, bool, BulkOperationCommand<T>> createCommandForId,
+            OperationCancelToken token)
+            where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             if (index.Type.IsMapReduce())
                 throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");
@@ -131,6 +140,7 @@ namespace Raven.Server.Documents.Queries
             onProgress(progress);
 
             var result = new BulkOperationResult();
+            void RetrieveDetails(IBulkOperationDetails details) => result.Details.Add(details);
 
             using (var rateGate = options.MaxOpsPerSecond.HasValue ? new RateGate(options.MaxOpsPerSecond.Value, TimeSpan.FromSeconds(1)) : null)
             {
@@ -138,10 +148,10 @@ namespace Raven.Server.Documents.Queries
                 {
                     var command = new ExecuteRateLimitedOperations<string>(resultIds, id =>
                     {
-                        var subCommand = func(id, options.RetrieveDetails);
+                        var subCommand = createCommandForId(id, options.RetrieveDetails);
 
                         if (options.RetrieveDetails)
-                            subCommand.AfterExecute = details => result.Details.Add(details);
+                            subCommand.RetrieveDetails = RetrieveDetails;
 
                         return subCommand;
                     }, rateGate, token, 
@@ -180,12 +190,14 @@ namespace Raven.Server.Documents.Queries
             private readonly T _command;
             private readonly bool _retrieveDetails;
             private readonly Func<T, IBulkOperationDetails> _getDetails;
+            private readonly Action<T> _disposeResult;
 
-            public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails)
+            public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails, Action<T> disposeResult)
             {
                 _command = command;
                 _retrieveDetails = retrieveDetails;
                 _getDetails = getDetails;
+                _disposeResult = disposeResult;
             }
 
             public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
@@ -193,8 +205,9 @@ namespace Raven.Server.Documents.Queries
                 var count = _command.Execute(context, recording);
 
                 if (_retrieveDetails)
-                    AfterExecute?.Invoke(_getDetails(_command));
+                    RetrieveDetails?.Invoke(_getDetails(_command));
 
+                _disposeResult?.Invoke(_command);
                 return count;
             }
 
@@ -208,7 +221,7 @@ namespace Raven.Server.Documents.Queries
                 throw new NotSupportedException("Should only call Execute() here");
             }
 
-            public Action<IBulkOperationDetails> AfterExecute { private get; set; }
+            public Action<IBulkOperationDetails> RetrieveDetails { private get; set; }
         }
     }
 }
