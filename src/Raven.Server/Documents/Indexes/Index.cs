@@ -1692,6 +1692,7 @@ namespace Raven.Server.Documents.Indexes
                                     // that queries won't get the searcher having 'old' state but see 'new' changes committed here
                                     // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
                                     IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                    IndexPersistence.RecreateSuggestionsSearchers(tx.InnerTransaction);
                                 }
                             };
 
