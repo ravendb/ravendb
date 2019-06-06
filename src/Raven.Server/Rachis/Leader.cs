@@ -627,6 +627,7 @@ namespace Raven.Server.Rachis
                 var lockTaken = false;
                 try
                 {
+                    var waitAsync = _waitForCommit.WaitAsync(timeout);
                     Monitor.TryEnter(_commandsQueue, ref lockTaken);
                     if (lockTaken)
                     {
@@ -634,7 +635,7 @@ namespace Raven.Server.Rachis
                     }
                     else
                     {
-                        if (await _waitForCommit.WaitAsync(timeout) == false)
+                        if (await waitAsync == false)
                         {
                             if (rachisMergedCommand.Consumed.Raise())
                             {
