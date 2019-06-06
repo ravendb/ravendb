@@ -404,6 +404,8 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
+                        NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
+
                         if (e is TopologyMismatchException)
                         {
                             if (_leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out _))
@@ -416,7 +418,6 @@ namespace Raven.Server.Rachis
                         // This is an unexpected exception which indicate the something is wrong with the connection.
                         // So we will retry to reconnect. 
                         _connection?.Dispose();
-                        NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                 }
