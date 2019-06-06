@@ -119,6 +119,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
+                    id = originalDocument.Id; // we want to use the original Id casing
                     documentInstance = UpdateOriginalDocument();
                 }
 
@@ -166,8 +167,14 @@ namespace Raven.Server.Documents.Patch
                                     var docBlittableToUpdate = UpdateCountersInMetadata(context, docToUpdate.Data, docId, ref docToUpdate.Flags);
                                     if (_isTest == false)
                                     {
-                                        _database.DocumentsStorage.Put(context, docId,
-                                            docToUpdate.ChangeVector, docBlittableToUpdate, null, null, docToUpdate.Flags);
+                                        _database.DocumentsStorage.Put(
+                                            context,
+                                            docId,
+                                            docToUpdate.ChangeVector,
+                                            docBlittableToUpdate,
+                                            null,
+                                            null,
+                                            docToUpdate.Flags);
                                     }
                                 }
                             }
@@ -187,8 +194,14 @@ namespace Raven.Server.Documents.Patch
                             Debug.Assert(originalDocument != null);
                             if (_isTest == false || run.PutOrDeleteCalled)
                             {
-                                putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
-                                    originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                                putResult = _database.DocumentsStorage.Put(
+                                    context,
+                                    id,
+                                    originalDocument.ChangeVector,
+                                    modifiedDocument,
+                                    null,
+                                    null,
+                                    originalDocument.Flags);
                             }
 
                             result.Status = PatchStatus.Patched;
