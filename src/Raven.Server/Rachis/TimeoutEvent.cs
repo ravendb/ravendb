@@ -121,8 +121,6 @@ namespace Raven.Server.Rachis
 
         public void ExecuteTimeoutBehavior()
         {
-            var action = _timeoutHappened;
-
             if (Interlocked.CompareExchange(ref _inProgress, 1, 0) == 1)
             {
                 Defer(_currentLeader);
@@ -131,6 +129,8 @@ namespace Raven.Server.Rachis
 
             try
             {
+                Action action;
+
                 lock (this)
                 {
                     if (Disable)
@@ -138,6 +138,8 @@ namespace Raven.Server.Rachis
 
                     if (_singleShot)
                         _timer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                    action = _timeoutHappened;
                 }
 
                 if (action == null)
