@@ -144,7 +144,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (_lastLogs.TryGetValue(message, out var last))
             {
-                if (last + 60 > _iteration) // 30 sec
+                if (last + 60 > _iteration) 
+                    // each iteration occur every 500 ms, so we update the log with the _same_ message every 30 sec (60 * 0.5s)
                     return;
             }
             _lastLogs[message] = _iteration;
