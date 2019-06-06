@@ -88,6 +88,7 @@ namespace Raven.Server.Documents.Handlers
                 var startEtag = cv.Etag;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (context.OpenReadTransaction())
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
@@ -95,55 +96,52 @@ namespace Raven.Server.Documents.Handlers
                     var numberOfDocs = 0;
                     while (numberOfDocs == 0 && sp.Elapsed < timeLimit)
                     {
-                        using (context.OpenReadTransaction())
+                        var first = true;
+                        var lastEtag = startEtag;
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
                         {
-                            var first = true;
-                            var lastEtag = startEtag;
-                            foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
+                            if (itemDetails.Doc.Data != null)
                             {
-                                if (itemDetails.Doc.Data != null)
+                                using (itemDetails.Doc.Data)
                                 {
-                                    using (itemDetails.Doc.Data)
+                                    includeCmd.Gather(itemDetails.Doc);
+
+                                    if (first == false)
+                                        writer.WriteComma();
+
+                                    if (itemDetails.Exception == null)
                                     {
-                                        includeCmd.Gather(itemDetails.Doc);
-
-                                        if (first == false)
-                                            writer.WriteComma();
-
-                                        if (itemDetails.Exception == null)
-                                        {
-                                            writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
-                                        }
-                                        else
-                                        {
-                                            var documentWithException = new DocumentWithException
-                                            {
-                                                Exception = itemDetails.Exception.ToString(),
-                                                ChangeVector = itemDetails.Doc.ChangeVector,
-                                                Id = itemDetails.Doc.Id,
-                                                DocumentData = itemDetails.Doc.Data
-                                            };
-                                            writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
-                                        }
-
-                                        first = false;
-
-                                        if (++numberOfDocs >= pageSize)
-                                            break;
+                                        writer.WriteDocument(context, itemDetails.Doc, metadataOnly: false);
                                     }
+                                    else
+                                    {
+                                        var documentWithException = new DocumentWithException
+                                        {
+                                            Exception = itemDetails.Exception.ToString(),
+                                            ChangeVector = itemDetails.Doc.ChangeVector,
+                                            Id = itemDetails.Doc.Id,
+                                            DocumentData = itemDetails.Doc.Data
+                                        };
+                                        writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
+                                    }
+
+                                    first = false;
+
+                                    if (++numberOfDocs >= pageSize)
+                                        break;
                                 }
-
-                                if (sp.Elapsed >= timeLimit)
-                                    break;
-
-                                lastEtag = itemDetails.Doc.Etag;
                             }
 
-                            if (startEtag == lastEtag)
+                            if (sp.Elapsed >= timeLimit)
                                 break;
 
-                            startEtag = lastEtag;
+                            lastEtag = itemDetails.Doc.Etag;
                         }
+
+                        if (startEtag == lastEtag)
+                            break;
+
+                        startEtag = lastEtag;
                     }
 
                     writer.WriteEndArray();
