@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
                     RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
-                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory()) 
+                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
                     RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
                 throw;

@@ -1045,7 +1045,7 @@ namespace Raven.Server.Rachis
                         string.IsNullOrEmpty(clusterTopology.TopologyId) == false)
                     {
                         throw new TopologyMismatchException(
-                            $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
+                            $"Node {initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             "Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
                     if (_tag == InitialTag)
@@ -1063,7 +1063,7 @@ namespace Raven.Server.Rachis
                         if (_tag != initialMessage.DebugDestinationIdentifier)
                         {
                             throw new TopologyMismatchException(
-                                $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
+                                $"Node {initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
                                 "Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
                         }
                     }
