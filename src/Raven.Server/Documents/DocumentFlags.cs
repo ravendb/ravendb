@@ -45,7 +45,7 @@ namespace Raven.Server.Documents
         ResolveCountersConflict = 0x200,
         ByCountersUpdate = 0x400,
         FromResolver = 0x800,
-        ForceRevisionCreation = 0x1000
+        ForceRevisionCreationBefore = 0x1000
     }
 
     public static class EnumExtensions

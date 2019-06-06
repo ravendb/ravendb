@@ -41,10 +41,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
-            bool forceRevisionCreation = GetBoolValueQueryString("forceRevisionCreation", required: false) ?? false;
-            
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var command = new MergedBatchCommand(Database, forceRevisionCreation))
+            using (var command = new MergedBatchCommand(Database))
             {
                 var contentType = HttpContext.Request.ContentType;
                 if (contentType == null ||
@@ -59,6 +57,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                     ThrowNotSupportedType(contentType);
+                
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
                     BatchTrafficWatch(command.ParsedCommands);
@@ -124,7 +123,6 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(BatchCommandResult.Results)] = command.Reply
                     });
                 }
-
             }
         }
 
@@ -682,12 +680,9 @@ namespace Raven.Server.Documents.Handlers
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public bool IsClusterTransaction;
-            private readonly NonPersistentDocumentFlags _nonPersistentDocumentFlags = NonPersistentDocumentFlags.None;
-
-            public MergedBatchCommand(DocumentDatabase database, bool forceRevisionCreation = false) : base(database)
+            
+            public MergedBatchCommand(DocumentDatabase database) : base(database)
             {
-                if (forceRevisionCreation)
-                    _nonPersistentDocumentFlags = NonPersistentDocumentFlags.ForceRevisionCreation;
             }
 
             public override string ToString()
@@ -756,7 +751,8 @@ namespace Raven.Server.Documents.Handlers
                             DocumentsStorage.PutOperationResults putResult;
                             try
                             {
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, nonPersistentFlags: _nonPersistentDocumentFlags);
+                                NonPersistentDocumentFlags nonPersistentFlags = cmd.ForceRevision ? NonPersistentDocumentFlags.ForceRevisionCreationBefore : NonPersistentDocumentFlags.None;
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, nonPersistentFlags: nonPersistentFlags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {
@@ -785,6 +781,7 @@ namespace Raven.Server.Documents.Handlers
                             AddPutResult(putResult);
                             lastPutResult = putResult;
                             break;
+                        
                         case CommandType.PATCH:
                         case CommandType.BatchPATCH:
                             try
@@ -802,6 +799,7 @@ namespace Raven.Server.Documents.Handlers
                                 LastChangeVector = lastChangeVector;
 
                             break;
+                        
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
@@ -821,6 +819,7 @@ namespace Raven.Server.Documents.Handlers
                                 DeleteWithPrefix(context, cmd.Id);
                             }
                             break;
+                        
                         case CommandType.AttachmentPUT:
                             var attachmentStream = AttachmentStreams.Dequeue();
                             var stream = attachmentStream.Stream;
@@ -863,8 +862,8 @@ namespace Raven.Server.Documents.Handlers
 
                             apReplies.Add((apReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(apReply);
-
                             break;
+                        
                         case CommandType.AttachmentDELETE:
                             Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, updateDocument: false);
 
@@ -883,8 +882,8 @@ namespace Raven.Server.Documents.Handlers
 
                             adReplies.Add((adReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(adReply);
-
                             break;
+                        
                         case CommandType.AttachmentMOVE:
                             var attachmentMoveResult = Database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
 
@@ -918,6 +917,7 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(amReply);
                             break;
+                        
                         case CommandType.AttachmentCOPY:
                             if (cmd.AttachmentType == 0)
                             {
@@ -947,8 +947,8 @@ namespace Raven.Server.Documents.Handlers
 
                             acReplies.Add((acReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(acReply);
-
                             break;
+                        
                         case CommandType.Counters:
 
                             var counterDocId = cmd.Counters.DocumentId;
@@ -989,6 +989,35 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(CountersDetail)] = counterBatchCmd.CountersDetail.ToJson(),
                                 [nameof(Constants.Fields.CommandData.DocumentChangeVector)] = counterBatchCmd.LastDocumentChangeVector
                             });
+                            break;
+                        
+                        case CommandType.ForceRevisionCreation:
+                            // Create a revision for an existing document (specified by the id) even if no revisions settings are configured for the collection
+                            
+                            var existingDoc = Database.DocumentsStorage.Get(context, cmd.Id);
+                            if (existingDoc == null)
+                            {
+                                throw new InvalidOperationException ($"failed to create revision for document {cmd.Id} because document doesn't exits.");
+                            }
+
+                            var clonedDocumentData = existingDoc.Data.Clone(context);
+                            putResult = Database.DocumentsStorage.Put(context, existingDoc.Id, existingDoc.ChangeVector, clonedDocumentData, nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreationBefore);
+                           
+                            var forceRevisionReply = new DynamicJsonValue
+                            {
+                                ["Type"] = nameof(CommandType.ForceRevisionCreation), 
+                                [Constants.Documents.Metadata.Id] = putResult.Id,
+                                [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
+                                [Constants.Documents.Metadata.ChangeVector] = putResult.ChangeVector,
+                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified
+                            };
+    
+                            if (putResult.Flags != DocumentFlags.None)
+                                forceRevisionReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
+                            
+                            LastChangeVector = putResult.ChangeVector;
+                          
+                            Reply.Add(forceRevisionReply);
                             break;
                     }
                 }
