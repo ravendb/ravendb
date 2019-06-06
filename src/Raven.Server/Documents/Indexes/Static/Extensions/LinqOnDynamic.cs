@@ -125,6 +125,18 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             return new DynamicArray(Enumerable.OrderBy(source, pair => keySelector(pair), comparer));
         }
 
+        [Obsolete("This method should never be used directly.")]
+        public static IOrderedEnumerable<dynamic> OrderByDescending(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector)
+        {
+            return new DynamicArray(Enumerable.OrderByDescending(source, pair => keySelector(pair)));
+        }
+
+        [Obsolete("This method should never be used directly.")]
+        public static IOrderedEnumerable<dynamic> OrderByDescending(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
+        {
+            return new DynamicArray(Enumerable.OrderByDescending(source, pair => keySelector(pair), comparer));
+        }
+
         private static IEnumerable<dynamic> Select(this object self)
         {
             if (self == null || self is DynamicNullObject)

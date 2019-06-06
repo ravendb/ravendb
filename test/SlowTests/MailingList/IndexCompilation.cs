@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using FastTests;
 using Orders;
@@ -146,6 +147,7 @@ namespace SlowTests.MailingList
                     var results = session.Query<ToDictionarySelectOrderBySumIndex.Result, ToDictionarySelectOrderBySumIndex>()
                         .ProjectInto<ToDictionarySelectOrderBySumIndex.Result>()
                         .ToList();
+
                     Assert.Equal(countOfUsers, results.Count);
                     for (int i = 0; i < countOfUsers; i++)
                     {
@@ -158,6 +160,7 @@ namespace SlowTests.MailingList
                         Assert.Equal(expectedResult.Id, results[i].Id);
                         Assert.Equal(expectedResult.SelectSum, results[i].SelectSum);
                         Assert.Equal(expectedResult.OrderBySum, results[i].OrderBySum);
+
                     }
                 }
             }
@@ -219,11 +222,13 @@ namespace SlowTests.MailingList
                             SelectSum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
                             OrderBySum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
                             IdsWithDecimals = listOfUsers[i].ListOfDecimals.ToDictionary(k => k, k => 0),
+                            OrderByDescending = listOfUsers[i].LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.ToString(CultureInfo.InvariantCulture), y => y.Value),
                             Items = new[] { listOfUsers[i].Id }
                         };
                         Assert.Equal(expectedResult.Id, results[i].Id);
                         Assert.Equal(expectedResult.SelectSum, results[i].SelectSum);
                         Assert.Equal(expectedResult.OrderBySum, results[i].OrderBySum);
+                        Assert.Equal(expectedResult.OrderByDescending, results[i].OrderByDescending);
                         Assert.Equal(expectedResult.Items, results[i].Items);
                     }
                 }
@@ -441,6 +446,8 @@ namespace SlowTests.MailingList
 
                 public Dictionary<decimal, int> IdsWithDecimals { get; set; }
 
+                public Dictionary<string, int> OrderByDescending { get; set; }
+
                 public IList<string> Items { get; set; } = new List<string>();
             }
 
@@ -453,6 +460,7 @@ namespace SlowTests.MailingList
                                    SelectSum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
                                    OrderBySum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
                                    IdsWithDecimals = user.ListOfDecimals.ToDictionary(i => i, i => 0),
+                                   OrderByDescending = user.LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.ToString(CultureInfo.InvariantCulture), y => y.Value),
                                    Items = new[] { user.Id }
                                };
 
@@ -461,7 +469,8 @@ namespace SlowTests.MailingList
                     {
                         result.Id,
                         result.OrderBySum,
-                        result.SelectSum
+                        result.SelectSum,
+                        result.OrderByDescending
                     }
                     into g
                     let numbersDictionary = g.SelectMany(x => x.IdsWithDecimals).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
@@ -471,6 +480,7 @@ namespace SlowTests.MailingList
                         SelectSum = g.Key.SelectSum,
                         OrderBySum = g.Key.OrderBySum,
                         IdsWithDecimals = numbersDictionary,
+                        OrderByDescending = g.Key.OrderByDescending,
                         Items = g.SelectMany(x => x.Items).Distinct().OrderBy(x => x).ToList()
                     };
             }
