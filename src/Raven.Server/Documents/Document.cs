@@ -11,6 +11,7 @@ namespace Raven.Server.Documents
     {
         public static readonly Document ExplicitNull = new Document();
 
+        private bool _disposed;
         private ulong? _hash;
         private bool _metadataEnsured;
 
@@ -84,9 +85,19 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            if (_disposed)
+                return;
+
             Id?.Dispose();
+            Id = null;
+
             LowerId?.Dispose();
+            LowerId = null;
+
             Data?.Dispose();
+            Data = null;
+
+            _disposed = true;
         }
     }
 }
