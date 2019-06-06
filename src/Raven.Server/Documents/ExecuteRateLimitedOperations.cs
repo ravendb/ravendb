@@ -19,7 +19,10 @@ namespace Raven.Server.Documents
         private readonly int? _batchSize;
         private CancellationToken _cancellationToken;
 
-        internal ExecuteRateLimitedOperations(Queue<T> documentIds, Func<T, TransactionOperationsMerger.MergedTransactionCommand> commandToExecute, RateGate rateGate,
+        internal ExecuteRateLimitedOperations(
+            Queue<T> documentIds, 
+            Func<T, TransactionOperationsMerger.MergedTransactionCommand> commandToExecute, 
+            RateGate rateGate,
             OperationCancelToken token, 
             int? maxTransactionSize ,
             int? batchSize)

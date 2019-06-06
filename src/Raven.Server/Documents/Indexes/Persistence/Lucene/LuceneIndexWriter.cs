@@ -14,6 +14,8 @@ using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
+using Sparrow.LowMemory;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

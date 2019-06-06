@@ -6,10 +6,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
-    public class Document
+    public class Document : IDisposable
     {
         public static readonly Document ExplicitNull = new Document();
 
+        private bool _disposed;
         private ulong? _hash;
         private bool _metadataEnsured;
 
@@ -79,6 +80,23 @@ namespace Raven.Server.Documents
         {
             _metadataEnsured = false;
             Data.Modifications = null;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            Id?.Dispose();
+            Id = null;
+
+            LowerId?.Dispose();
+            LowerId = null;
+
+            Data?.Dispose();
+            Data = null;
+
+            _disposed = true;
         }
     }
 }

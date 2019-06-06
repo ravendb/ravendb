@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations
         NotModified
     }
 
-    public class PatchResult
+    public class PatchResult : IDisposable
     {
         /// <summary>
         /// Result of patch operation:
@@ -65,5 +65,11 @@ namespace Raven.Client.Documents.Operations
         public string ChangeVector;
 
         public string Collection;
+
+        public void Dispose()
+        {
+            ModifiedDocument?.Dispose();
+            OriginalDocument?.Dispose();
+        }
     }
 }
