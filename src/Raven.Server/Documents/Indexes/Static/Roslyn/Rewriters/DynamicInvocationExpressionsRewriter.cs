@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -50,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private SyntaxNode HandleEnumerableToDictionary(InvocationExpressionSyntax node)
         {
-            return SyntaxFactory.ParseExpression($"((Dictionary<dynamic, dynamic>){node})");
+            return SyntaxFactory.ParseExpression($"((IDictionary<dynamic, dynamic>){node})");
         }
 
         private static string GetParentMethod(InvocationExpressionSyntax currentInvocation)
