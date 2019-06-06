@@ -39,13 +39,12 @@ namespace Raven.Server.Documents
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,
         ResolveAttachmentsConflict = 0x20,
-        FromRevision = 0x40,
+        SkipRevisionCreation = 0x40,
         Resolved = 0x80,
-        SkipRevisionCreation = 0x100,
+        SkipRevisionCreationForSmuggler = 0x100,
         ResolveCountersConflict = 0x200,
         ByCountersUpdate = 0x400,
-        FromResolver = 0x800,
-        ForceRevisionCreationBefore = 0x1000
+        FromResolver = 0x800
     }
 
     public static class EnumExtensions

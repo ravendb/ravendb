@@ -23,6 +23,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Json;
 using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Rachis;
@@ -537,7 +538,7 @@ namespace Raven.Server.Documents.Handlers
                                         using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
                                         {
                                             Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
-                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler);
                                         }
 
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
@@ -751,8 +752,30 @@ namespace Raven.Server.Documents.Handlers
                             DocumentsStorage.PutOperationResults putResult;
                             try
                             {
-                                NonPersistentDocumentFlags nonPersistentFlags = cmd.ForceRevision ? NonPersistentDocumentFlags.ForceRevisionCreationBefore : NonPersistentDocumentFlags.None;
-                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, nonPersistentFlags: nonPersistentFlags);
+                                var flags = DocumentFlags.None;
+                                
+                                //if (cmd.ForceRevision)
+                                if (cmd.ForceRevisionCreationStrategy == ForceRevisionStrategy.Before)
+                                // Note: we currently only handle 'Before'. 
+                                // Creating the revision 'After' will be done only upon customer demand.
+                                {
+                                    var existingDocument = Database.DocumentsStorage.Get(context, cmd.Id);
+                                    if (existingDocument == null)
+                                    {
+                                        throw new InvalidOperationException($"Can't force revision creation - the document was not saved on the server yet. document: {cmd.Id}.");
+                                    }
+
+                                    // Force a revision (before applying new document changes..)
+                                    Database.DocumentsStorage.RevisionsStorage.Put(context, existingDocument.Id,
+                                                                                   existingDocument.Data.Clone(context),
+                                                                                   existingDocument.Flags |= DocumentFlags.HasRevisions, 
+                                                                                   nonPersistentFlags: NonPersistentDocumentFlags.None,
+                                                                                   existingDocument.ChangeVector,
+                                                                                   existingDocument.LastModified.Ticks);
+                                    flags |= DocumentFlags.HasRevisions;
+                                }
+
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document, flags: flags);
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {
@@ -777,6 +800,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 return 0;
                             }
+                            
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                             AddPutResult(putResult);
                             lastPutResult = putResult;
@@ -992,31 +1016,72 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         
                         case CommandType.ForceRevisionCreation:
-                            // Create a revision for an existing document (specified by the id) even if no revisions settings are configured for the collection
-                            
+                            // Create a revision for an existing document (specified by the id) even if revisions settings are Not configured for the collection.
+                            // Only one such revision will be created.
+                            // i.e. If there is already an existing 'forced' revision to this document then we don't create another forced revision. 
+
                             var existingDoc = Database.DocumentsStorage.Get(context, cmd.Id);
                             if (existingDoc == null)
                             {
-                                throw new InvalidOperationException ($"failed to create revision for document {cmd.Id} because document doesn't exits.");
+                                throw new InvalidOperationException($"Failed to create revision for document {cmd.Id} because document doesn't exits.");
                             }
 
-                            var clonedDocumentData = existingDoc.Data.Clone(context);
-                            putResult = Database.DocumentsStorage.Put(context, existingDoc.Id, existingDoc.ChangeVector, clonedDocumentData, nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreationBefore);
-                           
-                            var forceRevisionReply = new DynamicJsonValue
-                            {
-                                ["Type"] = nameof(CommandType.ForceRevisionCreation), 
-                                [Constants.Documents.Metadata.Id] = putResult.Id,
-                                [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
-                                [Constants.Documents.Metadata.ChangeVector] = putResult.ChangeVector,
-                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified
-                            };
-    
-                            if (putResult.Flags != DocumentFlags.None)
-                                forceRevisionReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
+                            DynamicJsonValue forceRevisionReply;
                             
-                            LastChangeVector = putResult.ChangeVector;
-                          
+                            // Note: here there is no point checking 'Before' or 'After' because if there were any changes then the forced revision is done from the PUT command....
+                            
+                            bool revisionCreated = false;
+                            var clonedDocData = existingDoc.Data.Clone(context);
+                            
+                            if (existingDoc.Flags.Contain(DocumentFlags.HasRevisions) == false)
+                            {
+                                // When forcing a revision for a document that doesn't have revisions yet, 
+                                // we must add HasRevisions flag to the document and save (put)  
+                                existingDoc.Flags = existingDoc.Flags |= DocumentFlags.HasRevisions;
+                                
+                                putResult = Database.DocumentsStorage.Put(context, existingDoc.Id,
+                                                                         existingDoc.ChangeVector, 
+                                                                          clonedDocData, 
+                                                                          flags: existingDoc.Flags,
+                                                                          nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+
+                                existingDoc.ChangeVector = putResult.ChangeVector;
+                                existingDoc.LastModified = putResult.LastModified;
+                            }
+                            
+                            // Create the revision. Revision will be created only if there isn't a revision with identical content for this document  
+                            revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id, 
+                                                                                         clonedDocData, 
+                                                                                         existingDoc.Flags, 
+                                                                                         nonPersistentFlags: NonPersistentDocumentFlags.None,
+                                                                                         existingDoc.ChangeVector,
+                                                                                         existingDoc.LastModified.Ticks);
+                            if (revisionCreated)
+                            {
+                                // Reply with new revision data
+                                forceRevisionReply = new DynamicJsonValue
+                                {
+                                    ["RevisionCreated"] = true,
+                                    ["Type"] = nameof(CommandType.ForceRevisionCreation), 
+                                    [Constants.Documents.Metadata.Id] = existingDoc.Id,
+                                    [Constants.Documents.Metadata.Collection] =  CollectionName.GetCollectionName(existingDoc.Data),
+                                    [Constants.Documents.Metadata.ChangeVector] = existingDoc.ChangeVector,
+                                    [Constants.Documents.Metadata.LastModified] = existingDoc.LastModified,
+                                    [Constants.Documents.Metadata.Flags] = existingDoc.Flags
+                                };
+
+                                LastChangeVector = existingDoc.ChangeVector;
+                            }
+                            else 
+                            {
+                                // No revision was created
+                                forceRevisionReply = new DynamicJsonValue
+                                {
+                                    ["RevisionCreated"] = false,
+                                    ["Type"] = nameof(CommandType.ForceRevisionCreation)
+                                };
+                            }
+                            
                             Reply.Add(forceRevisionReply);
                             break;
                     }

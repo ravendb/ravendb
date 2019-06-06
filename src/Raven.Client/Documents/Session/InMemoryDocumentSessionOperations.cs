@@ -198,7 +198,7 @@ namespace Raven.Client.Documents.Session
 
         public readonly bool NoTracking;
        
-        public Dictionary<string, RevisionCreationStrategy> IDsForCreatingRevisions = new Dictionary<string, RevisionCreationStrategy>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, ForceRevisionStrategy> IDsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 
@@ -904,10 +904,13 @@ more responsive application.
         
         private void PrepareForCreatingRevisionsFromIDs(SaveChangesData result)
         {
-            foreach (KeyValuePair<string, RevisionCreationStrategy> idEntry in IDsForCreatingRevisions)
+            // Note: here there is not point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
+            foreach (var idEntry in IDsForCreatingForcedRevisions)
             {
-                result.SessionCommands.Add(new RevisionsCommandData(idEntry.Key, null));
+                result.SessionCommands.Add(new RevisionsCommandData(idEntry.Key));   
             }
+            
+            IDsForCreatingForcedRevisions.Clear();
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
@@ -1036,8 +1039,19 @@ more responsive application.
                 else
                     changeVector = null;
 
-                var forceRevisionCreation = IDsForCreatingRevisions.Remove(entity.Value.Id);
-                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreation)); 
+                var forceRevisionCreationStrategy = ForceRevisionStrategy.None;
+                
+                if (entity.Value.Id != null)
+                {
+                    // Check if user wants to Force a Revision
+                    if (IDsForCreatingForcedRevisions.TryGetValue(entity.Value.Id, out var creationStrategy))
+                    {
+                        IDsForCreatingForcedRevisions.Remove(entity.Value.Id);
+                        forceRevisionCreationStrategy = creationStrategy;
+                    }
+                } 
+                
+                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
             }
         }
 

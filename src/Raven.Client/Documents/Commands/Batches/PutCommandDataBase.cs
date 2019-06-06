@@ -8,8 +8,8 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
-        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, bool forceRevisionCreation = false)
-            : base(id, changeVector, document, forceRevisionCreation)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.None)
+            : base(id, changeVector, document, forceRevisionCreationStrategy)
         {
         }
 
@@ -20,8 +20,8 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
-        public PutCommandData(string id, string changeVector, DynamicJsonValue document, bool forceRevisionCreation = false)
-            : base(id, changeVector, document, forceRevisionCreation)
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.None)
+            : base(id, changeVector, document, forceRevisionCreationStrategy)
         {
         }
 
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public abstract class PutCommandDataBase<T> : ICommandData
     {
-        protected PutCommandDataBase(string id, string changeVector, T document, bool forceRevisionCreation = false)
+        protected PutCommandDataBase(string id, string changeVector, T document, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.None)
         {
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Id = id;
             ChangeVector = changeVector;
             Document = document;
-            ForceRevisionCreation = forceRevisionCreation;
+            ForceRevisionCreationStrategy = forceRevisionCreationStrategy;
         }
 
         public string Id { get; }
@@ -48,18 +48,24 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;
-        public bool ForceRevisionCreation { get; }
+        public ForceRevisionStrategy ForceRevisionCreationStrategy { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Document)] = Document,
-                [nameof(Type)] = Type.ToString(),
-                [nameof(ForceRevisionCreation)] = ForceRevisionCreation
+                [nameof(Type)] = Type.ToString()
             };
+            
+            if (ForceRevisionCreationStrategy != ForceRevisionStrategy.None)
+            {
+                json[nameof(ForceRevisionCreationStrategy)] = ForceRevisionCreationStrategy;
+            }
+
+            return json;
         }
 
         public abstract void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session);

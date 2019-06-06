@@ -11,6 +11,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using System.Linq;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -152,12 +153,7 @@ namespace Raven.Server.Documents
                     
                     if (shouldVersion)
                     {
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore) && oldDoc == null)
-                        {
-                            throw new InvalidOperationException("Can't force revision creation - the document is not saved on the server yet.");
-                        }
-                        
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore) || ShouldVersionOldDocument(flags, oldDoc))
+                        if (ShouldVersionOldDocument(flags, oldDoc))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -166,11 +162,9 @@ namespace Raven.Server.Documents
                             _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions, NonPersistentDocumentFlags.None,
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
+                        
                         flags |= DocumentFlags.HasRevisions;
-
-                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore) == false) {
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
-                        }
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
 

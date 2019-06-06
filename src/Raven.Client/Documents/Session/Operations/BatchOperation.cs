@@ -90,12 +90,14 @@ namespace Raven.Client.Documents.Session.Operations
                     case CommandType.PUT:
                         HandlePut(i, batchResult, isDeferred: false);
                         break;
+                    case CommandType.ForceRevisionCreation:
+                        HandleForceRevisionCreation(batchResult);
+                        break;
                     case CommandType.DELETE:
                         HandleDelete(batchResult);
                         break;
                     case CommandType.CompareExchangePUT:
                     case CommandType.CompareExchangeDELETE:
-                    case CommandType.ForceRevisionCreation:
                         break;
                     default:
                         throw new NotSupportedException($"Command '{type}' is not supported.");
@@ -367,6 +369,44 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
+        private void HandleForceRevisionCreation(BlittableJsonReaderObject batchResult)
+        {
+            // Need to update the change-vector of tracked entities in the session
+            // because ForceRevisionCreation can also create (put) new documents in the server:
+            // when forcing a revision for a document that did not have any revisions yet (original document is updated/saved with has-revisions flag)
+            
+            if (GetBooleanField(batchResult, CommandType.ForceRevisionCreation, "RevisionCreated") == false)
+            { 
+                // no forced revision was created...nothing to update.
+                return;
+            }
+            
+            var id = GetLazyStringField(batchResult, CommandType.ForceRevisionCreation, Constants.Documents.Metadata.Id);
+            var changeVector = GetLazyStringField(batchResult, CommandType.ForceRevisionCreation, Constants.Documents.Metadata.ChangeVector);
+
+            if (_session.DocumentsById.TryGetValue(id, out var documentInfo) == false)
+                return;
+            
+            // update change vector
+            documentInfo.ChangeVector = changeVector;
+            
+            // update last modification time
+            documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);
+
+            foreach (var propertyName in batchResult.GetPropertyNames())
+            {
+                if (propertyName == nameof(ICommandData.Type))
+                    continue;
+
+                documentInfo.Metadata.Modifications[propertyName] = batchResult[propertyName];
+            }
+            
+            ApplyMetadataModifications(id, documentInfo);
+            
+            var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
+            _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
+        }
+        
         private void HandlePut(int index, BlittableJsonReaderObject batchResult, bool isDeferred)
         {
             object entity = null;
@@ -459,6 +499,14 @@ namespace Raven.Client.Documents.Session.Operations
                 ThrowMissingField(type, fieldName);
 
             return longValue;
+        }
+        
+        private static bool GetBooleanField(BlittableJsonReaderObject json, CommandType type, string fieldName)
+        {
+            if (json.TryGet(fieldName, out bool boolValue) == false)
+                ThrowMissingField(type, fieldName);
+
+            return boolValue;
         }
 
         private static void ThrowMissingField(CommandType type, string fieldName)
