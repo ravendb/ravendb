@@ -44,6 +44,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                         await writer.WriteToWebSocket(action.ToJson());
                     }
 
+                    // update the connection with the current cluster topology
+                    writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutRecentClusterTopologyConnectivity;
+
                     await writer.WriteNotifications(isValidFor);
                 }
             }

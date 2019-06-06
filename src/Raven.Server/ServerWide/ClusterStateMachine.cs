@@ -1594,6 +1594,15 @@ namespace Raven.Server.ServerWide
                 NotifyValueChanged(context, type, index);
             }
         }
+        private void PutValueDirectly(TransactionOperationContext context, string key, BlittableJsonReaderObject value, long index)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, key, out Slice keySlice))
+            using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice keyLoweredSlice))
+            {
+                UpdateValue(index, items, keyLoweredSlice, keySlice, value);
+            }
+        }
 
         private void PutCertificate(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
@@ -1891,42 +1900,109 @@ namespace Raven.Server.ServerWide
             CertificatesSchema.Create(context.Transaction.InnerTransaction, CertificatesSlice, 32);
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
-            parent.StateChanged += OnStateChange;
+
+            _parent.SwitchToSingleLeaderAction = SwitchToSingleLeader;
         }
 
-        private void OnStateChange(object sender, RachisConsensus.StateTransition transition)
+        private void SwitchToSingleLeader(TransactionOperationContext context)
         {
-            if (transition.From == RachisState.Passive && transition.To == RachisState.LeaderElect)
+            // when switching to a single node cluster we need to clear all of the irrelevant databases
+            var clusterTopology = _parent.GetTopology(context);
+            var oldTag = clusterTopology.LastNodeId;
+            var newTag = clusterTopology.Members.First().Key;
+
+            SqueezeDatabasesToSingleNodeCluster(context, oldTag, newTag);
+
+            if (newTag != oldTag)
             {
-                // moving from 'passive'->'leader elect', means that we were bootstrapped!  
-                using (_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                UpdateClusterTopology(context, clusterTopology, newTag, _parent.GetLastEntryIndex(context));
+            }
+
+            UpdateLicenseOnSwitchingToSingleLeader(context);
+        }
+
+        private void UpdateLicenseOnSwitchingToSingleLeader(TransactionOperationContext context)
                 {
+            var licenseLimitsBlittable = Read(context, ServerStore.LicenseLimitsStorageKey, out long index);
+            if (licenseLimitsBlittable == null)
+                return;
+
+            var tag = _parent.ReadNodeTag(context);
+            var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+
+            if (licenseLimits.NodeLicenseDetails.ContainsKey(tag) && licenseLimits.NodeLicenseDetails.Count == 1)
+                return;
+
+            if (licenseLimits.NodeLicenseDetails.TryGetValue(_parent.Tag, out var details) == false)
+                return;
+
+            var newLimits = new LicenseLimits
+            {
+                NodeLicenseDetails = new Dictionary<string, DetailsPerNode>
+                {
+                    [tag] = details
+                }
+            };
+
+            var value = context.ReadObject(newLimits.ToJson(), "overwrite-license-limits");
+            PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
+        }
+
+        private void UpdateClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
+        {
+            _parent.UpdateNodeTag(context, newTag);
+
+            var topology = new ClusterTopology(
+                clusterTopology.TopologyId,
+                new Dictionary<string, string>
+                {
+                    [newTag] = clusterTopology.GetUrlFromTag(newTag)
+                },
+                new Dictionary<string, string>(),
+                new Dictionary<string, string>(),
+                newTag,
+                index
+            );
+
+            _parent.SetTopology(context, topology);
+        }
+
+        private void SqueezeDatabasesToSingleNodeCluster(TransactionOperationContext context, string oldTag, string newTag)
+        {
                     var toDelete = new List<string>();
                     var toShrink = new List<DatabaseRecord>();
-                    using (context.OpenReadTransaction())
+
+            foreach (var name in GetDatabaseNames(context))
                     {
-                        foreach (var record in ReadAllDatabases(context))
+                var blittableRecord = ReadRawDatabase(context, name, out _);
+                var topology = ReadDatabaseTopology(blittableRecord);
+
+                if (topology.RelevantFor(oldTag) == false)
                         {
-                            if (record.Topology.RelevantFor(_parent.Tag) == false)
-                            {
-                                toDelete.Add(record.DatabaseName);
+                    toDelete.Add(name);
                             }
                             else
                             {
+                    if (topology.RelevantFor(newTag) && topology.Count == 1)
+                        continue;
+
+                    var record = JsonDeserializationCluster.DatabaseRecord(blittableRecord);
                                 record.Topology = new DatabaseTopology();
-                                record.Topology.Members.Add(_parent.Tag);
+                    record.Topology.Members.Add(newTag);
                                 toShrink.Add(record);
                             }
                         }
-                    }
 
                     if (toShrink.Count == 0 && toDelete.Count == 0)
                         return;
 
-                    using (context.OpenWriteTransaction())
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            var cmd = new DynamicJsonValue
                     {
-                        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                        var index = _parent.GetLastCommitIndex(context);
+                ["Type"] = "Switch to single leader"
+            };
+
+            var index = _parent.InsertToLeaderLog(context, _parent.CurrentTerm, context.ReadObject(cmd, "single-leader"), RachisEntryFlags.Noop);
 
                         foreach (var databaseName in toDelete)
                         {
@@ -1936,8 +2012,22 @@ namespace Raven.Server.ServerWide
                                 DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
                             }
                         }
+
+            if (toShrink.Count == 0)
+                return;
+
+            var actions = new List<Action>();
+            var type = "ClusterTopologyChanged";
+
                         foreach (var record in toShrink)
                         {
+                record.Topology.Stamp = new LeaderStamp
+                {
+                    Index = index,
+                    LeadersTicks = 0,
+                    Term = _parent.CurrentTerm
+                };
+
                             var dbKey = "db/" + record.DatabaseName;
                             using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                             using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
@@ -1945,12 +2035,13 @@ namespace Raven.Server.ServerWide
                                 var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
                                 UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                             }
+
+                actions.Add(() => DatabaseChanged?.Invoke(this,
+                    (record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
                         }
-                        context.Transaction.Commit();
+
+            ExecuteManyOnDispose(context, index, type, actions);
                     }
-                }
-            }
-        }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
         {
