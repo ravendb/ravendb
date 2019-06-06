@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
 
             public bool SeenCounters;
             public bool SeenAttachments;
-            public bool ForceRevision;
+            public ForceRevisionStrategy ForceRevisionCreationStrategy;
 
             [JsonIgnore]
             public PatchDocumentCommandBase PatchCommand;
@@ -558,16 +558,15 @@ namespace Raven.Server.Documents.Handlers
                             await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         }
                         break;
-                    case CommandPropertyName.ForceRevisionCreation:
+                    case CommandPropertyName.ForceRevisionCreationStrategy: 
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-
-                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        if (state.CurrentTokenType != JsonParserToken.String)
                         {
-                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                            ThrowUnexpectedToken(JsonParserToken.String, state);
                         }
-
-                        commandData.ForceRevision = state.CurrentTokenType == JsonParserToken.True;
+                        
+                        commandData.ForceRevisionCreationStrategy = GetEnumValue(state, ctx);
                         break;
                 }
             }
@@ -724,7 +723,7 @@ namespace Raven.Server.Documents.Handlers
             IdPrefixed,
             Index,
             ReturnDocument,
-            ForceRevisionCreation,
+            ForceRevisionCreationStrategy,
 
             #region Attachment
 
@@ -842,12 +841,13 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.DestinationName;
                     return CommandPropertyName.NoSuchProperty;
                 
-                case 21:
+                case 29:
                     if (*(long*)state.StringBuffer == 8531315664536891206 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1869182049 &&
-                        state.StringBuffer[20] == (byte)'n')
-                        return CommandPropertyName.ForceRevisionCreation;
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 8247308551402910817 &&
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) == 1734702177 &&
+                        state.StringBuffer[28] == (byte)'y')
+                        return CommandPropertyName.ForceRevisionCreationStrategy;
                     return CommandPropertyName.NoSuchProperty;
                 
                 default:
@@ -855,6 +855,28 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private static unsafe ForceRevisionStrategy GetEnumValue(JsonParserState state, JsonOperationContext ctx)
+        {
+            switch (state.StringSize)
+            {
+                case 6:
+                    if (*(int*)state.StringBuffer == 1868981570 &&
+                        state.StringBuffer[5] == (byte)'e')
+                        return ForceRevisionStrategy.Before;
+                    
+                    // Do 'After' on customer demand...
+                    
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+                
+                default:
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+            }
+
+            return 0;
+        }
+        
         private static unsafe AttachmentType GetAttachmentType(JsonParserState state, JsonOperationContext ctx)
         {
             // here we confirm that the value is matching our expectation, in order to save CPU instructions
@@ -869,6 +891,7 @@ namespace Raven.Server.Documents.Handlers
 
                     ThrowInvalidProperty(state, ctx);
                     break;
+                
                 default:
                     ThrowInvalidProperty(state, ctx);
                     break;

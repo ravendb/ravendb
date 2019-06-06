@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Session
             return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
         
-        public void ForceRevisionCreationFor<T>(T entity, RevisionCreationStrategy revisionCreationStrategy = RevisionCreationStrategy.Before)
+        public void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.Before)
         {
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException(nameof(entity));
@@ -79,22 +79,22 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Cannot create a revision for the requested entity because it is not tracked by the session");
             }
 
-            if (Session.IDsForCreatingRevisions.ContainsKey(documentInfo.Id))
+            if (Session.IDsForCreatingForcedRevisions.ContainsKey(documentInfo.Id))
             {
                 throw new InvalidOperationException("A request for creating a revision was already made for the document in the current session.");
             }
             
-            Session.IDsForCreatingRevisions.Add(documentInfo.Id, revisionCreationStrategy);
+            Session.IDsForCreatingForcedRevisions.Add(documentInfo.Id, forceRevisionCreationStrategy);
         } 
         
-        public void ForceRevisionCreationFor(string id)
+        public void ForceRevisionCreationFor(string id, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.Before)
         {
-            if (Session.IDsForCreatingRevisions.ContainsKey(id))
+            if (Session.IDsForCreatingForcedRevisions.ContainsKey(id))
             {
                 throw new InvalidOperationException($"A request for creating a revision was already made for document {id} in the current session.");
             }
             
-            Session.IDsForCreatingRevisions.Add(id, RevisionCreationStrategy.Before);
+            Session.IDsForCreatingForcedRevisions.Add(id, forceRevisionCreationStrategy);
         } 
     }
 }

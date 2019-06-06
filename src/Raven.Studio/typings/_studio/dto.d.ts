@@ -167,7 +167,8 @@ interface chagesApiConfigureRequestDto {
 }
 
 interface changedOnlyMetadataFieldsDto extends documentMetadataDto {
-    Method: string;
+    Type: string;
+    RevisionCreated: boolean;
 }
 
 interface saveDocumentResponseDto {
@@ -567,7 +568,7 @@ interface editDocumentCrudActions {
     fetchRevisionsCount(docId: string, db: database): void;
     
     saveRelatedItems(targetDocumentId: string): JQueryPromise<void>;
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void;
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean): void;
 }
 
 interface confirmationDialogOptions {

@@ -14,7 +14,7 @@ class forceRevisionCreationCommand extends commandBase {
                    Type: "ForceRevisionCreation"
         } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
         
-        const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [ toBulkDoc ];          
+        const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [ toBulkDoc ];
 
         const args = ko.toJSON({ Commands: commands });
         const url = endpoints.databases.batch.bulk_docs;
@@ -22,10 +22,15 @@ class forceRevisionCreationCommand extends commandBase {
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);
 
         if (this.reportSaveProgress) {
-            saveTask.done((result: saveDocumentResponseDto) => { 
-                this.reportSuccess("Created revision for" + result.Results[0]["@id"])  
-            });
-            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to create revision for: " + this.id, response.responseText, response.statusText));
+            saveTask.done((result: saveDocumentResponseDto) => {
+                if (result.Results[0].RevisionCreated) {
+                    this.reportSuccess("Created revision for document:" + result.Results[0]["@id"]);
+                }
+                else {
+                    this.reportSuccess("No new revision created. A revision with the latest document content already exists");
+                }
+            });            
+            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to create revision for document: " + this.id, response.responseText, response.statusText));
         }
 
         return saveTask;

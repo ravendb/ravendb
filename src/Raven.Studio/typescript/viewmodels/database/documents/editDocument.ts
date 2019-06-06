@@ -113,7 +113,7 @@ class editDocument extends viewModelBase {
     private changeNotification: changeSubscription;
 
     private normalActionProvider = new normalCrudActions(this.document, this.activeDatabase, 
-            docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any) => this.onDocumentSaved(saveResult, localDoc));
+            docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
     
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider); 
@@ -742,17 +742,25 @@ class editDocument extends viewModelBase {
                 return this.crudActionsProvider().saveRelatedItems(saveResult.Results[0]["@id"])
                     .then(() => saveResult);
             })
-            .then((saveResult: saveDocumentResponseDto) => this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto))
+            .then((saveResult: saveDocumentResponseDto) => this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto, forceRevisionCreation))
             .fail(() => {
                 this.isSaving(false);
             });
     }
     
-    private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+    private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) {
+        
+        if (forceRevisionCreation && !saveResult.Results[0].RevisionCreated) {            
+            // No new revision was created since the server detected that a revision with latest document content already exists... so do nothing.
+            this.isSaving(false);
+            return;
+        }
+        
         this.isClone(false);
         this.crudActionsProvider(this.normalActionProvider);
         
         const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
+        
         const currentSelection = this.docEditor.getSelectionRange();
 
         const metadata = localDoc['@metadata'];
@@ -1077,14 +1085,14 @@ class normalCrudActions implements editDocumentCrudActions {
     private readonly document: KnockoutObservable<document>;
     private readonly db: KnockoutObservable<database>;
     private readonly loadDocument: (id: string) => JQueryPromise<document>;
-    private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any) => void | JQueryPromise<void>;
+    private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => void | JQueryPromise<void>;
 
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
     revisionsCount = ko.observable<number>();
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (id: string) => JQueryPromise<document>,
-                onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any) => void | JQueryPromise<void>) {
+                onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean) => void | JQueryPromise<void>) {
         this.document = document;
         this.db = db;
         this.loadDocument = loadDocument;
@@ -1282,8 +1290,8 @@ class normalCrudActions implements editDocumentCrudActions {
         return $.when<void>(null);
     }
     
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void | JQueryPromise<void> {
-        this.onDocumentSavedAction(saveResult, localDoc);
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean): void | JQueryPromise<void> {
+        this.onDocumentSavedAction(saveResult, localDoc, forceRevisionCreation);
     }
 }
 
