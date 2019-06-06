@@ -1357,9 +1357,7 @@ namespace Raven.Server.Documents
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }
-
                 }
-
             }
 
             return deleteResults;

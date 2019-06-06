@@ -68,5 +68,33 @@ namespace Raven.Client.Documents.Session
             operation.SetResult(command.Result);
             return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
+        
+        public void ForceRevisionCreationFor<T>(T entity, RevisionCreationStrategy revisionCreationStrategy = RevisionCreationStrategy.Before)
+        {
+            if (ReferenceEquals(entity, null))
+                throw new ArgumentNullException(nameof(entity));
+           
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
+            {
+                throw new InvalidOperationException("Cannot create a revision for the requested entity because it is not tracked by the session");
+            }
+
+            if (Session.IDsForCreatingRevisions.ContainsKey(documentInfo.Id))
+            {
+                throw new InvalidOperationException("A request for creating a revision was already made for the document in the current session.");
+            }
+            
+            Session.IDsForCreatingRevisions.Add(documentInfo.Id, revisionCreationStrategy);
+        } 
+        
+        public void ForceRevisionCreationFor(string id)
+        {
+            if (Session.IDsForCreatingRevisions.ContainsKey(id))
+            {
+                throw new InvalidOperationException($"A request for creating a revision was already made for document {id} in the current session.");
+            }
+            
+            Session.IDsForCreatingRevisions.Add(id, RevisionCreationStrategy.Before);
+        } 
     }
 }

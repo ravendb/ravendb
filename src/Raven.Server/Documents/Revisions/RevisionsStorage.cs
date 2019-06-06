@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Revisions
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
 
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore))
                 return true;
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromRevision))

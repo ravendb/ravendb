@@ -95,6 +95,7 @@ namespace Raven.Client.Documents.Session.Operations
                         break;
                     case CommandType.CompareExchangePUT:
                     case CommandType.CompareExchangeDELETE:
+                    case CommandType.ForceRevisionCreation:
                         break;
                     default:
                         throw new NotSupportedException($"Command '{type}' is not supported.");
@@ -134,6 +135,7 @@ namespace Raven.Client.Documents.Session.Operations
                         break;
                     case CommandType.CompareExchangePUT:
                     case CommandType.CompareExchangeDELETE:
+                    case CommandType.ForceRevisionCreation:
                         break;
                     case CommandType.Counters:
                         HandleCounters(batchResult);

@@ -41,6 +41,7 @@ import aceDiff = require("common/helpers/text/aceDiff");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
 import getDocumentRevisionsCountCommand = require("commands/database/documents/getDocumentRevisionsCountCommand");
 import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
+import forceRevisionCreationCommand = require("commands/database/documents/forceRevisionCreationCommand");
 
 interface revisionToCompare {
     date: string;
@@ -729,7 +730,10 @@ class editDocument extends viewModelBase {
         // we split save of cloned document into 2 calls, as default id convention creates ids like: users/
         // as result we don't know exact destination document id.
         const newDoc = new document(updatedDto);
-        const saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase(), true, forceRevisionCreation);
+        
+        const saveCommand = forceRevisionCreation ?
+                            new forceRevisionCreationCommand(documentId, this.activeDatabase()) :
+                            new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
         
         this.isSaving(true);
         saveCommand

@@ -10,6 +10,12 @@ using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session
 {
+    
+    public enum RevisionCreationStrategy
+    {
+        Before // Create a revision from the document that is currently in store - BEFORE applying any changes made by the user 
+    }
+    
     /// <summary>
     ///     Revisions advanced synchronous session operations
     /// </summary>
@@ -40,5 +46,24 @@ namespace Raven.Client.Documents.Session
         /// the specified date
         /// </summary>
         T Get<T>(string id, DateTime date);
+        
+        /// <summary>
+        /// Make the session create a revision for the specified entity
+        /// Can be used with tracked entities only
+        /// Revision will be created even if:
+        ///    1. Revisions configuration is Not set for the collection
+        ///    2. Document was Not modified
+        /// </summary>
+        void ForceRevisionCreationFor<T>(T entity, RevisionCreationStrategy revisionCreationStrategy = RevisionCreationStrategy.Before); 
+        
+        /// <summary>
+        /// Make the session create a revision for the specified entity
+        /// Can be used for un-tracked entities
+        /// Revision will be created even if:
+        ///    1. Revisions configuration is Not set for the collection
+        ///    2. Document was Not modified
+        /// </summary>
+        /// <param name="id"></param>
+        void ForceRevisionCreationFor(string id);
     }
 }

@@ -8,8 +8,8 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
-        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document)
-            : base(id, changeVector, document)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, bool forceRevisionCreation = false)
+            : base(id, changeVector, document, forceRevisionCreation)
         {
         }
 
@@ -20,8 +20,8 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
-        public PutCommandData(string id, string changeVector, DynamicJsonValue document)
-            : base(id, changeVector, document)
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document, bool forceRevisionCreation = false)
+            : base(id, changeVector, document, forceRevisionCreation)
         {
         }
 
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public abstract class PutCommandDataBase<T> : ICommandData
     {
-        protected PutCommandDataBase(string id, string changeVector, T document)
+        protected PutCommandDataBase(string id, string changeVector, T document, bool forceRevisionCreation = false)
         {
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
@@ -40,6 +40,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Id = id;
             ChangeVector = changeVector;
             Document = document;
+            ForceRevisionCreation = forceRevisionCreation;
         }
 
         public string Id { get; }
@@ -47,6 +48,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;
+        public bool ForceRevisionCreation { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -55,7 +57,8 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Document)] = Document,
-                [nameof(Type)] = Type.ToString()
+                [nameof(Type)] = Type.ToString(),
+                [nameof(ForceRevisionCreation)] = ForceRevisionCreation
             };
         }
 

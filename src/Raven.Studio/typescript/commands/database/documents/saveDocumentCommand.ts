@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 
 class saveDocumentCommand extends commandBase {
 
-    constructor(private id: string, private document: document, private db: database, private reportSaveProgress: boolean = true, private forceRevisionCreation: boolean = false) {
+    constructor(private id: string, private document: document, private db: database, private reportSaveProgress: boolean = true) {
         super();
     }
 
@@ -17,23 +17,13 @@ class saveDocumentCommand extends commandBase {
         ];
 
         const args = ko.toJSON({ Commands: commands });
-        
-        const urlArgs = {
-           forceRevisionCreation: this.forceRevisionCreation  
-        };
-              
-        const url = endpoints.databases.batch.bulk_docs + this.urlEncodeArgs(urlArgs);
+        const url = endpoints.databases.batch.bulk_docs;
         
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);
 
         if (this.reportSaveProgress) {
-            if (this.forceRevisionCreation) {
-                saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Created revision for" + result.Results[0]["@id"]));
-                saveTask.fail((response: JQueryXHR) => this.reportError("Failed to create revision for: " + this.id, response.responseText, response.statusText));
-            } else {
-                saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved document: " + result.Results[0]["@id"]));
-                saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save document:" + this.id, response.responseText, response.statusText));
-            }
+            saveTask.done((result: saveDocumentResponseDto) => this.reportSuccess("Saved document: " + result.Results[0]["@id"]));
+            saveTask.fail((response: JQueryXHR) => this.reportError("Failed to save document:" + this.id, response.responseText, response.statusText));
         }
 
         return saveTask;

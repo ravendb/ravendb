@@ -197,6 +197,8 @@ namespace Raven.Client.Documents.Session
             new Dictionary<(string, CommandType, string), ICommandData>();
 
         public readonly bool NoTracking;
+       
+        public Dictionary<string, RevisionCreationStrategy> IDsForCreatingRevisions = new Dictionary<string, RevisionCreationStrategy>(StringComparer.OrdinalIgnoreCase);
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 
@@ -795,7 +797,7 @@ more responsive application.
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
-
+            PrepareForCreatingRevisionsFromIDs(result);
             PrepareCompareExchangeEntities(result);
 
             if (DeferredCommands.Count > deferredCommandsCount)
@@ -836,7 +838,6 @@ more responsive application.
                         break;
                     default:
                         throw new NotSupportedException($"The command '{command.Type}' is not supported in a cluster session.");
-
                 }
             }
         }
@@ -900,6 +901,14 @@ more responsive application.
 
             return true;
         }
+        
+        private void PrepareForCreatingRevisionsFromIDs(SaveChangesData result)
+        {
+            foreach (KeyValuePair<string, RevisionCreationStrategy> idEntry in IDsForCreatingRevisions)
+            {
+                result.SessionCommands.Add(new RevisionsCommandData(idEntry.Key, null));
+            }
+        }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
@@ -952,7 +961,7 @@ more responsive application.
 
             if (changes == null)
                 result.OnSuccess.ClearDeletedEntities();
-            }
+        }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
@@ -967,12 +976,12 @@ more responsive application.
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
 
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                if (EntityChanged(document, entity.Value, null) == false)
+               
+                if (EntityChanged(document, entity.Value,null) == false)
                 {
                     document.Dispose();
                     continue;
                 }
-                    
 
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientModifyDocumentCommand, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
@@ -1001,7 +1010,6 @@ more responsive application.
 
                 result.OnSuccess.UpdateEntityDocumentInfo(entity.Value, document);
                 
-
                 if (metadataUpdated)
                 {
                     // we need to preserve the metadata after the changes, otherwise we'll consume the changes
@@ -1028,7 +1036,8 @@ more responsive application.
                 else
                     changeVector = null;
 
-                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document));
+                var forceRevisionCreation = IDsForCreatingRevisions.Remove(entity.Value.Id);
+                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreation)); 
             }
         }
 
@@ -1741,7 +1750,7 @@ more responsive application.
                 public ActionsToRunOnSuccess(InMemoryDocumentSessionOperations _session)
                 {
                     this._session = _session;
-        }
+                }
 
                 public void RemoveDocumentById(string id)
                 {

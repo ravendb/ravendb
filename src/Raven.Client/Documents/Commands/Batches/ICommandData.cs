@@ -32,16 +32,14 @@ namespace Raven.Client.Documents.Commands.Batches
         AttachmentCOPY,
         CompareExchangePUT,
         CompareExchangeDELETE,
-
+        ForceRevisionCreation, 
         Counters,
-
         BatchPATCH,
         // NOTE: When you add anything here, such as additional 
         // operation relating to a document but not operating on it 
         // directly, be sure to also update DeferInternal
         // to recognize that these are allows, like with AttachmentPUT and
         // AttachmentDELETE
-
         ClientAnyCommand,
         ClientModifyDocumentCommand
     }

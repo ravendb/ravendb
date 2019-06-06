@@ -152,7 +152,12 @@ namespace Raven.Server.Documents
                     
                     if (shouldVersion)
                     {
-                        if (ShouldVersionOldDocument(flags, oldDoc, nonPersistentFlags))
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore) && oldDoc == null)
+                        {
+                            throw new InvalidOperationException("Can't force revision creation - the document is not saved on the server yet.");
+                        }
+                        
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore) || ShouldVersionOldDocument(flags, oldDoc))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -163,7 +168,9 @@ namespace Raven.Server.Documents
                         }
                         flags |= DocumentFlags.HasRevisions;
 
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreationBefore) == false) {
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                        }
                     }
                 }
 
@@ -252,7 +259,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc, NonPersistentDocumentFlags nonPersistentDocumentFlags)
+        private static bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc)
         {
             if (oldDoc == null)
                 return false; // no document to version
@@ -262,9 +269,6 @@ namespace Raven.Server.Documents
 
             if (flags.Contain(DocumentFlags.Resolved))
                 return false; // we already versioned it with the a conflicted flag
-
-            if (nonPersistentDocumentFlags.Contain(NonPersistentDocumentFlags.ForceRevisionCreation))
-                return false; // no need to create 2 identical revisions
             
             return true;
         }
