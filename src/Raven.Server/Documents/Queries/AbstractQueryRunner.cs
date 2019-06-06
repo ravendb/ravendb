@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Queries
         protected Task<IOperationResult> ExecutePatch(IndexQueryServerSide query, Index index, QueryOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, index, options, context, onProgress, 
+            return ExecuteOperation(query, index, options, context, onProgress,
                 (key, retrieveDetails) =>
                 {
                     var command = new PatchDocumentCommand(context, key,
@@ -82,23 +82,23 @@ namespace Raven.Server.Documents.Queries
                         collectResultsNeeded: true,
                         returnDocument: false);
 
-                    return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, 
+                    return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails,
                         x => new BulkOperationResult.PatchDetails
                         {
                             Id = key,
                             ChangeVector = x.PatchResult.ChangeVector,
                             Status = x.PatchResult.Status
-                        }, 
-                        c => c.PatchResult.Dispose());
+                        },
+                        c => c.PatchResult?.Dispose());
                 }, token);
         }
 
         private async Task<IOperationResult> ExecuteOperation<T>(
-            IndexQueryServerSide query, 
-            Index index, 
+            IndexQueryServerSide query,
+            Index index,
             QueryOperationOptions options,
-            DocumentsOperationContext context, 
-            Action<DeterminateProgress> onProgress, 
+            DocumentsOperationContext context,
+            Action<DeterminateProgress> onProgress,
             Func<string, bool, BulkOperationCommand<T>> createCommandForId,
             OperationCancelToken token)
             where T : TransactionOperationsMerger.MergedTransactionCommand
@@ -121,9 +121,12 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var document in results.Results)
                 {
-                    token.Delay();
+                    using (document)
+                    {
+                        token.Delay();
 
-                    resultIds.Enqueue(document.Id.ToString());
+                        resultIds.Enqueue(document.Id.ToString());
+                    }
                 }
             }
             finally // make sure to close tx if DocumentConflictException is thrown
@@ -154,7 +157,7 @@ namespace Raven.Server.Documents.Queries
                             subCommand.RetrieveDetails = RetrieveDetails;
 
                         return subCommand;
-                    }, rateGate, token, 
+                    }, rateGate, token,
                         maxTransactionSize: 16 * Constants.Size.Megabyte,
                         batchSize: batchSize);
 
@@ -190,25 +193,31 @@ namespace Raven.Server.Documents.Queries
             private readonly T _command;
             private readonly bool _retrieveDetails;
             private readonly Func<T, IBulkOperationDetails> _getDetails;
-            private readonly Action<T> _disposeResult;
+            private readonly Action<T> _afterExecuted;
 
-            public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails, Action<T> disposeResult)
+            public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails, Action<T> afterExecuted)
             {
                 _command = command;
                 _retrieveDetails = retrieveDetails;
                 _getDetails = getDetails;
-                _disposeResult = disposeResult;
+                _afterExecuted = afterExecuted;
             }
 
             public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
             {
-                var count = _command.Execute(context, recording);
+                try
+                {
+                    var count = _command.Execute(context, recording);
 
-                if (_retrieveDetails)
-                    RetrieveDetails?.Invoke(_getDetails(_command));
+                    if (_retrieveDetails)
+                        RetrieveDetails?.Invoke(_getDetails(_command));
 
-                _disposeResult?.Invoke(_command);
-                return count;
+                    return count;
+                }
+                finally
+                {
+                    _afterExecuted?.Invoke(_command);
+                }
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
