@@ -874,24 +874,37 @@ namespace Voron.Impl
                   ? Task.Run(() => { CommitStage2_WriteToJournal(); return true; })
                   : NoWriteToJournalRequiredTask;
 
+            var usageIncremented = false;
+
             try
             {
+                _forTestingPurposes?.ActionToCallDuringBeginAsyncCommitAndStartNewTransaction?.Invoke();
+
                 _env.IncrementUsageOnNewTransaction();
+                usageIncremented = true;
+
                 _env.ActiveTransactions.Add(nextTx);
                 _env.WriteTransactionStarted();
+
 
                 return nextTx;
             }
             catch (Exception)
             {
-                // failure here means that we'll try to complete the current transaction normaly
+                // failure here means that we'll try to complete the current transaction normally
                 // then throw as if commit was called normally and the next transaction failed
 
-                _env.DecrementUsageOnTransactionCreationFailure();
+                try
+                {
+                    if (usageIncremented)
+                        _env.DecrementUsageOnTransactionCreationFailure();
 
-                EndAsyncCommit();
-
-                AsyncCommit = null;
+                    EndAsyncCommit();
+                }
+                finally
+                {
+                    AsyncCommit = null;
+                }
 
                 _disposed |= TxState.Errored;
 
@@ -964,34 +977,27 @@ namespace Voron.Impl
         {
             // In the case of non-lazy transactions, we must flush the data from older lazy transactions
             // to ensure the sequentiality of the data.
-            Stopwatch sp = null;
-            if (_requestedCommitStats != null)
-            {
-                sp = Stopwatch.StartNew();
-            }
 
-            string journalFilePath;
-            CompressedPagesResult numberOfWrittenPages;
             try
             {
-                numberOfWrittenPages = _journal.WriteToJournal(this, out journalFilePath);
+                var numberOfWrittenPages = _journal.WriteToJournal(this, out var journalFilePath, out var writeToJournalDuration);
                 FlushedToJournal = true;
                 _updatePageTranslationTableAndUnusedPages = numberOfWrittenPages.UpdatePageTranslationTableAndUnusedPages;
                 if (_forTestingPurposes?.SimulateThrowingOnCommitStage2 == true)
                     _forTestingPurposes.ThrowSimulateErrorOnCommitStage2();
+
+                if (_requestedCommitStats != null)
+                {
+                    _requestedCommitStats.WriteToJournalDuration = writeToJournalDuration;
+                    _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
+                    _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
+                    _requestedCommitStats.JournalFilePath = journalFilePath;
+                }
             }
             catch
             {
                 _disposed |= TxState.Errored;
                 throw;
-            }
-
-            if (_requestedCommitStats != null)
-            {
-                _requestedCommitStats.WriteToJournalDuration = sp.Elapsed;
-                _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
-                _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
-                _requestedCommitStats.JournalFilePath = journalFilePath;
             }
         }
 
@@ -1108,6 +1114,7 @@ namespace Voron.Impl
 
             RolledBack = true;
         }
+
         public void RetrieveCommitStats(out CommitStats stats)
         {
             _requestedCommitStats = stats = new CommitStats();
@@ -1288,6 +1295,7 @@ namespace Voron.Impl
 
             internal Action ActionToCallDuringEnsurePagerStateReference;
             internal Action ActionToCallJustBeforeWritingToJournal;
+            internal Action ActionToCallDuringBeginAsyncCommitAndStartNewTransaction;
 
             public TestingStuff(LowLevelTransaction tx)
             {
@@ -1311,6 +1319,13 @@ namespace Voron.Impl
                 ActionToCallJustBeforeWritingToJournal = action;
 
                 return new DisposableAction(() => ActionToCallJustBeforeWritingToJournal = null);
+            }
+
+            internal IDisposable CallDuringBeginAsyncCommitAndStartNewTransaction(Action action)
+            {
+                ActionToCallDuringBeginAsyncCommitAndStartNewTransaction = action;
+
+                return new DisposableAction(() => ActionToCallDuringBeginAsyncCommitAndStartNewTransaction = null);
             }
 
             internal HashSet<PagerState> GetPagerStates()

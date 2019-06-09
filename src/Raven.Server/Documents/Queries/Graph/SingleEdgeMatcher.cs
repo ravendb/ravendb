@@ -44,7 +44,8 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (BlittableJsonTraverser.Default.TryRead(leftDoc, Edge.Path.FieldValue, out var value, out _) == false || value == null)
                     return;
 
-                var projectFieldValue = Edge.Project?.FieldValue;              
+                var projectFieldValue = !string.IsNullOrWhiteSpace(Edge.Project?.FieldValueWithoutAlias) ? 
+                        Edge.Project?.FieldValueWithoutAlias : Edge.Project?.FieldValue;              
 
                 switch (value)
                 {

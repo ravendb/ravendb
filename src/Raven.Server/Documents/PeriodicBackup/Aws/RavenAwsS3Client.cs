@@ -30,11 +30,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private readonly string _bucketName;
 
-        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionName,
-            string bucketName, Progress progress = null, CancellationToken? cancellationToken = null)
-            : base(awsAccessKey, awsSecretKey, awsRegionName, progress, cancellationToken)
+        public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, CancellationToken? cancellationToken = null)
+            : base(s3Settings, progress, cancellationToken)
         {
-            _bucketName = bucketName;
+            _bucketName = s3Settings.BucketName;
         }
 
         public async Task PutObject(string key, Stream stream, Dictionary<string, string> metadata)
@@ -50,18 +49,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var url = $"{GetUrl()}/{key}";
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
             Progress?.UploadProgress.SetTotal(stream.Length);
 
             // stream is disposed by the HttpClient
-            var content = new ProgressableStreamContent(stream, Progress)
-            {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var content = new ProgressableStreamContent(stream, Progress);
+            UpdateHeaders(content.Headers, now, stream);
 
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
@@ -127,16 +119,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private async Task AbortMultiUpload(HttpClient client, string url)
         {
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
-            {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -161,17 +145,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var now = SystemTime.UtcNow;
             var doc = CreateCompleteMultiUploadDocument(partNumbersWithEtag);
             var xmlString = doc.OuterXml;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHashFromString(xmlString);
 
             var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
             {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                },
                 Content = new StringContent(xmlString, Encoding.UTF8, "text/plain")
             };
+
+            UpdateHeaders(requestMessage.Headers, now, stream: null, RavenAwsHelper.CalculatePayloadHashFromString(xmlString));
 
             var headers = ConvertToHeaders(requestMessage.Headers);
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
@@ -222,18 +202,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (var subStream = new SubStream(baseStream, offset: 0, length: length))
             {
                 var now = SystemTime.UtcNow;
-                var payloadHash = RavenAwsHelper.CalculatePayloadHash(subStream);
 
                 // stream is disposed by the HttpClient
                 var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
                     {
-                        {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                        {"x-amz-content-sha256", payloadHash},
                         {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
                     }
                 };
+
+                UpdateHeaders(content.Headers, now, subStream);
 
                 var headers = ConvertToHeaders(content.Headers);
                 client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
@@ -275,16 +254,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{baseUrl}?uploads";
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
-            {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             foreach (var metadataKey in metadata.Keys)
                 requestMessage.Headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
@@ -311,21 +283,35 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public async Task TestConnection()
         {
-            var bucketLocation = await GetBucketLocation();
-            if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
+            try
             {
-                throw new InvalidOperationException(
-                    $"AWS location is set to {AwsRegion}, " +
-                    $"but the bucket named: '{_bucketName}' " +
-                    $"is located in: {bucketLocation}");
+                var bucketLocation = await GetBucketLocation();
+                if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    throw new InvalidOperationException(
+                        $"AWS location is set to {AwsRegion}, " +
+                        $"but the bucket named: '{_bucketName}' " +
+                        $"is located in: {bucketLocation}");
+                }
+            }
+            catch (AwsForbiddenException)
+            {
+                // we don't have the permissions to view the bucket location
             }
 
-            var bucketPermission = await GetBucketPermission();
-            if (bucketPermission != "FULL_CONTROL" && bucketPermission != "WRITE")
+            try
             {
-                throw new InvalidOperationException(
-                    $"Can't create an object in bucket '{_bucketName}', " +
-                    $"when permission is set to '{bucketPermission}'");
+                var bucketPermission = await GetBucketPermission();
+                if (bucketPermission != "FULL_CONTROL" && bucketPermission != "WRITE")
+                {
+                    throw new InvalidOperationException(
+                        $"Can't create an object in bucket '{_bucketName}', " +
+                        $"when permission is set to '{bucketPermission}'");
+                }
+            }
+            catch (AwsForbiddenException)
+            {
+                // we don't have the permissions to view the bucket permissions
             }
         }
 
@@ -335,16 +321,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             {
                 var url = $"{GetUrl()}?location";
                 var now = SystemTime.UtcNow;
-                var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-                var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
-                {
-                    Headers =
-                    {
-                        {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                        {"x-amz-content-sha256", payloadHash}
-                    }
-                };
+                var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
+                UpdateHeaders(requestMessage.Headers, now, null);
 
                 var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -361,7 +340,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
 
                 if (response.IsSuccessStatusCode == false)
-                    throw StorageException.FromResponseMessage(response);
+                {
+                    var storageException = StorageException.FromResponseMessage(response);
+
+                    if (response.StatusCode == HttpStatusCode.Forbidden)
+                        throw new AwsForbiddenException(storageException.ResponseString);
+
+                    throw storageException;
+                }
 
                 using (var stream = await response.Content.ReadAsStreamAsync())
                 using (var reader = new StreamReader(stream))
@@ -390,16 +376,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{GetUrl()}?acl";
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
-            {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -410,8 +389,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.StatusCode == HttpStatusCode.NotFound)
                 throw new BucketNotFoundException($"Bucket name '{_bucketName}' doesn't exist!");
 
+
             if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
+            {
+                var storageException = StorageException.FromResponseMessage(response);
+                
+                if (response.StatusCode == HttpStatusCode.Forbidden)
+                    throw new AwsForbiddenException(storageException.ResponseString);
+
+                throw storageException;
+            }
 
             using (var stream = await response.Content.ReadAsStreamAsync())
             using (var reader = new StreamReader(stream))
@@ -441,14 +428,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 var requestMessage = new HttpRequestMessage(HttpMethods.Put, url)
                 {
-                    Headers =
-                    {
-                        {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                        {"x-amz-content-sha256", payloadHash}
-                    },
                     Content = hasLocationConstraint == false ?
                         null : new StringContent(xmlString, Encoding.UTF8, "text/plain")
                 };
+
+                UpdateHeaders(requestMessage.Headers, now, stream: null, payloadHash: payloadHash);
 
                 var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -496,16 +480,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             {
                 var url = GetUrl();
                 var now = SystemTime.UtcNow;
-                var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
-                {
-                    Headers =
-                    {
-                        {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                        {"x-amz-content-sha256", payloadHash}
-                    }
-                };
+                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
+                UpdateHeaders(requestMessage.Headers, now, null);
 
                 var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -527,16 +504,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{GetUrl()}/{key}";
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
-            {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -560,16 +530,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{GetUrl()}/{key}";
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
-            {
-                Headers =
-                {
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
 

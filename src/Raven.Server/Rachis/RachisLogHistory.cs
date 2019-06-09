@@ -34,6 +34,7 @@ namespace Raven.Server.Rachis
             Index, // long
             Ticks, // long
             Term, // long
+            CommittedTerm,
             Type, // string
             State, // byte -> 1 - appended, 2 - committed
             Result, // blittable
@@ -128,12 +129,13 @@ namespace Raven.Server.Rachis
                 tvb.Add(Bits.SwapBytes(index));
                 tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
                 tvb.Add(term);
+                tvb.Add(0L);
                 tvb.Add(typeSlice);
                 tvb.Add((byte)HistoryStatus.Appended);
                 tvb.Add(Slices.Empty); // result
                 tvb.Add(Slices.Empty); // exception type
                 tvb.Add(Slices.Empty); // exception message
-                table.Insert(tvb);
+                table.Set(tvb);
             }
 
             if (table.NumberOfEntries > _logHistoryMaxEntries)
@@ -160,9 +162,10 @@ namespace Raven.Server.Rachis
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
 
+            TableValueReader reader;
             using (Slice.From(context.Allocator, guid, out var guidSlice))
             {
-                if (table.VerifyKeyExists(guidSlice) == false)
+                if (table.ReadByKey(guidSlice, out reader) == false)
                     return;
             }
 
@@ -178,6 +181,7 @@ namespace Raven.Server.Rachis
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
                 tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
+                tvb.Add(*(long*)reader.Read((int)(LogHistoryColumn.Term), out _));
                 tvb.Add(term);
                 tvb.Add(typeSlice);
                 tvb.Add((byte)status);
@@ -251,7 +255,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var entry in toCancel)
                 {
-                    UpdateInternal(context, entry.Guid, entry.Type, entry.Index, entry.Term, entry.Status, null, new OperationCanceledException(msg));
+                    UpdateInternal(context, entry.Guid, entry.Type, entry.Index, term, entry.Status, null, new OperationCanceledException(msg));
                 }
             }
         }
@@ -262,6 +266,26 @@ namespace Raven.Server.Rachis
             foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.FixedSizeIndexes[LogHistoryDateTimeSlice], 0, 0))
             {
                 yield return ReadHistoryLog(context, entryHolder);
+            }
+        }
+
+        public unsafe List<DynamicJsonValue> GetLogByIndex(TransactionOperationContext context, long index)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
+            var reversedIndex = Bits.SwapBytes(index);
+            using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out var key))
+            {
+                var res = new List<DynamicJsonValue>();
+                foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.Indexes[LogHistoryIndexSlice], key, 0))
+                {
+                    var entry = ReadHistoryLog(context, entryHolder.Result);
+                    if (entry[nameof(LogHistoryColumn.Index)].Equals(index) == false)
+                    {
+                        break;
+                    }
+                    res.Add(entry);
+                }
+                return res;
             }
         }
 
@@ -276,6 +300,7 @@ namespace Raven.Server.Rachis
             djv[nameof(LogHistoryColumn.Guid)] = ReadGuid(entryHolder);
             djv[nameof(LogHistoryColumn.Index)] = ReadIndex(entryHolder);
             djv[nameof(LogHistoryColumn.Term)] = ReadTerm(entryHolder);
+            djv[nameof(LogHistoryColumn.CommittedTerm)] = ReadCommittedTerm(entryHolder);
             djv[nameof(LogHistoryColumn.Type)] = ReadType(entryHolder);
             djv[nameof(LogHistoryColumn.State)] = ReadState(entryHolder).ToString();
 
@@ -298,6 +323,11 @@ namespace Raven.Server.Rachis
             djv[nameof(LogHistoryColumn.ExceptionMessage)] = size > 0 ? Encoding.UTF8.GetString(exMsg, size) : null;
 
             return djv;
+        }
+
+        private static unsafe long ReadCommittedTerm(Table.TableValueHolder entryHolder)
+        {
+            return *(long*)entryHolder.Reader.Read((int)(LogHistoryColumn.CommittedTerm), out _);
         }
 
         private static unsafe HistoryStatus ReadState(Table.TableValueHolder entryHolder)

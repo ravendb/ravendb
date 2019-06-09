@@ -649,26 +649,39 @@ namespace Raven.Server.Documents.Indexes
                     LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
                     ExecuteIndexing();
                 }
+                catch (ObjectDisposedException ode)
+                {
+                    if(_disposeOne.Disposed == false)
+                    {
+                        ReportUnexpectedIndexingError(ode);
+                    }
+                    // else we are been disposed of and we can ignore this error.
+                }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
-
-                    try
-                    {
-                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
-                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
-                            key: Name,
-                            details: new ExceptionDetails(e)));
-                    }
-                    catch (Exception)
-                    {
-                        // ignore if we can't create notification
-                    }
-
-                    State = IndexState.Error;
+                    ReportUnexpectedIndexingError(e);
                 }
             }, null, IndexingThreadName);
+        }
+
+        private void ReportUnexpectedIndexingError(Exception e)
+        {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+
+            try
+            {
+                DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
+                    "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                    key: Name,
+                    details: new ExceptionDetails(e)));
+            }
+            catch (Exception)
+            {
+                // ignore if we can't create notification
+            }
+
+            State = IndexState.Error;
         }
 
         public virtual void Stop(bool disableIndex = false)
@@ -1679,6 +1692,7 @@ namespace Raven.Server.Documents.Indexes
                                     // that queries won't get the searcher having 'old' state but see 'new' changes committed here
                                     // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
                                     IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                    IndexPersistence.RecreateSuggestionsSearchers(tx.InnerTransaction);
                                 }
                             };
 

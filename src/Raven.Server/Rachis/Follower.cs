@@ -54,12 +54,12 @@ namespace Raven.Server.Rachis
         private void FollowerSteadyState()
         {
             var entries = new List<RachisEntry>();
-            long lastCommit = 0, lastTruncate = 0;
+            long lastCommit = 0, lastTruncate = 0, lastAcknowledgedIndex = 0;
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"{ToString()}: Entering steady state");
             }
-            
+
             while (true)
             {
                 entries.Clear();
@@ -119,8 +119,6 @@ namespace Raven.Server.Rachis
                         }
                     }
 
-                    var lastLogIndex = appendEntries.PrevLogIndex;
-
                     // don't start write transaction for noop
                     if (lastCommit != appendEntries.LeaderCommit ||
                         lastTruncate != appendEntries.TruncateLogBefore ||
@@ -130,12 +128,12 @@ namespace Raven.Server.Rachis
                         {
                             // applying the leader state may take a while, we need to ping
                             // the server and let us know that we are still there
-                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);
+                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, appendEntries.PrevLogIndex);
                             try
                             {
                                 bool hasRemovedFromTopology;
 
-                                (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
+                                (hasRemovedFromTopology, lastAcknowledgedIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
                                     context,
                                     entries,
                                     appendEntries);
@@ -192,7 +190,7 @@ namespace Raven.Server.Rachis
                     _connection.Send(context, new AppendEntriesResponse
                     {
                         CurrentTerm = _term,
-                        LastLogIndex = lastLogIndex,
+                        LastLogIndex = lastAcknowledgedIndex,
                         Success = true
                     });
 
@@ -247,9 +245,8 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private (bool HasRemovedFromTopology, long LastLogIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, TransactionOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
+        private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, TransactionOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
         {
-            long lastLogIndex; 
             long lastTruncate;
             long lastCommit;
             
@@ -297,15 +294,15 @@ namespace Raven.Server.Rachis
                     }
                 }
 
-                lastLogIndex = _engine.GetLastEntryIndex(context);
-
                 var lastEntryIndexToCommit = Math.Min(
-                    lastLogIndex,
+                    _engine.GetLastEntryIndex(context),
                     appendEntries.LeaderCommit);
 
                 var lastAppliedIndex = _engine.GetLastCommitIndex(context);
+                var lastAppliedTerm = _engine.GetTermFor(context, lastEntryIndexToCommit);
 
-                if (lastEntryIndexToCommit > lastAppliedIndex)
+                // we start to commit only after we have any log with a term of the current leader
+                if (lastEntryIndexToCommit > lastAppliedIndex && lastAppliedTerm == appendEntries.Term)
                 {
                     lastAppliedIndex = _engine.Apply(context, lastEntryIndexToCommit, null, sp);
                 }
@@ -313,7 +310,7 @@ namespace Raven.Server.Rachis
                 lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
                 _engine.TruncateLogBefore(context, lastTruncate);
 
-                lastCommit = lastEntryIndexToCommit;
+                lastCommit = lastAppliedIndex;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"{ToString()}: Ready to commit in {sp.Elapsed}");
@@ -327,7 +324,9 @@ namespace Raven.Server.Rachis
                 _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
             }
 
-            return (HasRemovedFromTopology: removedFromTopology,  LastLogIndex: lastLogIndex,  LastTruncate: lastTruncate,  LastCommit: lastCommit);
+            var lastAcknowledgedIndex = entries.Count == 0 ? appendEntries.PrevLogIndex : entries[entries.Count - 1].Index;
+
+            return (HasRemovedFromTopology: removedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex,  LastTruncate: lastTruncate,  LastCommit: lastCommit);
         }
 
         public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
@@ -766,8 +765,7 @@ namespace Raven.Server.Rachis
             });
         }
 
-        private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context,
-            RemoteConnection connection, LogLengthNegotiation negotiation)
+        private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context, RemoteConnection connection, LogLengthNegotiation negotiation)
         {
             long minIndex;
             long maxIndex;
@@ -779,14 +777,7 @@ namespace Raven.Server.Rachis
 
                 if (minIndex == 0) // no entries at all
                 {
-                    connection.Send(context, new LogLengthNegotiationResponse
-                    {
-                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
-                        Message = "No entries at all here, give me everything from the start",
-                        CurrentTerm = _term,
-                        LastLogIndex = 0,
-                    });
-
+                    RequestAllEntries(context, connection, "No entries at all here, give me everything from the start");
                     return; // leader will know where to start from here
                 }
 
@@ -809,20 +800,11 @@ namespace Raven.Server.Rachis
                 if (midpointIndex == negotiation.PrevLogIndex && midpointTerm != negotiation.PrevLogTerm)
                 {
                     // our appended entries has been diverged, same index with different terms.
-                    var msg = $"Our appended entries has been diverged, same index with different terms. " +
-                              $"My index/term {midpointIndex}/{midpointTerm}, while yours is {negotiation.PrevLogIndex}/{negotiation.PrevLogTerm}.";
-                    if (_engine.Log.IsInfoEnabled)
+                    if (CanHandleLogDivergence(context, negotiation, ref midpointIndex, ref midpointTerm, ref minIndex, ref maxIndex) == false)
                     {
-                        _engine.Log.Info($"{ToString()}: {msg}");
+                        RequestAllEntries(context, connection, "all my entries are invalid, will require snapshot.");
+                        return;
                     }
-                    connection.Send(context, new LogLengthNegotiationResponse
-                    {
-                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
-                        Message = msg,
-                        CurrentTerm = _term,
-                        LastLogIndex = 0
-                    });
-                    return;
                 }
 
                 connection.Send(context, new LogLengthNegotiationResponse
@@ -846,15 +828,11 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"{ToString()}: Got a truncated response from the leader will request all entries");
                     }
-                    connection.Send(context, new LogLengthNegotiationResponse
-                    {
-                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
-                        Message = "We have entries that are already truncated at the leader, will ask for full snapshot",
-                        CurrentTerm = _term,
-                        LastLogIndex = 0
-                    });
+
+                    RequestAllEntries(context, connection, "We have entries that are already truncated at the leader, will ask for full snapshot");
                     return;
                 }
+
                 using (context.OpenReadTransaction())
                 {
                     if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
@@ -866,6 +844,7 @@ namespace Raven.Server.Rachis
                         maxIndex = Math.Max(midpointIndex - 1, minIndex);
                     }
                 }
+
                 midpointIndex = (maxIndex + minIndex) / 2;
                 using (context.OpenReadTransaction())
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
@@ -884,7 +863,54 @@ namespace Raven.Server.Rachis
                 LastLogIndex = midpointIndex,
             });
         }
-        
+
+        private bool CanHandleLogDivergence(TransactionOperationContext context, LogLengthNegotiation negotiation, ref long midpointIndex, ref long midpointTerm,
+            ref long minIndex, ref long maxIndex)
+        {
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info(
+                    $"{ToString()}: Our appended entries has been diverged, same index with different terms. " +
+                    $"My index/term {midpointIndex}/{midpointTerm}, while yours is {negotiation.PrevLogIndex}/{negotiation.PrevLogTerm}.");
+            }
+
+            using (context.OpenReadTransaction())
+            {
+                while (midpointTerm > negotiation.PrevLogTerm && midpointIndex > 0)
+                {
+                    // try to find any log in the previous term
+                    midpointIndex--;
+                    midpointTerm = _engine.GetTermFor(context, midpointIndex) ?? 0;
+                }
+
+                if (midpointTerm == 0 || midpointIndex == 0)
+                    return false;
+
+                // start the binary search again with those boundaries
+                minIndex = Math.Max(minIndex, _engine.GetFirstEntryIndex(context));
+                maxIndex = midpointIndex;
+                midpointIndex = (minIndex + maxIndex) / 2;
+                midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
+
+                if (minIndex == maxIndex && midpointTerm != negotiation.PrevLogTerm)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private void RequestAllEntries(TransactionOperationContext context, RemoteConnection connection, string message)
+        {
+            connection.Send(context,
+                new LogLengthNegotiationResponse
+                {
+                    Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                    Message = message,
+                    CurrentTerm = _term,
+                    LastLogIndex = 0
+                });
+        }
+
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
             if(_engine.CurrentState != RachisState.Passive)

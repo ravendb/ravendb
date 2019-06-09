@@ -1431,7 +1431,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx, out string journalFilePath)
+        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx, out string journalFilePath, out TimeSpan writeToJournalDuration)
         {
             lock (_writeLock)
             {
@@ -1473,7 +1473,7 @@ namespace Voron.Impl.Journal
                     tx._forTestingPurposes?.ActionToCallJustBeforeWritingToJournal?.Invoke();
 
                     sp.Restart();
-                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer);
+                    journalEntry.UpdatePageTranslationTableAndUnusedPages = CurrentFile.Write(tx, journalEntry, _lazyTransactionBuffer, out writeToJournalDuration);
                     sp.Stop();
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();

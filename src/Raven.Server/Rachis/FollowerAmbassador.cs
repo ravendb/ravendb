@@ -179,7 +179,7 @@ namespace Raven.Server.Rachis
 
                                     while (connectTask.Wait(1000) == false)
                                     {
-                                        if(_leader.Running == false)
+                                        if (_leader.Running == false)
                                             return;
 
                                         if (_running == false)
@@ -216,19 +216,16 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            if (e is RachisConcurrencyException == false && 
-                                RachisConsensus.IsExpectedException(e) == false)
-                                NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
-
+                            NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
                         finally
                         {
                             needNewConnection = true;
-                            _debugRecorder.Record("Connection obtained");
                         }
 
+                        _debugRecorder.Record("Connection obtained");
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected with {_tag}";
 
@@ -276,7 +273,7 @@ namespace Raven.Server.Rachis
                                             if (totalSize > Constants.Size.Megabyte)
                                                 break;
                                         }
-
+                                      
                                         appendEntries = new AppendEntries
                                         {
                                             ForceElections = ForceElectionsNow,
@@ -388,6 +385,10 @@ namespace Raven.Server.Rachis
                             _debugRecorder.Record("Cycle done");
                             _debugRecorder.Start();
                         }
+
+                        Status = AmbassadorStatus.Disconnected;
+                        StatusMessage = "Graceful shutdown";
+                        _debugRecorder.Record(StatusMessage);
                     }
                     catch (RachisConcurrencyException)
                     {
@@ -399,32 +400,23 @@ namespace Raven.Server.Rachis
                         // this is a rachis protocol violation exception, we must close this ambassador. 
                         throw;
                     }
-                    catch (Exception e) when (RachisConsensus.IsExpectedException(e))
-                    {
-                        // Those are expected exceptions which indicate that this ambassador is shutting down.
-                        throw;
-                    }
                     catch (Exception e)
                     {
+                        NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
+
+                        if (e is TopologyMismatchException)
+                        {
+                            if (_leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out _))
+                            {
+                                StatusMessage = "No longer in the topology";
+                                return;
+                            }
+                        }
+
                         // This is an unexpected exception which indicate the something is wrong with the connection.
                         // So we will retry to reconnect. 
                         _connection?.Dispose();
-                        NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
-                    }
-                    finally
-                    {
-                        if (Status == AmbassadorStatus.Connected)
-                        {
-                            StatusMessage = "Disconnected";
-                        }
-                        else
-                        {
-                            StatusMessage = "Disconnected due to :" + StatusMessage;
-                        }
-
-                        Status = AmbassadorStatus.Disconnected;
-                        _debugRecorder.Record(StatusMessage);
                     }
                 }
             }
@@ -495,11 +487,10 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info($"{ToString()}: sending empty snapshot to {_tag}");
                     }
 
-                    var index = Math.Min(earliestIndexEntry, _followerMatchIndex);
                     _connection.Send(context, new InstallSnapshot
                     {
-                        LastIncludedIndex = index,
-                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, index),
+                        LastIncludedIndex = _followerMatchIndex,
+                        LastIncludedTerm = _engine.GetTermForKnownExisting(context, _followerMatchIndex),
                         Topology = _engine.GetTopologyRaw(context)
                     });
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))

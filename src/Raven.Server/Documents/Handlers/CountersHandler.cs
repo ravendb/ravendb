@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
@@ -250,6 +251,8 @@ namespace Raven.Server.Documents.Handlers
             private readonly List<CounterGroupDetail> _counterGroups;
             private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
 
+            private Dictionary<string, (Document Doc, HashSet<string> CounterNames)> _counterUpdates;
+
             private readonly DocumentsOperationContext _context;
 
             private IDisposable _resetContext;
@@ -268,6 +271,7 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _result = result;
                 _counterGroups = new List<CounterGroupDetail>();
+                _counterUpdates = new Dictionary<string, (Document, HashSet<string>)>();
 
                 _toDispose = new List<IDisposable>();
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
@@ -335,13 +339,11 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-
                 if (_legacyDictionary != null)
                 {
                     foreach (var kvp in _legacyDictionary)
                     {
-                        var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv);
+                        using (var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv))                        
                         using (var cvLsv = context.GetLazyString(cv))
                         using (var keyLsv = context.GetLazyString(kvp.Key))
                         {
@@ -350,23 +352,41 @@ namespace Raven.Server.Documents.Handlers
                                 ChangeVector = cvLsv,
                                 DocumentId = keyLsv,
                                 Values = values
-                            }, countersToAdd);
+                            });
                         }
                     }
+
+                    UpdateDocumentsMetadata(context);
 
                     return _legacyDictionary.Count;
                 }
 
                 foreach (var cgd in _counterGroups)
                 {
-                    PutCounters(context, cgd, countersToAdd);
-
+                    using (cgd.Values)
+                    {
+                        PutCounters(context, cgd);
+                    }
                 }
+
+                UpdateDocumentsMetadata(context);
 
                 return _counterGroups.Count;
             }
 
-            private void PutCounters(DocumentsOperationContext context, CounterGroupDetail counterGroupDetail, SortedSet<string> countersToAdd)
+            private void UpdateDocumentsMetadata(DocumentsOperationContext context)
+            {
+                foreach (var toUpdate in _counterUpdates)
+                {
+                    var tuple = toUpdate.Value;
+                    using (tuple.Doc.Data)
+                    {
+                        UpdateDocumentCountersAfterImportBatch(context, tuple.Doc, toUpdate.Key, tuple.CounterNames);
+                    }
+                }
+            }
+
+            private void PutCounters(DocumentsOperationContext context, CounterGroupDetail counterGroupDetail)
             {
                 Document doc;
                 string docCollection = null;
@@ -390,25 +410,32 @@ namespace Raven.Server.Documents.Handlers
 
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
 
-                counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
-                foreach (var counter in values.GetPropertyNames())
-                {
-                    countersToAdd.Add(counter);
-                }
 
                 if (doc?.Data != null)
                 {
-                    var nonPersistentFlags = NonPersistentDocumentFlags.ByCountersUpdate |
-                                             NonPersistentDocumentFlags.FromSmuggler;
+                    counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
+                    var names = values.GetPropertyNames();
 
-                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, counterGroupDetail.DocumentId, countersToAdd, new HashSet<string>(), nonPersistentFlags);
-                    doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
+                    if (_counterUpdates.TryGetValue(counterGroupDetail.DocumentId, out var tuple) == false)
+                    {
+                        tuple = (doc, new HashSet<string>());
+                        _counterUpdates.Add(counterGroupDetail.DocumentId, tuple);
+                    }
+
+                    foreach (var name in names)
+                    {
+                        tuple.CounterNames.Add(name);
+                    }
                 }
-
-                countersToAdd.Clear();
 
                 void LoadDocument()
                 {
+                    if (_counterUpdates.TryGetValue(counterGroupDetail.DocumentId, out var tuple))
+                    {
+                        doc = tuple.Doc;
+                        return;
+                    }
+
                     try
                     {
                         doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
@@ -437,6 +464,84 @@ namespace Raven.Server.Documents.Handlers
                 }
 
 
+            }
+
+            private void UpdateDocumentCountersAfterImportBatch(DocumentsOperationContext context, Document doc, string docId,
+                HashSet<string> countersToAdd)
+            {
+                if (countersToAdd.Count == 0)
+                    return;
+
+                var data = doc.Data;
+                BlittableJsonReaderArray metadataCounters = null;
+                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                {
+                    metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
+                }
+
+                var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+                flags |= DocumentFlags.HasCounters;
+
+                if (metadataCounters == null)
+                {
+                    data.Modifications = new DynamicJsonValue(data);
+                    if (metadata == null)
+                    {
+                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(countersToAdd)
+                        };
+                    }
+                    else
+                    {
+                        metadata.Modifications = new DynamicJsonValue(metadata)
+                        {
+                            [Constants.Documents.Metadata.Counters] = countersToAdd
+                        };
+                        data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                    }
+                }
+
+                else
+                {
+                    var modified = false;
+                    var updates = new List<string>(metadataCounters.Length + countersToAdd.Count);
+                    for (var i = 0; i < metadataCounters.Length; i++)
+                    {
+                        var val = metadataCounters.GetStringByIndex(i);
+                        if (val == null)
+                            continue;
+                        updates.Add(val);
+                    }
+
+                    foreach (var counterName in countersToAdd)
+                    {
+                        var location = metadataCounters.BinarySearch(counterName, StringComparison.Ordinal);
+                        if (location < 0)
+                        {
+                            modified = true;
+                            updates.Insert(~location, counterName);
+                        }
+                    }
+
+                    if (modified == false)
+                        return;
+
+                    data.Modifications = new DynamicJsonValue(data);
+
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.Counters] = updates
+                    };
+                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                }
+
+                using (data)
+                {
+                    var newDocumentData = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    _database.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags,
+                        nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate | NonPersistentDocumentFlags.FromSmuggler);
+                }
             }
 
             private static unsafe BlittableJsonReaderObject ToCounterGroup(DocumentsOperationContext context, string docId, Dictionary<string, List<(string ChangeVector, long Value)>> dict, out string lastCv)
@@ -501,11 +606,9 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
-                foreach (var cgd in _counterGroups)
-                {
-                    cgd.Values?.Dispose();
-                }
                 _counterGroups.Clear();
+
+                _counterUpdates.Clear();
 
                 foreach (var disposable in _toDispose)
                 {

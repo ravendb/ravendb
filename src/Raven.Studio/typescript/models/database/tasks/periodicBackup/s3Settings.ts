@@ -97,8 +97,10 @@ class s3Settings extends amazonSettings {
             AwsAccessKey: null,
             AwsRegionName: null,
             AwsSecretKey: null,
+            AwsSessionToken: null,
             BucketName: null,
-            RemoteFolderName: null
+            RemoteFolderName: null,
+            GetBackupConfigurationScript: null
         }, allowedRegions);
     }
 }

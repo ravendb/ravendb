@@ -162,8 +162,8 @@ namespace Raven.Server.Documents.Replication
             {
                 //conflict with another existing document
                 var localHiloDoc = _database.DocumentsStorage.Get(context, id);
-                if (localHiloDoc.Data.TryGet("Max", out double max) && max > highestMax)
-                    resolvedHiLoDoc = localHiloDoc.Data;
+                if (localHiloDoc.Data.TryGet("Max", out long max) && max > highestMax)
+                    resolvedHiLoDoc = localHiloDoc.Data.Clone(context);
                 mergedChangeVector = ChangeVectorUtils.MergeVectors(changeVector, localHiloDoc.ChangeVector);
             }
             else
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Replication
                     if (conflict.Doc.TryGet("Max", out long tmpMax) && tmpMax > highestMax)
                     {
                         highestMax = tmpMax;
-                        resolvedHiLoDoc = conflict.Doc;
+                        resolvedHiLoDoc = conflict.Doc.Clone(context);
                     }
                 }
                 var merged = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());

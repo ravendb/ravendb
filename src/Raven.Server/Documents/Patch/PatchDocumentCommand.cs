@@ -110,16 +110,16 @@ namespace Raven.Server.Documents.Patch
 
                 object documentInstance;
                 var args = _patch.Args;
-                BlittableJsonReaderObject originalDoc;
+                BlittableJsonReaderObject originalDoc = null;
                 if (originalDocument == null)
                 {
                     run = runIfMissing;
                     args = _patchIfMissing.Args;
                     documentInstance = runIfMissing.CreateEmptyObject();
-                    originalDoc = null;
                 }
                 else
                 {
+                    id = originalDocument.Id; // we want to use the original Id casing
                     documentInstance = UpdateOriginalDocument();
                 }
 
@@ -147,6 +147,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (run.RefreshOriginalDocument)
                         {
+                            originalDocument?.Dispose();
                             originalDocument = _database.DocumentsStorage.Get(context, id);
                             documentInstance = UpdateOriginalDocument();
                         }
@@ -166,8 +167,14 @@ namespace Raven.Server.Documents.Patch
                                     var docBlittableToUpdate = UpdateCountersInMetadata(context, docToUpdate.Data, docId, ref docToUpdate.Flags);
                                     if (_isTest == false)
                                     {
-                                        _database.DocumentsStorage.Put(context, docId,
-                                            docToUpdate.ChangeVector, docBlittableToUpdate, null, null, docToUpdate.Flags);
+                                        _database.DocumentsStorage.Put(
+                                            context,
+                                            docId,
+                                            docToUpdate.ChangeVector,
+                                            docBlittableToUpdate,
+                                            null,
+                                            null,
+                                            docToUpdate.Flags);
                                     }
                                 }
                             }
@@ -200,8 +207,14 @@ namespace Raven.Server.Documents.Patch
                                 Debug.Assert(originalDocument != null);
                                 if (_isTest == false || run.PutOrDeleteCalled)
                                 {
-                                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
-                                        originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                                putResult = _database.DocumentsStorage.Put(
+                                    context,
+                                    id,
+                                    originalDocument.ChangeVector,
+                                    modifiedDocument,
+                                    null,
+                                    null,
+                                    originalDocument.Flags);
                                 }
 
                                 result.Status = PatchStatus.Patched;
@@ -245,6 +258,7 @@ namespace Raven.Server.Documents.Patch
                         // here we need to use the _cloned_ version of the document, since the patch may
                         // change it
                         originalDoc = translated.Blittable;
+                        originalDocument.Dispose();
                         originalDocument.Data = null; // prevent access to this by accident
 
                         return translated;

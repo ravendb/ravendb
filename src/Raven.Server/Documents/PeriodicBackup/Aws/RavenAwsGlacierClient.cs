@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -27,11 +28,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private readonly string _vaultName;
 
-        public RavenAwsGlacierClient(string awsAccessKey, string awsSecretKey, string awsRegionName,
-            string vaultName, Progress progress = null, CancellationToken? cancellationToken = null)
-            : base(awsAccessKey, awsSecretKey, awsRegionName, progress, cancellationToken)
+        public RavenAwsGlacierClient(GlacierSettings glacierSettings, Progress progress = null, CancellationToken? cancellationToken = null)
+            : base(glacierSettings, progress, cancellationToken)
         {
-            _vaultName = vaultName;
+            _vaultName = glacierSettings.VaultName;
         }
 
         public async Task<string> UploadArchive(Stream stream, string archiveDescription)
@@ -45,11 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
 
             var url = $"{GetUrl()}/archives";
-
             var now = SystemTime.UtcNow;
-
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
-            var payloadTreeHash = RavenAwsHelper.CalculatePayloadTreeHash(stream);
 
             Progress?.UploadProgress.SetTotal(stream.Length);
 
@@ -58,17 +54,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             {
                 Headers =
                 {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash},
-                    {"x-amz-sha256-tree-hash", payloadTreeHash},
+                    {"x-amz-sha256-tree-hash", RavenAwsHelper.CalculatePayloadTreeHash(stream)},
                     {"x-amz-archive-description", archiveDescription},
                     {"Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture)}
                 }
             };
 
-            var headers = ConvertToHeaders(content.Headers);
+            UpdateHeaders(content.Headers, now, stream);
 
+            var headers = ConvertToHeaders(content.Headers);
             var client = GetClient(TimeSpan.FromHours(24));
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
@@ -136,22 +130,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (var subStream = new SubStream(baseStream, offset: 0, length: length))
             {
                 var now = SystemTime.UtcNow;
-                var payloadHash = RavenAwsHelper.CalculatePayloadHash(subStream);
-                var payloadTreeHash = RavenAwsHelper.CalculatePayloadTreeHash(subStream);
 
                 // stream is disposed by the HttpClient
                 var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
                     {
-                        {"x-amz-glacier-version", "2012-06-01"},
-                        {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                        {"x-amz-content-sha256", payloadHash},
-                        {"x-amz-sha256-tree-hash", payloadTreeHash},
+                        {"x-amz-sha256-tree-hash", RavenAwsHelper.CalculatePayloadTreeHash(subStream)},
                         {"Content-Range", $"bytes {position}-{position+length-1}/*"},
                         {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
                     }
                 };
+
+                UpdateHeaders(content.Headers, now, subStream);
 
                 var headers = ConvertToHeaders(content.Headers);
                 client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
@@ -190,19 +181,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             string archiveDescription, long lengthPerPartPowerOf2)
         {
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
             var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
             {
                 Headers =
                 {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
                     {"x-amz-archive-description", archiveDescription},
-                    {"x-amz-part-size", lengthPerPartPowerOf2.ToString()},
-                    {"x-amz-content-sha256", payloadHash}
+                    {"x-amz-part-size", lengthPerPartPowerOf2.ToString()}
                 }
             };
+
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
 
@@ -234,19 +222,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             string payloadTreeHash)
         {
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
             var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
             {
                 Headers =
                 {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
                     {"x-amz-archive-size", archiveSize.ToString()},
-                    {"x-amz-content-sha256", payloadHash},
                     {"x-amz-sha256-tree-hash", payloadTreeHash}
                 }
             };
+
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
@@ -262,20 +247,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private async Task AbortMultiUpload(string url, HttpClient client)
         {
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
-            {
-                Headers =
-                {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
 
             var headers = ConvertToHeaders(requestMessage.Headers);
-
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
 
             var response = await client.SendAsync(requestMessage, CancellationToken);
@@ -303,20 +278,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = GetUrl();
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-            var content = new HttpRequestMessage(HttpMethods.Put, url)
-            {
-                Headers =
-                {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var content = new HttpRequestMessage(HttpMethods.Put, url);
+            UpdateHeaders(content.Headers, now, null);
 
             var headers = ConvertToHeaders(content.Headers);
-
             var client = GetClient();
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
@@ -332,17 +297,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = GetUrl();
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-            var content = new HttpRequestMessage(HttpMethods.Delete, url)
-            {
-                Headers =
-                {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var content = new HttpRequestMessage(HttpMethods.Delete, url);
+            UpdateHeaders(content.Headers, now, null);
 
             var headers = ConvertToHeaders(content.Headers);
 
@@ -364,17 +320,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = GetUrl();
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-            var content = new HttpRequestMessage(HttpMethods.Get, url)
-            {
-                Headers =
-                {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var content = new HttpRequestMessage(HttpMethods.Get, url);
+            UpdateHeaders(content.Headers, now, null);
 
             var headers = ConvertToHeaders(content.Headers);
 
@@ -397,17 +344,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{GetUrl()}/archives/{archiveId}";
             var now = SystemTime.UtcNow;
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
-
-            var content = new HttpRequestMessage(HttpMethods.Delete, url)
-            {
-                Headers =
-                {
-                    {"x-amz-glacier-version", "2012-06-01"},
-                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
-                    {"x-amz-content-sha256", payloadHash}
-                }
-            };
+            var content = new HttpRequestMessage(HttpMethods.Delete, url);
+            UpdateHeaders(content.Headers, now, null);
 
             var headers = ConvertToHeaders(content.Headers);
 
@@ -427,6 +365,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return response.Headers
                 .GetValues("x-amz-archive-id")
                 .First();
+        }
+
+        protected override void UpdateHeaders(HttpHeaders headers, DateTime now, Stream stream, string payloadHash = null)
+        {
+            base.UpdateHeaders(headers, now, stream, payloadHash);
+
+            headers.Add("x-amz-glacier-version", "2012-06-01");
         }
 
         public override string ServiceName => "glacier";

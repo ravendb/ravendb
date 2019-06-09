@@ -148,7 +148,8 @@ class ftpSettings extends backupSettings {
             UserName: null,
             Password: null,
             CertificateAsBase64: null,
-            CertificateFileName: null
+            CertificateFileName: null,
+            GetBackupConfigurationScript: null
         });
     }
 }

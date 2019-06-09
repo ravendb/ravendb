@@ -18,12 +18,12 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -156,6 +156,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
+                // update the local configuration before starting the local backup
+                _configuration.LocalSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x));
+
                 GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
@@ -170,6 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
+                    await UpdateRemoteConfigurationFromScript();
                     await UploadToServer(backupFilePath, folderName, fileName, onProgress);
                 }
                 finally
@@ -263,6 +267,100 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
+                }
+            }
+        }
+
+        private async Task UpdateRemoteConfigurationFromScript()
+        {
+            _configuration.S3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x));
+            _configuration.GlacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x));
+            _configuration.AzureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x));
+            _configuration.GoogleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x));
+            _configuration.FtpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x));
+        }
+
+        private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> resultConvertFunc)
+                where T : BackupSettings
+        {
+            if (backupSettings == null)
+                return null;
+
+            if (backupSettings.GetBackupConfigurationScript == null || backupSettings.Disabled)
+                return backupSettings;
+
+            if (string.IsNullOrEmpty(backupSettings.GetBackupConfigurationScript.Exec))
+                return backupSettings;
+
+            var command = backupSettings.GetBackupConfigurationScript.Exec;
+            var arguments = backupSettings.GetBackupConfigurationScript.Arguments;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            Process process;
+
+            try
+            {
+                process = Process.Start(startInfo);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}. Failed to start process.", e);
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                var readErrors = process.StandardError.ReadToEndAsync();
+                var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
+                var timeoutInMs = backupSettings.GetBackupConfigurationScript.TimeoutInMs;
+
+                string GetStdError()
+                {
+                    try
+                    {
+                        return readErrors.Result;
+                    }
+                    catch
+                    {
+                        return "Unable to get stdout";
+                    }
+                }
+
+                try
+                {
+                    readStdOut.Wait(timeoutInMs);
+                    readErrors.Wait(timeoutInMs);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                }
+
+                if (process.WaitForExit(timeoutInMs) == false)
+                {
+                    process.Kill();
+
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
+                }
+
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                }
+
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    ms.Position = 0;
+                    var configuration = await context.ReadForMemoryAsync(ms, "backup-configuration-from-script");
+                    return resultConvertFunc(configuration);
                 }
             }
         }
@@ -825,8 +923,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Progress progress,
             string archiveDescription)
         {
-            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey,
-                settings.AwsRegionName, settings.BucketName, progress, TaskCancelToken.Token))
+            using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 await client.PutObject(key, stream, new Dictionary<string, string>
@@ -848,8 +945,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             string fileName,
             Progress progress)
         {
-            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey,
-                settings.AwsRegionName, settings.VaultName, progress, TaskCancelToken.Token))
+            using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(_database.Name, folderName, fileName);
                 var archiveId = await client.UploadArchive(stream, key);

@@ -255,21 +255,18 @@ namespace Raven.Server.Web
         {
             var guid = GetStringQueryString("raft-request-id", required: false);
 
-            if (RequestRouter.TryGetClientVersion(HttpContext, out var clientVersion))
+            if (guid == null)
             {
-                if (clientVersion.Build <= 42_009) // TODO: what should be the behaviour with the nightly version 
-                {
-                    guid = guid ?? RaftIdGenerator.DontCareId;
-                }
+#if DEBUG
+                var fromStudio = HttpContext.Request.Headers.ContainsKey(Constants.Headers.StudioVersion);
+                if (fromStudio)
+                    guid = RaftIdGenerator.NewId();
+#else
+                guid = RaftIdGenerator.NewId();
+#endif
             }
 
-#if DEBUG
             return guid;
-#endif
-
-#pragma warning disable 0162
-            return guid ?? RaftIdGenerator.NewId();
-#pragma warning restore 0162
         }
 
         protected string GetStringFromHeaders(string name)
@@ -600,7 +597,7 @@ namespace Raven.Server.Web
         public static void SetupCORSHeaders(HttpContext httpContext, ServerStore serverStore, CorsMode corsMode)
         {
             httpContext.Response.Headers.Add("Vary", "Origin");
-            
+
             var requestedOrigin = httpContext.Request.Headers["Origin"];
 
             if (requestedOrigin.Count == 0)
@@ -621,7 +618,7 @@ namespace Raven.Server.Web
                         allowedOrigin = requestedOrigin;
                     break;
             }
-            
+
             httpContext.Response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
             httpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
             httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);
@@ -635,9 +632,9 @@ namespace Raven.Server.Web
                 // running in unsafe mode - since server can be access via multiple urls/aliases accept them 
                 return true;
             }
-            
+
             var topology = serverStore.GetClusterTopology();
-            
+
             // check explicitly each topology type to avoid allocations in topology.AllNodes
             foreach (var kvp in topology.Members)
             {
@@ -646,7 +643,7 @@ namespace Raven.Server.Web
                     return true;
                 }
             }
-            
+
             foreach (var kvp in topology.Watchers)
             {
                 if (kvp.Value.Equals(origin, StringComparison.OrdinalIgnoreCase))
@@ -654,7 +651,7 @@ namespace Raven.Server.Web
                     return true;
                 }
             }
-            
+
             foreach (var kvp in topology.Promotables)
             {
                 if (kvp.Value.Equals(origin, StringComparison.OrdinalIgnoreCase))

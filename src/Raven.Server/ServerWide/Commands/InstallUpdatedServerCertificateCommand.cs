@@ -114,7 +114,7 @@ namespace Raven.Server.ServerWide.Commands
             AssertClusterAdmin(isClusterAdmin);
         }
 
-        public RecheckStatusOfServerCertificateReplacementCommand() : base(null)
+        public RecheckStatusOfServerCertificateReplacementCommand() : base(RaftIdGenerator.DontCareId)
         {
         }
     }

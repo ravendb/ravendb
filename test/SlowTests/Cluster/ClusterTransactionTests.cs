@@ -128,7 +128,7 @@ namespace SlowTests.Cluster
                     {
                         await task;
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         hasExecption = true;
                         Console.WriteLine(task.Exception.InnerExceptions[0].Message);
@@ -844,7 +844,7 @@ namespace SlowTests.Cluster
                         Name = "Aviv1"
                     };
                     session.Store(user, "users/1-A");
-                    using (var ms = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    using (var ms = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
                         session.Advanced.Attachments.Store(user, "dummy", ms);
                         session.SaveChanges();

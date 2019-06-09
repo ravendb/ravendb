@@ -211,9 +211,6 @@ namespace Sparrow.Server.Platform.Posix
         }
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int statvfs(string path, ref Statvfs buf);
-
-        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, IntPtr size, ProtFlag protFlag);
 
         public static void PwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
@@ -448,21 +445,5 @@ namespace Sparrow.Server.Platform.Posix
     {
         F_NOCACHE = 0x00000030,
         F_FULLFSYNC = 0x00000033
-    }
-
-    public unsafe struct Statvfs
-    {
-        public ulong f_bsize;    /* file system block size */
-        public ulong f_frsize;   /* fragment size */
-        public ulong f_blocks;   /* size of fs in f_frsize units */
-        public ulong f_bfree;    /* # free blocks */
-        public ulong f_bavail;   /* # free blocks for unprivileged users */
-        public ulong f_files;    /* # inodes */
-        public ulong f_ffree;    /* # free inodes */
-        public ulong f_favail;   /* # free inodes for unprivileged users */
-        public ulong f_fsid;     /* file system ID */
-        public ulong f_flag;     /* mount flags */
-        public ulong f_namemax;  /* maximum filename length */
-        public fixed int f_spare[6];
     }
 }

@@ -38,9 +38,12 @@ namespace Raven.Server.Rachis
                     throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
 
                 lastAppliedIndex = index;
-
+               
                 if (flags != RachisEntryFlags.StateMachineCommand)
+                {
+                    _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, null);
                     continue;
+                }
 
                 Apply(context, cmd, index, leader, serverStore);
                 
