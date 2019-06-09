@@ -10,6 +10,8 @@ class commandBase {
 
     static ravenClientVersion = '5.0.0.0';
 
+    static ravenStudioVersionHeader = 'Raven-Studio-Version';
+
     execute(): JQueryPromise<any> {
         throw new Error("Execute must be overridden.");
     }
@@ -143,6 +145,9 @@ class commandBase {
                 }
             }
         }
+
+        defaultOptions.headers = defaultOptions.headers || {};
+        defaultOptions.headers[commandBase.ravenStudioVersionHeader] = commandBase.ravenClientVersion;
 
         return $.ajax(defaultOptions)
             .always(() => {

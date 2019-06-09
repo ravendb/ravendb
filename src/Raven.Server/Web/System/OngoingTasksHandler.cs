@@ -309,19 +309,14 @@ namespace Raven.Server.Web.System
                     {
                         case PeriodicBackupTestConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(
-                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName,
-                                s3Settings.BucketName, cancellationToken: ServerStore.ServerShutdown))
+                            using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await awsClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var glacierClient = new RavenAwsGlacierClient(
-                                glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
-                                glacierSettings.AwsRegionName, glacierSettings.VaultName,
-                                cancellationToken: ServerStore.ServerShutdown))
+                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await glacierClient.TestConnection();
                             }
@@ -465,6 +460,8 @@ namespace Raven.Server.Web.System
                 return;
 
             localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
+            if (folderPath == null)
+                return;
 
             var pathResult = GetActualFullPath(folderPath);
             if (pathResult.Error != null)
@@ -488,6 +485,11 @@ namespace Raven.Server.Web.System
 
             if (DataDirectoryInfo.CanAccessPath(folderPath, out var error) == false)
                 throw new ArgumentException(error);
+
+            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
+            {
+                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
+            }
         }
 
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -547,14 +549,6 @@ namespace Raven.Server.Web.System
             public string FolderPath { get; set; }
 
             public string Error { get; set; }
-        }
-
-        private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)
-        {
-            if (string.IsNullOrWhiteSpace(backupFrequency))
-                return null;
-
-            return CrontabSchedule.Parse(backupFrequency);
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]

@@ -347,6 +347,14 @@ namespace Sparrow.Logging
                 var logPosition = fileName.LastIndexOf(".log", StringComparison.Ordinal);
                 var start = fileName.LastIndexOf(".", logPosition - 1, StringComparison.Ordinal) - DateFormatLength;
 
+                // if we are scanning C:\Users\UserName\AppData\Local\Temp\  
+                // there could be other apps .log files, we should skip them
+                if (start < 0)
+                {
+                    dateTime = DateTime.MinValue;
+                    return false;
+                }
+
                 var date = fileName.Substring(start, DateFormatLength);
                 return DateTime.TryParse(date, out dateTime);
             }

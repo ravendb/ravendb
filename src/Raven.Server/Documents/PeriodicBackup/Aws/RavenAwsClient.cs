@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -14,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.AspNetCore.WebUtilities;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
@@ -26,21 +28,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
+        private readonly string _sessionToken;
 
         protected string AwsRegion { get; set; }
 
-        protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName,
-            Progress progress, CancellationToken? cancellationToken = null)
+        protected RavenAwsClient(AmazonSettings amazonSettings, Progress progress, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(awsRegionName))
+            if (string.IsNullOrWhiteSpace(amazonSettings.AwsRegionName))
                 throw new ArgumentException("AWS region cannot be null or empty!");
 
-            awsRegionName = awsRegionName.ToLower();
-
-            _awsAccessKey = awsAccessKey;
-            _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + awsSecretKey);
-            AwsRegion = awsRegionName;
+            _awsAccessKey = amazonSettings.AwsAccessKey;
+            _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + amazonSettings.AwsSecretKey);
+            _sessionToken = amazonSettings.AwsSessionToken;
+            AwsRegion = amazonSettings.AwsRegionName.ToLower();
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
@@ -76,6 +77,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         }
 
         public abstract string GetHost();
+
+        protected virtual void UpdateHeaders(HttpHeaders headers, DateTime now, Stream stream, string payloadHash = null)
+        {
+            headers.Add("x-amz-date", RavenAwsHelper.ConvertToString(now));
+            headers.Add("x-amz-content-sha256", payloadHash ?? RavenAwsHelper.CalculatePayloadHash(stream));
+
+            if (_sessionToken != null)
+                headers.Add("x-amz-security-token", _sessionToken);
+        }
 
         private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
         {

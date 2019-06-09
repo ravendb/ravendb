@@ -293,17 +293,6 @@ namespace Raven.Server.Rachis
                     _shutdownRequested
                 };
 
-                var noopCmd = new DynamicJsonValue
-                {
-                    ["Command"] = "noop"
-                };
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var tx = context.OpenWriteTransaction())
-                using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
-                {
-                    _engine.InsertToLeaderLog(context, Term, cmd, RachisEntryFlags.Noop);
-                    tx.Commit();
-                }
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
@@ -637,6 +626,7 @@ namespace Raven.Server.Rachis
                 var lockTaken = false;
                 try
                 {
+                    var waitAsync = _waitForCommit.WaitAsync(timeout);
                     Monitor.TryEnter(_commandsQueue, ref lockTaken);
                     if (lockTaken)
                     {
@@ -644,7 +634,7 @@ namespace Raven.Server.Rachis
                     }
                     else
                     {
-                        if (await _waitForCommit.WaitAsync(timeout) == false)
+                        if (await waitAsync == false)
                         {
                             if (rachisMergedCommand.Consumed.Raise())
                             {
@@ -910,7 +900,7 @@ namespace Raven.Server.Rachis
         {
             if (nodeTag != null)
             {
-                ValidateNodeTag(nodeTag);
+                RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
             using (_disposerLock.EnsureNotDisposed())
@@ -1026,24 +1016,7 @@ namespace Raven.Server.Rachis
                 return true;
             }
         }
-
-        public static void ValidateNodeTag(string nodeTag)
-        {
-            if (nodeTag.Equals("RAFT"))
-                ThrowInvalidNodeTag(nodeTag, "It is a reserved tag.");
-            if (nodeTag.Length > 4)
-                ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");
-            // Node tag must not contain ':' or '-' chars as they are in use in change vector.
-            // The following check covers that as well.
-            if (nodeTag.IsUpperLettersOnly() == false)
-                ThrowInvalidNodeTag(nodeTag, "Node tag must contain only upper case letters.");
-        }
-
-        public static void ThrowInvalidNodeTag(string nodeTag, string reason)
-        {
-            throw new ArgumentException($"Can't set the node tag to '{nodeTag}'. {reason}");
-        }
-
+        
         public override string ToString()
         {
             return $"Leader {_engine.Tag} in term {Term}";

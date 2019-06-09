@@ -24,11 +24,11 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Server.Utils;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -960,14 +960,32 @@ namespace Raven.Server.Documents.Replication
                     ExceptionMessage = e.Message,
                 };
                 OutgoingReplicationConnectionFailed?.Invoke(replicationPulse);
-                var stats = new OutgoingReplicationStatsAggregator(GetNextReplicationStatsId(), null);
-                using (var scope = stats.CreateScope())
-                {
-                    scope.AddError(e);
-                }
 
-                var failureReporter = new OutgoingReplicationFailureToConnectReporter(node, stats);
-                OutgoingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
+                if (node is PullReplicationAsSink)
+                {
+                    var stats = new IncomingReplicationStatsAggregator(GetNextReplicationStatsId(), null);
+                    using (var scope = stats.CreateScope())
+                    {
+                        scope.AddError(e);
+                    }
+
+                    var failureReporter = new IncomingReplicationFailureToConnectReporter(node, stats);
+                    IncomingReplicationConnectionErrored?.Invoke(node, failureReporter);
+                    IncomingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
+                }
+                else
+                {
+                    var stats = new OutgoingReplicationStatsAggregator(GetNextReplicationStatsId(), null);
+                    using (var scope = stats.CreateScope())
+                    {
+                        scope.AddError(e);
+                    }
+
+                    var failureReporter = new OutgoingReplicationFailureToConnectReporter(node, stats);
+                    OutgoingReplicationConnectionErrored?.Invoke(node, failureReporter);
+                    OutgoingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
+
+                }
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
 
@@ -976,6 +994,10 @@ namespace Raven.Server.Documents.Replication
 
         public ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingConnectionsLastFailureToConnect =
             new ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter>();
+
+        public ConcurrentDictionary<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingConnectionsLastFailureToConnect =
+            new ConcurrentDictionary<ReplicationNode, IncomingReplicationFailureToConnectReporter>();
+
         private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsSink pullReplicationAsSink, X509Certificate2 certificate, string database)
         {
             var remoteTask = pullReplicationAsSink.HubDefinitionName;
@@ -987,7 +1009,18 @@ namespace Raven.Server.Documents.Replication
                     certificate, DocumentConventions.Default))
                 {
                     var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask);
-                    requestExecutor.Execute(cmd, ctx);
+
+                    try
+                    {
+                        requestExecutor.Execute(cmd, ctx);
+                    }
+                    catch
+                    {
+                        // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
+                        pullReplicationAsSink.Url = requestExecutor.Url;
+                        pullReplicationAsSink.Database = database;
+                    }
+
                     remoteDatabaseUrls = cmd.Result;
                 }
 
@@ -995,10 +1028,18 @@ namespace Raven.Server.Documents.Replication
                 using (var requestExecutor = RequestExecutor.CreateForFixedTopology(remoteDatabaseUrls,
                     pullReplicationAsSink.ConnectionString.Database, certificate, DocumentConventions.Default))
                 {
-                    var cmd = new GetTcpInfoForRemoteTaskCommand(ExternalReplicationTag , database, remoteTask);
-                    requestExecutor.Execute(cmd, ctx);
-                    pullReplicationAsSink.Url = requestExecutor.Url;
-                    pullReplicationAsSink.Database = database;
+                    var cmd = new GetTcpInfoForRemoteTaskCommand(ExternalReplicationTag, database, remoteTask);
+
+                    try
+                    {
+                        requestExecutor.Execute(cmd, ctx);
+                    }
+                    finally
+                    {
+                        pullReplicationAsSink.Url = requestExecutor.Url;
+                        pullReplicationAsSink.Database = database;
+                    }
+
                     return cmd.Result;
                 }
             }
@@ -1012,9 +1053,17 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var cmd = new GetTcpInfoCommand("external-replication", database);
-                requestExecutor.Execute(cmd, ctx);
-                exNode.Database = database;
-                exNode.Url = requestExecutor.Url;
+                try
+                {
+                    requestExecutor.Execute(cmd, ctx);
+                }
+                finally
+                {
+                    // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
+                    exNode.Database = database;
+                    exNode.Url = requestExecutor.Url;
+                }
+
                 return cmd.Result;
             }
         }
@@ -1175,6 +1224,8 @@ namespace Raven.Server.Documents.Replication
 
         public string TombstoneCleanerIdentifier => "Replication";
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> OutgoingReplicationConnectionFailed;
+        public event Action<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingReplicationConnectionErrored;
+        public event Action<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingReplicationConnectionErrored;
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
@@ -1364,6 +1415,24 @@ namespace Raven.Server.Documents.Replication
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
         {
             return new[] {_stats.ToReplicationPerformanceStats()};
+        }
+    }
+
+    public class IncomingReplicationFailureToConnectReporter : IReportIncomingReplicationPerformance
+    {
+        private ReplicationNode _node;
+        private IncomingReplicationStatsAggregator _stats;
+
+        public IncomingReplicationFailureToConnectReporter(ReplicationNode node, IncomingReplicationStatsAggregator stats)
+        {
+            _node = node;
+            _stats = stats;
+        }
+
+        public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
+        public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
+        {
+            return new[] { _stats.ToReplicationPerformanceStats() };
         }
     }
 }

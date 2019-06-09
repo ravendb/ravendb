@@ -20,7 +20,7 @@ namespace Raven.Server.NotificationCenter
         private readonly CancellationToken _resourceShutdown;
         
         private readonly MemoryStream _ms = new MemoryStream();
-        
+        public Action AfterTrackActionsRegistration;
         public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
         {
             _webSocket = webSocket;
@@ -40,6 +40,8 @@ namespace Raven.Server.NotificationCenter
             {
                 using (_notificationsBase.TrackActions(asyncQueue, this, shouldWriteByDb))
                 {
+                    AfterTrackActionsRegistration?.Invoke();
+
                     while (_resourceShutdown.IsCancellationRequested == false)
                     {
                         // we use this to detect client-initialized closure

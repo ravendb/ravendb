@@ -67,26 +67,30 @@ namespace SlowTests.SparrowTests
             var afterEndFiles = Directory.GetFiles(path);
             AssertNoFileMissing(afterEndFiles);
 
-            foreach (var (fileName, shouldExist) in toCheckLogFiles)
+            try
             {
-                var compressedFileName = fileName + ".gz";
-                if (shouldExist)
+                foreach (var (fileName, shouldExist) in toCheckLogFiles)
                 {
-                    Assert.True(afterEndFiles.Contains(fileName) || afterEndFiles.Contains(compressedFileName),
-                        $"The log file \"{Path.GetFileNameWithoutExtension(fileName)}\" and all log files from and after {retentionDate} " +
-                        $"should be deleted due to time retention");
-                }
-                else
-                {
-                    Assert.False(afterEndFiles.Contains(fileName),
-                        $"The file \"{fileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
-                    if (afterEndFiles.Contains(compressedFileName))
+                    var compressedFileName = fileName + ".gz";
+                    if (shouldExist)
                     {
-
+                        Assert.True(afterEndFiles.Contains(fileName) || afterEndFiles.Contains(compressedFileName),
+                            $"The log file \"{Path.GetFileNameWithoutExtension(fileName)}\" and all log files from and after {retentionDate} " +
+                            "should be deleted due to time retention");
                     }
-                    Assert.False(afterEndFiles.Contains(compressedFileName),
-                        $"The file \"{compressedFileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
+                    else
+                    {
+                        Assert.False(afterEndFiles.Contains(fileName),
+                            $"The file \"{fileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
+
+                        Assert.False(afterEndFiles.Contains(compressedFileName),
+                            $"The file \"{compressedFileName}\" and all log files from before {retentionDate} should be deleted due to time retention");
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Logs after end - {JustFileNamesAsString(afterEndFiles)}", e);
             }
         }
 
@@ -130,7 +134,10 @@ namespace SlowTests.SparrowTests
             AssertNoFileMissing(afterEndFiles);
             var size = afterEndFiles.Select(f => new FileInfo(f)).Sum(f => f.Length);
             var threshold = 2 * fileSize;
-            Assert.True(Math.Abs(size - retentionSize) < threshold, $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})");
+            Assert.True(Math.Abs(size - retentionSize) < threshold,
+                $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" +
+                Environment.NewLine +
+                JustFileNamesAsString(afterEndFiles));
         }
 
         [Theory]
@@ -261,19 +268,21 @@ namespace SlowTests.SparrowTests
                     restartDateTime > lastWriteTime,
                     $"{file} was changed (time:" +
                     $"{lastWriteTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)}) after the restart (time:" +
-                    $"{restartDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)})");
+                    $"{restartDateTime.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)})" +
+                    Environment.NewLine +
+                    JustFileNamesAsString(beforeRestartFiles));
             }
         }
 
         private static string GetTestName([CallerMemberName] string memberName = "") => memberName;
 
-        private void AssertNoFileMissing(string[] beforeEndFiles)
+        private void AssertNoFileMissing(string[] files)
         {
-            Assert.NotEmpty(beforeEndFiles);
+            Assert.NotEmpty(files);
 
             var exceptions = new List<Exception>();
 
-            var list = GetLogMetadataOrderedByDateThenByNumber(beforeEndFiles, exceptions);
+            var list = GetLogMetadataOrderedByDateThenByNumber(files, exceptions);
 
             for (var i = 1; i < list.Length; i++)
             {
@@ -284,20 +293,28 @@ namespace SlowTests.SparrowTests
                     if (previous.Number == current.Number && Path.GetExtension(current.FileName) == ".gz")
                         continue;
 
-                    exceptions.Add(new Exception($"Log between {previous} and {current} is missing"));
+                    exceptions.Add(new Exception($"Log between {previous.FileName} and {current.FileName} is missing"));
                 }
 
             }
 
             if (exceptions.Any())
             {
-                throw new AggregateException(exceptions);
+                var allLogs = JustFileNamesAsString(files);
+                throw new AggregateException($"All logs - {allLogs}", exceptions);
             }
         }
 
-        private LogMetaData[] GetLogMetadataOrderedByDateThenByNumber(string[] beforeEndFiles, List<Exception> exceptions)
+        private static string JustFileNamesAsString(string[] files)
         {
-            var list = beforeEndFiles.Select(f =>
+            var justFileNames = files.Select(Path.GetFileName);
+            var logsAroundError = string.Join(',', justFileNames);
+            return logsAroundError;
+        }
+
+        private LogMetaData[] GetLogMetadataOrderedByDateThenByNumber(string[] files, List<Exception> exceptions)
+        {
+            var list = files.Select(f =>
                 {
                     var withoutExtension = f.Substring(0, f.IndexOf("log", StringComparison.Ordinal) - ".".Length);
                     var snum = Path.GetExtension(withoutExtension).Substring(1);
@@ -314,8 +331,6 @@ namespace SlowTests.SparrowTests
                         exceptions.Add(new Exception($"{f} can't be parsed to date format"));
                         return null;
                     }
-
-
 
                     return new LogMetaData
                     {

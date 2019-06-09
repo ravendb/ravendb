@@ -19,6 +19,9 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing =
             new ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>>();
 
+        private readonly ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter> _outgoingErrors = new ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter>();
+        private readonly ConcurrentDictionary<ReplicationNode, IncomingReplicationFailureToConnectReporter> _incomingErrors = new ConcurrentDictionary<ReplicationNode, IncomingReplicationFailureToConnectReporter>();
+
         public LiveReplicationPerformanceCollector(DocumentDatabase database) : base(database)
         {
             var recentStats = PrepareInitialPerformanceStats().ToList();
@@ -36,6 +39,8 @@ namespace Raven.Server.Documents.Replication
             Database.ReplicationLoader.IncomingReplicationRemoved += IncomingHandlerRemoved;
             Database.ReplicationLoader.OutgoingReplicationAdded += OutgoingHandlerAdded;
             Database.ReplicationLoader.OutgoingReplicationRemoved += OutgoingHandlerRemoved;
+            Database.ReplicationLoader.OutgoingReplicationConnectionErrored += OutgoingReplicationConnectionFailed;
+            Database.ReplicationLoader.IncomingReplicationConnectionErrored += IncomingReplicationConnectionFailed;
 
             foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
                 IncomingHandlerAdded(handler);
@@ -53,6 +58,8 @@ namespace Raven.Server.Documents.Replication
                 Database.ReplicationLoader.OutgoingReplicationAdded -= OutgoingHandlerAdded;
                 Database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
                 Database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
+                Database.ReplicationLoader.OutgoingReplicationConnectionErrored -= OutgoingReplicationConnectionFailed;
+                Database.ReplicationLoader.IncomingReplicationConnectionErrored -= IncomingReplicationConnectionFailed;
 
                 foreach (var kvp in _incoming)
                     IncomingHandlerRemoved(kvp.Value.Handler);
@@ -62,6 +69,15 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void OutgoingReplicationConnectionFailed(ReplicationNode node, OutgoingReplicationFailureToConnectReporter outgoingFailureReporter)
+        {
+            _outgoingErrors.AddOrUpdate(node, outgoingFailureReporter, (_, __) => outgoingFailureReporter);
+        }
+
+        private void IncomingReplicationConnectionFailed(ReplicationNode node, IncomingReplicationFailureToConnectReporter incomingFailureReporter)
+        {
+            _incomingErrors.AddOrUpdate(node, incomingFailureReporter, (_, __) => incomingFailureReporter);
+        }
         protected IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
         {
             foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
@@ -85,7 +101,7 @@ namespace Raven.Server.Documents.Replication
 
         protected override List<IReplicationPerformanceStats> PreparePerformanceStats()
         {
-            var results = new List<IReplicationPerformanceStats>(_incoming.Count + _outgoing.Count);
+            var results = new List<IReplicationPerformanceStats>(_incoming.Count + _outgoing.Count + _incomingErrors.Count + _outgoingErrors.Count);
 
             foreach (var incoming in _incoming)
             {
@@ -138,9 +154,21 @@ namespace Raven.Server.Documents.Replication
                 {
                     var stats = itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray();
                     results.Add(handler.IsPullReplicationAsHub
-                        ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats) 
+                        ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats)
                         : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.DestinationFormatted, stats));
                 }
+            }
+
+            foreach (var outgoingError in _outgoingErrors)
+            {
+                results.Add(OutgoingPerformanceStats.ForPushReplication(outgoingError.Key.Database, outgoingError.Value.DestinationFormatted, outgoingError.Value.GetReplicationPerformance()));
+                _outgoingErrors.TryRemove(outgoingError.Key, out _);
+            }
+
+            foreach (var incomingError in _incomingErrors)
+            {
+                results.Add(IncomingPerformanceStats.ForPullReplication(incomingError.Key.Database, incomingError.Value.DestinationFormatted, incomingError.Value.GetReplicationPerformance()));
+                _incomingErrors.TryRemove(incomingError.Key, out _);
             }
 
             return results;

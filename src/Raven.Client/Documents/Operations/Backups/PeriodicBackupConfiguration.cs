@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Operations.Backups
             var destinations = GetDestinations();
             return destinations.Count == 0 ? 
                 $"{BackupType} w/o destinations" : 
-                $"{BackupType.ToString()} to {string.Join(", ", destinations)}";
+                $"{BackupType} to {string.Join(", ", destinations)}";
         }
 
         public string GetTaskName()

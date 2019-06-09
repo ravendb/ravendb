@@ -24,6 +24,7 @@ using Voron.Impl;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -31,6 +32,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using System.Linq;
 using System.Reflection;
+using Voron.Data.BTrees;
 
 namespace Raven.Server.Rachis
 {
@@ -258,9 +260,11 @@ namespace Raven.Server.Rachis
 
         public event EventHandler<StateTransition> StateChanged;
 
-        public event Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
-
         public event EventHandler LeaderElected;
+
+        public Action<TransactionOperationContext> SwitchToSingleLeaderAction;
+
+        public Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
 
         private string _tag;
         private string _clusterId;
@@ -388,24 +392,14 @@ namespace Raven.Server.Rachis
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
-
-                    var readResult = state.Read(TagSlice);
-                    _tag = readResult == null ? InitialTag : readResult.Reader.ToStringValue();
+                    _tag = ReadNodeTag(context);
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
 
-                    var read = state.Read(CurrentTermSlice);
-                    if (read == null || read.Reader.Length != sizeof(long))
-                    {
-                        using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
-                            *(long*)ptr = CurrentTerm = 0;
-                    }
-                    else
-                        CurrentTerm = read.Reader.ReadLittleEndianInt64();
+                    CurrentTerm = ReadTerm(context);
 
                     topology = GetTopology(context);
                     if (topology.AllNodes.Count == 1 && topology.Members.Count == 1)
@@ -464,6 +458,30 @@ namespace Raven.Server.Rachis
             }
         }
         
+        private unsafe long ReadTerm(TransactionOperationContext context)
+        {
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+
+            var read = state.Read(CurrentTermSlice);
+            if (read == null || read.Reader.Length != sizeof(long))
+            {
+                using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
+                    *(long*)ptr = 0;
+
+                return 0L;
+            }
+
+            return read.Reader.ReadLittleEndianInt64();
+        }
+
+        public string ReadNodeTag(TransactionOperationContext context)
+        {
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+
+            var readResult = state.Read(TagSlice);
+            return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
+        }
+
         private void SwitchToSingleLeader(TransactionOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
@@ -475,6 +493,8 @@ namespace Raven.Server.Rachis
             }
             var leader = new Leader(this, electionTerm);
             SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader" , () => _currentLeader = leader);
+            SwitchToSingleLeaderAction?.Invoke(context);
+
             Candidate = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
@@ -619,6 +639,17 @@ namespace Raven.Server.Rachis
             {
                 if (GetSnapshotRequest(context))
                     throw new RachisInvalidOperationException("We cannot be elected for leadership if snapshot is requested.");
+            }
+
+            if (rachisState == RachisState.LeaderElect)
+            {
+                var noopCmd = new DynamicJsonValue
+                {
+                    ["Type"] = $"Noop for {Tag} in term {expectedTerm}",
+                    ["Command"] = "noop",
+                    [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
+                };
+                InsertToLeaderLog(context, expectedTerm, context.ReadObject(noopCmd, "noop-cmd"), RachisEntryFlags.Noop);
             }
 
             var sp = Stopwatch.StartNew();
@@ -1014,7 +1045,7 @@ namespace Raven.Server.Rachis
                         string.IsNullOrEmpty(clusterTopology.TopologyId) == false)
                     {
                         throw new TopologyMismatchException(
-                            $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
+                            $"Node {initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             "Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
                     if (_tag == InitialTag)
@@ -1032,7 +1063,7 @@ namespace Raven.Server.Rachis
                         if (_tag != initialMessage.DebugDestinationIdentifier)
                         {
                             throw new TopologyMismatchException(
-                                $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
+                                $"Node {initialMessage.DebugSourceIdentifier} attempted to connect to us with tag {initialMessage.DebugDestinationIdentifier} but our tag is already set ({_tag}). " +
                                 "Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
                         }
                     }
@@ -1260,7 +1291,7 @@ namespace Raven.Server.Rachis
 
                 var firstEntry = entries[firstIndexInEntriesThatWeHaveNotSeen];
                 //While we do support the case where we get the same entries, we expect them to have the same index/term up to the commit index.
-                if (firstEntry.Index < lastCommitIndex)
+                if (firstEntry.Index <= lastCommitIndex)
                 {
                     ThrowFatalError(firstEntry, GetTermFor(context, firstEntry.Index), lastCommitIndex, lastCommitTerm);
                 }
@@ -1693,8 +1724,10 @@ namespace Raven.Server.Rachis
                 if (CurrentState != RachisState.Passive)
                     return;
 
+                var newTag = _tag;
                 if(_tag == InitialTag)
                 {
+                    newTag = nodeTag;
                     UpdateNodeTag(ctx, nodeTag);
                 }
 
@@ -1704,11 +1737,11 @@ namespace Raven.Server.Rachis
                     topologyId,
                     new Dictionary<string, string>
                     {
-                        [_tag] = selfUrl
+                        [newTag] = selfUrl
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    nodeTag,
+                    newTag,
                     GetLastEntryIndex(ctx)
                 );
 
@@ -1729,15 +1762,14 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                var lastNode =  GetTopology(ctx).LastNodeId;
-                UpdateNodeTag(ctx, nodeTag);
+                var lastNode =  _tag;
 
                 var topologyId = Guid.NewGuid().ToString();
                 var topology = new ClusterTopology(
                     topologyId,
                     new Dictionary<string, string>
                     {
-                        [_tag] = Url
+                        [nodeTag] = Url
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
@@ -1746,6 +1778,8 @@ namespace Raven.Server.Rachis
                 );
 
                 SetTopology(this, ctx, topology);
+
+                SetSnapshotRequest(ctx, false);
 
                 SwitchToSingleLeader(ctx);
 
@@ -1771,7 +1805,7 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    string.Empty,
+                    _tag,
                     GetLastEntryIndex(ctx) + 1
                 );
 
@@ -1785,6 +1819,26 @@ namespace Raven.Server.Rachis
 
                 tx.Commit();
             }
+        }
+
+        public static void ValidateNodeTag(string nodeTag)
+        {
+            if (nodeTag == InitialTag)
+                return;
+
+            if (nodeTag.Equals("RAFT"))
+                ThrowInvalidNodeTag(nodeTag, "It is a reserved tag.");
+            if (nodeTag.Length > 4)
+                ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");
+            // Node tag must not contain ':' or '-' chars as they are in use in change vector.
+            // The following check covers that as well.
+            if (nodeTag.IsUpperLettersOnly() == false)
+                ThrowInvalidNodeTag(nodeTag, "Node tag must contain only upper case letters.");
+        }
+
+        public static void ThrowInvalidNodeTag(string nodeTag, string reason)
+        {
+            throw new ArgumentException($"Can't set the node tag to '{nodeTag}'. {reason}");
         }
 
         public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
@@ -1918,13 +1972,21 @@ namespace Raven.Server.Rachis
 
         public void UpdateNodeTag(TransactionOperationContext context, string newTag)
         {
-            _tag = newTag;
+            ValidateNodeTag(newTag);
 
-            using (Slice.From(context.Transaction.InnerTransaction.Allocator, _tag, out Slice str))
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, newTag, out Slice str))
             {
                 var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
                 state.Add(TagSlice, str);
             }
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed)
+                {
+                    _tag = newTag;
+        }
+            };
         }
 
         public bool RequestSnapshot { get; private set; }

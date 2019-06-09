@@ -536,7 +536,7 @@ namespace Raven.Server.Commercial
             if (existingCertificateKeys.Count == 0)
                 return;
 
-            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand()
+            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand(RaftIdGenerator.NewId())
             {
                 Names = existingCertificateKeys
             });
@@ -1069,7 +1069,7 @@ namespace Raven.Server.Commercial
 
             foreach (var node in setupInfo.NodeSetupInfos)
             {
-                Leader.ValidateNodeTag(node.Key);
+                RachisConsensus.ValidateNodeTag(node.Key);
 
                 if (node.Value.Port == 0)
                     setupInfo.NodeSetupInfos[node.Key].Port = 443;

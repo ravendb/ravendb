@@ -19,7 +19,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
@@ -29,6 +28,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -115,6 +115,8 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
+        public SemaphoreSlim ConcurrentBackupsSemaphore { get; }
+
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
             // we want our servers to be robust get early errors about such issues
@@ -154,6 +156,9 @@ namespace Raven.Server.ServerWide
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
             _server.ServerCertificateChanged += OnServerCertificateChanged;
+
+            var maxConcurrentBackupsTasks = Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue;
+            ConcurrentBackupsSemaphore = new SemaphoreSlim(maxConcurrentBackupsTasks);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
@@ -650,7 +655,8 @@ namespace Raven.Server.ServerWide
             }
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
-            _engine.BeforeAppendToRaftLog += BeforeAppendToRaftLog;
+            _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
+
             var myUrl = GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, myUrl);
 
@@ -842,24 +848,60 @@ namespace Raven.Server.ServerWide
             return nodesStatuses ?? new Dictionary<string, NodeStatus>();
         }
 
+        public void NotifyAboutRecentClusterTopologyConnectivity()
+        {
+            TaskExecutor.Execute(_ =>
+            {
+                var clusterTopology = GetClusterTopology();
+
+                if (_engine.CurrentState != RachisState.Follower)
+                {
+                    OnTopologyChangeInternal(clusterTopology);
+                    return;
+                }
+
+                // need to get it from the leader
+                var leaderTag = LeaderTag;
+                if (leaderTag == null)
+                    return;
+
+                var leaderUrl = clusterTopology.GetUrlFromTag(leaderTag);
+                if (leaderUrl == null)
+                    return;
+
+                using (var clusterRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl))
+                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var command = new GetClusterTopologyCommand(NodeTag);
+                    clusterRequestExecutor.Execute(command, context);
+                    var response = command.Result;
+
+                    OnTopologyChangeInternal(response.Topology, response.Status);
+                }
+            },null);
+        }
+
         public void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
             if (_engine.CurrentState == RachisState.Follower)
                 return;
 
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
-                NodeTag, _engine.CurrentTerm, _engine.CurrentState, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails),
-                DateTime.MinValue);
+            OnTopologyChangeInternal(topologyJson);
+        }
+
+        private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
+        {
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
+                NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
                 db.Value.Result.Changes.RaiseNotifications(new TopologyChange
                 {
-                    Url = topologyJson.GetUrlFromTag(NodeTag),
+                    Url = topology.GetUrlFromTag(NodeTag),
                     Database = db.Value.Result.Name
                 });
             }
-            // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType _) t)
@@ -1480,6 +1522,20 @@ namespace Raven.Server.ServerWide
             }
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
+        }
+
+        public Task<(long Index, object Result)> PutServerWideBackupConfigurationAsync(ServerWideBackupConfiguration configuration, string raftRequestId)
+        {
+            var command = new PutServerWideBackupConfigurationCommand(configuration, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public Task<(long Index, object Result)> DeleteServerWideBackupConfigurationAsync(string configurationName, string raftRequestId)
+        {
+            var command = new DeleteServerWideBackupConfigurationCommand(configurationName, raftRequestId);
+
+            return SendToLeaderAsync(command);
         }
 
         public async Task<(long, object)> ModifyPeriodicBackup(TransactionOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)

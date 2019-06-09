@@ -41,7 +41,8 @@ abstract class backupSettings {
 
     toDto(): Raven.Client.Documents.Operations.Backups.BackupSettings {
         return {
-            Disabled: !this.enabled()
+            Disabled: !this.enabled(),
+            GetBackupConfigurationScript: null
         }
     }
 }

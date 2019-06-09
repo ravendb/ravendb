@@ -6,7 +6,13 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public bool Disabled { get; set; }
 
-        public abstract bool HasSettings();
+        public GetBackupConfigurationScript GetBackupConfigurationScript { get; set; }
+
+        public virtual bool HasSettings()
+        {
+            return GetBackupConfigurationScript != null && 
+                   string.IsNullOrWhiteSpace(GetBackupConfigurationScript.Exec) == false;
+        }
 
         public virtual bool WasEnabled(BackupSettings other)
         {
@@ -17,7 +23,32 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             return new DynamicJsonValue
             {
-                [nameof(Disabled)] = Disabled
+                [nameof(Disabled)] = Disabled,
+                [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToJson()
+            };
+        }
+    }
+
+    public class GetBackupConfigurationScript
+    {
+        public GetBackupConfigurationScript()
+        {
+            TimeoutInMs = 10_000;
+        }
+
+        public string Exec { get; set; }
+
+        public string Arguments { get; set; }
+
+        public int TimeoutInMs { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Exec)] = Exec,
+                [nameof(Arguments)] = Arguments,
+                [nameof(TimeoutInMs)] = TimeoutInMs
             };
         }
     }
@@ -32,6 +63,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(FolderPath) == false;
         }
 
@@ -62,6 +96,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string AwsSecretKey { get; set; }
 
+        public string AwsSessionToken { get; set; }
+
         /// <summary>
         /// Amazon Web Services (AWS) region.
         /// </summary>
@@ -74,6 +110,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(AwsAccessKey)] = AwsAccessKey;
             djv[nameof(AwsSecretKey)] = AwsSecretKey;
             djv[nameof(AwsRegionName)] = AwsRegionName;
+            djv[nameof(AwsSessionToken)] = AwsSessionToken;
 
             return djv;
         }
@@ -93,6 +130,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(BucketName) == false;
         }
 
@@ -136,6 +176,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(VaultName) == false;
         }
 
@@ -184,6 +227,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return string.IsNullOrWhiteSpace(StorageContainer) == false;
         }
 
@@ -227,6 +273,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public override bool HasSettings()
         {
+            if (base.HasSettings())
+                return true;
+
             return Port != 0 && string.IsNullOrWhiteSpace(Url) == false;
         }
 

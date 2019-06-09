@@ -14,6 +14,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -37,6 +38,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -1099,6 +1101,108 @@ namespace Raven.Server.Web.System
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
             return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
+        }
+
+        [RavenAction("/admin/configuration/server-wide/backup", "PUT", AuthorizationStatus.ClusterAdmin)]
+        public async Task PutServerWideBackupConfigurationCommand()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
+                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+
+                var configurationJson = JsonDeserializationCluster.ServerWideBackupConfiguration(configuration);
+
+                if (VerifyBackupFrequency(configurationJson.FullBackupFrequency) == null &&
+                    VerifyBackupFrequency(configurationJson.IncrementalBackupFrequency) == null)
+                {
+                    throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
+                                                $"full backup cron expression: {configurationJson.FullBackupFrequency}, " +
+                                                $"incremental backup cron expression: {configurationJson.IncrementalBackupFrequency}");
+                }
+
+                var localSettings = configurationJson.LocalSettings;
+                if (localSettings != null)
+                {
+                    if (localSettings.HasSettings() == false)
+                    {
+                        throw new ArgumentException(
+                            $"{nameof(localSettings.FolderPath)} and {nameof(localSettings.GetBackupConfigurationScript)} cannot be both null or empty");
+                    }
+
+                    if (localSettings.Disabled == false && string.IsNullOrEmpty(localSettings.FolderPath) == false)
+                    {
+                        if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
+                            throw new ArgumentException(error);
+                    }
+                }
+
+                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson, GetRaftRequestIdFromQuery());
+                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (context.OpenReadTransaction())
+                {
+                    var backupName = ServerStore.Cluster.GetServerWideBackupNameByTaskId(context, newIndex);
+                    if (backupName == null)
+                        throw new InvalidOperationException($"Backup name is null for server wide backup with task id: {newIndex}");
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(PutServerWideBackupConfigurationResponse.Name));
+                    writer.WriteString(backupName);
+
+                    writer.WriteEndObject();
+                }
+            }
+
+            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
+            {
+                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
+            }
+        }
+
+        [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        public async Task DeleteServerWideBackupConfigurationCommand()
+        {
+            var name = GetStringQueryString("name", required: true);
+
+            var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name, GetRaftRequestIdFromQuery());
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+
+            NoContentStatus();
+        }
+
+        [RavenAction("/admin/configuration/server-wide/backup", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task GetServerWideBackupConfigurationCommand()
+        {
+            var name = GetStringQueryString("name", required: false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var backups = ServerStore.Cluster.GetServerWideBackupConfigurations(context, name);
+
+                writer.WriteStartObject();
+
+                var isFirst = true;
+                writer.WritePropertyName(nameof(GetServerWideBackupConfigurationsResponse.Results));
+                writer.WriteStartArray();
+                foreach (var backup in backups)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+
+                    isFirst = false;
+                    writer.WriteObject(backup);
+                }
+
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+
+                return Task.CompletedTask;
+            }
         }
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -11,6 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -49,8 +51,26 @@ namespace Raven.Client.Documents.Smuggler
         {
             return ExportAsync(options, async stream =>
             {
-                using (var file = File.OpenWrite(toFile))
-                    await stream.CopyToAsync(file, 8192, token).ConfigureAwait(false);
+                try
+                {
+                    var fileInfo = new FileInfo(toFile);
+                    var directoryInfo = fileInfo.Directory;
+                    if (directoryInfo != null && directoryInfo.Exists == false)
+                        directoryInfo.Create();
+
+                    using (var fileStream = fileInfo.OpenWrite())
+                        await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Could not save export file.", e);
+
+                    if (e is UnauthorizedAccessException || e is DirectoryNotFoundException || e is IOException)
+                        throw new InvalidOperationException($"Cannot export to selected path {toFile}, please ensure you selected proper filename.", e);
+
+                    throw new InvalidOperationException($"Could not save export file {toFile}.", e);
+                }
             }, token);
         }
 

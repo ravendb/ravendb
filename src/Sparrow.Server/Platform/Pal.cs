@@ -7,7 +7,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42007; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42008; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -204,6 +204,14 @@ namespace Sparrow.Server.Platform
         public static extern PalFlags.FailCodes rvn_truncate_journal(
             SafeJournalHandle handle,
             Int64 size,
+            out Int32 errorCode
+            );
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_get_path_disk_space(
+            string path,
+            out UInt64 totalFreeSizeInBytes,
+            out UInt64 totalSizeInBytes,
             out Int32 errorCode
             );
 

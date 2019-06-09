@@ -95,7 +95,8 @@ class azureSettings extends backupSettings {
             StorageContainer: null,
             RemoteFolderName: null,
             AccountName: null,
-            AccountKey: null
+            AccountKey: null,
+            GetBackupConfigurationScript: null
         });
     }
 }

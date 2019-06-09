@@ -52,4 +52,9 @@
   <ItemGroup>
     <Folder Include="Server\Documents\PeriodicBackup" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="Issues\RavenDB-13499.ravendbdump">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

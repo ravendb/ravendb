@@ -20,6 +20,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         
         private const string AwsAccessKey = "<aws_access_key>";
         private const string AwsSecretKey = "<aws_secret_key>";
+        private const string AwsSessionToken = "<aws_session_token>";
         private const string EastRegion1 = "us-east-1";
         private const string WestRegion2 = "us-west-2";
         
@@ -31,7 +32,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var bucketName = $"testing-{Guid.NewGuid()}";
             var key = $"test-key-{Guid.NewGuid()}";
 
-            using (var client = new RavenAwsS3Client(AwsAccessKey, AwsSecretKey, region, bucketName))
+            using (var client = new RavenAwsS3Client(GetS3Settings(region, bucketName)))
             {
                 // make sure that the bucket doesn't exist
                 await client.DeleteBucket();
@@ -80,8 +81,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var bucketName = $"testing-{Guid.NewGuid()}";
             var key = Guid.NewGuid().ToString();
 
-            using (var clientRegion1 = new RavenAwsS3Client(AwsAccessKey, AwsSecretKey, region1, bucketName))
-            using (var clientRegion2 = new RavenAwsS3Client(AwsAccessKey, AwsSecretKey, region2, bucketName))
+            using (var clientRegion1 = new RavenAwsS3Client(GetS3Settings(region1, bucketName)))
+            using (var clientRegion2 = new RavenAwsS3Client(GetS3Settings(region2, bucketName)))
             {
                 // make sure that the bucket doesn't exist
                 await clientRegion1.DeleteBucket();
@@ -166,7 +167,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var maxUploadPutObjectInBytesSetter = ExpressionHelper.CreateFieldSetter<RavenAwsS3Client, int>("MaxUploadPutObjectSizeInBytes");
             var minOnePartUploadSizeLimitInBytesSetter = ExpressionHelper.CreateFieldSetter<RavenAwsS3Client, int>("MinOnePartUploadSizeLimitInBytes");
 
-            using (var client = new RavenAwsS3Client(AwsAccessKey, AwsSecretKey, region, bucketName, progress))
+            using (var client = new RavenAwsS3Client(GetS3Settings(region, bucketName), progress))
             {
                 maxUploadPutObjectInBytesSetter(client, 10 * 1024 * 1024); // 10MB
                 minOnePartUploadSizeLimitInBytesSetter(client, 7 * 1024 * 1024); // 7MB
@@ -232,7 +233,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
-            using (var client = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region, vaultName))
+            using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName)))
             {
                 await client.PutVault();
 
@@ -252,8 +253,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var vaultName1 = $"testing-{Guid.NewGuid()}";
             var vaultName2 = $"testing-{Guid.NewGuid()}";
 
-            using (var clientRegion1 = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region1, vaultName1))
-            using (var clientRegion2 = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region2, vaultName2))
+            using (var clientRegion1 = new RavenAwsGlacierClient(GetGlacierSettings(region1, vaultName1)))
+            using (var clientRegion2 = new RavenAwsGlacierClient(GetGlacierSettings(region2, vaultName2)))
             {
                 var e = await Assert.ThrowsAsync<VaultNotFoundException>(async () =>
                 {
@@ -310,7 +311,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var maxUploadArchiveSizeInBytes = ExpressionHelper.CreateFieldSetter<RavenAwsGlacierClient, int>("MaxUploadArchiveSizeInBytes");
             var minOnePartUploadSizeLimitInBytes = ExpressionHelper.CreateFieldSetter<RavenAwsGlacierClient, int>("MinOnePartUploadSizeLimitInBytes");
 
-            using (var client = new RavenAwsGlacierClient(AwsAccessKey, AwsSecretKey, region, vaultName, progress))
+            using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName), progress))
             {
                 maxUploadArchiveSizeInBytes(client, 10 * 1024 * 1024); // 9MB
                 minOnePartUploadSizeLimitInBytes(client, minOnePartSizeInMB * 1024 * 1024);
@@ -343,7 +344,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact]
         public void AuthorizationHeaderValueForAwsS3ShouldBeCalculatedCorrectly1()
         {
-            using (var client = new RavenAwsS3Client("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "us-east-1", "examplebucket"))
+            var s3Settings = new S3Settings
+            {
+                AwsAccessKey = "AKIAIOSFODNN7EXAMPLE",
+                AwsSecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                AwsRegionName = "us-east-1",
+                BucketName = "examplebucket"
+            };
+
+            using (var client = new RavenAwsS3Client(s3Settings))
             {
                 var date = new DateTime(2013, 5, 24);
 
@@ -372,7 +381,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact]
         public void AuthorizationHeaderValueForAwsS3ShouldBeCalculatedCorrectly2()
         {
-            using (var client = new RavenAwsS3Client("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", "us-east-1", "examplebucket"))
+            var s3Settings = new S3Settings
+            {
+                AwsAccessKey = "AKIAIOSFODNN7EXAMPLE",
+                AwsSecretKey = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                AwsRegionName = "us-east-1",
+                BucketName = "examplebucket"
+            };
+
+            using (var client = new RavenAwsS3Client(s3Settings))
             {
                 var date = new DateTime(2013, 5, 24);
                 var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
@@ -394,6 +411,30 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal("AWS4-HMAC-SHA256", auth.Scheme);
                 Assert.Equal("Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request,SignedHeaders=host;range;x-amz-content-sha256;x-amz-date,Signature=819484c483cfb97d16522b1ac156f87e61677cc8f1f2545c799650ef178f4aa8", auth.Parameter);
             }
+        }
+
+        private static S3Settings GetS3Settings(string region, string bucketName)
+        {
+            return new S3Settings
+            {
+                AwsAccessKey = AwsAccessKey,
+                AwsSecretKey = AwsSecretKey,
+                AwsSessionToken = AwsSessionToken,
+                AwsRegionName = region,
+                BucketName = bucketName
+            };
+        }
+
+        private static GlacierSettings GetGlacierSettings(string region, string vaultName)
+        {
+            return new GlacierSettings
+            {
+                AwsAccessKey = AwsAccessKey,
+                AwsSecretKey = AwsSecretKey,
+                AwsSessionToken = AwsSessionToken,
+                AwsRegionName = region,
+                VaultName = vaultName
+            };
         }
     }
 }

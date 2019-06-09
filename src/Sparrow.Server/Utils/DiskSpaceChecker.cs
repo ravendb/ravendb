@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 
 namespace Sparrow.Server.Utils
@@ -23,51 +24,27 @@ namespace Sparrow.Server.Utils
             if (string.IsNullOrEmpty(pathToCheck))
                 return null;
 
-            if (PlatformDetails.RunningOnPosix)
-            {
-                var statvfs = default(Statvfs);
-                var result = Syscall.statvfs(pathToCheck, ref statvfs);
-                if (result != 0)
-                {
-                    var error = Syscall.ErrorNumberToStatusCode(result) ?? result.ToString();
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to get file system statistics for path: {pathToCheck}, error: {error}");
-
-                    return null;
-                }
-
-                return new DiskSpaceResult
-                {
-                    DriveName = driveInfoBase?.DriveName,
-                    TotalFreeSpace = new Size((long)(statvfs.f_bsize * statvfs.f_bavail), SizeUnit.Bytes),
-                    TotalSize = new Size((long)(statvfs.f_bsize * statvfs.f_blocks), SizeUnit.Bytes)
-                };
-            }
-            
-            var success = GetDiskFreeSpaceEx(pathToCheck, out var freeBytesAvailable, out var totalNumberOfBytes, out _);
-            if (success == false)
+            var result = Pal.rvn_get_path_disk_space(pathToCheck, out var totalFreeBytes, out var totalDiskBytes, out int error);
+            if (result != PalFlags.FailCodes.Success)
             {
                 if (Logger.IsInfoEnabled)
-                {
-                    var error = Marshal.GetLastWin32Error();
-                    Logger.Info($"Failed to get the free disk space, path: {pathToCheck}, error: {error}");
-                }
+                    Logger.Info($"Failed to get file system statistics for path: {pathToCheck}, error: {error}");
+
                 return null;
             }
 
-            var driveName = driveInfoBase?.DriveName;
             return new DiskSpaceResult
             {
-                DriveName = driveName,
-                VolumeLabel = GetVolumeLabel(driveName),
-                TotalFreeSpace = new Size((long)freeBytesAvailable, SizeUnit.Bytes),
-                TotalSize = new Size((long)totalNumberOfBytes, SizeUnit.Bytes)
+                DriveName = driveInfoBase?.DriveName,
+                VolumeLabel = GetVolumeLabel(driveInfoBase?.DriveName),
+                TotalFreeSpace = new Size((long)totalFreeBytes, SizeUnit.Bytes),
+                TotalSize = new Size((long)totalDiskBytes, SizeUnit.Bytes)
             };
         }
 
         private static string GetVolumeLabel(string path)
         {
-            if (path == null)
+            if (path == null || PlatformDetails.RunningOnPosix)
                 return null;
 
             if (path.StartsWith("\\", StringComparison.OrdinalIgnoreCase))
@@ -262,12 +239,6 @@ namespace Sparrow.Server.Utils
             return realPath;
         }
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetDiskFreeSpaceEx(string lpDirectoryName,
-            out ulong lpFreeBytesAvailable,
-            out ulong lpTotalNumberOfBytes,
-            out ulong lpTotalNumberOfFreeBytes);
 
         private const uint FILE_READ_EA = 0x0008;
         private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x2000000;

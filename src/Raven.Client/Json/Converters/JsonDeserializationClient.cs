@@ -178,6 +178,10 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ServerWideStudioConfiguration> ServerWideStudioConfiguration = GenerateJsonDeserializationRoutine<ServerWideStudioConfiguration>();
 
+        internal static readonly Func<BlittableJsonReaderObject, PutServerWideBackupConfigurationResponse> PutServerWideBackupConfigurationResponse = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationResponse>();
+
+        internal static readonly Func<BlittableJsonReaderObject, GetServerWideBackupConfigurationsResponse> GetServerWideBackupConfigurationsResponse = GenerateJsonDeserializationRoutine<GetServerWideBackupConfigurationsResponse>();
+
         internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();
 
         internal static readonly Func<BlittableJsonReaderObject, S3Settings> S3Settings = GenerateJsonDeserializationRoutine<S3Settings>();

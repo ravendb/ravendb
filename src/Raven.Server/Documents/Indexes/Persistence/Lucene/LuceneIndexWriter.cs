@@ -12,6 +12,8 @@ using Lucene.Net.Store;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
+using Sparrow.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -63,12 +65,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _indexWriter.Commit(state);
             }
+            catch (EarlyOutOfMemoryException)
+            {
+                RecreateIndexWriter(state);
+                throw;
+            }
+            catch (DiskFullException)
+            {
+                RecreateIndexWriter(state);
+                throw;
+            }
             catch (SystemException e)
             {
                 if (e.Message.StartsWith("this writer hit an OutOfMemoryError"))
                     RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
-                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory()) 
+                if (e is Win32Exception win32Exception && win32Exception.IsOutOfMemory())
                     RecreateIndexWriteAndThrowOutOfMemory(state, e);
 
                 throw;

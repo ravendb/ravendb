@@ -101,7 +101,8 @@ class googleCloudSettings extends backupSettings {
             Disabled: true,
             RemoteFolderName: null,
             GoogleCredentialsJson: null,
-            BucketName: null
+            BucketName: null,
+            GetBackupConfigurationScript: null
         });
     }
 }
