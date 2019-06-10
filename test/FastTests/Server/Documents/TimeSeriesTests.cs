@@ -20,6 +20,40 @@ namespace FastTests.Server.Documents
         }
 
         [Fact]
+        public void SetTheSameDatesWithDifferenTags()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    var r = new Random(1335);
+                    for (int i = 0; i < 10_000; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende")
+                            .Append("Heartrate", baseline.AddMilliseconds(i+100), "watches/a", 
+                            new double[] { r.Next(50, 120) });
+                    }
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(61), "watches/a", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(61), "watches/b", new[] { 69d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(63), "watches/a", new[] { 79d });
+
+                    session.TimeSeriesFor("users/ayende")
+                       .Append("Heartrate", baseline.AddMinutes(63), "watches/b", new[] { 89d });
+
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
         public void CanQueryTimeSeriesAggregation_Simple()
         {
             using (var store = GetDocumentStore())
@@ -244,7 +278,7 @@ namespace FastTests.Server.Documents
                     session.TimeSeriesFor("users/ayende")
                         .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 59d });
 
-            
+
                     session.TimeSeriesFor("users/ayende")
                         .Append("Heartrate", baseline.AddMinutes(3), "watches/fitbit", new[] { 69d });
 

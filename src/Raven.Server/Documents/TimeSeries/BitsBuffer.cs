@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (bitsToRead > 64)
                 throw new ArgumentException($"Unable to read more than 64 bits at a time.  Requested {bitsToRead} bits", nameof(bitsToRead));
 
-            if (bitsPosition + bitsToRead > Size * 8)
+            if (bitsPosition + bitsToRead > (Size - sizeof(BitsBufferHeader) - Header->CompressedSize) * 8)
                 throw new ArgumentException($"Not enough bits left in the buffer. Requested {bitsToRead} bits.  Current Position: {bitsPosition}", nameof(bitsToRead));
 
             ulong value = 0;
