@@ -142,7 +142,19 @@ namespace Raven.Server.Documents.Patch
                                         value = string.Empty;
                                         break;
                                 }
-                                _value = value;
+                                
+                                if (long.TryParse(value, out var valueAsLong))
+                                {
+                                    _value = valueAsLong;
+                                }
+                                else if (double.TryParse(value, out var valueAsDouble))
+                                {
+                                    _value = valueAsDouble;
+                                }
+                                else
+                                {
+                                    _value = value;
+                                }
                             }                            
                         }
                         else
