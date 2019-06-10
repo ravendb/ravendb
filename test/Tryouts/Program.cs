@@ -40,6 +40,11 @@ namespace Tryouts
                 Database = "Test"
             }.Initialize();
 
+            using (var sa = store.OpenSession())
+            {
+                sa.Store(new { }, "users/oren");
+                sa.SaveChanges();
+            }
 
             var lines = File.ReadLines(@"D:\telemetryexport\telemetryexport.csv")
                 .Select(line =>
@@ -57,27 +62,32 @@ namespace Tryouts
                     return (date, tag, a, b);
                 })
                 .Where(x => x.date > DateTime.MinValue);
+            var sp = Stopwatch.StartNew();
             var s = store.OpenSession();
-            var ts = s.TimeSeriesFor("users/Jørgensen");
+            var ts = s.TimeSeriesFor("users/oren");
             var count = 0;
             var total = 0;
             foreach (var line in lines)
             {
                 ts.Append("Telemetry", line.date, line.tag, new[] { line.a, line.b });
                 total++;
-                if(count++ > 1000)
+                if (count++ > 1000)
                 {
                     s.SaveChanges();
                     count = 0;
                     s.Dispose();
                     s = store.OpenSession();
-                    ts = s.TimeSeriesFor("users/Jørgensen");
-                    if(total % 100_000 == 0)
+                    ts = s.TimeSeriesFor("users/oren");
+                    if (total % 50_000 == 0)
                         Console.WriteLine(total);
                 }
             }
 
             s.SaveChanges();
+
+
+            Console.WriteLine(sp.Elapsed + " " + total);
+
         }
 
 
