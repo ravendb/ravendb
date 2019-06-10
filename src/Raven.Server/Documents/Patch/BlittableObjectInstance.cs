@@ -143,11 +143,7 @@ namespace Raven.Server.Documents.Patch
                                         break;
                                 }
                                 
-                                if (long.TryParse(value, out var valueAsLong))
-                                {
-                                    _value = valueAsLong;
-                                }
-                                else if (double.TryParse(value, out var valueAsDouble))
+                                if (double.TryParse(value, out var valueAsDouble))
                                 {
                                     _value = valueAsDouble;
                                 }
