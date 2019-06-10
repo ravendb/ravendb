@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.TimeSeries
                 Header->NumberOfValues
             );
 
+        public ulong Hash => Hashing.XXHash64.Calculate(_buffer, (ulong)NumberOfBytes);
+
         public DateTime GetLastTimestamp(DateTime baseline)
         {
             return baseline.AddMilliseconds(Header->PreviousTimeStamp);
@@ -157,8 +159,8 @@ namespace Raven.Server.Documents.TimeSeries
                     // need to write the tag
                     insertTag = true;
 
-                    tempBitsBuffer.AddValue(2, 2); // will write the tag index buffer here
-                    tempBitsBuffer.AddValue((ulong)(~prevTagIndex), 8);
+                    tempBitsBuffer.AddValue(3, 2); // will write the tag index buffer here
+                    tempBitsBuffer.AddValue((ulong)(~prevTagIndex), 7);
                     tempHeader->PreviousTagIndex = (byte)(~prevTagIndex);
                 }
 
@@ -417,11 +419,14 @@ namespace Raven.Server.Documents.TimeSeries
                 if (differentTag == 1)
                 {
                     var hasTag = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
-                    if(hasTag == 0)
+                    if (hasTag == 0)
                     {
                         tag = default;
                     }
-                    ReadTagValueByIndex(ref tag);
+                    else
+                    {
+                        ReadTagValueByIndex(ref tag);
+                    }
                 }
 
                 return true;
@@ -429,7 +434,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void ReadTagValueByIndex(ref TagPointer tag)
             {
-                var tagIndex = (int)_bitsBuffer.ReadValue(ref _bitsPosisition, 8);
+                var tagIndex = (int)_bitsBuffer.ReadValue(ref _bitsPosisition, 7);
                 var offset = _parent.Header->SizeOfTags;
                 var tagsPtr = _parent._buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * _parent.Header->NumberOfValues;
                 var numberOfTags = *(tagsPtr + offset - 1);

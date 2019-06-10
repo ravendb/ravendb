@@ -41,49 +41,45 @@ namespace Tryouts
             }.Initialize();
 
 
-            var lines = File.ReadAllLines(@"C:\Users\ayende\source\repos\ConsoleApp20\ConsoleApp20\bin\Debug\netcoreapp2.2\out.csv")
+            var lines = File.ReadLines(@"D:\telemetryexport\telemetryexport.csv")
                 .Select(line =>
                 {
                     var parts = line.Split(',');
-                    if (parts.Length != 2)
+                    if (parts.Length != 4)
                         return default;
-                    if (DateTime.TryParseExact(parts[0], "o", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var date) == false)
+                    if (DateTime.TryParseExact(parts[0], "yyyy-MM-ddThh.mm.ssZ", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date) == false)
                         return default;
-                    if (double.TryParse(parts[1], out var d) == false)
+                    if (double.TryParse(parts[2], out var a) == false)
                         return default;
-
-                    return (date, d);
+                    if (double.TryParse(parts[3], out var b) == false)
+                        return default;
+                    var tag = parts[1];
+                    return (date, tag, a, b);
                 })
-                .Where(x => x.date > DateTime.MinValue)
-                .OrderBy(x => x.date)
-                .ToList();
-            var start = DateTime.MinValue;
-            for (int i = 0; i < lines.Count; i += 250)
+                .Where(x => x.date > DateTime.MinValue);
+            var s = store.OpenSession();
+            var ts = s.TimeSeriesFor("users/Jørgensen");
+            var count = 0;
+            var total = 0;
+            foreach (var line in lines)
             {
-                FlushBpm(store, lines, i, Math.Min(250, lines.Count - i));
-                if ((lines[i].date - start).TotalDays > 30)
+                ts.Append("Telemetry", line.date, line.tag, new[] { line.a, line.b });
+                total++;
+                if(count++ > 1000)
                 {
-                    start = lines[i].date;
-                    Console.WriteLine(start);
+                    s.SaveChanges();
+                    count = 0;
+                    s.Dispose();
+                    s = store.OpenSession();
+                    ts = s.TimeSeriesFor("users/Jørgensen");
+                    if(total % 100_000 == 0)
+                        Console.WriteLine(total);
                 }
             }
+
+            s.SaveChanges();
         }
 
-        private static void FlushBpm(IDocumentStore store, List<(DateTime, double)> list, int offset, int count)
-        {
-            using (var s = store.OpenSession())
-            {
-                var ts = s.TimeSeriesFor("users/oren");
-
-                for (int i = 0; i < count; i++)
-                {
-                    var item = list[offset + i];
-                    ts.Append("BPM", item.Item1, "watches/fitbit", new[] { item.Item2 });
-                }
-
-                s.SaveChanges();
-            }
-        }
 
         private static async Task WriteMillionDocs(DocumentStore store)
         {
