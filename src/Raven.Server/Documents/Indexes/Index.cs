@@ -3222,7 +3222,15 @@ namespace Raven.Server.Documents.Indexes
 
                 if (Configuration.TransactionSizeLimit == null)
                 {
-                    _transactionSizeLimit = new Lazy<Size?>(() => null);
+                    _transactionSizeLimit = new Lazy<Size?>(() =>
+                    {
+                        if (DocumentDatabase.IsEncrypted)
+                        {
+                            return new Size(64, SizeUnit.Megabytes);
+                        }
+
+                        return null;
+                    });
                 }
                 else
                 {
@@ -3298,7 +3306,7 @@ namespace Raven.Server.Documents.Indexes
                     return false;
                 }
             }
-
+			
             if (TransactionSizeLimit != null)
             {
                 var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
@@ -3395,7 +3403,7 @@ namespace Raven.Server.Documents.Indexes
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
 
-            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
+            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;

@@ -461,18 +461,17 @@ namespace Raven.Server.Documents.ETL
             }
 
             var totalAllocated = _threadAllocations.TotalAllocated + ctx.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
-            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
-            var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
+            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated.GetValue(SizeUnit.Bytes);
 
-            stats.RecordCurrentlyAllocated(totalAllocated + GC.GetAllocatedBytesForCurrentThread());
+            stats.RecordCurrentlyAllocated(totalAllocated.GetValue(SizeUnit.Bytes) + GC.GetAllocatedBytesForCurrentThread());
 
-            if (currentlyInUse > _currentMaximumAllowedMemory)
+            if (totalAllocated > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        currentlyInUse,
+                        totalAllocated,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out var memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
                     if (memoryUsage != null)
                     {
                         reason += " Current memory usage: " +

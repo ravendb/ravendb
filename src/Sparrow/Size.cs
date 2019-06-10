@@ -154,6 +154,16 @@ namespace Sparrow
             return new Size(x._valueInBytes + y._valueInBytes, SizeUnit.Bytes);
         }
 
+        public static Size operator +(Size x, long y)
+        {
+            return new Size(x._valueInBytes + y, SizeUnit.Bytes);
+        }
+
+        public static Size operator +(long x, Size y)
+        {
+            return new Size(x + y._valueInBytes, SizeUnit.Bytes);
+        }
+
         public static Size operator -(Size x, Size y)
         {
             return new Size(x._valueInBytes - y._valueInBytes, SizeUnit.Bytes);

@@ -4,6 +4,7 @@ using System.Threading;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Constants = Voron.Global.Constants;
 
@@ -72,7 +73,7 @@ namespace Raven.Server.Documents
 
                 if (_maxTransactionSizeInPages != null &&
                     context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages +
-                    context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize / Constants.Storage.PageSize > _maxTransactionSizeInPages)
+                    context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) / Constants.Storage.PageSize > _maxTransactionSizeInPages)
                     break;
             }
 

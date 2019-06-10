@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sparrow;
 
 namespace Voron.Impl.Paging
 {
@@ -30,14 +31,14 @@ namespace Voron.Impl.Paging
             get; set;
         }
 
-        public long TotalEncryptionBufferSize
+        public Size TotalEncryptionBufferSize
         {
             get
             {
                 var cryptoTransactionStates = CryptoPagerTransactionState;
                 if (cryptoTransactionStates == null)
                 {
-                    return 0L;
+                    return new Size(0, SizeUnit.Bytes);
                 }
 
                 var total = 0L;
@@ -46,7 +47,8 @@ namespace Voron.Impl.Paging
                     total += state.TotalCryptoBufferSize;
                 }
 
-                return total;
+                return new Size(total, SizeUnit.Bytes);
+                ;
             }
         }
 
