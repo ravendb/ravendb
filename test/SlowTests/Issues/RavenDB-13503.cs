@@ -24,6 +24,8 @@ namespace SlowTests.Issues
                             IntegerNumber2 = 2,
                             DecimalNumber1 = 3,
                             DecimalNumber2 = 2,
+                            DoubleNumber1 = 300.33,
+                            DoubleNumber2 = 400.32,
                             String = "Or"
                         }
                     };
@@ -42,6 +44,9 @@ namespace SlowTests.Issues
                                           IntegerSum = doc.IntegerNumber1 + doc.IntegerNumber2,
                                           IntegerDup = doc.IntegerNumber1 * doc.IntegerNumber2,
                                           DecimalSum = doc.DecimalNumber1 + doc.DecimalNumber2,
+                                          DoubleSum =  doc.DoubleNumber1 + doc.DoubleNumber2,
+                                          DoubleAndStringSum =  doc.String + doc.DoubleNumber2,
+                                          DoubleAndIntSum =  doc.IntegerNumber1 + doc.DoubleNumber2,
                                           StringSum = doc.String + doc.IntegerNumber2
                                       })
                         .Single();
@@ -49,7 +54,10 @@ namespace SlowTests.Issues
                     Assert.Equal(5, projection.IntegerSum);
                     Assert.Equal(5, projection.DecimalSum);
                     Assert.Equal(6, projection.IntegerDup);
+                    Assert.Equal(700.65, projection.DoubleSum);
                     Assert.Equal("Or2", projection.StringSum);
+                    Assert.Equal(403.32, projection.DoubleAndIntSum);
+                    Assert.Equal("Or400.32", projection.DoubleAndStringSum);
                 }
             }
         }
@@ -57,8 +65,11 @@ namespace SlowTests.Issues
         private class Result
         {
             public int IntegerSum { get; set; }
+            public double DoubleSum { get; set; }
             public decimal DecimalSum { get; set; }
             public string StringSum { get; set; }
+            public string DoubleAndStringSum { get; set; }
+            public double DoubleAndIntSum { get; set; }
             public int IntegerDup { get; set; }
         }
 
@@ -74,6 +85,8 @@ namespace SlowTests.Issues
             public int IntegerNumber2;
             public decimal DecimalNumber1;
             public decimal DecimalNumber2;
+            public double DoubleNumber1;
+            public double DoubleNumber2;
             public string String;
         }
 
@@ -85,6 +98,8 @@ namespace SlowTests.Issues
                 public int IntegerNumber2;
                 public decimal DecimalNumber1;
                 public decimal DecimalNumber2;
+                public double DoubleNumber1;
+                public double DoubleNumber2;
                 public  string String;
             }
 
@@ -97,6 +112,8 @@ namespace SlowTests.Issues
                         IntegerNumber2 = doc.Statistics.IntegerNumber2,
                         DecimalNumber1 = doc.Statistics.DecimalNumber1,
                         DecimalNumber2 = doc.Statistics.DecimalNumber2,
+                        DoubleNumber1 = doc.Statistics.DoubleNumber1,
+                        DoubleNumber2 = doc.Statistics.DoubleNumber2,
                         String = doc.Statistics.String
                     };
 
