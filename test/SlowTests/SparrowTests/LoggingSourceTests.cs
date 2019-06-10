@@ -290,7 +290,9 @@ namespace SlowTests.SparrowTests
                 var current = list[i];
                 if (previous.Date == current.Date && previous.Number + 1 != current.Number)
                 {
-                    if (previous.Number == current.Number && Path.GetExtension(current.FileName) == ".gz")
+                    if (previous.Number == current.Number && 
+                        (Path.GetExtension(previous.FileName) == ".gz" && Path.GetExtension(current.FileName) == ".log") ||
+                        (Path.GetExtension(previous.FileName) == ".log" && Path.GetExtension(current.FileName) == ".gz"))
                         continue;
 
                     exceptions.Add(new Exception($"Log between {previous.FileName} and {current.FileName} is missing"));
