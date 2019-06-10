@@ -345,6 +345,12 @@ namespace Sparrow.Logging
             public static bool TryGetDate(string fileName, out DateTime dateTime)
             {
                 var logPosition = fileName.LastIndexOf(".log", StringComparison.Ordinal);
+                if (logPosition <= 0)
+                {
+                    dateTime = default;
+                    return false;
+                }
+
                 var start = fileName.LastIndexOf(".", logPosition - 1, StringComparison.Ordinal) - DateFormatLength;
 
                 // if we are scanning C:\Users\UserName\AppData\Local\Temp\  
