@@ -10,11 +10,9 @@ namespace Sparrow.Server.Platform
         public const int PAL_VER = 42009; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
-        {
-            bool win7x = true;
+        {            
             var toFilename = LIBRVNPAL;
-            string fromFilename;
-            var win7 = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && win7x ? "7" : "";
+            string fromFilename;         
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
@@ -36,6 +34,17 @@ namespace Sparrow.Server.Platform
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
+                var win7 = "";
+                var osdesc = RuntimeInformation.OSDescription.Split(new[] { "Windows " }, StringSplitOptions.RemoveEmptyEntries);
+                if (osdesc.Length > 1)
+                {
+                    var os = osdesc[1].Split('.');
+                    if (os.Length > 1 && os[0].Equals("6") &&
+                        int.TryParse(new String(new[] {os[1][0]}), out var subver) &&
+                        subver < 2) // e.x. : "Microsoft Windows 6.1.7601 S" for windows 7, 6.0.x for Windows Server 2008..
+                        win7 = "7";
+                }
+
                 fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win{win7}.x64.dll" : $"{toFilename}.win{win7}.x86.dll";
                 toFilename += ".dll";
             }
