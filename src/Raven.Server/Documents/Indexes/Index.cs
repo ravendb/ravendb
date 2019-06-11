@@ -3226,7 +3226,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         if (DocumentDatabase.IsEncrypted)
                         {
-                            return new Size(64, SizeUnit.Megabytes);
+                            return Configuration.EncryptedTransactionSizeLimit;
                         }
 
                         return null;
