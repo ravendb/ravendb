@@ -24,7 +24,8 @@ rvn_write_header (const char *path, void *header, int32_t size,
 		goto error_cleanup;
 	}
 
-	if ( !WriteFile(file, header, size, NULL, NULL) ){
+    int32_t bytesWritten;
+	if ( !WriteFile(file, header, size, &bytesWritten, NULL) ){
 		rc = FAIL_WRITE_FILE;
 		goto error_cleanup;	
 	}

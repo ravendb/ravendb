@@ -10,6 +10,7 @@
 EXPORT int32_t
 rvn_prefetch_virtual_memory(void *virtual_address, int64_t length, int32_t *detailed_error_code)
 {
+#ifndef RVN_WIN7
     HANDLE handle = GetCurrentProcess();
     WIN32_MEMORY_RANGE_ENTRY entry;
     entry.NumberOfBytes = (SIZE_T)length;
@@ -20,7 +21,7 @@ rvn_prefetch_virtual_memory(void *virtual_address, int64_t length, int32_t *deta
         *detailed_error_code = GetLastError();
         return FAIL_PREFETCH;
     }
-
+#endif
     return SUCCESS;
 }
 
@@ -28,6 +29,7 @@ EXPORT int32_t
 rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *detailed_error_code)
 {
     int32_t rc;
+#ifndef RVN_WIN7
     HANDLE handle = GetCurrentProcess();
 
     WIN32_MEMORY_RANGE_ENTRY entries[16];
@@ -59,7 +61,7 @@ rvn_prefetch_ranges(struct RVN_RANGE_LIST *range_list, int32_t count, int32_t *d
 
         range_list += internal_count;
     } while (count > 0);
-
+#endif
     return SUCCESS;
 error_cleanup:
     *detailed_error_code = GetLastError();
