@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow.Platform;
 
 namespace Sparrow.Server.Platform
 {
@@ -34,16 +35,7 @@ namespace Sparrow.Server.Platform
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var win7 = "";
-                var osdesc = RuntimeInformation.OSDescription.Split(new[] { "Windows " }, StringSplitOptions.RemoveEmptyEntries);
-                if (osdesc.Length > 1)
-                {
-                    var os = osdesc[1].Split('.');
-                    if (os.Length > 1 && os[0].Equals("6") &&
-                        int.TryParse(new String(new[] {os[1][0]}), out var subver) &&
-                        subver < 2) // e.x. : "Microsoft Windows 6.1.7601 S" for windows 7, 6.0.x for Windows Server 2008..
-                        win7 = "7";
-                }
+                var win7 = PlatformDetails.IsWindows8OrNewer ? "" : "7";
 
                 fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win{win7}.x64.dll" : $"{toFilename}.win{win7}.x86.dll";
                 toFilename += ".dll";
