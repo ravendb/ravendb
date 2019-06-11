@@ -106,6 +106,9 @@ namespace Raven.Server.Https
                 }
             }
 
+            if (_server.ServerStore.Initialized == false)
+                await _server.ServerStore.InitializationCompleted.WaitAsync();
+
             var tls = context.Features.Get<ITlsConnectionFeature>();
             var certificate = tls?.ClientCertificate;
             var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
