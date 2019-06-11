@@ -33,10 +33,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         public Document Get(Document doc)
         {
-            return GetProjectionFromDocument(doc, null, 0, FieldsToFetch, _context, null);
+            return GetProjectionFromDocument(doc, null, FieldsToFetch, _context, null);
         }      
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
+        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state, int resultIndex)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Queries.Results
                     key = fieldToFetch.ProjectedName ?? (fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value);
                     fieldVal = GetFunctionValue(fieldToFetch, null, args);
 
-                    var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
+                    var immediateResult = AddProjectionToResult(item, FieldsToFetch, result, key, fieldVal);
                     if (immediateResult != null)
                         return immediateResult;
                 }
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
                                 continue;
                             d.EnsureMetadata();
-                            var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
+                            var immediateResult = AddProjectionToResult(d, FieldsToFetch, result, key, fieldVal);
                             if (immediateResult != null)
                                 return immediateResult;
                             break;
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
                                 continue;
                             doc.EnsureMetadata();
-                            var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
+                            var immediateResult = AddProjectionToResult(doc, FieldsToFetch, result, key, fieldVal);
                             if (immediateResult != null)
                                 return immediateResult;
                             break;

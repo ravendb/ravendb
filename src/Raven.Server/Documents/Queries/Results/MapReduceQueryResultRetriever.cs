@@ -68,17 +68,20 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
+        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state, int resultIndex)
         {
             if (FieldsToFetch.IsProjection)
-                return GetProjection(input, score, null, state);
+            {
+                var proj = GetProjection(input, null, state);
+                FinishDocumentSetup(proj, score, resultIndex);
+                return proj;
+            }
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
                 var doc = DirectGet(input, null, DocumentFields.All, state);
 
-                if (doc != null)
-                    doc.IndexScore = score;
+                FinishDocumentSetup(doc, score, resultIndex);
 
                 return doc;
             }

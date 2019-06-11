@@ -2454,7 +2454,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
-                                IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
+                                IEnumerable<IndexReadOperation.QueryResult> documents;
 
                                 if (query.Metadata.HasMoreLikeThis)
                                 {
