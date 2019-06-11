@@ -48,13 +48,24 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
+            : this(mem, size, context)
+        {
+            _buffer = buffer;
+        }
+
+        private BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, AllocatedMemoryData allocatedMemory)
+            : this(mem, size, context)
+        {
+            _allocatedMemory = allocatedMemory;
+        }
+
+        private BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context)
             : base(context)
         {
             if (size == 0)
                 ThrowOnZeroSize(size);
 
             _isRoot = true;
-            _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
 
@@ -834,7 +845,7 @@ namespace Sparrow.Json
 
             if (_mem == null) //double dispose will do nothing
                 return;
-            if (_allocatedMemory != null && _buffer.IsDisposed == false)
+            if (_allocatedMemory != null)
             {
                 _context.ReturnMemory(_allocatedMemory);
                 _allocatedMemory = null;
@@ -888,10 +899,7 @@ namespace Sparrow.Json
             var mem = context.GetMemory(Size);
 
             CopyTo(mem.Address);
-            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context)
-            {
-                _allocatedMemory = mem
-            };
+            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context, mem);
             if (Modifications != null)
             {
                 cloned.Modifications = new DynamicJsonValue(cloned);

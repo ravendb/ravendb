@@ -698,7 +698,7 @@ namespace Sparrow
 
 
         private const int ExternalFastPoolSize = 16;
-        private int _externalAlignedSize = 0;
+        private readonly int _externalAlignedSize = (sizeof(ByteStringStorage) + (sizeof(long) - sizeof(ByteStringStorage) % sizeof(long)));
         private int _externalCurrentLeft = 0;
         private int _externalFastPoolCount = 0;
         private readonly IntPtr[] _externalFastPool = new IntPtr[ExternalFastPoolSize];
@@ -796,7 +796,7 @@ namespace Sparrow
             return $"Allocated {Sizes.Humane(_currentlyAllocated)} / {Sizes.Humane(_totalAllocated)}";
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
@@ -1163,7 +1163,6 @@ namespace Sparrow
             byte* end = start + memorySegment.Size;
 
             _externalCurrent = new SegmentInformation ( memorySegment, start, end, true );
-            _externalAlignedSize = (sizeof(ByteStringStorage) + (sizeof(long) - sizeof(ByteStringStorage) % sizeof(long)));
             _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
 
             _wholeSegments.Add(_externalCurrent);
