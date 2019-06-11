@@ -1523,6 +1523,12 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
+            if (document.Distance != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(Constants.Documents.Metadata.Distance);
+                writer.WriteDouble(document.Distance.Value);
+            }
             if (document.LastModified != DateTime.MinValue)
             {
                 writer.WriteComma();

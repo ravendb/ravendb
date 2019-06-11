@@ -20,6 +20,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
+        public double? Distance;
         public string ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
@@ -72,6 +73,8 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.LastModified] = LastModified;
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
+            if (Distance.HasValue)
+                mutatedMetadata[Constants.Documents.Metadata.Distance] = Distance;
 
             _hash = null;
         }
