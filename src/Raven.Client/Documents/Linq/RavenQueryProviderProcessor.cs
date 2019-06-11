@@ -2377,15 +2377,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (IsRaw(expression, name))
                 return;
 
-            var expressionType = expression.Arguments[1].NodeType;
-
             // if _declareBuilder != null then we already have an 'output' function
             // the load-argument might depend on previous statements inside the function body
             // use js load() method instead of a LoadToken
-            var shouldUseLoadToken = expressionType != ExpressionType.Conditional &&
-                                     expressionType != ExpressionType.Call &&
-                                     _declareBuilder == null;
-                                     
+            var shouldUseLoadToken = _declareBuilder == null &&
+                                     expression.Arguments[1].NodeType != ExpressionType.Conditional &&
+                                     (!(expression.Arguments[1] is MethodCallExpression mce) || mce.Method.Name == nameof(RavenQuery.Load));
 
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
             var js = ToJs(expression.Arguments[1], false, loadSupport);
