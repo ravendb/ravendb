@@ -39,7 +39,6 @@ namespace Raven.Server.Documents.Queries
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select, DocumentDatabase database = null)
             : this(ParseQuery(query, queryType, database), parameters, cacheKey)
         {
-
         }
 
         private static Query ParseQuery(string q, QueryType queryType, DocumentDatabase database = null)
@@ -419,11 +418,13 @@ namespace Raven.Server.Documents.Queries
 
                         AddInclude(include, fe.FieldValue);
                         break;
+
                     case ValueExpression ve:
                         HasIncludeOrLoad = true;
 
                         AddInclude(include, ve.Token.Value);
                         break;
+
                     case MethodExpression me:
                         var methodType = QueryMethod.GetMethodType(me.Name.Value);
                         switch (methodType)
@@ -441,6 +442,7 @@ namespace Raven.Server.Documents.Queries
 
                                 highlightings.Add(CreateHighlightingField(me, parameters));
                                 break;
+
                             case MethodType.Explanation:
                                 if (IsCollectionQuery)
                                     throw new InvalidQueryException("Collection queries cannot return explanations.", QueryText, parameters);
@@ -453,10 +455,12 @@ namespace Raven.Server.Documents.Queries
                                 Explanation = CreateExplanationField(me);
                                 HasExplanations = true;
                                 break;
+
                             case MethodType.Timings:
                                 QueryValidator.ValidateTimings(me.Arguments, QueryText, parameters);
                                 HasTimings = true;
                                 break;
+
                             case MethodType.Counters:
                                 QueryValidator.ValidateIncludeCounter(me.Arguments, QueryText, parameters);
 
@@ -468,10 +472,12 @@ namespace Raven.Server.Documents.Queries
 
                                 AddToCounterIncludes(CounterIncludes, me, parameters);
                                 break;
+
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
                         }
                         break;
+
                     default:
                         throw new InvalidQueryException("Unable to figure out how to deal with include of type " + include.Type, QueryText, parameters);
                 }
@@ -512,9 +518,11 @@ namespace Raven.Server.Documents.Queries
                     case 1:
                         result.AddFragmentLength(ve.Token.Value, ve.Value);
                         break;
+
                     case 2:
                         result.AddFragmentCount(ve.Token.Value, ve.Value);
                         break;
+
                     case 3:
                         result.AddOptions(ve.Token.Value, ve.Value);
                         break;
@@ -602,7 +610,6 @@ namespace Raven.Server.Documents.Queries
                     {
                         sourcePath = value.PropertyPath;
                     }
-
                     else if (fe.FieldValue != null)
                     {
                         if (Query.From.Alias?.Value == null)
@@ -646,7 +653,6 @@ namespace Raven.Server.Documents.Queries
                 var value = QueryBuilder.GetValue(Query, this, parameters, vt);
 
                 AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
-
             }
         }
 
@@ -770,6 +776,7 @@ namespace Raven.Server.Documents.Queries
                     case OrderByFieldType.AlphaNumeric:
                     case OrderByFieldType.String:
                         return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id);
+
                     default:
                         throw new InvalidQueryException("Invalid ORDER BY 'id()' call, this field can only be sorted as a string or alphanumeric value, but got " + orderingType, QueryText, parameters);
                 }
@@ -857,12 +864,15 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(expression.Arguments, QueryText, parameters);
                         break;
+
                     case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(expression.Arguments, QueryText, parameters);
                         break;
+
                     case MethodType.Spatial_Point:
                         QueryValidator.ValidatePoint(expression.Arguments, QueryText, parameters);
                         break;
+
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -908,7 +918,6 @@ namespace Raven.Server.Documents.Queries
 
                     if (!(me.Arguments[0] is FieldExpression sumFieldToken))
                         throw new InvalidQueryException("Invalid ORDER BY sum call, expected field value, go " + me.Arguments[0], QueryText, parameters);
-
 
                     if (orderingType == OrderByFieldType.Implicit)
                     {
@@ -970,7 +979,6 @@ namespace Raven.Server.Documents.Queries
 
                     if (selectField.Alias != null)
                     {
-
                         if (selectField.IsGroupByKey == false)
                         {
                             _aliasToName[selectField.Alias] = selectField.Name;
@@ -1001,7 +1009,6 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
-
             if (expression is ValueExpression ve)
             {
                 if (HasFacet)
@@ -1155,6 +1162,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         case "key":
                             return SelectField.CreateGroupByKeyField(alias, GroupBy);
+
                         default:
                             ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName, QueryText, parameters);
                             return null; // never hit
@@ -1176,6 +1184,7 @@ namespace Raven.Server.Documents.Queries
                             ThrowInvalidAggregationMethod(parameters, methodName);
                         fieldName = QueryFieldName.Count;
                         break;
+
                     case AggregationOperation.Sum:
                         if (IsGroupBy == false)
                             ThrowInvalidAggregationMethod(parameters, methodName);
@@ -1272,18 +1281,23 @@ namespace Raven.Server.Documents.Queries
 
                             result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], me.Name.Value, parameters, QueryText);
                             break;
+
                         case MethodType.Average:
                             AddFacetAggregation(me, result, FacetAggregation.Average, parameters);
                             break;
+
                         case MethodType.Sum:
                             AddFacetAggregation(me, result, FacetAggregation.Sum, parameters);
                             break;
+
                         case MethodType.Min:
                             AddFacetAggregation(me, result, FacetAggregation.Min, parameters);
                             break;
+
                         case MethodType.Max:
                             AddFacetAggregation(me, result, FacetAggregation.Max, parameters);
                             break;
+
                         default:
                             ThrowInvalidAggregationMethod(parameters, me.Name.Value);
                             break;
@@ -1505,7 +1519,6 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'", queryText, parameters);
         }
 
-
         private static void ThrowMissingFieldNameArgumentOfSumMethod(string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)", queryText, parameters);
@@ -1612,7 +1625,6 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Cannot use GROUP BY in a suggestion query", QueryText, parameters);
         }
 
-
         private void ThrowSuggestMethodArgumentMustBeValue(int index, QueryExpression argument, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Argument at index '{index}' in suggest() must be a value but was '{argument.GetType()}'", QueryText, parameters);
@@ -1682,10 +1694,12 @@ namespace Raven.Server.Documents.Queries
                                 _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType);
                             }
                             break;
+
                         case MethodType.Sum:
                         case MethodType.Count:
                             VisitFieldToken(leftSide, rightSide, parameters, null);
                             break;
+
                         default:
                             throw new ArgumentException($"The method {methodType} on the left side inside the WHERE clause is not supported.");
                     }
@@ -1721,9 +1735,11 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Id:
                             _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType);
                             break;
+
                         case MethodType.Count:
                             _metadata.AddWhereField(QueryFieldName.Count, parameters, exact: _insideExact > 0);
                             break;
+
                         case MethodType.Sum:
                             if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
                                 VisitFieldToken(f, value, parameters, operatorType);
@@ -1759,7 +1775,6 @@ namespace Raven.Server.Documents.Queries
 
                 if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
-
             }
 
             public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
@@ -1844,6 +1859,7 @@ namespace Raven.Server.Documents.Queries
 
                         _metadata.AddWhereField(QueryFieldName.DocumentId, parameters);
                         break;
+
                     case MethodType.StartsWith:
                     case MethodType.EndsWith:
                     case MethodType.Search:
@@ -1863,10 +1879,12 @@ namespace Raven.Server.Documents.Queries
                         else
                             _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName.Value);
                         break;
+
                     case MethodType.Exists:
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
                         _metadata.AddExistField(fieldName, parameters);
                         break;
+
                     case MethodType.Boost:
                         _metadata.HasBoost = true;
                         var firstArg = arguments.Count == 0 ? null : arguments[0];
@@ -1876,6 +1894,7 @@ namespace Raven.Server.Documents.Queries
 
                         Visit(firstArg, parameters);
                         break;
+
                     case MethodType.Intersect:
                         _metadata.HasIntersect = true;
 
@@ -1885,6 +1904,7 @@ namespace Raven.Server.Documents.Queries
                             Visit(expressionArgument, parameters);
                         }
                         return;
+
                     case MethodType.Exact:
                         if (arguments.Count != 1)
                             throw new InvalidQueryException($"Method {methodName}() expects one argument, got " + arguments.Count, QueryText, parameters);
@@ -1895,27 +1915,34 @@ namespace Raven.Server.Documents.Queries
                             Visit(expressionArgument, parameters);
                         }
                         return;
+
                     case MethodType.Count:
                         // nothing needs to be done here
                         return;
+
                     case MethodType.Sum:
                         HandleSum(arguments, parameters);
                         return;
+
                     case MethodType.Spatial_Within:
                     case MethodType.Spatial_Contains:
                     case MethodType.Spatial_Disjoint:
                     case MethodType.Spatial_Intersects:
                         HandleSpatial(methodName.Value, arguments, parameters);
                         return;
+
                     case MethodType.MoreLikeThis:
                         HandleMoreLikeThis(methodName.Value, arguments, parameters);
                         return;
+
                     case MethodType.Fuzzy:
                         HandleFuzzy(methodName.Value, arguments, parameters);
                         return;
+
                     case MethodType.Proximity:
                         HandleProximity(methodName.Value, arguments, parameters);
                         return;
+
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2027,6 +2054,7 @@ namespace Raven.Server.Documents.Queries
                                 wkt
                             });
                             break;
+
                         case MethodType.Spatial_Point:
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
@@ -2040,6 +2068,7 @@ namespace Raven.Server.Documents.Queries
                                 longitude
                             });
                             break;
+
                         default:
                             throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() or wkt() method", QueryText, parameters);
                     }
@@ -2071,9 +2100,11 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(shapeExpression.Arguments, QueryText, parameters);
                         break;
+
                     case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
                         break;
+
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2081,7 +2112,6 @@ namespace Raven.Server.Documents.Queries
 
                 _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, spatial: fieldOptions);
             }
-
 
             private void HandleSum(List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
@@ -2127,7 +2157,7 @@ namespace Raven.Server.Documents.Queries
 
             var updateBody = Query.UpdateBody;
 
-            if (Query.From.Alias == null) // will have to use this 
+            if (Query.From.Alias == null) // will have to use this
             {
                 if (Query.Load != null)
                     throw new InvalidQueryException("When using LOAD, a from alias is required", QueryText, parameters);
@@ -2179,17 +2209,21 @@ namespace Raven.Server.Documents.Queries
                     case Identifier identifier when currentProp == null:
                         currentProp = identifier;
                         break;
+
                     case ArrowFunctionExpression arrowFunction:
                         RemoveFromUnknowns(arrowFunction.Params);
                         break;
+
                     case FunctionExpression functionExpression:
                         RemoveFromUnknowns(functionExpression.Params);
                         break;
+
                     case Property prop when prop.Key == currentProp:
                         if (maybeUnknowns?.Count > 0)
                             ThrowUnknownAlias(maybeUnknowns.First(), parameters);
                         currentProp = null;
                         break;
+
                     case StaticMemberExpression sme when sme.Object is Identifier id &&
                                                          UnknownIdentifier(id.Name):
                         maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
@@ -2231,4 +2265,3 @@ namespace Raven.Server.Documents.Queries
         }
     }
 }
-

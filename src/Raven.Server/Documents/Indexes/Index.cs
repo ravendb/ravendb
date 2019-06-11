@@ -112,6 +112,7 @@ namespace Raven.Server.Documents.Indexes
         /// Cancelled if the database is in shutdown process.
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
+
         private bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
@@ -331,6 +332,7 @@ namespace Raven.Server.Documents.Indexes
                                 case IndexType.Map:
                                 case IndexType.JavaScriptMap:
                                     return MapIndex.CreateNew(staticDef, documentDatabase);
+
                                 case IndexType.MapReduce:
                                 case IndexType.JavaScriptMapReduce:
                                     return MapReduceIndex.CreateNew(staticDef, documentDatabase);
@@ -356,14 +358,18 @@ namespace Raven.Server.Documents.Indexes
                 {
                     case IndexType.AutoMap:
                         return AutoMapIndex.Open(environment, documentDatabase);
+
                     case IndexType.AutoMapReduce:
                         return AutoMapReduceIndex.Open(environment, documentDatabase);
+
                     case IndexType.Map:
                     case IndexType.JavaScriptMap:
                         return MapIndex.Open(environment, documentDatabase);
+
                     case IndexType.MapReduce:
                     case IndexType.JavaScriptMapReduce:
                         return MapReduceIndex.Open(environment, documentDatabase);
+
                     default:
                         throw new ArgumentException($"Unknown index type {type} for index {name}");
                 }
@@ -412,7 +418,9 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual bool IsMultiMap => false;
 
-        public virtual void ResetIsSideBySideAfterReplacement() { }
+        public virtual void ResetIsSideBySideAfterReplacement()
+        {
+        }
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {
@@ -841,7 +849,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             if (Type == IndexType.Faulty)
@@ -1048,7 +1055,7 @@ namespace Raven.Server.Documents.Indexes
                                     catch
                                     {
                                         // need to call it here to the let the index continue running
-                                        // we'll stop when we reach the index error threshold 
+                                        // we'll stop when we reach the index error threshold
                                         _mre.Set();
                                         throw;
                                     }
@@ -1256,7 +1263,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 // allocation cleanup has been requested multiple times or
                                 // there is no work to be done, and hasn't been for a while,
-                                // so this is a good time to release resources we won't need 
+                                // so this is a good time to release resources we won't need
                                 // anytime soon
                                 ReduceMemoryUsage(storageEnvironment);
 
@@ -1359,12 +1366,15 @@ namespace Raven.Server.Documents.Indexes
                 case IndexPriority.Low:
                     newPriority = ThreadPriority.Lowest;
                     break;
+
                 case IndexPriority.Normal:
                     newPriority = ThreadPriority.BelowNormal;
                     break;
+
                 case IndexPriority.High:
                     newPriority = ThreadPriority.Normal;
                     break;
+
                 default:
                     throw new NotSupportedException($"Unknown priority: {priority}");
             }
@@ -2379,9 +2389,9 @@ namespace Raven.Server.Documents.Indexes
                     AssertIndexState();
                     marker.HoldLock();
 
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
+                    // we take the awaiter _before_ the indexing transaction happens,
+                    // so if there are any changes, it will already happen to it, and we'll
+                    // query the index again. This is important because of:
                     // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                     var frozenAwaiter = GetIndexingBatchAwaiter();
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
@@ -2498,7 +2508,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<(Document Result, Dictionary<string,Dictionary<string,string[]>> Highlightings, ExplanationResult Explanation), QueryResultsIterationState>(documentsContext,
+                                        enumerator = new PulsedTransactionEnumerator<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation), QueryResultsIterationState>(documentsContext,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(documentsContext, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
                                     }
@@ -2701,9 +2711,9 @@ namespace Raven.Server.Documents.Indexes
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
-                        // we take the awaiter _before_ the indexing transaction happens, 
-                        // so if there are any changes, it will already happen to it, and we'll 
-                        // query the index again. This is important because of: 
+                        // we take the awaiter _before_ the indexing transaction happens,
+                        // so if there are any changes, it will already happen to it, and we'll
+                        // query the index again. This is important because of:
                         // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                         var frozenAwaiter = GetIndexingBatchAwaiter();
                         using (var indexTx = indexContext.OpenReadTransaction())
@@ -2745,7 +2755,6 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
                     }
-
                 }
             }
         }
@@ -2802,9 +2811,9 @@ namespace Raven.Server.Documents.Indexes
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
-                        // we take the awaiter _before_ the indexing transaction happens, 
-                        // so if there are any changes, it will already happen to it, and we'll 
-                        // query the index again. This is important because of: 
+                        // we take the awaiter _before_ the indexing transaction happens,
+                        // so if there are any changes, it will already happen to it, and we'll
+                        // query the index again. This is important because of:
                         // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
                         var frozenAwaiter = GetIndexingBatchAwaiter();
                         using (var indexTx = indexContext.OpenReadTransaction())
@@ -3123,7 +3132,6 @@ namespace Raven.Server.Documents.Indexes
         protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale, IndexState indexState,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-
             foreach (var collection in Collections)
             {
                 var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
@@ -3193,7 +3201,6 @@ namespace Raven.Server.Documents.Indexes
 
             return etags;
         }
-
 
         private void AddIndexingPerformance(IndexingStatsAggregator stats)
         {
@@ -3284,11 +3291,13 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.JavaScriptMap:
                         _minBatchSize = MinMapBatchSize;
                         break;
+
                     case IndexType.MapReduce:
                     case IndexType.AutoMapReduce:
                     case IndexType.JavaScriptMapReduce:
                         _minBatchSize = MinMapReduceBatchSize;
                         break;
+
                     default:
                         throw new ArgumentException($"Unknown index type {Type}");
                 }
@@ -3594,7 +3603,6 @@ namespace Raven.Server.Documents.Indexes
                 PathSetting compactPath = null;
                 PathSetting tempPath = null;
 
-
                 try
                 {
                     var storageEnvironmentOptions = _environment.Options;
@@ -3726,7 +3734,6 @@ namespace Raven.Server.Documents.Indexes
             return Math.Max(lastDocEtag, lastTombstoneEtag);
         }
 
-
         public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
             return collection == Constants.Documents.Collections.AllDocumentsCollection
@@ -3844,7 +3851,7 @@ namespace Raven.Server.Documents.Indexes
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
-            readonly Index _parent;
+            private readonly Index _parent;
             private bool _hasLock;
 
             public IndexQueryDoneRunning(Index parent)

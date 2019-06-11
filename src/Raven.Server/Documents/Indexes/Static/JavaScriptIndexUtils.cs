@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             // here we only traverse the single statement, we don't try to traverse into
             // complex expression, etc. This is to avoid too much complexity such as:
-            // return (function() { return { a: 1})();, etc. 
+            // return (function() { return { a: 1})();, etc.
             switch (stmt?.Type)
             {
                 case null:
@@ -32,10 +32,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 case Nodes.BlockStatement:
                     return GetReturnStatements(((BlockStatement)stmt).Body);
+
                 case Nodes.DoWhileStatement:
                     return GetReturnStatements(((DoWhileStatement)stmt).Body);
+
                 case Nodes.ForStatement:
                     return GetReturnStatements(((ForStatement)stmt).Body);
+
                 case Nodes.ForInStatement:
                     return GetReturnStatements(((ForInStatement)stmt).Body);
 
@@ -55,7 +58,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 case Nodes.WhileStatement:
                     return GetReturnStatements(((WhileStatement)stmt).Body);
-
 
                 case Nodes.WithStatement:
                     return GetReturnStatements(((WithStatement)stmt).Body);
@@ -112,7 +114,15 @@ namespace Raven.Server.Documents.Indexes.Static
             if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
                 changeVector = cv;
 
+            //if (dbj.TryGetDocument(out var doc))
+            //{
+            //    jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, doc);
+            //}
+            //else
+            //{
             jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, lastModified, changeVector);
+            //}
+
             return true;
         }
 

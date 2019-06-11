@@ -52,7 +52,7 @@ namespace Raven.Server.Json
             writer.WriteArray(context, "Results", stats, (w, c, taskStats) =>
             {
                 w.WriteStartObject();
-                
+
                 w.WritePropertyName(nameof(taskStats.TaskId));
                 w.WriteInteger(taskStats.TaskId);
                 w.WriteComma();
@@ -60,7 +60,7 @@ namespace Raven.Server.Json
                 w.WritePropertyName(nameof(taskStats.TaskName));
                 w.WriteString(taskStats.TaskName);
                 w.WriteComma();
-                
+
                 w.WritePropertyName(nameof(taskStats.EtlType));
                 w.WriteString(taskStats.EtlType.ToString());
                 w.WriteComma();
@@ -171,7 +171,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -194,7 +195,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -327,7 +329,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -354,7 +357,8 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.CappedMaxResults != null) {
+            if (result.CappedMaxResults != null)
+            {
                 writer.WritePropertyName(nameof(result.CappedMaxResults));
                 writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
@@ -439,7 +443,6 @@ namespace Raven.Server.Json
 
             writer.WriteEndObject();
             return numberOfResults;
-
         }
 
         private static void WriteIncludedCounterNames(AsyncBlittableJsonTextWriter writer, DocumentQueryResult result)
@@ -666,7 +669,6 @@ namespace Raven.Server.Json
             }
             else
                 writer.WriteNull();
-
 
             writer.WriteEndObject();
         }
@@ -1225,7 +1227,6 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-
                 WriteDocument(writer, context, documents.Current, metadataOnly);
             }
 
@@ -1269,7 +1270,7 @@ namespace Raven.Server.Json
                 return;
             }
 
-            // Explicitly not disposing it, a single document can be 
+            // Explicitly not disposing it, a single document can be
             // used multiple times in a single query, for example, due to projections
             // so we will let the context handle it, rather than handle it directly ourselves
             //using (document.Data)
@@ -1471,7 +1472,6 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-
         public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
             Document document)
         {
@@ -1523,7 +1523,6 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Id);
-
             }
             if (document.IndexScore != null)
             {
@@ -1531,6 +1530,22 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
+            //if (document.Distance != null)
+            //{
+            //    writer.WriteComma();
+            //    var result = document.Distance.Value;
+            //    writer.WritePropertyName(Constants.Documents.Metadata.SpatialResult);
+            //    writer.WriteStartObject();
+            //    writer.WritePropertyName(nameof(result.Distance));
+            //    writer.WriteDouble(result.Distance);
+            //    writer.WriteComma();
+            //    writer.WritePropertyName(nameof(result.Latitude));
+            //    writer.WriteDouble(result.Latitude);
+            //    writer.WriteComma();
+            //    writer.WritePropertyName(nameof(result.Longitude));
+            //    writer.WriteDouble(result.Longitude);
+            //    writer.WriteEndObject();
+            //}
             if (document.LastModified != DateTime.MinValue)
             {
                 writer.WriteComma();
@@ -1551,7 +1566,6 @@ namespace Raven.Server.Json
 
         private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
-       
             var first = true;
             BlittableJsonReaderObject metadata = null;
             var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
@@ -1766,4 +1780,3 @@ namespace Raven.Server.Json
         }
     }
 }
-

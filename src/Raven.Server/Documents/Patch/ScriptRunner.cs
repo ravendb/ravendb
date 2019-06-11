@@ -14,10 +14,12 @@ using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
@@ -25,6 +27,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Spatial4n.Core.Distance;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
@@ -39,7 +42,7 @@ namespace Raven.Server.Documents.Patch
         public readonly List<string> ScriptsSource = new List<string>();
 
         public long Runs;
-        DateTime _lastRun;
+        private DateTime _lastRun;
 
         public string ScriptType { get; internal set; }
 
@@ -142,7 +145,6 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
                         .LocalTimeZone(TimeZoneInfo.Utc);
-
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
@@ -150,9 +152,19 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
 
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
+
+                //console.log
                 ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
                 consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
                 ScriptEngine.SetValue("console", consoleObject);
+
+                //spatial.distance
+                //ObjectInstance spatialObject = new ObjectInstance(ScriptEngine);
+                //var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
+                //spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
+                //ScriptEngine.SetValue("spatial", spatialObject);
+                //ScriptEngine.SetValue("spatial.distance", spatialFunc);
+
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
@@ -209,7 +221,7 @@ namespace Raven.Server.Documents.Patch
                     args[0] = tmp;
                 }
 
-                // this is basically the same as Math.min / Math.max, but 
+                // this is basically the same as Math.min / Math.max, but
                 // can also be applied to strings, numbers and nulls
 
                 if (args.Length != 2)
@@ -223,6 +235,7 @@ namespace Raven.Server.Documents.Patch
                         // null sorts lowers, so that is fine (either the other one is null or
                         // already higher than us).
                         break;
+
                     case Jint.Runtime.Types.Boolean:
                     case Jint.Runtime.Types.Number:
                         var a = Jint.Runtime.TypeConverter.ToNumber(args[0]);
@@ -230,6 +243,7 @@ namespace Raven.Server.Documents.Patch
                         if (a > b)
                             Swap();
                         break;
+
                     case Jint.Runtime.Types.String:
                         switch (args[1].Type)
                         {
@@ -238,9 +252,10 @@ namespace Raven.Server.Documents.Patch
                             case Jint.Runtime.Types.Null:
                                 Swap();// a value is bigger than no value
                                 break;
+
                             case Jint.Runtime.Types.Boolean:
                             case Jint.Runtime.Types.Number:
-                                // if the string value is a number that is smaller than 
+                                // if the string value is a number that is smaller than
                                 // the numeric value, because Math.min(true, "-2") works :-(
                                 if (double.TryParse(args[0].AsString(), out double d) == false ||
                                     d > Jint.Runtime.TypeConverter.ToNumber(args[1]))
@@ -248,16 +263,17 @@ namespace Raven.Server.Documents.Patch
                                     Swap();
                                 }
                                 break;
+
                             case Jint.Runtime.Types.String:
                                 if (string.Compare(args[0].AsString(), args[1].AsString()) > 0)
                                     Swap();
                                 break;
                         }
                         break;
+
                     case Jint.Runtime.Types.Object:
                         throw new ArgumentException(caller + " cannot be called on an object");
                 }
-
             }
 
             private JsValue Raven_Max(JsValue self, JsValue[] args)
@@ -333,6 +349,41 @@ namespace Raven.Server.Documents.Patch
                 }
                 return Undefined.Instance;
             }
+
+            /*
+            private JsValue Spatial_Distance(JsValue self, JsValue[] args)
+            {
+                if (args.Length < 4 && args.Length > 5)
+                    throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
+
+                for (int i = 0; i < 4; i++)
+                {
+                    if (args[i].IsNumber() == false)
+                        return Undefined.Instance;
+                }
+
+                var lat1 = args[0].AsNumber();
+                var lng1 = args[1].AsNumber();
+                var lat2 = args[2].AsNumber();
+                var lng2 = args[3].AsNumber();
+
+                var units = SpatialUnits.Kilometers;
+                if (args.Length > 4 && args[4].IsString())
+                {
+                    if (string.Equals("cartesian", args[4].AsString(), StringComparison.OrdinalIgnoreCase))
+                        return SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2);
+
+                    if (Enum.TryParse(args[4].AsString(), ignoreCase: true, out units) == false)
+                        throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilomoters' or 'miles'");
+                }
+
+                var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistanceInMiles(lat1, lng1, lat2, lng2);
+                if (units == SpatialUnits.Kilometers)
+                    result *= DistanceUtils.MILES_TO_KM;
+
+                return result;
+            }
+            */
 
             private JsValue OutputDebug(JsValue self, JsValue[] args)
             {
@@ -508,7 +559,6 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext();
 
-
                 if (args.Length != 2 ||
                     (args[0].IsNull() == false && args[0].IsUndefined() == false && args[0].IsObject() == false)
                     || args[1].IsString() == false)
@@ -531,7 +581,6 @@ namespace Raven.Server.Documents.Patch
                         return JsValue.Null;
 
                     return LoadDocumentInternal(_documentIds.First());
-
                 }
 
                 throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
@@ -858,21 +907,27 @@ namespace Raven.Server.Documents.Patch
                 {
                     case ExpressionType.Subtract:
                         return (date1 - date2).ToString();
+
                     case ExpressionType.GreaterThan:
                         return date1 > date2;
+
                     case ExpressionType.GreaterThanOrEqual:
                         return date1 >= date2;
+
                     case ExpressionType.LessThan:
                         return date1 < date2;
+
                     case ExpressionType.LessThanOrEqual:
                         return date1 <= date2;
+
                     case ExpressionType.Equal:
                         return date1 == date2;
+
                     case ExpressionType.NotEqual:
                         return date1 != date2;
+
                     default:
                         throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
-
                 }
             }
 
@@ -896,6 +951,7 @@ namespace Raven.Server.Documents.Patch
                     {
                         case LazyStringParser.Result.DateTime:
                             return dt;
+
                         default:
                             ThrowInvalidArgumentForCompareDates();
                             return DateTime.MinValue; // never hit
@@ -942,7 +998,6 @@ namespace Raven.Server.Documents.Patch
                     return format != null ?
                         date.ToString(format, cultureInfo) :
                         date.ToString(cultureInfo);
-
                 }
 
                 if (args[0].IsNumber())
@@ -965,6 +1020,7 @@ namespace Raven.Server.Documents.Patch
                                 return format != null ?
                                     dt.ToString(format, cultureInfo) :
                                     dt.ToString(cultureInfo);
+
                             default:
                                 throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
                         }
@@ -1011,14 +1067,12 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 2)
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
-
                 JsValue firstParam = args[0];
                 if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
                 {
                     JsValue secondParam = args[1];
                     if (secondParam.IsObject() && secondParam.AsObject() is ArrowFunctionInstance lambda)
                     {
-
                         var functionAst = lambda.FunctionDeclaration;
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
@@ -1048,16 +1102,22 @@ namespace Raven.Server.Documents.Patch
                         {
                             case BlittableJsonToken.Null:
                                 return JsValue.Null;
+
                             case BlittableJsonToken.Boolean:
                                 return (bool)propDetails.Value;
+
                             case BlittableJsonToken.Integer:
                                 return new ObjectWrapper(selfInstance.Engine, value);
+
                             case BlittableJsonToken.LazyNumber:
                                 return new ObjectWrapper(selfInstance.Engine, value);
+
                             case BlittableJsonToken.String:
                                 return new ObjectWrapper(selfInstance.Engine, value);
+
                             case BlittableJsonToken.CompressedString:
                                 return new ObjectWrapper(selfInstance.Engine, value);
+
                             default:
                                 throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
                         }
@@ -1159,7 +1219,6 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(null, boi);
                 }
             }
-
 
             private static JsonOperationContext ThrowArgumentNull()
             {

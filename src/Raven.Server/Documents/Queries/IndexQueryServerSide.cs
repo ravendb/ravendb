@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
@@ -27,6 +28,9 @@ namespace Raven.Server.Documents.Queries
 
         [JsonDeserializationIgnore]
         public QueryTimingsScope Timings { get; private set; }
+
+        [JsonDeserializationIgnore]
+        public SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator Distances;
 
         public new int Start
         {

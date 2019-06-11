@@ -52,6 +52,12 @@ namespace Raven.Server.Documents.Patch
                 [Constants.Documents.Metadata.LastModified] = boi.LastModified,
             };
 
+            //if (boi.Score != null)
+            //    metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.Score.Value;
+
+            //if (boi.Distance != null)
+            //    metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
+
             metadata = Context.ReadObject(metadata, boi.DocumentId);
             return TranslateToJs(_scriptEngine, Context, metadata);
         }
@@ -194,9 +200,9 @@ namespace Raven.Server.Documents.Patch
             var noCache = origin.NoCache;
             origin.NoCache = true;
             // RavenDB-8286
-            // here we need to make sure that we aren't sending a value to 
+            // here we need to make sure that we aren't sending a value to
             // the js engine that might be modified by the actions of the js engine
-            // for example, calling put() might cause the original data to change 
+            // for example, calling put() might cause the original data to change
             // because we defrag the data that we looked at. We are handling this by
             // ensuring that we have our own, safe, copy.
             var cloned = origin.Clone(context);

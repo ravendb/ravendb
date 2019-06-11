@@ -82,7 +82,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-
         public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
@@ -322,7 +321,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
 
-            //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
+            //Not sure how to select the page size here??? The problem is that only docs in this search can be part
             //of the final result because we're doing an intersection query (but we might exclude some of them)
             var pageSize = GetPageSize(_searcher, query.PageSize);
             int pageSizeBestGuess = GetPageSize(_searcher, ((long)query.Start + query.PageSize) * 2);
@@ -367,7 +366,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     && previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
                 var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-                //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
+                //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize,
                 //because it's before the INTERSECTION has been applied, so only some of those results make it out.
                 //Trying to give an accurate answer is going to be too costly, so we aren't going to try.
                 totalResults.Value = search.TotalHits;
@@ -516,6 +515,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                             point = spatialField.ReadPoint(cLatitude, cLongitude).GetCenter();
                             break;
+
                         case MethodType.Spatial_Wkt:
                             var wkt = field.Arguments[0].GetString(query.QueryParameters);
                             SpatialUnits? spatialUnits = null;
@@ -524,12 +524,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                             point = spatialField.ReadShape(wkt, spatialUnits).GetCenter();
                             break;
+
                         case MethodType.Spatial_Point:
                             var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
                             var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
 
                             point = spatialField.ReadPoint(pLatitude, pLongitude).GetCenter();
                             break;
+
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -557,6 +559,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         sortOptions = SortField.LONG;
                         fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
                         break;
+
                     case OrderByFieldType.Double:
                         sortOptions = SortField.DOUBLE;
                         fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
@@ -796,7 +799,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             fixed (byte* ptr = bytes)
             {
                 var blittableJson = context.ParseBuffer(ptr, bytes.Length, "MoreLikeThis/ExtractTermsFromJson", BlittableJsonDocumentBuilder.UsageMode.None);
-                blittableJson.BlittableValidation(); //precaution, needed because this is user input..                
+                blittableJson.BlittableValidation(); //precaution, needed because this is user input..
                 return blittableJson;
             }
         }
