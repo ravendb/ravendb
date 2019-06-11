@@ -240,10 +240,21 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
+                                    <div class="panel-name flex-grow">
+                                        <h3>
+                                            <a href="#" data-bind="visible: !isServerWide(), click: editTask, attr: { 'title': 'Task name: ' + taskName() }">
+                                                <span data-bind="text: taskName"></span>
+                                            </a>
+                                            <div data-bind="visible: isServerWide">
+                                                <i class="icon-global"></i>
+                                                <span data-bind="text: taskName"></span>    
+                                            </div>
+                                            
+                                        </h3>
+                                    </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                    <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'backup-actions-template' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -564,6 +575,16 @@
     </div>
     <div data-bind="if: !responsibleNode().NodeTag" title="No node is currently handling this task">
         <i class="icon-cluster-node"></i> N/A
+    </div>
+</script>
+
+<script type="text/html" id="backup-actions-template">
+    <div class="actions-container">
+        <div class="actions">
+            <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
+            <button class="btn btn-default" data-bind="visible: !isServerWide(), click: editTask" title="Edit task"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+        </div>
     </div>
 </script>
 

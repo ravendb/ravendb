@@ -15,6 +15,8 @@ import shell = require("viewmodels/shell");
 
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
+    
+    private static namePrefix = "Server Wide Backup";
 
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
@@ -41,6 +43,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     lastIncrementalBackupHumanized: KnockoutComputed<string>;
     nextBackupHumanized: KnockoutComputed<string>;
     onGoingBackupHumanized: KnockoutComputed<string>;
+    isServerWide: KnockoutComputed<boolean>;
 
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
@@ -142,6 +145,10 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         });
 
         this.fullBackupTypeName = ko.pureComputed(() => this.getBackupType(this.backupType(), true));
+        
+        this.isServerWide = ko.pureComputed(() => {
+           return this.taskName().startsWith(ongoingTaskBackupListModel.namePrefix); 
+        });
     }
 
     initializeObservables() {
