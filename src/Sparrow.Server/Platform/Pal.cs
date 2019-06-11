@@ -7,12 +7,14 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42008; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42009; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
+            bool win7x = true;
             var toFilename = LIBRVNPAL;
             string fromFilename;
+            var win7 = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && win7x ? "7" : "";
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
@@ -34,7 +36,7 @@ namespace Sparrow.Server.Platform
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win.x64.dll" : $"{toFilename}.win.x86.dll";
+                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win{win7}.x64.dll" : $"{toFilename}.win{win7}.x86.dll";
                 toFilename += ".dll";
             }
             else
