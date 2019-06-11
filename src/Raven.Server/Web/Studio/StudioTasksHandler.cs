@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -90,6 +91,25 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/studio-tasks/folder-path-options-cloud", "POST", AuthorizationStatus.Operator)]
+        public Task GetFolderPathOptionsCloud()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var dummy = new FolderPathOptions
+                {
+                    List = { @"C:\", @"D:\" }
+                };
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(dummy.List)
+                });
+            }
+
+            return Task.CompletedTask;
+        }
+        
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
         public Task OfflineMigrationTest()
         {

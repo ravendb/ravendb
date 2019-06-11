@@ -495,33 +495,45 @@ namespace Raven.Server.Web.System
                 var restorePathJson = JsonDeserializationServer.DatabaseRestorePath(restorePathBlittable);
 
                 var restorePoints = new RestorePoints();
-
-                try
-                {
-                    Directory.GetLastAccessTime(restorePathJson.Path);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    throw new InvalidOperationException($"Unauthorized access to path: {restorePathJson.Path}");
-                }
-
-                if (Directory.Exists(restorePathJson.Path) == false)
-                    throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
-
                 var sortedList = new SortedList<DateTime, RestorePoint>(new RestoreUtils.DescendedDateComparer());
-                var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
-                if (directories.Count == 0)
+
+                switch (restorePathJson.ConnectionType)
                 {
-                    // no folders in directory
-                    // will scan the directory for backup files
-                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, context, assertLegacyBackups: true);
-                }
-                else
-                {
-                    foreach (var directory in directories)
-                    {
-                        RestoreUtils.FetchRestorePoints(directory, sortedList, context);
-                    }
+                    case ConnectionType.Local:
+                        try
+                        {
+                            Directory.GetLastAccessTime(restorePathJson.Path);
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            throw new InvalidOperationException($"Unauthorized access to path: {restorePathJson.Path}");
+                        }
+
+                        if (Directory.Exists(restorePathJson.Path) == false)
+                            throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
+
+                        
+                        var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
+                        if (directories.Count == 0)
+                        {
+                            // no folders in directory
+                            // will scan the directory for backup files
+                            RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, context, assertLegacyBackups: true);
+                        }
+                        else
+                        {
+                            foreach (var directory in directories)
+                            {
+                                RestoreUtils.FetchRestorePoints(directory, sortedList, context);
+                            }
+                        }
+                        break;
+
+                    case ConnectionType.Cloud:
+                        sortedList.Add(DateTime.Now, new RestorePoint());
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 restorePoints.List = sortedList.Values.ToList();
@@ -1448,5 +1460,11 @@ namespace Raven.Server.Web.System
             }
             return (false, progressLine);
         }
+    }
+
+    public enum ConnectionType
+    {
+        Local,
+        Cloud
     }
 }

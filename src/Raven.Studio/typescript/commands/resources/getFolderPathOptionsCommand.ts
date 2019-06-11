@@ -3,13 +3,14 @@ import endpoints = require("endpoints");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    constructor(private inputPath: string, private isBackupFolder: boolean = false) {
+    constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: string = "Local") {
         super();
     }
 
     execute(): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         const args = {
             path: this.inputPath ? this.inputPath : "",
+            connectionType: this.connectionType,
             backupFolder: this.isBackupFolder
         };
 
