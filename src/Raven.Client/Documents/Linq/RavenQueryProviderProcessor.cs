@@ -2377,13 +2377,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (IsRaw(expression, name))
                 return;
 
-            var isConditionalExpression = expression.Arguments[1].NodeType == ExpressionType.Conditional;
+            var expressionType = expression.Arguments[1].NodeType;
 
             // if _declareBuilder != null then we already have an 'output' function
             // the load-argument might depend on previous statements inside the function body
             // use js load() method instead of a LoadToken
-            var shouldUseLoadToken = isConditionalExpression == false && 
+            var shouldUseLoadToken = expressionType != ExpressionType.Conditional &&
+                                     expressionType != ExpressionType.Call &&
                                      _declareBuilder == null;
+                                     
 
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
             var js = ToJs(expression.Arguments[1], false, loadSupport);
