@@ -529,7 +529,7 @@ namespace Voron.Impl.Journal
                     total += state.TotalCryptoBufferSize;
                 }
 
-                return new Size(0, SizeUnit.Bytes);
+                return new Size(total, SizeUnit.Bytes);
             }
         }
         
