@@ -667,7 +667,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
         {
-            if (query.DeclaredFunctions.TryGetValue(methodName, out var func) && func.Type == DeclaredFunction.FunctionType.TimeSeries)
+            if (query.DeclaredFunctions != null && 
+                query.DeclaredFunctions.TryGetValue(methodName, out var func) && 
+                func.Type == DeclaredFunction.FunctionType.TimeSeries)
                 return InvokeTimeSeriesFunction(func.TimeSeries, query, documentId, args);
 
             var key = new QueryKey(query.DeclaredFunctions);
