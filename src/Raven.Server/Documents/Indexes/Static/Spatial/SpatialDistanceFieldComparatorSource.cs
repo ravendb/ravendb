@@ -3,6 +3,9 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Server.Documents.Queries;
+using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static.Spatial
@@ -10,17 +13,22 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
     public class SpatialDistanceFieldComparatorSource : FieldComparatorSource
     {
         private readonly Point _center;
+        private readonly IndexQueryServerSide _query;
         private readonly SpatialField _spatialField;
 
-        public SpatialDistanceFieldComparatorSource(SpatialField spatialField, Point center)
+        public SpatialDistanceFieldComparatorSource(SpatialField spatialField, Point center, IndexQueryServerSide query)
         {
             _spatialField = spatialField;
             _center = center;
+            _query = query;
         }
 
         public override FieldComparator NewComparator(string fieldname, int numHits, int sortPos, bool reversed)
         {
-            return new SpatialDistanceFieldComparator(_spatialField, _center, numHits);
+            var comp = new SpatialDistanceFieldComparator(_spatialField, _center, numHits);
+            if (_query.Distances == null)
+                _query.Distances = comp; // we will only push the distance for the first one
+            return comp;
         }
 
         public class SpatialDistanceFieldComparator : FieldComparator
@@ -29,14 +37,23 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private readonly DistanceValue[] _values;
             private DistanceValue _bottom;
             private readonly Point _originPt;
+            private bool _isGeo;
+
+            public SpatialUnits Units => _spatialField.Units;
 
             private IndexReader _currentIndexReader;
+
+            public double Get(int i)
+            {
+                return _values[i].Value;
+            }
 
             public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits)
             {
                 _spatialField = spatialField;
                 _values = new DistanceValue[numHits];
                 _originPt = origin;
+                _isGeo = _spatialField.GetContext().IsGeo();
             }
 
             public override int Compare(int slot1, int slot2)
@@ -101,7 +118,60 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 var pt = shape as Point;
                 if (pt == null)
                     pt = shape.GetCenter();
-                return _spatialField.GetContext().GetDistCalc().Distance(pt, _originPt);
+                double dist = _isGeo ? 
+                    HaverstineDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX()) : 
+                    CartesianDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+
+                switch (Units)
+                {
+                    case SpatialUnits.Kilometers:
+                        dist *= DistanceUtils.MILES_TO_KM;
+                        break;
+                    case SpatialUnits.Miles:
+                    default:
+                        break;
+                }
+
+                return dist;
+            }
+
+            private static double HaverstineDistance(double lat1, double lng1, double lat2, double lng2)
+            {
+                // from : https://www.geodatasource.com/developers/javascript
+                if ((lat1 == lat2) && (lng1 == lng2))
+                {
+                    return 0;
+                }
+                else
+                {
+                    var radlat1 = DistanceUtils.DEGREES_TO_RADIANS * lat1;
+                    var radlat2 = DistanceUtils.DEGREES_TO_RADIANS * lat2;
+                    var theta = lng1 - lng2;
+                    var radtheta = DistanceUtils.DEGREES_TO_RADIANS * theta;
+                    var dist = Math.Sin(radlat1) * Math.Sin(radlat2) + Math.Cos(radlat1) * Math.Cos(radlat2) 
+                        * Math.Cos(radtheta);
+                    if (dist > 1)
+                    {
+                        dist = 1;
+                    }
+                    dist = Math.Acos(dist);
+                    dist = dist * DistanceUtils.RADIANS_TO_DEGREES;
+                    dist = dist * 60 * 1.1515;
+                    return dist;
+                }
+            }
+
+            private double CartesianDistance(double lat1, double lng1, double lat2, double lng2)
+            {
+                double result = 0;
+
+                double v = lat1 - lat2;
+                result += (v * v);
+
+                v = lng2 - lng2;
+                result += (v * v);
+
+                return result;
             }
 
             public override void SetNextReader(IndexReader reader, int docBase, IState state)

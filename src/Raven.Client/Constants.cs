@@ -161,6 +161,8 @@ namespace Raven.Client
 
                 public const string IndexScore = "@index-score";
 
+                public const string Distance = "@distance";
+
                 public const string LastModified = "@last-modified";
 
                 public const string RavenClrType = "Raven-Clr-Type";

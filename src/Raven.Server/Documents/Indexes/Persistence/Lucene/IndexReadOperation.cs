@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var returnedResults = 0;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, _index, getSpatialField, documentsContext);
+            var sort = GetSort(query,_index, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
 
-                        var result = retriever.Get(document, scoreDoc.Score, _state);
+                        var result = retriever.Get(document, scoreDoc.Score, _state,position);
                         if (scope.TryIncludeInResults(result) == false)
                         {
                             skippedResults.Value++;
@@ -183,7 +183,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 }
                             }
 
-                            yield return (result, highlightings, explanation);
+                            yield return new QueryResult
+                            {
+                                Result = result,
+                                Highlightings = highlightings,
+                                Explanation = explanation
+                            };
                         }
 
                         if (returnedResults == pageSize)
@@ -295,7 +300,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _highlighterQuery = _highlighter.GetFieldQuery(luceneQuery);
         }
 
-        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public struct QueryResult
+        {
+            public Document Result;
+            public Dictionary<string, Dictionary<string, string[]>> Highlightings;
+            public ExplanationResult Explanation;
+        }
+
+        public IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
 
@@ -387,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
 
-                    var result = retriever.Get(document, indexResult.Score, _state);
+                    var result = retriever.Get(document, indexResult.Score, _state, -1);
                     if (scope.TryIncludeInResults(result) == false)
                     {
                         skippedResults.Value++;
@@ -397,7 +409,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     returnedResults++;
 
-                    yield return (result, null, null);
+                    yield return new QueryResult
+                    {
+                        Result = result
+                    };
 
                     if (returnedResults == pageSize)
                         yield break;
@@ -534,7 +549,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             throw new ArgumentOutOfRangeException();
                     }
 
-                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point);
+                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query);
                     sort.Add(new SortField(field.Name, dsort, field.Ascending == false));
                     continue;
                 }
@@ -616,7 +631,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> MoreLikeThis(
+        public IEnumerable<QueryResult> MoreLikeThis(
             IndexQueryServerSide query,
             IQueryResultRetriever retriever,
             DocumentsOperationContext context,
@@ -719,8 +734,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var hit in hits)
+            for (int i = 0; i < hits.Length; i++)
             {
+                var hit = hits[i];
+                token.ThrowIfCancellationRequested();
+
                 if (hit.Doc == baseDocId)
                     continue;
 
@@ -732,7 +750,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (ids.Add(id) == false)
                     continue;
 
-                yield return (retriever.Get(doc, hit.Score, _state), null, null);
+                yield return new QueryResult
+                {
+                    Result = retriever.Get(doc, hit.Score, _state, i)
+                };
             }
         }
 
