@@ -13,6 +13,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -183,10 +184,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return _commands;
         }
 
-        public override void Transform(RavenEtlItem item)
+        public override void Transform(RavenEtlItem item, EtlStatsScope stats)
         {
             Current = item;
-            _currentRun = new RavenEtlScriptRun();
+            _currentRun = new RavenEtlScriptRun(stats);
 
             if (item.IsDelete == false)
             {

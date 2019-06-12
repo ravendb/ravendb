@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions;
+using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
@@ -1151,6 +1152,65 @@ loadToUsers(
                         Assert.Equal(1, dbCommand.ExecuteScalar());
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5"
+            }))
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Orders]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [Pic] [varbinary](max) NULL
+)
+");
+                using (var session = store.OpenSession())
+                {
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var order = new Orders.Order();
+                        session.Store(order);
+
+                        var r = new Random(i);
+
+                        var bytes = new byte[1024 * 1024 * 1];
+
+                        r.NextBytes(bytes);
+
+                        session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                SetupSqlEtl(store, @"
+
+var orderData = {
+    Id: id(this),
+    Pic: loadAttachment('my-attachment') 
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                var database = GetDatabase(store.Database).Result;
+
+                var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
+
+                var stats = etlProcess.GetPerformanceStats();
+
+                Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchCompleteReason).ToList());
             }
         }
 

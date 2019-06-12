@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Jint.Native;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Documents.ETL.Stats;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -10,6 +11,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 {
     public class RavenEtlScriptRun
     {
+        private readonly EtlStatsScope _stats;
         private readonly List<ICommandData> _deletes = new List<ICommandData>();
 
         private Dictionary<JsValue, (string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
@@ -26,6 +28,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private List<ICommandData> _fullDocuments;
 
+        public RavenEtlScriptRun(EtlStatsScope stats)
+        {
+            _stats = stats;
+        }
+
         public void Delete(ICommandData command)
         {
             Debug.Assert(command is DeleteCommandData || command is DeletePrefixedCommandData);
@@ -40,11 +47,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             _fullDocuments.Add(new PutCommandDataWithBlittableJson(id, null, doc));
 
+            _stats.IncrementBatchSize(doc.Size);
+
             if (attachments != null && attachments.Count > 0)
             {
                 foreach (var attachment in attachments)
                 {
                     _fullDocuments.Add(new PutAttachmentCommandData(id, attachment.Name, attachment.Stream, attachment.ContentType, null));
+
+                    _stats.IncrementBatchSize(attachment.Stream.Length);
                 }
             }
 
@@ -65,6 +76,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 _putsByJsReference = new Dictionary<JsValue, (string Id, BlittableJsonReaderObject)>(ReferenceEqualityComparer<JsValue>.Default);
 
             _putsByJsReference.Add(instance, (id, doc));
+            _stats.IncrementBatchSize(doc.Size);
         }
 
         public void LoadAttachment(JsValue attachmentReference, Attachment attachment)
@@ -97,6 +109,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             attachments.Add((name ?? attachment.Name, attachment));
+            _stats.IncrementBatchSize(attachment.Stream.Length);
         }
 
         public void DeleteAttachment(string documentId, string name)

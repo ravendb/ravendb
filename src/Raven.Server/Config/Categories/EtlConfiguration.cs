@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -34,5 +35,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ETL.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxFallbackTime { get; set; }
 
+        [Description("Maximum batch size of transformed data in megabytes that will be sent to the destination in a single batch")]
+        [DefaultValue(64)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("ETL.MaxBatchSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? MaxBatchSize { get; protected set; }
     }
 }
