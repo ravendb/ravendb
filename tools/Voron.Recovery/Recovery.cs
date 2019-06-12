@@ -45,7 +45,9 @@ namespace Voron.Recovery
             _pageSize = config.PageSizeInKB * Constants.Size.Kilobyte;
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB * Constants.Size.Kilobyte;
-            
+
+            _masterKey = config.MasterKey;
+
             // by default CopyOnWriteMode will be true
             _copyOnWrite = !config.DisableCopyOnWriteMode;
             _config = config;
@@ -65,7 +67,7 @@ namespace Voron.Recovery
             result.ManualFlushing = true;
             result.ManualSyncing = true;
             result.IgnoreInvalidJournalErrors = _config.IgnoreInvalidJournalErrors;
-
+            result.MasterKey = _masterKey;
             return result;
         }
 
@@ -73,6 +75,7 @@ namespace Voron.Recovery
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
         private readonly List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
         private readonly VoronRecoveryConfiguration _config;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long GetFilePosition(long offset, byte* position)
         {
@@ -90,8 +93,14 @@ namespace Voron.Recovery
             }
 
             StorageEnvironment se = null;
+            TempPagerTransaction tx = null;
             try
             {
+                if (IsEncrypted)
+                {
+                    //We need a tx for the encryption pager and we can't dispose of it while reading the page.
+                    tx = new TempPagerTransaction();
+                }
                 var sw = new Stopwatch();
                 sw.Start();
                 byte* mem = null;
@@ -130,8 +139,9 @@ namespace Voron.Recovery
                                 }
                             }
                         }
-
-                        mem = se.Options.DataPager.AcquirePagePointer(null, 0);
+                        
+                        //for encrypted database the pointer points to the buffer and this is not what we want.
+                        mem = se.Options.DataPager.PagerState.MapBase;
                         writer.WriteLine(
                             $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
                     }
@@ -160,13 +170,15 @@ namespace Voron.Recovery
                 }
                 if (mem == null)
                 {
-                    mem = Pager.AcquirePagePointer(null, 0);
+                    //for encrypted database the pointer points to the buffer and this is not what we want.
+                    mem = se.Options.DataPager.PagerState.MapBase;
                 }
                 long startOffset = (long)mem;
                 var fi = new FileInfo(_datafile);
                 var fileSize = fi.Length;
                 //making sure eof is page aligned
                 var eof = mem + (fileSize / _pageSize) * _pageSize;
+
                 DateTime lastProgressReport = DateTime.MinValue;
 
                 if (Directory.Exists(Path.GetDirectoryName(_output)) == false)
@@ -194,7 +206,9 @@ namespace Voron.Recovery
                     while (mem < eof)
                     {
                         try
-                        {
+                        {                    
+                            var page = DecryptPageIfNeeded(mem, startOffset, ref tx, maybePulseTransaction: true);
+
                             if (ct.IsCancellationRequested)
                             {
                                 if (_logger.IsOperationsEnabled)
@@ -213,12 +227,12 @@ namespace Voron.Recovery
                                 PrintRecoveryProgress(startOffset, mem, eof, now);
                             }
 
-                            var pageHeader = (PageHeader*)mem;
+                            var pageHeader = (PageHeader*)page;
 
                             //this page is not raw data section move on
                             if ((pageHeader->Flags).HasFlag(PageFlags.RawData) == false && pageHeader->Flags.HasFlag(PageFlags.Stream) == false)
                             {
-                                mem += _pageSize;
+                                mem += _pageSize;                                
                                 continue;
                             }
 
@@ -242,6 +256,7 @@ namespace Voron.Recovery
                                 if (pageHeader->Flags.HasFlag(PageFlags.Stream))
                                 {
                                     var streamPageHeader = (StreamPageHeader*)pageHeader;
+                                    //Skipping stream chunks that are not first, this is not a faulty page so we don't report error
                                     if (streamPageHeader->StreamPageFlags.HasFlag(StreamPageFlags.First) == false)
                                     {
                                         mem += numberOfPages * _pageSize;
@@ -264,9 +279,10 @@ namespace Voron.Recovery
                                         }
                                         // write document header, including size
                                         PageHeader* nextPage = pageHeader;
-                                        byte* nextPagePtr = (byte*)nextPage;
+
                                         bool valid = true;
                                         string tag = null;
+
                                         while (true) // has next
                                         {
                                             streamPageHeader = (StreamPageHeader*)nextPage;
@@ -292,7 +308,10 @@ namespace Voron.Recovery
                                                 ExtractTagFromLastPage(nextPage, streamPageHeader, ref tag);
                                                 break;
                                             }
-                                            nextPage = (PageHeader*)(streamPageHeader->StreamNextPageNumber * _pageSize + startOffset);
+
+                                            var nextStreamHeader = (byte*)(streamPageHeader->StreamNextPageNumber * _pageSize) + startOffset;
+                                            nextPage = (PageHeader*)DecryptPageIfNeeded(nextStreamHeader, startOffset, ref tx, false);
+
                                             //This is the case that the next page isn't a stream page
                                             if (nextPage->Flags.HasFlag(PageFlags.Stream) == false || nextPage->Flags.HasFlag(PageFlags.Overflow) == false)
                                             {
@@ -301,7 +320,10 @@ namespace Voron.Recovery
                                                     _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunk but isn't marked as Overflow | Stream");
                                                 break;
                                             }
-                                            valid = ValidateOverflowPage(nextPage, eof, (long)nextPage, ref nextPagePtr);
+                                            
+                                            valid = ValidateOverflowPage(nextPage, eof, (long)nextStreamHeader, ref mem);
+                                            
+                                            //we already advance the pointer inside the validation
                                             if (valid == false)
                                             {
                                                 break;
@@ -336,7 +358,7 @@ namespace Voron.Recovery
                                 }
 
                                 else if (Write((byte*)pageHeader + PageHeader.SizeOf, pageHeader->OverflowSize, documentsWriter, revisionsWriter,
-                                    conflictsWriter, countersWriter, context, startOffset, ((RawDataOverflowPageHeader*)mem)->TableType))
+                                    conflictsWriter, countersWriter, context, startOffset, ((RawDataOverflowPageHeader*)page)->TableType))
                                 {
 
                                     mem += numberOfPages * _pageSize;
@@ -347,19 +369,22 @@ namespace Voron.Recovery
                                 }
                                 continue;
                             }
-
-                            checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, 0);
-
-                            if (checksum != pageHeader->Checksum)
+                            //We don't have checksum for encrypted pages
+                            if (IsEncrypted == false)
                             {
-                                var message =
-                                    $"Invalid checksum for page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
-                                mem = PrintErrorAndAdvanceMem(message, mem);
-                                continue;
+                                checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, 0);
+
+                                if (checksum != pageHeader->Checksum)
+                                {
+                                    var message =
+                                        $"Invalid checksum for page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
+                                    mem = PrintErrorAndAdvanceMem(message, mem);
+                                    continue;
+                                }
                             }
 
                             // small raw data section 
-                            var rawHeader = (RawDataSmallPageHeader*)mem;
+                            var rawHeader = (RawDataSmallPageHeader*)page;
 
                             // small raw data section header
                             if (rawHeader->RawDataFlags.HasFlag(RawDataPageFlags.Header))
@@ -377,13 +402,13 @@ namespace Voron.Recovery
 
                             for (var pos = PageHeader.SizeOf; pos < rawHeader->NextAllocation;)
                             {
-                                var currMem = mem + pos;
+                                var currMem = page + pos;
                                 var entry = (RawDataSection.RawDataEntrySizes*)currMem;
                                 //this indicates that the current entry is invalid because it is outside the size of a page
                                 if (pos > _pageSize)
                                 {
                                     var message =
-                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}";
+                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, mem + pos)}";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
                                     //we can't retrieve entries past the invalid entry
                                     break;
@@ -393,7 +418,7 @@ namespace Voron.Recovery
                                     rawHeader->NextAllocation)
                                 {
                                     var message =
-                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
+                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, mem + pos)}" +
                                         "the allocated entry exceed the bound of the page next allocation.";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
                                     //we can't retrieve entries past the invalid entry
@@ -402,7 +427,7 @@ namespace Voron.Recovery
                                 if (entry->UsedSize > entry->AllocatedSize)
                                 {
                                     var message =
-                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
+                                        $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, mem + pos)}" +
                                         "the size of the entry exceed the allocated size";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
                                     //we can't retrieve entries past the invalid entry
@@ -413,7 +438,7 @@ namespace Voron.Recovery
                                     continue;
 
                                 if (Write(currMem + sizeof(RawDataSection.RawDataEntrySizes), entry->UsedSize, documentsWriter, revisionsWriter,
-                                        conflictsWriter, countersWriter, context, startOffset, ((RawDataSmallPageHeader*)mem)->TableType) == false)
+                                        conflictsWriter, countersWriter, context, startOffset, ((RawDataSmallPageHeader*)page)->TableType) == false)
                                     break;
                             }
                             mem += _pageSize;
@@ -463,10 +488,34 @@ namespace Voron.Recovery
             }
             finally
             {
+                tx?.Dispose();
                 se?.Dispose();
                 if(_config.LoggingMode != LogMode.None)
                     LoggingSource.Instance.EndLogging();
             }
+        }
+
+        private Size _maxTransactionSize = new Size(64,SizeUnit.Megabytes);
+
+
+        private byte* DecryptPageIfNeeded(byte* mem,long start, ref TempPagerTransaction tx, bool maybePulseTransaction = false)
+        {
+            if (IsEncrypted == false)
+                return mem;
+
+            //We must make sure we can close the transaction since it may hold buffers for memory we still need e.g. attachments chunks.
+            if (maybePulseTransaction && tx?.TotalEncryptionBufferSize > _maxTransactionSize)
+            {
+                tx.Dispose();
+                tx = new TempPagerTransaction();
+            }
+
+            PageHeader header = *(PageHeader*)mem;
+
+            long pageNumber = (long)((PageHeader*)mem)->PageNumber;
+            var res = Pager.AcquirePagePointer(tx, pageNumber);
+           
+            return res;
         }
 
         private static void ExtractTagFromLastPage(PageHeader* nextPage, StreamPageHeader* streamPageHeader, ref string tag)
@@ -832,13 +881,16 @@ namespace Voron.Recovery
         private bool ValidateOverflowPage(PageHeader* pageHeader, byte* eof, long startOffset, ref byte* mem)
         {
             ulong checksum;
-            var endOfOverflow = (byte*)pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
+            //pageHeader might be a buffer address we need to verify we don't exceed the original memory boundary here
+            var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
+            var sizeOfPages = numberOfPages * _pageSize;
+            var endOfOverflow = startOffset + sizeOfPages;
             // the endOfOverflow can be equal to eof if the last page is overflow
-            if (endOfOverflow > eof)
+            if (endOfOverflow > (long)eof)
             {
                 var message =
                     $"Overflow page #{pageHeader->PageNumber} (offset={GetFilePosition(startOffset, mem)})" +
-                    $" size exceeds the end of the file ([{(long)pageHeader}:{(long)endOfOverflow}])";
+                    $" size exceeds the end of the file ([{(long)mem}:{(long)endOfOverflow}])";
                 mem = PrintErrorAndAdvanceMem(message, mem);
                 return false;
             }
@@ -851,16 +903,21 @@ namespace Voron.Recovery
                 mem = PrintErrorAndAdvanceMem(message, mem);
                 return false;
             }
-            // this can only be here if we know that the overflow size is valid
-            checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
 
-            if (checksum != pageHeader->Checksum)
+            if (IsEncrypted == false)
             {
-                var message =
-                    $"Invalid checksum for overflow page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
-                mem = PrintErrorAndAdvanceMem(message, mem);
-                return false;
+                // this can only be here if we know that the overflow size is valid
+                checksum = StorageEnvironment.CalculatePageChecksum((byte*)pageHeader, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
+
+                if (checksum != pageHeader->Checksum)
+                {
+                    var message =
+                        $"Invalid checksum for overflow page {pageHeader->PageNumber}, expected hash to be {pageHeader->Checksum} but was {checksum}";
+                    mem = PrintErrorAndAdvanceMem(message, mem);
+                    return false;
+                }
             }
+
             return true;
         }
 
@@ -1156,7 +1213,9 @@ namespace Voron.Recovery
         private byte* PrintErrorAndAdvanceMem(string message, byte* mem)
         {
             if (_logger.IsOperationsEnabled)
+            {
                 _logger.Operations(message);
+            }
             _numberOfFaultedPages++;
             return mem + _pageSize;
         }
@@ -1190,7 +1249,9 @@ namespace Voron.Recovery
         private bool _lastWriteIsDocument;
         private (string hash, long size, string tag)? _lastAttachmentInfo;
         private Logger _logger;
+        private readonly byte[] _masterKey;
 
+        public bool IsEncrypted => _masterKey != null;
         public enum RecoveryStatus
         {
             Success,
