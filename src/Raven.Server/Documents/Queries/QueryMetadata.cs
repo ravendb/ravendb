@@ -847,8 +847,8 @@ namespace Raven.Server.Documents.Queries
 
             if (me.Name.Equals("spatial.distance", StringComparison.OrdinalIgnoreCase))
             {
-                if (me.Arguments.Count != 2)
-                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected two arguments, got " + me.Arguments.Count, QueryText,
+                if (me.Arguments.Count < 2 && me.Arguments.Count > 3)
+                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance(from, to, roundFactor)' call, expected 2-3 arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
 
                 QueryFieldName fieldName;
@@ -864,9 +864,7 @@ namespace Raven.Server.Documents.Queries
                     fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "spatial.distance", parameters);
                 }
 
-
-
-                var lastArgument = me.Arguments[me.Arguments.Count - 1];
+                var lastArgument = me.Arguments[1];
 
                 if (!(lastArgument is MethodExpression expression))
                     throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected expression, got " + lastArgument, QueryText,
@@ -891,11 +889,19 @@ namespace Raven.Server.Documents.Queries
                         break;
                 }
 
-                var arguments = new OrderByField.Argument[expression.Arguments.Count];
+                var additional = me.Arguments.Count == 3 ? 1 : 0;
+
+                var arguments = new OrderByField.Argument[expression.Arguments.Count + additional];
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
                     var argument = (ValueExpression)expression.Arguments[i];
                     arguments[i] = new OrderByField.Argument(argument.Token.Value, argument.Value);
+                }
+                if(additional != 0)
+                {
+                    // copy the roundFactor for spatial.distance
+                    var argument = (ValueExpression)me.Arguments[2];
+                    arguments[expression.Arguments.Count] = new OrderByField.Argument(argument.Token.Value, argument.Value);
                 }
 
                 return new OrderByField(

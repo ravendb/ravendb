@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -13,6 +14,95 @@ namespace SlowTests.Issues
 {
     public class RavenDB_13682 : RavenTestBase
     {
+        public class Item
+        {
+            public double Lat, Lng;
+            public string Name;
+        }
+
+        [Fact]
+        public void CanQueryByRoundedSpatialRanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    // 35.1, -106.3 - destination
+                    s.Store(new Item { Lat = 35.1, Lng = -107.1, Name = "a" }); // 3rd dist - 72.7 km
+                    s.Store(new Item { Lat = 35.2, Lng = -107.0, Name = "b" }); // 2nd dist - 64.04 km
+                    s.Store(new Item { Lat = 35.3, Lng = -106.5, Name = "c" }); // 1st dist - 28.71 km
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    // we sort first by spatial distance (but round it up to 25km)
+                    // then we sort by name ascending, so within 25 range, we can apply a different sort
+
+                    var result = s.Advanced.RawQuery<Item>(@"from Items  as a
+order by spatial.distance(spatial.point(a.Lat, a.Lng), spatial.point(35.1, -106.3), 25), Name")
+                        .ToList();
+
+                    Assert.Equal(3, result.Count);
+                    Assert.Equal("c", result[0].Name);
+                    Assert.Equal("a", result[1].Name);
+                    Assert.Equal("b", result[2].Name);
+                }
+
+                // dynamic query 
+                using (var s = store.OpenSession())
+                {
+                    // we sort first by spatial distance (but round it up to 25km)
+                    // then we sort by name ascending, so within 25 range, we can apply a different sort
+
+                    var query = s.Query<Item>()
+                        .OrderByDistance(spatial => spatial.Point(item => item.Lat, item => item.Lng).RoundTo(25), 35.1, -106.3);
+                    var result = query.ToList();
+
+                    Assert.Equal(3, result.Count);
+                    Assert.Equal("c", result[0].Name);
+                    Assert.Equal("a", result[1].Name);
+                    Assert.Equal("b", result[2].Name);
+                }
+
+                new SpatialIndex().Execute(store);
+                WaitForIndexing(store);
+
+
+                using (var s = store.OpenSession())
+                {
+                    // we sort first by spatial distance (but round it up to 25km)
+                    // then we sort by name ascending, so within 25 range, we can apply a different sort
+
+                    var query = s.Query<Item, SpatialIndex>()
+                        .OrderByDistance("Coordinates", 35.1, -106.3, 25);
+                    var result = query.ToList();
+
+                    Assert.Equal(3, result.Count);
+                    Assert.Equal("c", result[0].Name);
+                    Assert.Equal("a", result[1].Name);
+                    Assert.Equal("b", result[2].Name);
+                }
+
+
+            }
+        }
+
+
+        private class SpatialIndex : AbstractIndexCreationTask<Item>
+        {
+            public SpatialIndex()
+            {
+                Map =
+                    entities =>
+                    from e in entities
+                    select new
+                    {
+                        e.Name,
+                        Coordinates = CreateSpatialField(e.Lat, e.Lng)
+                    };
+            }
+        }
         [Fact]
         public void CanUseDynamicQueryOrderBySpatial_WithAlias()
         {
@@ -109,7 +199,7 @@ select {
         [Fact]
         public void CanGetDistanceFromSpatialQuery()
         {
-            using(var store = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -118,7 +208,7 @@ select {
                 using (var s = store.OpenSession())
                 {
                     var d = s.Query<Order>("Orders/ByShipment/Location")
-                        .Where(x=>x.Id == "orders/830-A")
+                        .Where(x => x.Id == "orders/830-A")
                         .OrderByDistance("ShipmentLocation", 35.2, -107.1)
                         .Single();
 
