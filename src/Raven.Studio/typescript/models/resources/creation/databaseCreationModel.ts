@@ -67,6 +67,8 @@ class databaseCreationModel {
     canCreateEncryptedDatabases: KnockoutObservable<boolean>;
 
     restore = {
+        source: ko.observable<restoreSource>("serverLocal"),
+        cloudCredentials: ko.observable<string>(),
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
         backupDirectoryError: ko.observable<string>(null),
         lastFailedBackupDirectory: null as string,
@@ -465,6 +467,16 @@ class databaseCreationModel {
                 }
             },
             base64: true
+        });
+        
+        this.restore.source.extend({
+            required: true
+        });
+        
+        this.restore.cloudCredentials.extend({
+            required: {
+                onlyIf: () => this.restore.source() === "cloud"
+            }
         });
         
         this.restore.backupDirectory.extend({

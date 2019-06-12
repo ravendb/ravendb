@@ -3,7 +3,8 @@ import endpoints = require("endpoints");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: string = "Local") {
+    //TODO: add extra parameter when cloud
+    private constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: restoreSource) {
         super();
     }
 
@@ -24,6 +25,14 @@ class getFolderPathOptionsCommand extends commandBase {
 
                 this.reportError("Failed to get the folder path options", response.responseText, response.statusText);
             });
+    }
+    
+    static forServerLocal(inputPath: string, isBackupFolder: boolean) {
+        return new getFolderPathOptionsCommand(inputPath, isBackupFolder, "serverLocal");
+    }
+    
+    static forS3Backup(inputPath: string) {
+        return new getFolderPathOptionsCommand(inputPath, false, "cloud"); //TODO: pass s3 credentials
     }
 }
 
