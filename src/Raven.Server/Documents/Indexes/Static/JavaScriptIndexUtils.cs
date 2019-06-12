@@ -100,7 +100,15 @@ namespace Raven.Server.Documents.Indexes.Static
             var id = dbj.GetId();
             if (isMapReduce == false && id == DynamicNullObject.Null)
                 return false;
-            jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
+
+            if(dbj.TryGetDocument(out var doc))
+            {
+                jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, doc);
+            }
+            else
+            {
+                jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
+            }
             return true;
         }
 

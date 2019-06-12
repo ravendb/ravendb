@@ -33,10 +33,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         public Document Get(Document doc)
         {
-            return GetProjectionFromDocument(doc, null, FieldsToFetch, _context, null);
+            return GetProjectionFromDocument(doc, null, null, FieldsToFetch, _context, null);
         }      
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state, int resultIndex)
+        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc lucene, IState state)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         case Document d:
                         {
-                            if (TryGetValue(fieldToFetch, d, null, null, out key, out fieldVal) == false)
+                            if (TryGetValue(fieldToFetch, d, null, null, null, out key, out fieldVal) == false)
                                 continue;
                             d.EnsureMetadata();
                             var immediateResult = AddProjectionToResult(d, FieldsToFetch, result, key, fieldVal);
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Queries.Results
                         case BlittableJsonReaderObject bjro:
                         {
                             var doc = new Document { Data = bjro };
-                            if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
+                            if (TryGetValue(fieldToFetch, doc, null, null, null, out key, out fieldVal) == false)
                                 continue;
                             doc.EnsureMetadata();
                             var immediateResult = AddProjectionToResult(doc, FieldsToFetch, result, key, fieldVal);
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                                 var doc = new Document { Data = matchJson };
 
-                                if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, doc, null, null, null, out key, out fieldVal) == false)
                                     continue;
                                 doc.EnsureMetadata();
                                 if (ReferenceEquals(doc, fieldVal))

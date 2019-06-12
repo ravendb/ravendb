@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Patch
     {
         public bool Changed;
         private readonly BlittableObjectInstance _parent;
+        private readonly Document _doc;
         private bool _put;
 
         public readonly DateTime? LastModified;
@@ -30,7 +31,10 @@ namespace Raven.Server.Documents.Patch
             new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
-        public IState LuceneState;        
+        public IState LuceneState;
+
+        public double? Distance => _doc?.Distance;
+        public float? Score => _doc?.IndexScore;
 
         private void MarkChanged()
         {
@@ -268,16 +272,23 @@ namespace Raven.Server.Documents.Patch
         public BlittableObjectInstance(Engine engine,
             BlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
-            string docId,
-            DateTime? lastModified, string changeVector = null) : base(engine)
+            string id, DateTime? lastModified, string changeVector = null) : base(engine)
         {
             _parent = parent;
             blittable.NoCache = true;
             LastModified = lastModified;
             ChangeVector = changeVector;
             Blittable = blittable;
-            DocumentId = docId;
+            DocumentId = id;
             Prototype = engine.Object.PrototypeObject;
+        }
+
+        public BlittableObjectInstance(Engine engine,
+            BlittableObjectInstance parent,
+            BlittableJsonReaderObject blittable,
+            Document doc) : this(engine,parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
+        {
+            _doc = doc;
         }
 
 

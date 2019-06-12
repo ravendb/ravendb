@@ -181,13 +181,22 @@ namespace Raven.Server.Documents.Queries
             string methodName = null
             )
         {
-            var split = fieldName.Value.Split(".");
-            if (split.Length > 1 && NotInRootAliasPaths(split[0]))
+            QueryFieldName indexFieldName;
+
+            if (spatial == null && IsDynamic)
             {
-                ThrowUnknownAlias(split[0], parameters);
+                var split = fieldName.Value.Split(".");
+                if (split.Length > 1 && NotInRootAliasPaths(split[0]))
+                {
+                    ThrowUnknownAlias(split[0], parameters);
+                }
+                indexFieldName = GetIndexFieldName(fieldName, parameters);
+            }
+            else
+            {
+                indexFieldName = new QueryFieldName(fieldName, true);
             }
 
-            var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
             if (operatorType == null &&
                 // to support startsWith(id(), ...)
@@ -290,13 +299,13 @@ namespace Raven.Server.Documents.Queries
             if (Query.OrderBy != null)
             {
                 OrderBy = new OrderByField[Query.OrderBy.Count];
-
+                
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
                     var order = Query.OrderBy[i];
                     if (order.Expression is MethodExpression me)
                     {
-                        OrderBy[i] = ExtractOrderByFromMethod(me, order.FieldType, order.Ascending, parameters);
+                        OrderBy[i] = ExtractOrderByFromMethod(me, fromAlias, order.FieldType, order.Ascending, parameters);
                     }
                     else if (order.Expression is FieldExpression fe)
                     {
@@ -553,7 +562,7 @@ namespace Raven.Server.Documents.Queries
             sb.Append("function ").Append(SelectOutput).Append("(");
             int index = 0;
             var args = new SelectField[IsGraph ?
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count : 
+                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count :
                 RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
@@ -758,7 +767,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException(sb.ToString(), QueryText, parameters);
         }
 
-        private OrderByField ExtractOrderByFromMethod(MethodExpression me, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters)
+        private OrderByField ExtractOrderByFromMethod(MethodExpression me, string fromAlias, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters)
         {
             if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
             {
@@ -831,7 +840,20 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected two arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
 
-                var fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "spatial.distance", parameters);
+                QueryFieldName fieldName;
+
+                if (me.Arguments[0] is MethodExpression firstArgME)
+                {
+                    var visitor = new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText);
+                    visitor.HandleSpatial("spatial.distance", me.Arguments, parameters);
+                    fieldName = new QueryFieldName(firstArgME.GetText(null), true);
+                }
+                else
+                {
+                    fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "spatial.distance", parameters);
+                }
+
+
 
                 var lastArgument = me.Arguments[me.Arguments.Count - 1];
 
@@ -1066,7 +1088,7 @@ namespace Raven.Server.Documents.Queries
                             {
                                 if (!RootAliasPaths.ContainsKey(argumentExpression.FieldValue))
                                     ThrowUnknownAlias(argumentExpression.FieldValue, parameters);
-                                return SelectField.CreateMethodCall("id", alias, new []{ SelectField.Create(QueryFieldName.DocumentId, argumentExpression.FieldValue)  });
+                                return SelectField.CreateMethodCall("id", alias, new[] { SelectField.Create(QueryFieldName.DocumentId, argumentExpression.FieldValue) });
                             }
                         }
 
@@ -1369,7 +1391,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (IsGraph)
             {
-               return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
+                return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
             }
 
             if (_aliasToName.TryGetValue(fe.Compound[0].Value, out var indexFieldName) &&
@@ -1382,8 +1404,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (fe.Compound.Count == 1)
                 return new QueryFieldName(fe.Compound[0].Value, fe.IsQuoted);
-           
-            if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+
+            if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
             {
                 if (fe.Compound.Count == 2)
                 {
@@ -1983,7 +2005,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a parameter name or value", QueryText, parameters);
             }
 
-            private void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+            public void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
                 AutoSpatialOptions fieldOptions = null;
                 QueryFieldName fieldName;
@@ -1996,7 +2018,7 @@ namespace Raven.Server.Documents.Queries
                     if (argument is FieldExpression == false && argument is ValueExpression == false)
                         throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a field name when static index is queried", QueryText, parameters);
 
-                    fieldName = ExtractFieldNameFromArgument(argument, methodName, parameters, QueryText);
+                    fieldName = _metadata.ExtractFieldNameFromArgument(argument, methodName, parameters, QueryText);
                 }
                 else
                 {
@@ -2010,7 +2032,7 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 1)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
 
-                            var wkt = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "wkt", parameters, QueryText).Value;
+                            var wkt = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "wkt", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Wkt, new List<string>
                             {
@@ -2021,8 +2043,8 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
-                            var latitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "point", parameters, QueryText).Value;
-                            var longitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[1], "point", parameters, QueryText).Value;
+                            var latitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "point", parameters, QueryText).Value;
+                            var longitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[1], "point", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
                             {
@@ -2064,6 +2086,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
                         break;
+                    case MethodType.Spatial_Point:
+                        QueryValidator.ValidatePoint(shapeExpression.Arguments, QueryText, parameters);
+                        break;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2096,10 +2121,14 @@ namespace Raven.Server.Documents.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, string methodName, BlittableJsonReaderObject parameters, string queryText)
+        private QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, string methodName, BlittableJsonReaderObject parameters, string queryText)
         {
             if (argument is FieldExpression field)
+            {
+                if (ShouldStripAlias(field))
+                    return new QueryFieldName(field.FieldValueWithoutAlias, field.IsQuoted);
                 return new QueryFieldName(field.FieldValue, field.IsQuoted);
+            }
 
             if (argument is ValueExpression value) // escaped string might go there
                 return new QueryFieldName(value.Token.Value, value.Value == ValueTokenType.String);
@@ -2218,6 +2247,14 @@ namespace Raven.Server.Documents.Queries
         {
             return RootAliasPaths.Count > 0 &&
                    RootAliasPaths.TryGetValue(key, out _) == false;
+        }
+
+        private bool ShouldStripAlias(FieldExpression expr)
+        {
+            if (RootAliasPaths.Count == 0)
+                return false;
+
+            return RootAliasPaths.TryGetValue(expr.Compound[0], out _);
         }
     }
 }

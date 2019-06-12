@@ -579,6 +579,12 @@ namespace Raven.Server.Documents.Patch
                     [Constants.Documents.Metadata.LastModified] = boi.LastModified,
                 };
 
+                if (boi.Score != null)
+                    metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.Score.Value;
+
+                if (boi.Distance != null)
+                    metadata.Modifications[Constants.Documents.Metadata.Distance] = boi.Distance.Value;
+
                 metadata = _jsonCtx.ReadObject(metadata, boi.DocumentId);
 
                 return TranslateToJs(ScriptEngine, _jsonCtx, metadata);
@@ -1288,7 +1294,7 @@ namespace Raven.Server.Documents.Patch
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
-                    return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d.Id, d.LastModified, d.ChangeVector)
+                    return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d)
                     {
                         LuceneDocument = t.Item2,
                         LuceneState = t.Item3
@@ -1296,7 +1302,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 if (o is Document doc)
                 {
-                    return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified);
+                    return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc);
                 }
                 if (o is DocumentConflict dc)
                 {
@@ -1340,7 +1346,7 @@ namespace Raven.Server.Documents.Patch
                     var args = new JsValue[1];
                     for (var i = 0; i < docList.Count; i++)
                     {
-                        args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified);
+                        args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i]);
                         engine.Array.PrototypeObject.Push(jsArray, args);
                     }
                     return jsArray;
