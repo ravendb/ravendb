@@ -591,7 +591,7 @@ namespace Raven.Server
                 return null;
             }
 
-            if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
+            if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate && forceRenew == false)
             {
                 var msg =
                     "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
