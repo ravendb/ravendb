@@ -15,18 +15,20 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
     {
         private readonly Point _center;
         private readonly IndexQueryServerSide _query;
+        private readonly double _roundFactor;
         private readonly SpatialField _spatialField;
 
-        public SpatialDistanceFieldComparatorSource(SpatialField spatialField, Point center, IndexQueryServerSide query)
+        public SpatialDistanceFieldComparatorSource(SpatialField spatialField, Point center, IndexQueryServerSide query, double roundFactor)
         {
             _spatialField = spatialField;
             _center = center;
             _query = query;
+            _roundFactor = roundFactor;
         }
 
         public override FieldComparator NewComparator(string fieldname, int numHits, int sortPos, bool reversed)
         {
-            var comp = new SpatialDistanceFieldComparator(_spatialField, _center, numHits);
+            var comp = new SpatialDistanceFieldComparator(_spatialField, _center, numHits, _roundFactor);
             if (_query.Distances == null)
                 _query.Distances = comp; // we will only push the distance for the first one
             return comp;
@@ -41,6 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private bool _isGeo;
             private Dictionary<int, double> _cache = new Dictionary<int, double>();
             private int _currentDocBase;
+            private double _roundFactor;
 
             public SpatialUnits Units => _spatialField.Units;
 
@@ -52,12 +55,13 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return cache;
             }
 
-            public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits)
+            public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits, double roundFactor)
             {
                 _spatialField = spatialField;
                 _values = new DistanceValue[numHits];
                 _originPt = origin;
                 _isGeo = _spatialField.GetContext().IsGeo();
+                _roundFactor = roundFactor;
             }
 
             public override int Compare(int slot1, int slot2)
@@ -104,23 +108,30 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             {
                 var actualDocId = doc + _currentDocBase;
                 if (_cache.TryGetValue(actualDocId, out var cache))
-                    return cache;
+                    return GetRoundedValue(cache);
 
                 cache = ActuallyCalculateDistance(doc, state);
 
                 _cache[actualDocId] = cache;
 
-                return cache;
+                return GetRoundedValue(cache);
+            }
+
+            private double GetRoundedValue(double cache)
+            {
+                if (_roundFactor == 0)
+                    return cache;
+                return cache - cache % _roundFactor;
             }
 
             private double ActuallyCalculateDistance(int doc, IState state)
             {
                 var document = _currentIndexReader.Document(doc, state);
                 if (document == null)
-                    return double.NaN;
+                    return double.MaxValue;
                 var field = document.GetField(Constants.Documents.Indexing.Fields.SpatialShapeFieldName);
                 if (field == null)
-                    return double.NaN;
+                    return double.MaxValue;
                 var shapeAsText = field.StringValue(state);
                 Shape shape;
                 try

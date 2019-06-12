@@ -86,13 +86,19 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
-            OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude);
+            OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude, field.RoundFactor);
+        }
+
+        public void OrderByDistance(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistance(fieldName, latitude, longitude, 0);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, double latitude, double longitude)
+        public void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor)
         {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
+            var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName));
         }
 
         /// <inheritdoc />
@@ -103,13 +109,19 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
-            OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt);
+            OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt, field.RoundFactor);
         }
 
         /// <inheritdoc />
         public void OrderByDistance(string fieldName, string shapeWkt)
         {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt)));
+            OrderByDistance(fieldName, shapeWkt);
+        }
+
+        public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor)
+        {
+            var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt), roundFactorParameterName));
         }
 
         /// <inheritdoc />
@@ -120,13 +132,18 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
 
-            OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude);
+            OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude, field.RoundFactor);
         }
 
-        /// <inheritdoc />
         public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
         {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
+            OrderByDistanceDescending(fieldName, latitude, longitude, 0);
+        }
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor)
+        {
+            var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName));
         }
 
         /// <inheritdoc />
@@ -137,13 +154,20 @@ namespace Raven.Client.Documents.Session
 
             AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
 
-            OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt);
+            OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt, field.RoundFactor);
+        }
+
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt)
+        {
+            OrderByDistanceDescending(fieldName, shapeWkt, 0);
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(string fieldName, string shapeWkt)
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor)
         {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt)));
+            string factorParamName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
+
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt), factorParamName));
         }
         
         private void AssertIsDynamicQuery(DynamicSpatialField dynamicField, string methodName)

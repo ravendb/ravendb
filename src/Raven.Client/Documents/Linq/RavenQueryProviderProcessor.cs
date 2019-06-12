@@ -1246,17 +1246,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
             VisitExpression(arguments[0]);
 
             LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[1], out var distanceFieldName);
-            if (arguments.Count == 4)
+            LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[2], out var sndArgObj);
+
+            if (sndArgObj is double) // can only be lat here
             {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[2], out var distanceLatitude);
+                // lat / lng
+                var distanceLatitude = (double)sndArgObj;
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[3], out var distanceLongitude);
 
                 if (distanceFieldName is string fieldName)
                 {
+                    double roundFactor = 0;
+                    if (arguments.Count > 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[4], out var roundFactorObj);
+                        roundFactor = (double)roundFactorObj;
+                    }
+
+
                     if (descending == false)
-                        _documentQuery.OrderByDistance(fieldName, (double)distanceLatitude, (double)distanceLongitude);
+                        _documentQuery.OrderByDistance(fieldName, distanceLatitude, (double)distanceLongitude, roundFactor);
                     else
-                        _documentQuery.OrderByDistanceDescending(fieldName, (double)distanceLatitude, (double)distanceLongitude);
+                        _documentQuery.OrderByDistanceDescending(fieldName, distanceLatitude, (double)distanceLongitude, roundFactor);
                 }
                 else if (distanceFieldName is DynamicSpatialField dynamicField)
                 {
@@ -1270,21 +1281,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
             else
             {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[2], out var distanceShapeWkt);
+                // wkt 
+                var distanceShapeWkt = (string)sndArgObj;
+
 
                 if (distanceFieldName is string fieldName)
                 {
+                    double roundFactor = 0;
+                    if (arguments.Count > 3)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[3], out var roundFactorObj);
+                        roundFactor = (double)roundFactorObj;
+                    }
+
                     if (descending == false)
-                        _documentQuery.OrderByDistance(fieldName, (string)distanceShapeWkt);
+                        _documentQuery.OrderByDistance(fieldName, distanceShapeWkt, roundFactor);
                     else
-                        _documentQuery.OrderByDistanceDescending(fieldName, (string)distanceShapeWkt);
+                        _documentQuery.OrderByDistanceDescending(fieldName, distanceShapeWkt, roundFactor);
                 }
                 else if (distanceFieldName is DynamicSpatialField dynamicField)
                 {
                     if (descending == false)
-                        _documentQuery.OrderByDistance(dynamicField, (string)distanceShapeWkt);
+                        _documentQuery.OrderByDistance(dynamicField, distanceShapeWkt);
                     else
-                        _documentQuery.OrderByDistanceDescending(dynamicField, (string)distanceShapeWkt);
+                        _documentQuery.OrderByDistanceDescending(dynamicField, distanceShapeWkt);
                 }
                 else
                     throw new NotSupportedException("Unknown spatial field name type: " + distanceFieldName.GetType());
