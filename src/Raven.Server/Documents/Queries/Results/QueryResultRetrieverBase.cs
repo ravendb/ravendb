@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, scoreDoc, state, out key, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, scoreDoc, state, out _, out args[i]);
                     if (ReferenceEquals(args[i], document))
                     {
                         args[i] = Tuple.Create(document, luceneDoc, state);

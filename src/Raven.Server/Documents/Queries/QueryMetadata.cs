@@ -1111,6 +1111,11 @@ namespace Raven.Server.Documents.Queries
                         return CreateFacet(me, alias, parameters);
                     }
 
+                    if (string.Equals("spatial.distance", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return SelectField.CreateMethodCall("spatial.distance", alias, ConvertSelectArguments(parameters, alias, me, methodName));
+                    }
+
                     if (string.Equals("suggest", methodName, StringComparison.OrdinalIgnoreCase))
                     {
                         if (IsGroupBy)
@@ -1140,18 +1145,7 @@ namespace Raven.Server.Documents.Queries
                         if (me.Arguments.Count == 0 || me.Arguments.Count > 2)
                             ThrowInvalidNumberOfArgumentsForCounter(methodName, parameters, me.Arguments.Count);
 
-                        var args = new SelectField[me.Arguments.Count];
-                        for (int i = 0; i < me.Arguments.Count; i++)
-                        {
-                            if (me.Arguments[i] is ValueExpression vt)
-                                args[i] = SelectField.CreateValue(vt.Token.Value, alias, vt.Value);
-                            else if (me.Arguments[i] is FieldExpression ft)
-                                args[i] = GetSelectValue(null, ft, parameters);
-                            else
-                                ThrowCounterInvalidArgument(methodName, me.Arguments[i], parameters);
-                        }
-
-                        var counterField = SelectField.CreateCounterField(alias, args);
+                        var counterField = SelectField.CreateCounterField(alias, ConvertSelectArguments(parameters, alias, me, methodName));
                         if (string.Equals("counterRaw", methodName, StringComparison.OrdinalIgnoreCase))
                         {
                             counterField.FunctionArgs = new SelectField[0];
@@ -1210,6 +1204,22 @@ namespace Raven.Server.Documents.Queries
 
             ThrowUnhandledExpressionTypeInSelect(expression.Type.ToString(), QueryText, parameters);
             return null; // never hit
+        }
+
+        private SelectField[] ConvertSelectArguments(BlittableJsonReaderObject parameters, string alias, MethodExpression me, string methodName)
+        {
+            var args = new SelectField[me.Arguments.Count];
+            for (int i = 0; i < me.Arguments.Count; i++)
+            {
+                if (me.Arguments[i] is ValueExpression vt)
+                    args[i] = SelectField.CreateValue(vt.Token.Value, alias, vt.Value);
+                else if (me.Arguments[i] is FieldExpression ft)
+                    args[i] = GetSelectValue(null, ft, parameters);
+                else
+                    ThrowCounterInvalidArgument(methodName, me.Arguments[i], parameters);
+            }
+
+            return args;
         }
 
         private void HasLoadOrIncludeInProjection(Esprima.Ast.Program ast)
@@ -2183,7 +2193,9 @@ namespace Raven.Server.Documents.Queries
 
         private static readonly HashSet<string> JsBaseObjects = new HashSet<string>
         {
-            "Math", "Number", "Object", "Date", "Array"
+            "Math", "Number", "Object", "Date", "Array",
+            // out stuff
+            "console", "spatial"
         };
 
         private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
