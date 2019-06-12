@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly SubscriptionState _subscription;
         private readonly SubscriptionPatchDocument _patch;
         // make sure that we don't use too much memory for subscription batch
-        private readonly long _maximumAllowedMemory;
+        private readonly Size _maximumAllowedMemory;
 
         public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
             bool revisions,
@@ -49,9 +49,9 @@ namespace Raven.Server.Documents.TcpHandlers
             _revisions = revisions;
             _subscription = subscription;
             _patch = patch;
-            _maximumAllowedMemory = (PlatformDetails.Is32Bits || _db.Configuration.Storage.ForceUsing32BitsPager
+            _maximumAllowedMemory = new Size(PlatformDetails.Is32Bits || _db.Configuration.Storage.ForceUsing32BitsPager
                 ? 4
-                : 32)* Voron.Global.Constants.Size.Megabyte;
+                : 32* Voron.Global.Constants.Size.Megabyte, SizeUnit.Bytes);
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory)
+                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory)
+                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }
