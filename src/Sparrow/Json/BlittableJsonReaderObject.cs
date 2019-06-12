@@ -1026,7 +1026,7 @@ namespace Sparrow.Json
             {
                 var mem = context.GetMemory(Size);
                 CopyTo(mem.Address);
-            var cloned = new BlittableJsonReaderObject(mem.Address, Size, context, mem);
+                return new BlittableJsonReaderObject(mem.Address, Size, context, mem);
             }
 
             return context.ReadObject(this, null);
