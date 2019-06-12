@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return dist;
             }
 
-            private static double HaverstineDistance(double lat1, double lng1, double lat2, double lng2)
+            public static double HaverstineDistance(double lat1, double lng1, double lat2, double lng2)
             {
                 // from : https://www.geodatasource.com/developers/javascript
                 if ((lat1 == lat2) && (lng1 == lng2))
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 }
             }
 
-            private double CartesianDistance(double lat1, double lng1, double lat2, double lng2)
+            public static double CartesianDistance(double lat1, double lng1, double lat2, double lng2)
             {
                 double result = 0;
 
