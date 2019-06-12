@@ -130,16 +130,14 @@ namespace Raven.Server.Documents.Patch
                     // that clone later
                     using (var scriptResult = run.Run(context, context, "execute", id, new[] { documentInstance, args }))
                     {
-                        var modifiedDocument = scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
                         var result = new PatchResult
                         {
                             Status = PatchStatus.NotModified,
                             OriginalDocument = _isTest == false ? null : originalDoc?.Clone(context),
-                            ModifiedDocument = modifiedDocument
+                            ModifiedDocument = scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk)
                         };
 
-                        if (modifiedDocument == null)
+                        if (result.ModifiedDocument == null)
                         {
                             result.Status = PatchStatus.Skipped;
                             return result;
@@ -149,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                         {
                             originalDocument?.Dispose();
                             originalDocument = _database.DocumentsStorage.Get(context, id);
-                            documentInstance = UpdateOriginalDocument();
+                            UpdateOriginalDocument();
                         }
 
                         if (run.UpdatedDocumentCounterIds != null)
@@ -159,7 +157,10 @@ namespace Raven.Server.Documents.Patch
                                 if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
                                 {
                                     Debug.Assert(originalDocument != null);
-                                    modifiedDocument = UpdateCountersInMetadata(context, modifiedDocument, docId, ref originalDocument.Flags);
+                                    using (var old = result.ModifiedDocument)
+                                    {
+                                        result.ModifiedDocument = UpdateCountersInMetadata(context, result.ModifiedDocument, docId, ref originalDocument.Flags);
+                                }
                                 }
                                 else
                                 {
@@ -185,7 +186,7 @@ namespace Raven.Server.Documents.Patch
                         if (originalDoc == null)
                         {
                             if (_isTest == false || run.PutOrDeleteCalled)
-                                putResult = _database.DocumentsStorage.Put(context, id, null, modifiedDocument);
+                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument);
 
                             result.Status = PatchStatus.Created;
                         }
@@ -211,7 +212,7 @@ namespace Raven.Server.Documents.Patch
                                     context,
                                     id,
                                     originalDocument.ChangeVector,
-                                    modifiedDocument,
+                                    result.ModifiedDocument,
                                     null,
                                     null,
                                     originalDocument.Flags);
@@ -230,7 +231,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (_isTest && result.Status == PatchStatus.NotModified)
                         {
-                            using (var old = modifiedDocument)
+                            using (var old = result.ModifiedDocument)
                             {
                                 result.ModifiedDocument = originalDoc?.Clone(_externalContext ?? context);
                             }
