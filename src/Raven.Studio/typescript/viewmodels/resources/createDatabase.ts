@@ -299,6 +299,14 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
+        this.databaseModel.restore.source.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        });
+
+        this.databaseModel.restore.cloudCredentials.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        });
+        
         this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
             this.updateBackupDirectoryPathOptions(newPath);
         });
@@ -404,39 +412,43 @@ class createDatabase extends dialogViewModelBase {
         generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
     }
     
-    private updateFolderPath(path: string, currentValueProvider: () => string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return new getFolderPathOptionsCommand(path)
-            .execute()
-            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
-                if (currentValueProvider() !== path) {
-                    // the path has changed
-                    return;
-                }
-            });
+    private updateFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
+            .execute();
+    }
+
+    private updateCloudFolderPath(path: string): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forS3Backup(path) //TODO: pass credentials 
+            .execute();
     }
     
     updateFolderPathOptions(path: string) {
-        this.updateFolderPath(path, this.databaseModel.path.dataPath)
+        this.updateFolderPath(path)
             .done(result => this.folderPathOptions(result.List));
     }
 
     updateBackupDirectoryPathOptions(path: string) {
-        this.updateFolderPath(path, this.databaseModel.restore.backupDirectory, true)
-            .done(result => this.backupDirectoryPathOptions(result.List));
+        if (this.databaseModel.restore.source() === "serverLocal") {
+            this.updateFolderPath(path, true)
+                .done(result => this.backupDirectoryPathOptions(result.List));
+        } else {
+            this.updateCloudFolderPath(path)
+                .done(result => this.backupDirectoryPathOptions(result.List));
+        }
     }
 
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {
-        this.updateFolderPath(path, this.databaseModel.legacyMigration.dataDirectory)
+        this.updateFolderPath(path)
             .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
     }
     
     updateLegacyDataExporterPath(path: string) {
-        this.updateFolderPath(path, this.databaseModel.legacyMigration.dataExporterFullPath)
+        this.updateFolderPath(path)
             .done(result => this.dataExporterDirectoryPathOptions(result.List));
     }
 
     updateSourceJournalsPathOptions(path: string) {
-        this.updateFolderPath(path, this.databaseModel.legacyMigration.journalsPath)
+        this.updateFolderPath(path)
             .done(result => this.sourceJournalsPathOptions(result.List));
     }
 
@@ -580,6 +592,15 @@ class createDatabase extends dialogViewModelBase {
                 dialog.close(this);
                 this.spinners.create(false);
             });
+    }
+
+    findRestoreSourceLabel(restoreSource: restoreSource) {
+        switch (restoreSource) {
+            case "cloud":
+                return "Cloud";
+            case "serverLocal":
+                return "Server local directory";
+        }
     }
 
     toggleSelectAll() {
