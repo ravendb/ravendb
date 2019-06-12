@@ -14,5 +14,7 @@ namespace Voron.Recovery
         public bool DisableCopyOnWriteMode { get; set; }
         public bool? IgnoreInvalidJournalErrors { get; set; }
         public LogMode LoggingMode { get; set; } = LogMode.Operations;
+
+        public byte[] MasterKey { get; set; }
     }
 }

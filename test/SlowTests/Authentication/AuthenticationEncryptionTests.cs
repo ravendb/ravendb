@@ -115,7 +115,7 @@ namespace SlowTests.Authentication
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                
+
                 using (var commands = store.Commands())
                 {
                     // create auto map index
@@ -222,7 +222,7 @@ namespace SlowTests.Authentication
 
                 var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-                
+
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
                 var compactOperation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
