@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -38,14 +39,17 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private DistanceValue _bottom;
             private readonly Point _originPt;
             private bool _isGeo;
+            private Dictionary<int, double> _cache = new Dictionary<int, double>();
+            private int _currentDocBase;
 
             public SpatialUnits Units => _spatialField.Units;
 
             private IndexReader _currentIndexReader;
 
-            public double Get(int i)
+            public double Get(int doc)
             {
-                return _values[i].Value;
+                _cache.TryGetValue(doc, out var cache);
+                return cache;
             }
 
             public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits)
@@ -96,8 +100,20 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                     Value = CalculateDistance(doc, state)
                 };
             }
-
             private double CalculateDistance(int doc, IState state)
+            {
+                var actualDocId = doc + _currentDocBase;
+                if (_cache.TryGetValue(actualDocId, out var cache))
+                    return cache;
+
+                cache = ActuallyCalculateDistance(doc, state);
+
+                _cache[actualDocId] = cache;
+
+                return cache;
+            }
+
+            private double ActuallyCalculateDistance(int doc, IState state)
             {
                 var document = _currentIndexReader.Document(doc, state);
                 if (document == null)
@@ -177,6 +193,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             public override void SetNextReader(IndexReader reader, int docBase, IState state)
             {
                 _currentIndexReader = reader;
+                _currentDocBase = docBase;
             }
 
             public override IComparable this[int slot] => _values[slot];
@@ -185,6 +202,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         private struct DistanceValue : IComparable
         {
             public double Value;
+
+            public override string ToString()
+            {
+                return Value.ToString();
+            }
+
             public int CompareTo(object obj)
             {
                 if (obj == null)

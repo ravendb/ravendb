@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
 
-                        var result = retriever.Get(document, scoreDoc.Score, _state,position);
+                        var result = retriever.Get(document, scoreDoc, _state);
                         if (scope.TryIncludeInResults(result) == false)
                         {
                             skippedResults.Value++;
@@ -399,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
 
-                    var result = retriever.Get(document, indexResult.Score, _state, -1);
+                    var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId,indexResult.Score), _state);
                     if (scope.TryIncludeInResults(result) == false)
                     {
                         skippedResults.Value++;
@@ -752,7 +752,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 yield return new QueryResult
                 {
-                    Result = retriever.Get(doc, hit.Score, _state, i)
+                    Result = retriever.Get(doc, hit, _state)
                 };
             }
         }
