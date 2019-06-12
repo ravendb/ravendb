@@ -21,7 +21,6 @@ namespace Raven.Client.Documents.Session
         Before,
         
         // After is currently Not implemented on the server side ! TBD only if requested by customer
-        After
     }
     
     /// <summary>

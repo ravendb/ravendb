@@ -904,7 +904,7 @@ more responsive application.
         
         private void PrepareForCreatingRevisionsFromIDs(SaveChangesData result)
         {
-            // Note: here there is not point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
+            // Note: here there is no point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
             foreach (var idEntry in IDsForCreatingForcedRevisions)
             {
                 result.SessionCommands.Add(new RevisionsCommandData(idEntry.Key));   
