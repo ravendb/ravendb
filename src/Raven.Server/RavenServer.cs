@@ -1346,6 +1346,10 @@ namespace Raven.Server
 
                 Logger tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 ListenToNewTcpConnection(listener);
+
+                if (ServerStore.Initialized == false)
+                    await ServerStore.InitializationCompleted.WaitAsync();
+
                 try
                 {
                     tcpClient.NoDelay = true;

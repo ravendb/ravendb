@@ -1,4 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -42,6 +45,42 @@ namespace RachisTests
                 }
             }
 
+        }
+
+        [Fact]
+        public async Task RavenDB_13659()
+        {
+            var leader = await CreateNetworkAndGetLeader(1);
+            var mre = new ManualResetEvent(false);
+            var tcs = new TaskCompletionSource<object>();
+
+            leader.Timeout.Start(() =>
+            {
+                mre.Set();
+                try
+                {
+                    using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenWriteTransaction())
+                    {
+
+                    }
+                    tcs.SetResult(null);
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+            });
+
+            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenWriteTransaction())
+            {
+                mre.WaitOne();
+                leader.SetNewStateInTx(context, RachisState.Follower, null, leader.CurrentTerm, "deadlock");
+                context.Transaction.Commit();
+            }
+
+            await tcs.Task;
         }
     }
 }

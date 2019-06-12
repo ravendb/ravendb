@@ -117,27 +117,43 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private int _inProgress;
+
         public void ExecuteTimeoutBehavior()
         {
-            lock (this)
+            if (Interlocked.CompareExchange(ref _inProgress, 1, 0) == 1)
             {
-                if (Disable)
-                    return;
+                Defer(_currentLeader);
+                return;
+            }
 
-                if (_singleShot)
-                    _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            try
+            {
+                Action action;
 
-                try
+                lock (this)
                 {
-                    if (_timeoutHappened == null)
+                    if (Disable)
                         return;
 
-                    _timeoutHappened?.Invoke();
+                    if (_singleShot)
+                        _timer.Change(Timeout.Infinite, Timeout.Infinite);
+
+                    action = _timeoutHappened;
                 }
-                catch (ConcurrencyException)
-                {
-                    // expected, ignoring
-                }
+
+                if (action == null)
+                    return;
+
+                action.Invoke();
+            }
+            catch (ConcurrencyException)
+            {
+                // expected, ignoring
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _inProgress, 0);
             }
         }
 
