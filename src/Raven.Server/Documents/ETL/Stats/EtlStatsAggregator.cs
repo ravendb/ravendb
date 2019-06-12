@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using Raven.Server.Utils.Stats;
+using Sparrow;
+using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -52,7 +54,8 @@ namespace Raven.Server.Documents.ETL.Stats
                 TransformationErrorCount = Scope.TransformationErrorCount,
                 SuccessfullyLoaded = Stats.SuccessfullyLoaded,
                 BatchCompleteReason = Stats.BatchCompleteReason,
-                CurrentlyAllocated = Stats.CurrentlyAllocated,
+                CurrentlyAllocated = new Size(Stats.CurrentlyAllocated.GetValue(SizeUnit.Bytes)),
+                BatchSize = new Size(Stats.BatchSize.GetValue(SizeUnit.Bytes)),
             };
         }
 

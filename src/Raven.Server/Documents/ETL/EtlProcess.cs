@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.ETL
                                 break;
                             }
 
-                            transformer.Transform(item);
+                            transformer.Transform(item, stats);
 
                             Statistics.TransformationSuccess();
 
@@ -488,6 +488,20 @@ namespace Raven.Server.Documents.ETL
 
                     return false;
                 }
+            }
+
+            var maxBatchSize = Database.Configuration.Etl.MaxBatchSize;
+
+            if (maxBatchSize != null && stats.BatchSize >= maxBatchSize)
+            {
+                var reason = $"Stopping the batch because maximum batch size limit was reached ({stats.BatchSize})";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchCompleteReason(reason);
+
+                return false;
             }
 
             return true;

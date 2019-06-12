@@ -7,6 +7,7 @@ using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -22,6 +23,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
         private Dictionary<string, Queue<Attachment>> _loadedAttachments;
         private readonly List<SqlEtlTable> _tablesForScript;
+
+        private EtlStatsScope _stats;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
@@ -89,6 +92,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                     sqlColumn.Type = 0;
                     sqlColumn.Value = attachment.Stream;
+
+                    _stats.IncrementBatchSize(attachment.Stream.Length);
                 }
 
                 columns.Add(sqlColumn);
@@ -98,6 +103,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Columns = columns
             });
+
+            _stats.IncrementBatchSize(result.Size);
         }
 
         private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
@@ -164,8 +171,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return _tables.Values.ToList();
         }
 
-        public override void Transform(ToSqlItem item)
+        public override void Transform(ToSqlItem item, EtlStatsScope stats)
         {
+            _stats = stats;
+
             if (item.IsDelete == false)
             {
                 Current = item;

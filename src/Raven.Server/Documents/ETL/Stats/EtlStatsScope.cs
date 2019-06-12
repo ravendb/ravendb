@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
+using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -41,6 +41,8 @@ namespace Raven.Server.Documents.ETL.Stats
         public string ChangeVector => _stats.ChangeVector;
 
         public string BatchCompleteReason => _stats.BatchCompleteReason;
+
+        public Size BatchSize => _stats.BatchSize;
 
         public void RecordExtractedItem(EtlItemType itemType)
         {
@@ -146,7 +148,12 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public void RecordCurrentlyAllocated(long allocatedInBytes)
         {
-            _stats.CurrentlyAllocated = new Size(allocatedInBytes);
+            _stats.CurrentlyAllocated = new Size(allocatedInBytes, SizeUnit.Bytes);
+        }
+
+        public void IncrementBatchSize(long sizeInBytes)
+        {
+            _stats.BatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
     }
 }
