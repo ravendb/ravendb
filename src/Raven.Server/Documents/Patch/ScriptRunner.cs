@@ -14,10 +14,12 @@ using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
@@ -25,6 +27,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Spatial4n.Core.Distance;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
@@ -150,9 +153,20 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
 
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
+
+                //console.log
                 ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
                 consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
                 ScriptEngine.SetValue("console", consoleObject);
+
+
+                //spatial.distance
+                ObjectInstance spatialObject = new ObjectInstance(ScriptEngine);
+                var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
+                spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
+                ScriptEngine.SetValue("spatial", spatialObject);
+                ScriptEngine.SetValue("spatial.distance", spatialFunc);
+
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
@@ -257,7 +271,6 @@ namespace Raven.Server.Documents.Patch
                     case Jint.Runtime.Types.Object:
                         throw new ArgumentException(caller + " cannot be called on an object");
                 }
-
             }
 
             private JsValue Raven_Max(JsValue self, JsValue[] args)
@@ -333,6 +346,40 @@ namespace Raven.Server.Documents.Patch
                 }
                 return Undefined.Instance;
             }
+
+            private JsValue Spatial_Distance(JsValue self, JsValue[] args)
+            {
+                if (args.Length < 4 && args.Length > 5)
+                    throw new ArgumentException("Called with expected number of arguments, expected: spatial.distance(lat1, lng1, lat2, lng2, kilometers | miles | cartesian)");
+
+                for (int i = 0; i < 4; i++)
+                {
+                    if (args[i].IsNumber() == false)
+                        return Undefined.Instance;
+                }
+
+                var lat1 = args[0].AsNumber();
+                var lng1 = args[1].AsNumber();
+                var lat2 = args[2].AsNumber();
+                var lng2 = args[3].AsNumber();
+
+                var units = SpatialUnits.Kilometers;
+                if (args.Length > 4 && args[4].IsString())
+                {
+                    if (string.Equals("cartesian", args[4].AsString(), StringComparison.OrdinalIgnoreCase))
+                        return SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.CartesianDistance(lat1, lng1, lat2, lng2);
+
+                    if (Enum.TryParse(args[4].AsString(), ignoreCase: true, out units) == false)
+                        throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilomoters' or 'miles'");
+                }
+
+                var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistance(lat1, lng1, lat2, lng2);
+                if (units == SpatialUnits.Kilometers)
+                    result *= DistanceUtils.MILES_TO_KM;
+
+                return result;
+            }
+
 
             private JsValue OutputDebug(JsValue self, JsValue[] args)
             {
