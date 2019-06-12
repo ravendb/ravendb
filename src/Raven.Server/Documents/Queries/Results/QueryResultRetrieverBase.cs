@@ -65,21 +65,19 @@ namespace Raven.Server.Documents.Queries.Results
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-        protected void FinishDocumentSetup(Document doc, float score, int index)
+        protected void FinishDocumentSetup(Document doc, Lucene.Net.Search.ScoreDoc lucene)
         {
-            if (doc == null)
+            if (doc == null || lucene == null)
                 return;
 
-            doc.IndexScore = score;
-            if (_query.Distances != null && index >= 0) 
+            doc.IndexScore = lucene.Score;
+            if (_query.Distances != null) 
             {
-                // intersection queries are not supported, rare and likely not going 
-                // to be useful in this regard. If needed, user can project
-                doc.Distance = _query.Distances.Get(index);
+                doc.Distance = _query.Distances.Get(lucene.Doc);
             }
         }
 
-        public abstract Document Get(Lucene.Net.Documents.Document input, float score, IState state, int resultIndex);
+        public abstract Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc lucene, IState state);
 
         public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
@@ -91,7 +89,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input,string lowerId, IState state)
+        protected Document GetProjection(Lucene.Net.Documents.Document input,string lowerId, IState state, Lucene.Net.Search.ScoreDoc lucene)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
@@ -103,8 +101,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     if (doc == null)
                         return null;
-
-                    return GetProjectionFromDocument(doc, input, FieldsToFetch, _context, state);
+                    return GetProjectionFromDocument(doc, input, lucene, FieldsToFetch, _context, state);
                 }
 
                 var documentLoaded = false;
@@ -187,7 +184,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
@@ -421,6 +418,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldToFetch.QueryField.Function != null)
             {
+                FinishDocumentSetup(document, scoreDoc);
+
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {

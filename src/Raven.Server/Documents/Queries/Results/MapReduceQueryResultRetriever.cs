@@ -1,4 +1,5 @@
-﻿using Lucene.Net.Store;
+﻿using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
@@ -68,12 +69,12 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state, int resultIndex)
+        public override Document Get(Lucene.Net.Documents.Document input, ScoreDoc lucene, IState state)
         {
             if (FieldsToFetch.IsProjection)
             {
-                var proj = GetProjection(input, null, state);
-                FinishDocumentSetup(proj, score, resultIndex);
+                var proj = GetProjection(input, null,state, lucene);
+                FinishDocumentSetup(proj, lucene);
                 return proj;
             }
 
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 var doc = DirectGet(input, null, DocumentFields.All, state);
 
-                FinishDocumentSetup(doc, score, resultIndex);
+                FinishDocumentSetup(doc, lucene);
 
                 return doc;
             }
