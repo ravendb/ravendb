@@ -3217,30 +3217,14 @@ namespace Raven.Server.Documents.Indexes
         {
             get
             {
-                if (_transactionSizeLimit != null)
-                    return _transactionSizeLimit.Value;
+                var limit = DocumentDatabase.IsEncrypted
+                    ? Configuration.EncryptedTransactionSizeLimit ?? Configuration.TransactionSizeLimit
+                    : Configuration.TransactionSizeLimit;
 
-                if (Configuration.TransactionSizeLimit == null)
-                {
-                    _transactionSizeLimit = new Lazy<Size?>(() =>
-                    {
-                        if (DocumentDatabase.IsEncrypted)
-                        {
-                            return Configuration.EncryptedTransactionSizeLimit;
-                        }
+                if (limit != null && Type == IndexType.MapReduce)
+                    limit = limit * 0.75;
 
-                        return null;
-                    });
-                }
-                else
-                {
-                    var limit = Configuration.TransactionSizeLimit;
-
-                    if (Type.IsMapReduce())
-                        limit = limit * 0.75; // let's decrease the limit to take into account additional work in reduce phase
-
-                    _transactionSizeLimit = new Lazy<Size?>(() => limit);
-                }
+                _transactionSizeLimit = new Lazy<Size?>(() => limit);
 
                 return _transactionSizeLimit.Value;
             }

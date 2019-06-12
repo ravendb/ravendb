@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag)
         {
             int numberOfDocs = 0;
-            long size = 0;
+            Size size = new Size(0, SizeUnit.Megabytes);
 
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
-                    size += item.Data.Size;
+                    size.Add(item.Data.Size, SizeUnit.Bytes);
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (includesCmd != null && run != null)
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
+                    if (size.GetValue(SizeUnit.Bytes) + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }
