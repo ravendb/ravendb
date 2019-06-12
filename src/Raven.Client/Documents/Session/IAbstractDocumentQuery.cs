@@ -306,17 +306,25 @@ namespace Raven.Client.Documents.Session
 
         void OrderByDistance(string fieldName, double latitude, double longitude);
 
+        void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor);
+
         void OrderByDistance(DynamicSpatialField field, string shapeWkt);
 
         void OrderByDistance(string fieldName, string shapeWkt);
+
+        void OrderByDistance(string fieldName, string shapeWkt, double roundFactor);
 
         void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude);
 
         void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
 
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor);
+
         void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt);
 
         void OrderByDistanceDescending(string fieldName, string shapeWkt);
+
+        void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor);
 
         MoreLikeThisScope MoreLikeThis();
 

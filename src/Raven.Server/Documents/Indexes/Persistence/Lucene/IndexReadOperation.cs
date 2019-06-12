@@ -522,34 +522,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     var spatialField = getSpatialField(field.Name);
 
+                    int lastArgument;
                     Point point;
                     switch (field.Method)
                     {
                         case MethodType.Spatial_Circle:
                             var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
                             var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
-
+                            lastArgument = 2;
                             point = spatialField.ReadPoint(cLatitude, cLongitude).GetCenter();
                             break;
                         case MethodType.Spatial_Wkt:
                             var wkt = field.Arguments[0].GetString(query.QueryParameters);
                             SpatialUnits? spatialUnits = null;
-                            if (field.Arguments.Length == 2)
+                            lastArgument = 1;
+                            if (field.Arguments.Length > 1)
+                            {
                                 spatialUnits = Enum.Parse<SpatialUnits>(field.Arguments[1].GetString(query.QueryParameters), ignoreCase: true);
+                                lastArgument = 2;
+                            }
 
                             point = spatialField.ReadShape(wkt, spatialUnits).GetCenter();
                             break;
                         case MethodType.Spatial_Point:
                             var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
                             var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
-
+                            lastArgument = 2;
                             point = spatialField.ReadPoint(pLatitude, pLongitude).GetCenter();
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
 
-                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query);
+                    var roundTo = field.Arguments.Length > lastArgument ? 
+                        field.Arguments[lastArgument].GetDouble(query.QueryParameters) 
+                        : 0;
+
+                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query, roundTo);
                     sort.Add(new SortField(field.Name, dsort, field.Ascending == false));
                     continue;
                 }
