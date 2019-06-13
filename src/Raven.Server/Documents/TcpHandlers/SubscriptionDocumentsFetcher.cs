@@ -49,8 +49,9 @@ namespace Raven.Server.Documents.TcpHandlers
             _revisions = revisions;
             _subscription = subscription;
             _patch = patch;
-            _maximumAllowedMemory = new Size((PlatformDetails.Is32Bits ||
-                                              _db.Configuration.Storage.ForceUsing32BitsPager) ? 4 : 32, SizeUnit.Megabytes);
+            _maximumAllowedMemory = new Size(PlatformDetails.Is32Bits || _db.Configuration.Storage.ForceUsing32BitsPager
+                ? 4
+                : 32* Voron.Global.Constants.Size.Megabyte, SizeUnit.Bytes);
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag)
         {
             int numberOfDocs = 0;
-            Size size = new Size(0, SizeUnit.Megabytes);
+            long size = 0;
 
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     using (doc.Data)
                     {
-                        size.Add(doc.Data.Size, SizeUnit.Bytes);
+                        size += doc.Data.Size;
                         if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                         {
                             if (exception != null)
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size >= _maximumAllowedMemory)
+                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }
@@ -209,7 +210,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     if (++numberOfDocs >= _maxBatchSize)
                         yield break;
 
-                    if (size >= _maximumAllowedMemory)
+                    if (size.GetValue(SizeUnit.Bytes) + docsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
                         yield break;
                 }
             }

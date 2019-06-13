@@ -121,6 +121,25 @@ namespace Raven.Server.Commercial
 
         public bool HasPullReplicationAsSink => GetValue<bool>("pullReplicationAsSink");
 
+        public bool IsCloud => GetValue<bool>("cloud");
+
+        public bool CanAutoRenewLetsEncryptCertificate
+        {
+            get
+            {
+                if (Attributes == null)
+                    return false;
+
+                if (Attributes.TryGetValue("letsEncryptAutoRenewal", out var value) == false)
+                    return Type != LicenseType.Developer; // backward compatibility
+
+                if (value is bool == false)
+                    return false;
+
+                return (bool)value;
+            }
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -150,7 +169,9 @@ namespace Raven.Server.Commercial
                 [nameof(DistributedCluster)] = DistributedCluster,
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
-                [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink
+                [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
+                [nameof(IsCloud)] = IsCloud,
+                [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate
             };
         }
     }

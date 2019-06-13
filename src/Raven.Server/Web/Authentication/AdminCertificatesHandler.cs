@@ -697,7 +697,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        [RavenAction("/admin/certificates/export", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/certificates/export", "GET", AuthorizationStatus.Operator)]
         public Task GetClusterCertificates()
         {
             if (Server.Certificate.Certificate == null)

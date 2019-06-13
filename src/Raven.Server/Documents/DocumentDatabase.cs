@@ -415,6 +415,7 @@ namespace Raven.Server.Documents
         private long? _nextClusterCommand;
         private long _lastCompletedClusterTransaction;
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+        public bool IsEncrypted => MasterKey != null;
 
         private int _clusterTransactionDelayOnFailure = 1000;
 

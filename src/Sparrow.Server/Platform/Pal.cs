@@ -1,18 +1,19 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Sparrow.Platform;
 
 namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42008; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42009; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
-        {
+        {            
             var toFilename = LIBRVNPAL;
-            string fromFilename;
+            string fromFilename;         
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
@@ -34,7 +35,9 @@ namespace Sparrow.Server.Platform
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win.x64.dll" : $"{toFilename}.win.x86.dll";
+                var win7 = PlatformDetails.IsWindows8OrNewer ? "" : "7";
+
+                fromFilename = Environment.Is64BitProcess ? $"{toFilename}.win{win7}.x64.dll" : $"{toFilename}.win{win7}.x86.dll";
                 toFilename += ".dll";
             }
             else

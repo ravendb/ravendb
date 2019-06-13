@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
         }
 
-        protected override int LoadInternal(IEnumerable<SqlTableWithRecords> records, JsonOperationContext context)
+        protected override int LoadInternal(IEnumerable<SqlTableWithRecords> records, DocumentsOperationContext context)
         {
             var count = 0;
 

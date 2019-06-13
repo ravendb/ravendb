@@ -823,7 +823,7 @@ from Users as u where u.Name != $p0 select output(u)",
         }
 
         [Fact]
-        public void Custom_Fuctions_With_Let_And_Load()
+        public void Custom_Functions_With_Let_And_Load()
         {
             using (var store = GetDocumentStore())
             {
@@ -871,7 +871,7 @@ from Users as u select output(u)", query.ToString());
         }
 
         [Fact]
-        public async Task Custom_Fuctions_With_Let_And_Load_Async()
+        public async Task Custom_Functions_With_Let_And_Load_Async()
         {
             using (var store = GetDocumentStore())
             {
@@ -3164,7 +3164,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
         }
         
         [Fact]
-        public void Custom_Fuctions_With_Nested_Loads_Simple()
+        public void Custom_Functions_With_Nested_Loads_Simple()
         {
             using (var store = GetDocumentStore())
             {
@@ -3215,7 +3215,7 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
         }
         
         [Fact]
-        public void Custom_Fuctions_With_Nested_Loads_Complex()
+        public void Custom_Functions_With_Nested_Loads_Complex()
         {
             using (var store = GetDocumentStore())
             {
@@ -3263,12 +3263,12 @@ from Users as u where u.LastName = $p0 select output(u)", query.ToString());
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-@"declare function output(o, company, _docs_1) {
-	var employee = _docs_1[0];
+@"declare function output(o, company) {
+	var employee = load(company.EmployeesIds)[0];
 	var manager = load(employee.ReportsTo);
 	return { Company : company.Name, Employee : employee.FirstName+"" ""+employee.LastName, Manager : manager.FirstName+"" ""+manager.LastName };
 }
-from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] select output(o, company, _docs_1)" ,query.ToString());
+from Orders as o load o.Company as company select output(o, company)", query.ToString());
 
                     var queryResult = query.ToList();
 

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new RavenEtlDocumentTransformer(Transformation, Database, context, _script);
         }
 
-        protected override int LoadInternal(IEnumerable<ICommandData> items, JsonOperationContext context)
+        protected override int LoadInternal(IEnumerable<ICommandData> items, DocumentsOperationContext context)
         {
             var commands = items as List<ICommandData>;
 
