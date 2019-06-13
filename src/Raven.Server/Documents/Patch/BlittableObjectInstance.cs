@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Patch
         public Dictionary<string, IndexField> LuceneIndexFields;
         public bool LuceneAnyDynamicIndexFields;
 
-        public double? Distance => _doc?.Distance;
+        public SpatialResult? Distance => _doc?.Distance;
         public float? Score => _doc?.IndexScore;
 
         private void MarkChanged()
