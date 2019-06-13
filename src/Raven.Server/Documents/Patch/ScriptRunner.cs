@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException("Unable to parse units " + args[5] + ", expected: 'kilomoters' or 'miles'");
                 }
 
-                var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistance(lat1, lng1, lat2, lng2);
+                var result = SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator.HaverstineDistanceInMiles(lat1, lng1, lat2, lng2);
                 if (units == SpatialUnits.Kilometers)
                     result *= DistanceUtils.MILES_TO_KM;
 
