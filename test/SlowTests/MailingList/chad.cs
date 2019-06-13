@@ -74,12 +74,12 @@ namespace SlowTests.MailingList
                     var Without_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
                         .WhereEquals("Categories_Id", "4bf58dd8d48988d17f941735")
                         .Take(1024)
-                        .ToList<Place>();
+                        .ToList();
 
                     var With_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
                             .WhereEquals("Categories_Id", "4bf58dd8d48988d17f941735")
                             .WithinRadiusOf("Coordinates", 15, 35.74498, 139.348083)
-                            .Take(1024).ToList<Place>();
+                            .Take(1024).ToList();
 
                     Assert.Equal(3, Without_WithinRadiusOf.Count);
                     Assert.Equal(2, With_WithinRadiusOf.Count);

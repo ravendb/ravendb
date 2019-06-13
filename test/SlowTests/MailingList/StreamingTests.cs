@@ -79,7 +79,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Advanced.DocumentQuery<UserFull, UserIndex>().SelectFields<UserLightweight>();
 
-                    using (var reader = query.GetEnumerator())
+                    using (var reader = query.ToList().GetEnumerator())
                     {
                         while (reader.MoveNext())
                         {

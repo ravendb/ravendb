@@ -23,6 +23,16 @@ namespace Raven.Client.Documents.Session
         Lazy<int> CountLazily();
 
         /// <summary>
+        ///     Executed the query and returns the results.
+        /// </summary>
+        List<T> ToList();
+
+        /// <summary>
+        ///     Executed the query and returns the results.
+        /// </summary>
+        T[] ToArray();
+
+        /// <summary>
         ///     Returns first element or throws if sequence is empty.
         /// </summary>
         T First();
@@ -63,13 +73,13 @@ namespace Raven.Client.Documents.Session
 
     public interface IRawDocumentQuery<T> :
         IQueryBase<T, IRawDocumentQuery<T>>,
-        IDocumentQueryBase<T>, IEnumerable<T>
+        IDocumentQueryBase<T>
     {
     }
 
     public interface IGraphQuery<T> :
         IQueryBase<T, IGraphQuery<T>>,
-        IDocumentQueryBase<T>, IEnumerable<T>
+        IDocumentQueryBase<T>
     {
         IGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query);
         IGraphQuery<T> With<TOther>(string alias, string rawQuery);
@@ -80,8 +90,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     A query against a Raven index
     /// </summary>
-    public interface IDocumentQuery<T> : 
-        IEnumerable<T>, 
+    public interface IDocumentQuery<T> :
         IDocumentQueryBase<T, IDocumentQuery<T>>,
         IDocumentQueryBase<T>
     {

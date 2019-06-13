@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                     session.SaveChanges();
 
-                    foreach (var query in new IEnumerable<Result>[]
+                    foreach (var results in new IList<Result>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<Result>(
@@ -43,7 +43,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                         from ItineraryTrafficDemands as i
 group by i.AirLineCode, i.Demands[].ItineraryDay
 select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].POOrigDemand) as SumOfPOOrigDemand")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         session.Advanced.DocumentQuery<ItineraryTrafficDemand>()
                             .GroupBy("AirLineCode", "Demands[].ItineraryDay")
@@ -55,10 +56,9 @@ select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].
                                 ProjectedName = "SumOfPOOrigDemand"
                             })
                             .OfType<Result>()
+                            .ToList()
                     })
                     {
-                        var results = query.ToList();
-
                         Assert.Equal("ABC", results[0].AirLineCode);
                         Assert.Equal(1, results[0].ItineraryDay);
                         Assert.Equal(5, results[0].SumOfPOOrigDemand);
@@ -87,7 +87,7 @@ select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].
 
                     session.SaveChanges();
 
-                    foreach (var query in new IEnumerable<Result>[]
+                    foreach (var queryResults in new IList<Result>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<Result>(
@@ -95,7 +95,8 @@ select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].
                         from ItineraryTrafficDemands as i
 group by i.AirLineCode, i.Demands[].ItineraryDay
 select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].POOrigDemand) as SumOfPOOrigDemand")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         session.Advanced.DocumentQuery<ItineraryTrafficDemand>()
                             .GroupBy("AirLineCode", "Demands[].ItineraryDay")
@@ -107,10 +108,12 @@ select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].
                                 ProjectedName = "SumOfPOOrigDemand"
                             })
                             .OfType<Result>()
+                            .ToList()
                     })
                     {
-                        var results = query.ToList()
-                            .OrderBy(x => x.SumOfPOOrigDemand).ToList();
+                        var results = queryResults
+                            .OrderBy(x => x.SumOfPOOrigDemand)
+                            .ToList();
 
                         Assert.Equal(2, results.Count);
 
@@ -128,21 +131,21 @@ select i.AirLineCode, i.Demands[].ItineraryDay as ItineraryDay, sum(i.Demands[].
 
         public class Result
         {
-            public string AirLineCode { get; set; } 
-            public int ItineraryDay { get; set; } 
-            public int SumOfPOOrigDemand { get; set; } 
+            public string AirLineCode { get; set; }
+            public int ItineraryDay { get; set; }
+            public int SumOfPOOrigDemand { get; set; }
         }
 
         public class Demand
         {
-            public int ItineraryDay { get; set; } 
-            public int POOrigDemand { get; set; } 
+            public int ItineraryDay { get; set; }
+            public int POOrigDemand { get; set; }
         }
 
         public class ItineraryTrafficDemand
         {
-            public string AirLineCode { get; set; } 
-            public List<Demand> Demands { get; set; } 
+            public string AirLineCode { get; set; }
+            public List<Demand> Demands { get; set; }
         }
     }
 }

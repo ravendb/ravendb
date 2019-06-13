@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var query in new IEnumerable<ProductCount>[]
+                    foreach (var products in new IList<ProductCount>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<ProductCount>(
@@ -28,21 +28,20 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                         from Orders group by Lines[].Product
                         order by count()
                         select key() as ProductName, count()")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         // linq
                         session.Query<Order>().GroupByArrayValues(x => x.Lines.Select(y => y.Product)).Select(x => new ProductCount
                         {
                             Count = x.Count(),
                             ProductName = x.Key
-                        }),
+                        }).ToList(),
 
                         // document query
-                        session.Advanced.DocumentQuery<Order>().GroupBy("Lines[].Product").SelectKey(projectedName: "ProductName").SelectCount().OfType<ProductCount>()
+                        session.Advanced.DocumentQuery<Order>().GroupBy("Lines[].Product").SelectKey(projectedName: "ProductName").SelectCount().OfType<ProductCount>().ToList()
                     })
                     {
-                        var products = query.ToList();
-
                         Assert.Equal(2, products.Count);
 
                         Assert.Equal("products/1", products[0].ProductName);
@@ -55,7 +54,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var query in new IEnumerable<ProductCount>[]
+                    foreach (var products in new IList<ProductCount>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<ProductCount>(
@@ -64,7 +63,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             group by Lines[].Product, ShipTo.Country 
                             order by count() 
                             select Lines[].Product as ProductName, ShipTo.Country as Country, count()")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         session.Advanced.DocumentQuery<Order>()
                             .GroupBy("Lines[].Product", "ShipTo.Country")
@@ -72,10 +72,9 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             .SelectKey("ShipTo.Country", "Country")
                             .SelectCount()
                             .OfType<ProductCount>()
+                            .ToList()
                     })
                     {
-                        var products = query.ToList();
-
                         Assert.Equal(2, products.Count);
 
                         Assert.Equal("products/1", products[0].ProductName);
@@ -90,7 +89,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var query in new IEnumerable<ProductCount>[]
+                    foreach (var products in new IList<ProductCount>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<ProductCount>(
@@ -99,7 +98,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             group by Lines[].Product, Lines[].Quantity 
                             order by Lines[].Quantity
                             select Lines[].Product as ProductName, Lines[].Quantity as Quantity, count()")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         // linq
                         session.Query<Order>().GroupByArrayValues(x => x.Lines.Select(y => new { y.Product, y.Quantity })).Select(x => new ProductCount
@@ -107,7 +107,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             Count = x.Count(),
                             ProductName = x.Key.Product,
                             Quantity = x.Key.Quantity
-                        }),
+                        }).ToList(),
 
                         // document query
 
@@ -117,10 +117,9 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             .SelectKey("Lines[].Quantity", "Quantity")
                             .SelectCount()
                             .OfType<ProductCount>()
+                            .ToList()
                     })
                     {
-                        var products = query.ToList();
-
                         Assert.Equal(3, products.Count);
 
                         Assert.Equal("products/1", products[0].ProductName);
@@ -174,7 +173,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var query in new IEnumerable<ProductCount>[]
+                    foreach (var products in new IList<ProductCount>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<ProductCount>(
@@ -182,21 +181,20 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                         from Orders group by array(Lines[].Product)
                         order by count()
                         select key() as Products, count()")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         // linq
                         session.Query<Order>().GroupByArrayContent(x => x.Lines.Select(y => y.Product)).Select(x => new ProductCount
                         {
                             Count = x.Count(),
                             Products = x.Key
-                        }).OrderBy(x => x.Count),
+                        }).OrderBy(x => x.Count).ToList(),
 
                         // document query
-                        session.Advanced.DocumentQuery<Order>().GroupBy(("Lines[].Product", GroupByMethod.Array)).SelectKey(projectedName: "Products").SelectCount().OrderBy("Count").OfType<ProductCount>()
+                        session.Advanced.DocumentQuery<Order>().GroupBy(("Lines[].Product", GroupByMethod.Array)).SelectKey(projectedName: "Products").SelectCount().OrderBy("Count").OfType<ProductCount>().ToList()
                     })
                     {
-                        var products = query.ToList();
-
                         Assert.Equal(2, products.Count);
 
                         Assert.Equal(new[] { "products/2" }, products[0].Products);
@@ -209,7 +207,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var query in new IEnumerable<ProductCount>[]
+                    foreach (var products in new IList<ProductCount>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<ProductCount>(
@@ -218,7 +216,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             group by array(Lines[].Product), ShipTo.Country 
                             order by count() 
                             select Lines[].Product as Products, ShipTo.Country as Country, count()")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         session.Advanced.DocumentQuery<Order>()
                             .GroupBy(("Lines[].Product", GroupByMethod.Array), ("ShipTo.Country", GroupByMethod.None))
@@ -227,10 +226,9 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             .SelectCount()
                             .OrderBy("Count")
                             .OfType<ProductCount>()
+                            .ToList()
                     })
                     {
-                        var products = query.ToList();
-
                         Assert.Equal(2, products.Count);
 
                         Assert.Equal(new[] { "products/2" }, products[0].Products);
@@ -243,7 +241,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var session = store.OpenSession())
                 {
-                    foreach (var query in new IEnumerable<ProductCount>[]
+                    foreach (var products in new IList<ProductCount>[]
                     {
                         // raw query
                         session.Advanced.RawQuery<ProductCount>(
@@ -252,7 +250,8 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             group by array(Lines[].Product), array(Lines[].Quantity) 
                             order by count()
                             select Lines[].Product as Products, Lines[].Quantity as Quantities, count()")
-                            .WaitForNonStaleResults(),
+                            .WaitForNonStaleResults()
+                            .ToList(),
 
                         // document query
 
@@ -263,10 +262,9 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                             .SelectCount()
                             .OrderBy("Count")
                             .OfType<ProductCount>()
+                            .ToList()
                     })
                     {
-                        var products = query.ToList();
-
                         Assert.Equal(2, products.Count);
 
                         Assert.Equal(new [] { "products/2" }, products[0].Products);
