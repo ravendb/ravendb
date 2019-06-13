@@ -6,9 +6,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class RevisionsCommandData : ICommandData
+    public class ForceRevisionCommandData : ICommandData
     {
-        public RevisionsCommandData(string id)
+        public ForceRevisionCommandData(string id)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
         }

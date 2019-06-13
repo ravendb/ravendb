@@ -18,9 +18,7 @@ namespace Raven.Client.Documents.Session
         
         // Create a forced revision from the document that is currently in store - BEFORE applying any changes made by the user 
         // The only exception is: with current implementation the forced revision for *new* document only is 'after', not 'before'  
-        Before,
-        
-        // After is currently Not implemented on the server side ! TBD only if requested by customer
+        Before
     }
     
     /// <summary>
@@ -61,7 +59,7 @@ namespace Raven.Client.Documents.Session
         ///    1. Revisions configuration is Not set for the collection
         ///    2. Document was Not modified
         /// </summary>
-        void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.Before); 
+        void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before); 
         
         /// <summary>
         /// Make the session create a revision for the specified document id.
@@ -70,6 +68,6 @@ namespace Raven.Client.Documents.Session
         ///    2. Document was Not modified
         /// </summary>
         /// <param name="id"></param>
-        void ForceRevisionCreationFor(string id, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.Before); 
+        void ForceRevisionCreationFor(string id, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before);
     }
 }

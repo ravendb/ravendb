@@ -69,32 +69,42 @@ namespace Raven.Client.Documents.Session
             return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
         
-        public void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.Before)
+        public void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before)
         {
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException(nameof(entity));
            
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
             {
-                throw new InvalidOperationException("Cannot create a revision for the requested entity because it is not tracked by the session");
+                throw new InvalidOperationException("Cannot create a revision for the requested entity because it is Not tracked by the session");
             }
 
-            if (Session.IDsForCreatingForcedRevisions.ContainsKey(documentInfo.Id))
-            {
-                throw new InvalidOperationException("A request for creating a revision was already made for the document in the current session.");
-            }
-            
-            Session.IDsForCreatingForcedRevisions.Add(documentInfo.Id, forceRevisionCreationStrategy);
+            AddIdToList(documentInfo.Id, strategy);
         } 
         
-        public void ForceRevisionCreationFor(string id, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.Before)
+        public void ForceRevisionCreationFor(string id, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before)
         {
-            if (Session.IDsForCreatingForcedRevisions.ContainsKey(id))
+            AddIdToList(id, strategy);
+        }
+
+        private void AddIdToList(string id, ForceRevisionStrategy requestedStrategy)
+        {
+            if (String.IsNullOrEmpty(id))
             {
-                throw new InvalidOperationException($"A request for creating a revision was already made for document {id} in the current session.");
+                throw new InvalidOperationException("Id cannot be null or empty.");
             }
-            
-            Session.IDsForCreatingForcedRevisions.Add(id, forceRevisionCreationStrategy);
-        } 
+
+            var idAlreadyAdded = Session.IdsForCreatingForcedRevisions.TryGetValue(id, out var existingStrategy);
+            if ( idAlreadyAdded && (existingStrategy != requestedStrategy))
+            {
+                throw new InvalidOperationException($"A request for creating a revision was already made for document {id} in the current session but with a different force strategy." + 
+                                                             $"New strategy requested: {requestedStrategy}. Previous strategy: {existingStrategy}.");
+            }
+
+            if (idAlreadyAdded == false)
+            {
+                Session.IdsForCreatingForcedRevisions.Add(id, requestedStrategy);
+            }
+        }
     }
 }

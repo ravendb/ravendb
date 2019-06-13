@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Xunit;
 
@@ -84,7 +85,7 @@ namespace SlowTests.Client
                     var company = new Company { Name = "HR" };
                   
                     var ex = Assert.Throws<InvalidOperationException>(() => session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company));
-                    Assert.Contains("Cannot create a revision for the requested entity because it is not tracked by the session", ex.Message);
+                    Assert.Contains("Cannot create a revision for the requested entity because it is Not tracked by the session", ex.Message);
                 }
             }
         }
@@ -269,11 +270,12 @@ namespace SlowTests.Client
                     var company = session.Load<Company>(companyId); 
                     company.Name = "HR V2";
 
-                    var ex = Assert.Throws<InvalidOperationException>(() => session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company));
-                    Assert.Contains("A request for creating a revision was already made", ex.Message);
+                    session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
+                    // The above request should not throw - we ignore duplicate requests with SAME strategy
                     
-                    ex = Assert.Throws<InvalidOperationException>(() => session.Advanced.Revisions.ForceRevisionCreationFor(company.Id));
-                    Assert.Contains("A request for creating a revision was already made", ex.Message);
+                    var ex = Assert.Throws<InvalidOperationException>(() => session.Advanced.Revisions.ForceRevisionCreationFor(company.Id, ForceRevisionStrategy.None));
+                    // the above should throw because we ask for different strategy in the same session
+                    Assert.Contains("A request for creating a revision was already made for document", ex.Message);
                     
                     session.SaveChanges();
 

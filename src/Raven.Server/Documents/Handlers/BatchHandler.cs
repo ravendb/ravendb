@@ -754,7 +754,6 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 var flags = DocumentFlags.None;
                                 
-                                //if (cmd.ForceRevision)
                                 if (cmd.ForceRevisionCreationStrategy == ForceRevisionStrategy.Before)
                                 // Note: we currently only handle 'Before'. 
                                 // Creating the revision 'After' will be done only upon customer demand.
@@ -1064,7 +1063,6 @@ namespace Raven.Server.Documents.Handlers
                                     ["RevisionCreated"] = true,
                                     ["Type"] = nameof(CommandType.ForceRevisionCreation), 
                                     [Constants.Documents.Metadata.Id] = existingDoc.Id,
-                                    [Constants.Documents.Metadata.Collection] =  CollectionName.GetCollectionName(existingDoc.Data),
                                     [Constants.Documents.Metadata.ChangeVector] = existingDoc.ChangeVector,
                                     [Constants.Documents.Metadata.LastModified] = existingDoc.LastModified,
                                     [Constants.Documents.Metadata.Flags] = existingDoc.Flags
