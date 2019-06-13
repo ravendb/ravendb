@@ -49,10 +49,11 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
             private IndexReader _currentIndexReader;
 
-            public double Get(int doc)
+            public double? Get(int doc)
             {
-                _cache.TryGetValue(doc, out var cache);
-                return cache;
+                if (_cache.TryGetValue(doc, out var cache))
+                    return cache;
+                return null;
             }
 
             public SpatialDistanceFieldComparator(SpatialField spatialField, Point origin, int numHits, double roundFactor)
@@ -145,9 +146,10 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 var pt = shape as Point;
                 if (pt == null)
                     pt = shape.GetCenter();
-                double dist = _isGeo ? 
-                    HaverstineDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX()) : 
-                    CartesianDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+                if (_isGeo == false)
+                    return CartesianDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+
+                double dist = HaverstineDistanceInMiles(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
 
                 switch (Units)
                 {
@@ -162,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return dist;
             }
 
-            public static double HaverstineDistance(double lat1, double lng1, double lat2, double lng2)
+            public static double HaverstineDistanceInMiles(double lat1, double lng1, double lat2, double lng2)
             {
                 // from : https://www.geodatasource.com/developers/javascript
                 if ((lat1 == lat2) && (lng1 == lng2))
@@ -183,7 +185,10 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                     }
                     dist = Math.Acos(dist);
                     dist = dist * DistanceUtils.RADIANS_TO_DEGREES;
-                    dist = dist * 60 * 1.1515;
+
+                    const double NumberOfMilesInNauticalMile = 1.1515;
+                    const double NauticalMilePerDegree = 60;
+                    dist = dist * NauticalMilePerDegree * NumberOfMilesInNauticalMile;
                     return dist;
                 }
             }
