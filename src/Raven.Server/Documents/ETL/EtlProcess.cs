@@ -1014,7 +1014,7 @@ namespace Raven.Server.Documents.ETL
                             return result;
                         }
                     case EtlType.Raven:
-                        using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, null))
+                        using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, database.ServerStore))
                         using (ravenEtl.EnterTestMode(out debugOutput))
                         {
                             ravenEtl.EnsureThreadAllocationStats();
