@@ -44,9 +44,9 @@ namespace SlowTests.Issues
                                           IntegerSum = doc.IntegerNumber1 + doc.IntegerNumber2,
                                           IntegerDup = doc.IntegerNumber1 * doc.IntegerNumber2,
                                           DecimalSum = doc.DecimalNumber1 + doc.DecimalNumber2,
-                                          DoubleSum =  doc.DoubleNumber1 + doc.DoubleNumber2,
-                                          DoubleAndStringSum =  doc.String + doc.DoubleNumber2,
-                                          DoubleAndIntSum =  doc.IntegerNumber1 + doc.DoubleNumber2,
+                                          DoubleSum = doc.DoubleNumber1 + doc.DoubleNumber2,
+                                          DoubleAndStringSum = doc.String + doc.DoubleNumber2,
+                                          DoubleAndIntSum = doc.IntegerNumber1 + doc.DoubleNumber2,
                                           StringSum = doc.String + doc.IntegerNumber2
                                       })
                         .Single();
@@ -75,7 +75,9 @@ namespace SlowTests.Issues
 
         private class Document
         {
+#pragma warning disable 649
             public string Id;
+#pragma warning restore 649
             public DocumentStatistics Statistics;
         }
 
@@ -100,22 +102,22 @@ namespace SlowTests.Issues
                 public decimal DecimalNumber2;
                 public double DoubleNumber1;
                 public double DoubleNumber2;
-                public  string String;
+                public string String;
             }
 
             public DocumentIndex()
             {
                 Map = docs => from doc in docs
-                    select new Result
-                    {
-                        IntegerNumber1 = doc.Statistics.IntegerNumber1,
-                        IntegerNumber2 = doc.Statistics.IntegerNumber2,
-                        DecimalNumber1 = doc.Statistics.DecimalNumber1,
-                        DecimalNumber2 = doc.Statistics.DecimalNumber2,
-                        DoubleNumber1 = doc.Statistics.DoubleNumber1,
-                        DoubleNumber2 = doc.Statistics.DoubleNumber2,
-                        String = doc.Statistics.String
-                    };
+                              select new Result
+                              {
+                                  IntegerNumber1 = doc.Statistics.IntegerNumber1,
+                                  IntegerNumber2 = doc.Statistics.IntegerNumber2,
+                                  DecimalNumber1 = doc.Statistics.DecimalNumber1,
+                                  DecimalNumber2 = doc.Statistics.DecimalNumber2,
+                                  DoubleNumber1 = doc.Statistics.DoubleNumber1,
+                                  DoubleNumber2 = doc.Statistics.DoubleNumber2,
+                                  String = doc.Statistics.String
+                              };
 
                 StoreAllFields(FieldStorage.Yes);
             }
