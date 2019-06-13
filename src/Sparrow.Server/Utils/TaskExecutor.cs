@@ -119,7 +119,16 @@ namespace Sparrow.Server.Utils
                 if(Interlocked.CompareExchange(ref _callback, null, callback) != callback)
                     return;
 
-                callback(state);
+                try
+                {
+                    callback(state);
+                }
+                catch (Exception e)
+                {
+                    var logger = Logging.LoggingSource.Instance.GetLogger<RunOnce>("TaskExecuter");
+                    if (logger.IsOperationsEnabled)
+                        logger.Operations("Failed to execute task", e);
+                }
             }
         }
 

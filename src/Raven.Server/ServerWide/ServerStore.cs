@@ -896,10 +896,21 @@ namespace Raven.Server.ServerWide
 
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
-                db.Value.Result.Changes.RaiseNotifications(new TopologyChange
+                DocumentDatabase dbActual;
+                try
+                {
+                    if (db.Value.IsCompletedSuccessfully == false)
+                        continue;
+                    dbActual = db.Value.Result;
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+                dbActual.Changes.RaiseNotifications(new TopologyChange
                 {
                     Url = topology.GetUrlFromTag(NodeTag),
-                    Database = db.Value.Result.Name
+                    Database = dbActual.Name
                 });
             }
         }
