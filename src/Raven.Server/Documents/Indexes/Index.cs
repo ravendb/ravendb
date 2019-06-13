@@ -651,7 +651,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (ObjectDisposedException ode)
                 {
-                    if(_disposeOne.Disposed == false)
+                    if (_disposeOne.Disposed == false)
                     {
                         ReportUnexpectedIndexingError(ode);
                     }
@@ -3331,7 +3331,7 @@ namespace Raven.Server.Documents.Indexes
                     return false;
                 }
             }
-			
+
             if (TransactionSizeLimit != null)
             {
                 var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
