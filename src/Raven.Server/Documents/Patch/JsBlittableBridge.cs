@@ -432,11 +432,12 @@ namespace Raven.Server.Documents.Patch
             }
             if (obj.Blittable != null)
             {
-                for (int i = 0; i < obj.Blittable.Count; i++)
+                var propertiesByInsertionOrder = obj.Blittable.GetPropertiesByInsertionOrder();
+                for (int i = 0; i < propertiesByInsertionOrder.Properties.Count; i++)
                 {
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                    obj.Blittable.GetPropertyByIndex(i, ref prop);
+                    var propIndex = propertiesByInsertionOrder.Properties[i];
+                    obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
                     
                     var existInObject = obj.OwnValues.TryGetValue(prop.Name, out var modifiedValue);
 
