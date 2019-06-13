@@ -89,6 +89,7 @@ namespace Raven.Client.Documents.Session
             OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude, field.RoundFactor);
         }
 
+        /// <inheritdoc />
         public void OrderByDistance(string fieldName, double latitude, double longitude)
         {
             OrderByDistance(fieldName, latitude, longitude, 0);
@@ -118,6 +119,7 @@ namespace Raven.Client.Documents.Session
             OrderByDistance(fieldName, shapeWkt);
         }
 
+        /// <inheritdoc />
         public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
