@@ -20,7 +20,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
-        public double? Distance;
+        public SpatialResult? Distance;
         public string ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
@@ -69,12 +69,14 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
-            if(LastModified != DateTime.MinValue)
+            if (LastModified != DateTime.MinValue)
                 mutatedMetadata[Constants.Documents.Metadata.LastModified] = LastModified;
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
             if (Distance.HasValue)
-                mutatedMetadata[Constants.Documents.Metadata.Distance] = Distance;
+            {
+                mutatedMetadata[Constants.Documents.Metadata.SpatialResult] = Distance.Value.ToJson();
+            }
 
             _hash = null;
         }
@@ -100,6 +102,29 @@ namespace Raven.Server.Documents
             Data = null;
 
             _disposed = true;
+        }
+    }
+
+
+    public struct SpatialResult
+    {
+        public double Distance, Latitude, Longitude;
+
+        public static SpatialResult Invalid = new SpatialResult
+        {
+            Distance = double.MaxValue,
+            Latitude = double.MaxValue,
+            Longitude = double.MaxValue
+        };
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Distance)] = Distance,
+                [nameof(Latitude)] = Latitude,
+                [nameof(Longitude)] = Longitude,
+            };
         }
     }
 }

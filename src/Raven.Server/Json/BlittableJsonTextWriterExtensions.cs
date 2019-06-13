@@ -1526,8 +1526,18 @@ namespace Raven.Server.Json
             if (document.Distance != null)
             {
                 writer.WriteComma();
-                writer.WritePropertyName(Constants.Documents.Metadata.Distance);
-                writer.WriteDouble(document.Distance.Value);
+                var result = document.Distance.Value;
+                writer.WritePropertyName(Constants.Documents.Metadata.SpatialResult);
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(result.Distance));
+                writer.WriteDouble(result.Distance);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.Latitude));
+                writer.WriteDouble(result.Latitude);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.Longitude));
+                writer.WriteDouble(result.Longitude);
+                writer.WriteEndObject();
             }
             if (document.LastModified != DateTime.MinValue)
             {

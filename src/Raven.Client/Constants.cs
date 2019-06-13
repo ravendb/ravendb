@@ -161,7 +161,7 @@ namespace Raven.Client
 
                 public const string IndexScore = "@index-score";
 
-                public const string Distance = "@distance";
+                public const string SpatialResult = "@spatial-result";
 
                 public const string LastModified = "@last-modified";
 

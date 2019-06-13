@@ -6,6 +6,7 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
+using Sparrow.Json.Parsing;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
 
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             private DistanceValue _bottom;
             private readonly Point _originPt;
             private bool _isGeo;
-            private Dictionary<int, double> _cache = new Dictionary<int, double>();
+            private Dictionary<int, SpatialResult> _cache = new Dictionary<int, SpatialResult>();
             private int _currentDocBase;
             private double _roundFactor;
 
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 
             private IndexReader _currentIndexReader;
 
-            public double? Get(int doc)
+            public SpatialResult? Get(int doc)
             {
                 if (_cache.TryGetValue(doc, out var cache))
                     return cache;
@@ -109,13 +110,13 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             {
                 var actualDocId = doc + _currentDocBase;
                 if (_cache.TryGetValue(actualDocId, out var cache))
-                    return GetRoundedValue(cache);
+                    return GetRoundedValue(cache.Distance);
 
                 cache = ActuallyCalculateDistance(doc, state);
 
                 _cache[actualDocId] = cache;
 
-                return GetRoundedValue(cache);
+                return GetRoundedValue(cache.Distance);
             }
 
             private double GetRoundedValue(double cache)
@@ -125,14 +126,14 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 return cache - cache % _roundFactor;
             }
 
-            private double ActuallyCalculateDistance(int doc, IState state)
+            private SpatialResult ActuallyCalculateDistance(int doc, IState state)
             {
                 var document = _currentIndexReader.Document(doc, state);
                 if (document == null)
-                    return double.MaxValue;
+                    return SpatialResult.Invalid;
                 var field = document.GetField(Constants.Documents.Indexing.Fields.SpatialShapeFieldName);
                 if (field == null)
-                    return double.MaxValue;
+                    return SpatialResult.Invalid;
                 var shapeAsText = field.StringValue(state);
                 Shape shape;
                 try
@@ -141,27 +142,37 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 }
                 catch (InvalidOperationException)
                 {
-                    return double.NaN;
+                    return SpatialResult.Invalid;
                 }
                 var pt = shape as Point;
                 if (pt == null)
                     pt = shape.GetCenter();
-                if (_isGeo == false)
-                    return CartesianDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
 
-                double dist = HaverstineDistanceInMiles(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+                var result = new SpatialResult
+                {
+                    Latitude = pt.GetY(),
+                    Longitude = pt.GetX()
+                };
+
+                if (_isGeo == false)
+                {
+                    result.Distance = CartesianDistance(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
+                    return result;
+                }
+
+                result.Distance = HaverstineDistanceInMiles(pt.GetY(), pt.GetX(), _originPt.GetY(), _originPt.GetX());
 
                 switch (Units)
                 {
                     case SpatialUnits.Kilometers:
-                        dist *= DistanceUtils.MILES_TO_KM;
+                        result.Distance *= DistanceUtils.MILES_TO_KM;
                         break;
                     case SpatialUnits.Miles:
                     default:
                         break;
                 }
 
-                return dist;
+                return result;
             }
 
             public static double HaverstineDistanceInMiles(double lat1, double lng1, double lat2, double lng2)
@@ -232,4 +243,5 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             }
         }
     }
+
 }

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Patch
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
 
-        public double? Distance => _doc?.Distance;
+        public SpatialResult? Distance => _doc?.Distance;
         public float? Score => _doc?.IndexScore;
 
         private void MarkChanged()

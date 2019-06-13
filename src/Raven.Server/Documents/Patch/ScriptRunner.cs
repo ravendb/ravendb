@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.Patch
                     metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.Score.Value;
 
                 if (boi.Distance != null)
-                    metadata.Modifications[Constants.Documents.Metadata.Distance] = boi.Distance.Value;
+                    metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
 
                 metadata = _jsonCtx.ReadObject(metadata, boi.DocumentId);
 
