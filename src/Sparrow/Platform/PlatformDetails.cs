@@ -6,7 +6,7 @@ namespace Sparrow.Platform
 {
     public static class PlatformDetails
     {
-        private static readonly bool IsWindows8OrNewer;
+        public static readonly bool IsWindows8OrNewer;
 
         private static readonly bool IsWindows10OrNewer;
 

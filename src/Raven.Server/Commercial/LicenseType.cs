@@ -14,8 +14,6 @@ namespace Raven.Server.Commercial
 
         Enterprise = 4,
 
-        Developer = 5,
-
-        Cloud = 6
+        Developer = 5
     }
 }

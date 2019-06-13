@@ -36,6 +36,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Impl;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
@@ -305,7 +306,7 @@ namespace Raven.Server.Documents.ETL
                                 break;
                             }
 
-                            transformer.Transform(item);
+                            transformer.Transform(item, stats);
 
                             Statistics.TransformationSuccess();
 
@@ -360,7 +361,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context, EtlStatsScope stats)
+        public void Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
             using (stats.For(EtlOperations.Load))
             {
@@ -401,9 +402,9 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract int LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
+        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {
             if (currentItem.Type == EtlItemType.CounterGroup)
             {
@@ -459,19 +460,18 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            var totalAllocated = _threadAllocations.TotalAllocated;
-            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
-            var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
+            var totalAllocated = new Size(_threadAllocations.TotalAllocated + ctx.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes), SizeUnit.Bytes);
+            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated.GetValue(SizeUnit.Bytes);
 
-            stats.RecordCurrentlyAllocated(totalAllocated + GC.GetAllocatedBytesForCurrentThread());
+            stats.RecordCurrentlyAllocated(totalAllocated.GetValue(SizeUnit.Bytes) + GC.GetAllocatedBytesForCurrentThread());
 
-            if (currentlyInUse > _currentMaximumAllowedMemory)
+            if (totalAllocated > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        currentlyInUse,
+                        totalAllocated,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out var memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
                     if (memoryUsage != null)
                     {
                         reason += " Current memory usage: " +
@@ -488,6 +488,20 @@ namespace Raven.Server.Documents.ETL
 
                     return false;
                 }
+            }
+
+            var maxBatchSize = Database.Configuration.Etl.MaxBatchSize;
+
+            if (maxBatchSize != null && stats.BatchSize >= maxBatchSize)
+            {
+                var reason = $"Stopping the batch because maximum batch size limit was reached ({stats.BatchSize})";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchCompleteReason(reason);
+
+                return false;
             }
 
             return true;

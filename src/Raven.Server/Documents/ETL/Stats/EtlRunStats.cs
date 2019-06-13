@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Util;
+using Sparrow;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.ETL.Stats
             {EtlItemType.CounterGroup, 0}
         };
 
-        public Size CurrentlyAllocated { get; set; } = new Size();
+        public Size CurrentlyAllocated;
 
         public long LastLoadedEtag;
 
@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.ETL.Stats
         public string ChangeVector;
 
         public bool? SuccessfullyLoaded;
-        
+
+        public Size BatchSize;
     }
 }

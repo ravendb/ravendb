@@ -3218,22 +3218,14 @@ namespace Raven.Server.Documents.Indexes
         {
             get
             {
-                if (_transactionSizeLimit != null)
-                    return _transactionSizeLimit.Value;
+                var limit = DocumentDatabase.IsEncrypted
+                    ? Configuration.EncryptedTransactionSizeLimit ?? Configuration.TransactionSizeLimit
+                    : Configuration.TransactionSizeLimit;
 
-                if (Configuration.TransactionSizeLimit == null)
-                {
-                    _transactionSizeLimit = new Lazy<Size?>(() => null);
-                }
-                else
-                {
-                    var limit = Configuration.TransactionSizeLimit;
+                if (limit != null && Type == IndexType.MapReduce)
+                    limit = limit * 0.75;
 
-                    if (Type.IsMapReduce())
-                        limit = limit * 0.75; // let's decrease the limit to take into account additional work in reduce phase
-
-                    _transactionSizeLimit = new Lazy<Size?>(() => limit);
-                }
+                _transactionSizeLimit = new Lazy<Size?>(() => limit);
 
                 return _transactionSizeLimit.Value;
             }
@@ -3299,7 +3291,7 @@ namespace Raven.Server.Documents.Indexes
                     return false;
                 }
             }
-
+			
             if (TransactionSizeLimit != null)
             {
                 var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
@@ -3395,6 +3387,8 @@ namespace Raven.Server.Documents.Indexes
             var threadAllocations = _threadAllocations.TotalAllocated;
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
+
+            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;

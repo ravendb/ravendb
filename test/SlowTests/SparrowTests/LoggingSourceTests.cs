@@ -261,7 +261,7 @@ namespace SlowTests.SparrowTests
             if (anotherThreadException != null)
                 throw anotherThreadException;
 
-            foreach (var file in beforeRestartFiles.SkipLast(1)) //The last is skipped because it is still written
+            foreach (var file in beforeRestartFiles.OrderBy(f => f).SkipLast(1)) //The last is skipped because it is still written
             {
                 var lastWriteTime = File.GetLastWriteTime(file);
                 Assert.True(
@@ -290,7 +290,8 @@ namespace SlowTests.SparrowTests
                 var current = list[i];
                 if (previous.Date == current.Date && previous.Number + 1 != current.Number)
                 {
-                    if (previous.Number == current.Number && Path.GetExtension(current.FileName) == ".gz")
+                    if (previous.Number == current.Number
+                        && ((Path.GetExtension(previous.FileName) == ".gz" && Path.GetExtension(current.FileName) == ".log") || (Path.GetExtension(previous.FileName) == ".log" && Path.GetExtension(current.FileName) == ".gz")))
                         continue;
 
                     exceptions.Add(new Exception($"Log between {previous.FileName} and {current.FileName} is missing"));

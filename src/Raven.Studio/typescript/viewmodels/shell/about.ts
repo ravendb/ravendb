@@ -108,15 +108,25 @@ class about extends viewModelBase {
 
     licenseType = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
+        return !licenseStatus ? "None" : licenseStatus.Type;
+    });
+
+    licenseTypeText = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
         if (!licenseStatus || licenseStatus.Type === "None") {
             return "No license - AGPLv3 Restrictions Applied";
         }
 
-        if (licenseStatus.Type === "Invalid") {
+        let licenseType = licenseStatus.Type;
+        if (licenseType === "Invalid") {
             return "Invalid license";
         }
 
-        return licenseStatus.Type;
+        if (licenseStatus.IsCloud) {
+            licenseType += " (Cloud)";
+        }
+
+        return licenseType;
     });
 
     hasLicense = ko.pureComputed(() => {

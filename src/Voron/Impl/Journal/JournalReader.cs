@@ -197,7 +197,7 @@ namespace Voron.Impl.Journal
                         {
                             // need to mark overlapped buffers as invalid for commit
 
-                            var encryptionBuffers = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState[_dataPager].LoadedBuffers;
+                            var encryptionBuffers = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState[_dataPager];
 
                             var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
 
@@ -513,6 +513,26 @@ namespace Voron.Impl.Journal
 
         Dictionary<AbstractPager, CryptoTransactionState> IPagerLevelTransactionState.CryptoPagerTransactionState { get; set; }
 
+        public Size TotalEncryptionBufferSize
+        {
+            get
+            {
+                var cryptoTransactionStates = ((IPagerLevelTransactionState)this).CryptoPagerTransactionState;
+                if (cryptoTransactionStates == null)
+                {
+                    return new Size(0,SizeUnit.Bytes);
+                }
+
+                var total = 0L;
+                foreach (var state in cryptoTransactionStates.Values)
+                {
+                    total += state.TotalCryptoBufferSize;
+                }
+
+                return new Size(total, SizeUnit.Bytes);
+            }
+        }
+        
         public event Action<IPagerLevelTransactionState> OnDispose;
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
