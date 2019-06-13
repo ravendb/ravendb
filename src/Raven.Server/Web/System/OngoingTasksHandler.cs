@@ -297,7 +297,7 @@ namespace Raven.Server.Web.System
         {
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
-            if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
+            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
                 throw new ArgumentException($"Unknown backup connection: {type}");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -308,43 +308,43 @@ namespace Raven.Server.Web.System
                     var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
                     switch (connectionType)
                     {
-                        case PeriodicBackupTestConnectionType.S3:
+                        case PeriodicBackupConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
                             using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await awsClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.Glacier:
+                        case PeriodicBackupConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
                             using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await glacierClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.Azure:
+                        case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
                             using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await azureClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.GoogleCloud:
+                        case PeriodicBackupConnectionType.GoogleCloud:
                             var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
                             using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await googleCloudClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.FTP:
+                        case PeriodicBackupConnectionType.FTP:
                             var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
                             using (var ftpClient = new RavenFtpClient(ftpSettings))
                             {
                                 await ftpClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.Local:
-                        case PeriodicBackupTestConnectionType.None:
+                        case PeriodicBackupConnectionType.Local:
+                        case PeriodicBackupConnectionType.None:
                         default:
                             throw new ArgumentOutOfRangeException();
                     }

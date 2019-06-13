@@ -47,6 +47,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
@@ -489,36 +490,42 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/restore/points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
+                throw new ArgumentException($"Unknown connection type: {type}");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore-path");
-                var restorePathJson = JsonDeserializationServer.DatabaseRestorePath(restorePathBlittable);
+                var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "restore-info");
 
                 var restorePoints = new RestorePoints();
                 var sortedList = new SortedList<DateTime, RestorePoint>(new RestoreUtils.DescendedDateComparer());
 
-                switch (restorePathJson.ConnectionType)
+                switch (connectionType)
                 {
-                    case ConnectionType.Local:
+                    case PeriodicBackupConnectionType.Local:
+                        var localSettings = JsonDeserializationServer.LocalSettings(restorePathBlittable);
+                        var directoryPath = localSettings.FolderPath;
+
                         try
                         {
-                            Directory.GetLastAccessTime(restorePathJson.Path);
+                            Directory.GetLastAccessTime(directoryPath);
                         }
                         catch (UnauthorizedAccessException)
                         {
-                            throw new InvalidOperationException($"Unauthorized access to path: {restorePathJson.Path}");
+                            throw new InvalidOperationException($"Unauthorized access to path: {directoryPath}");
                         }
 
-                        if (Directory.Exists(restorePathJson.Path) == false)
-                            throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
-
+                        if (Directory.Exists(directoryPath) == false)
+                            throw new InvalidOperationException($"Path '{directoryPath}' doesn't exist");
                         
-                        var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
+                        var directories = Directory.GetDirectories(directoryPath).OrderBy(x => x).ToList();
                         if (directories.Count == 0)
                         {
                             // no folders in directory
                             // will scan the directory for backup files
-                            RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, context, assertLegacyBackups: true);
+                            RestoreUtils.FetchRestorePoints(directoryPath, sortedList, context, assertLegacyBackups: true);
                         }
                         else
                         {
@@ -527,10 +534,16 @@ namespace Raven.Server.Web.System
                                 RestoreUtils.FetchRestorePoints(directory, sortedList, context);
                             }
                         }
+
                         break;
 
-                    case ConnectionType.Cloud:
-                        sortedList.Add(DateTime.Now, new RestorePoint());
+                    case PeriodicBackupConnectionType.S3:
+                        var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
+                        using (var client = new RavenAwsS3Client(s3Settings))
+                        {
+                            var prefix = s3Settings.RemoteFolderName;
+                        }
+
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -1460,11 +1473,5 @@ namespace Raven.Server.Web.System
             }
             return (false, progressLine);
         }
-    }
-
-    public enum ConnectionType
-    {
-        Local,
-        Cloud
     }
 }
