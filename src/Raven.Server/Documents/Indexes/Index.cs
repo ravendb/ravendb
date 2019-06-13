@@ -988,6 +988,8 @@ namespace Raven.Server.Documents.Indexes
                         if (_definitionChanged)
                             PersistIndexDefinition();
 
+                        PauseIfCpuCreditsBalanceIsTooLow();
+
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
 
@@ -1271,6 +1273,33 @@ namespace Raven.Server.Documents.Indexes
                     if (DocumentDatabase != null)
                         DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
+            }
+        }
+
+        private void PauseIfCpuCreditsBalanceIsTooLow()
+        {
+            AlertRaised alert = null;
+            int numberOfTimesSlept = 0;
+            while (DocumentDatabase.ServerStore.Server.CpuCreditsAlertRaised.IsRaised() &&
+                DocumentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                // give us a bit more than a measuring cycle to gain more CPU credits
+                Thread.Sleep(1250);
+                if (alert == null && numberOfTimesSlept++ > 5)
+                {
+                    alert = AlertRaised.Create(
+                       DocumentDatabase.Name,
+                       Name,
+                       "Indexing has been paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
+                       AlertType.Throttling_CpuCreditsBalance,
+                       NotificationSeverity.Warning,
+                       key: Name);
+                    DocumentDatabase.NotificationCenter.Add(alert);
+                }
+            }
+            if (alert != null)
+            {
+                DocumentDatabase.NotificationCenter.Dismiss(alert.Id);
             }
         }
 
@@ -3246,6 +3275,17 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
+            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsAlertRaised;
+            if (cpuCreditsAlertFlag.IsRaised())
+            {
+                HandleStoppedBatchesConcurrently(stats, count,
+                   canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
+                   reason: "CPU credits balance is low");
+
+                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because the CPU credits balance is almost completely used");
+                return false;
+            }
+
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
                 HandleStoppedBatchesConcurrently(stats, count,
@@ -3458,7 +3498,7 @@ namespace Raven.Server.Documents.Indexes
                     break;
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a low memory condition in action...");
+                    _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a {reason} condition in action...");
             }
         }
 

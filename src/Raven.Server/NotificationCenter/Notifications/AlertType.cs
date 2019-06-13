@@ -60,6 +60,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         Indexing_CouldNotGetStats,
 
         CpuUsageExtensionPointError,
-        TcpListenerError
+        TcpListenerError,
+
+        Throttling_CpuCreditsBalance
     }
 }

@@ -60,6 +60,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Threading;
 
 namespace Raven.Server
 {
@@ -276,6 +277,22 @@ namespace Raven.Server
 
                 StartSnmp();
 
+                if (Configuration.Server.CpuCreditsBase != null ||
+                    Configuration.Server.CpuCreditsMax != null ||
+                    Configuration.Server.CpuCreditsThreshold != null)
+                {
+                    if (Configuration.Server.CpuCreditsBase == null ||
+                        Configuration.Server.CpuCreditsMax == null ||
+                        Configuration.Server.CpuCreditsThreshold == null)
+                        throw new InvalidOperationException("If Server.CpuCreditsBase, Server.CpuCreditsMax and Server.CpuCreditsThreshold must be specified together");
+
+                    CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
+                    CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
+                    CpuCreditsBalance.Threshold = Configuration.Server.CpuCreditsThreshold.Value;
+
+                    var _ = StartMonitoringCpuCredits();
+                }
+
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
             }
             catch (Exception e)
@@ -284,7 +301,119 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
 
+        public MultipleUseFlag CpuCreditsAlertRaised = new MultipleUseFlag();
+        public CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
+        public class CpuCreditsState : IDynamicJson
+        {
+            public bool Used;
+            public double BaseCredits;
+            public double MaxCredits;
+            public double Threshold;
+            public double RemainingCpuCredits;
+            public double ThresholdReleasValue;
+            public double CreditsAccuredPerSecond;
+            public double[] History = new double[60 * 60];
+            public int HistoryCurrentIndex;
+
+            public DynamicJsonValue ToJson()
+            {
+                var historyByMinute = new DynamicJsonArray();
+                var current = HistoryCurrentIndex;
+                int currentMinItems = 0;
+                var currentMinuteValue = 0d;
+                for (int i = 0; i < History.Length; i++)
+                {
+                    var val = History[(current + i) % History.Length];
+                    currentMinuteValue += val;
+                    if(++currentMinItems == 60)
+                    {
+                        currentMinItems = 0;
+                        historyByMinute.Add(currentMinuteValue / 60);
+                        currentMinuteValue = 0d;
+                    }
+                }
+
+                return new DynamicJsonValue
+                {
+                    [nameof(Used)] = Used,
+                    [nameof(BaseCredits)] = BaseCredits,
+                    [nameof(MaxCredits)] = MaxCredits,
+                    [nameof(Threshold)] = Threshold,
+                    [nameof(RemainingCpuCredits)] = RemainingCpuCredits,
+                    [nameof(ThresholdReleasValue)] = ThresholdReleasValue,
+                    [nameof(CreditsAccuredPerSecond)] = CreditsAccuredPerSecond,
+                    [nameof(History)] = historyByMinute,
+                };
+            }
+        }
+
+        private async Task StartMonitoringCpuCredits()
+        {
+            CpuCreditsBalance.Used = true;
+            CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.BaseCredits;
+            CpuCreditsBalance.ThresholdReleasValue = CpuCreditsBalance.Threshold * 1.25;
+            CpuCreditsBalance.CreditsAccuredPerSecond = CpuCreditsBalance.BaseCredits / 3600;
+
+            var remainingTimeToAlert = 15;
+            AlertRaised alert = null;
+            while (ServerStore.ServerShutdown.IsCancellationRequested == false)
+            {
+                var (overallMachineCpuUsage, _) = CpuUsageCalculator.Calculate();
+                var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
+
+                CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex];
+                CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex] = utilizationOverAllCores;
+
+                CpuCreditsBalance.RemainingCpuCredits -= utilizationOverAllCores; // how much we spent this second
+                CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.CreditsAccuredPerSecond; // how much we earned this second
+
+                if (CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.MaxCredits)
+                    CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
+                if (CpuCreditsBalance.RemainingCpuCredits < 0)
+                    CpuCreditsBalance.RemainingCpuCredits = 0;
+
+                if (++CpuCreditsBalance.HistoryCurrentIndex > CpuCreditsBalance.History.Length)
+                    CpuCreditsBalance.HistoryCurrentIndex = 0;
+
+                if (CpuCreditsBalance.RemainingCpuCredits < CpuCreditsBalance.Threshold)
+                {
+                    if (CpuCreditsAlertRaised.IsRaised() == false)
+                    {
+                        CpuCreditsAlertRaised.Raise();
+                    }
+                    else if(alert == null && remainingTimeToAlert-- > 0)
+                    {
+                        alert = AlertRaised.Create(null, "CPU credits balance exhausted",
+                            $"The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
+                            $"RavenDB will throttle internal processes to reduce CPU consumption such as indexing, ETL processes and backups.",
+                            AlertType.Throttling_CpuCreditsBalance,
+                            NotificationSeverity.Warning);
+                        ServerStore.NotificationCenter.Add(alert);
+                    }
+                }
+                if(CpuCreditsAlertRaised.IsRaised() && CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.ThresholdReleasValue)
+                {
+                    CpuCreditsAlertRaised.Lower();
+                    if(alert != null)
+                    {
+                        ServerStore.NotificationCenter.Dismiss(alert.Id);
+                        alert = null;
+                        remainingTimeToAlert = 15;
+                    }
+                }
+
+                try
+                {
+                    await Task.Delay(1000, ServerStore.ServerShutdown);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+            }
         }
 
         private void RedirectsHttpTrafficToHttps()

@@ -122,6 +122,15 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
+                    if (_ravenServer.CpuCreditsAlertRaised.IsRaised())
+                    {
+                        if (_ravenServer.Configuration.Server.CpuCreditsExhaustionShouldTriggerFailover)
+                        {
+                            RejectRequestBecauseOfCpuThreshold(context);
+                            return;
+                        }
+                    }
+
                     using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
                     {
                         if (context.Request.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
@@ -142,6 +151,21 @@ namespace Raven.Server.Routing
             finally
             {
                 Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
+            }
+        }
+
+        private static void RejectRequestBecauseOfCpuThreshold(HttpContext context)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            {
+                ctx.Write(writer,
+                    new DynamicJsonValue
+                    {
+                        ["Type"] = "Error",
+                        ["Message"] = $"The request has been rejected because the CPU credits balance on this instance has been exhausted. See /debug/cpu-credits endpoint for details."
+                    });
             }
         }
 

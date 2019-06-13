@@ -423,6 +423,18 @@ namespace Raven.Server.Documents.ETL
                 // although need to respect below criteria
             }
 
+            if (_serverStore.Server.CpuCreditsAlertRaised.IsRaised())
+            {
+                var reason = $"Stopping the batch after {stats.Duration} because the CPU credits balance is almost completely used";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchCompleteReason(reason);
+
+                return false;
+            }
+
             if (currentItem.Type == EtlItemType.Document &&
                 stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
                 stats.NumberOfExtractedItems.Sum(x => x.Value) > Database.Configuration.Etl.MaxNumberOfExtractedItems)
@@ -712,6 +724,8 @@ namespace Raven.Server.Documents.ETL
 
                     try
                     {
+                        PauseIfCpuCreditsBalanceIsTooLow();
+
                         if (FallbackTime == null)
                         {
                             _waitForChanges.Wait(CancellationToken);
@@ -755,6 +769,33 @@ namespace Raven.Server.Documents.ETL
                     _threadAllocations.CurrentlyAllocatedForProcessing = 0;
                     _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
                 }
+            }
+        }
+
+        private void PauseIfCpuCreditsBalanceIsTooLow()
+        {
+            AlertRaised alert = null;
+            int numberOfTimesSlept = 0;
+            while (_serverStore.Server.CpuCreditsAlertRaised.IsRaised() &&
+                Database.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                // give us a bit more than a measuring cycle to gain more CPU credits
+                Thread.Sleep(1250);
+                if (alert == null && numberOfTimesSlept++ > 5)
+                {
+                    alert = AlertRaised.Create(
+                       Database.Name,
+                       Tag,
+                       "Etl process paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
+                       AlertType.Throttling_CpuCreditsBalance,
+                       NotificationSeverity.Warning,
+                       key: Name);
+                    Database.NotificationCenter.Add(alert);
+                }
+            }
+            if (alert != null)
+            {
+                Database.NotificationCenter.Dismiss(alert.Id);
             }
         }
 
