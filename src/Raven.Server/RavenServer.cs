@@ -312,8 +312,10 @@ namespace Raven.Server
             public double MaxCredits;
             public double Threshold;
             public double RemainingCpuCredits;
-            public double ThresholdReleasValue;
-            public double CreditsAccuredPerSecond;
+            public double ThresholdReleaseValue;
+            public double CreditsGainedPerSecond;
+            public double CurrentConsumption;
+            public double MachineCpuUsage;
             public double[] History = new double[60 * 60];
             public int HistoryCurrentIndex;
 
@@ -342,8 +344,10 @@ namespace Raven.Server
                     [nameof(MaxCredits)] = MaxCredits,
                     [nameof(Threshold)] = Threshold,
                     [nameof(RemainingCpuCredits)] = RemainingCpuCredits,
-                    [nameof(ThresholdReleasValue)] = ThresholdReleasValue,
-                    [nameof(CreditsAccuredPerSecond)] = CreditsAccuredPerSecond,
+                    [nameof(ThresholdReleaseValue)] = ThresholdReleaseValue,
+                    [nameof(CreditsGainedPerSecond)] = CreditsGainedPerSecond,
+                    [nameof(CurrentConsumption)] = CurrentConsumption,
+                    [nameof(MachineCpuUsage)] = MachineCpuUsage,
                     [nameof(History)] = historyByMinute,
                 };
             }
@@ -353,8 +357,8 @@ namespace Raven.Server
         {
             CpuCreditsBalance.Used = true;
             CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.BaseCredits;
-            CpuCreditsBalance.ThresholdReleasValue = CpuCreditsBalance.Threshold * 1.25;
-            CpuCreditsBalance.CreditsAccuredPerSecond = CpuCreditsBalance.BaseCredits / 3600;
+            CpuCreditsBalance.ThresholdReleaseValue = CpuCreditsBalance.Threshold * 1.25;
+            CpuCreditsBalance.CreditsGainedPerSecond = CpuCreditsBalance.BaseCredits / 3600;
 
             var remainingTimeToAlert = 15;
             AlertRaised alert = null;
@@ -362,12 +366,13 @@ namespace Raven.Server
             {
                 var (overallMachineCpuUsage, _) = CpuUsageCalculator.Calculate();
                 var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
-
+                CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
+                CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;
                 CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex];
                 CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex] = utilizationOverAllCores;
 
                 CpuCreditsBalance.RemainingCpuCredits -= utilizationOverAllCores; // how much we spent this second
-                CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.CreditsAccuredPerSecond; // how much we earned this second
+                CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.CreditsGainedPerSecond; // how much we earned this second
 
                 if (CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.MaxCredits)
                     CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
@@ -393,7 +398,7 @@ namespace Raven.Server
                         ServerStore.NotificationCenter.Add(alert);
                     }
                 }
-                if(CpuCreditsAlertRaised.IsRaised() && CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.ThresholdReleasValue)
+                if(CpuCreditsAlertRaised.IsRaised() && CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.ThresholdReleaseValue)
                 {
                     CpuCreditsAlertRaised.Lower();
                     if(alert != null)
