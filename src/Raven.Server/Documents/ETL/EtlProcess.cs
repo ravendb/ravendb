@@ -996,7 +996,7 @@ namespace Raven.Server.Documents.ETL
                 switch (testScript.Configuration.EtlType)
                 {
                     case EtlType.Sql:
-                        using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, null))
+                        using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, database.ServerStore))
                         using (sqlEtl.EnterTestMode(out debugOutput))
                         {
                             sqlEtl.EnsureThreadAllocationStats();
