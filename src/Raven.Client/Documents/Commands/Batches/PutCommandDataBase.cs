@@ -8,8 +8,8 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
-        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.None)
-            : base(id, changeVector, document, forceRevisionCreationStrategy)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
+            : base(id, changeVector, document, strategy)
         {
         }
 
@@ -20,8 +20,8 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
-        public PutCommandData(string id, string changeVector, DynamicJsonValue document, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.None)
-            : base(id, changeVector, document, forceRevisionCreationStrategy)
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
+            : base(id, changeVector, document, strategy)
         {
         }
 
@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public abstract class PutCommandDataBase<T> : ICommandData
     {
-        protected PutCommandDataBase(string id, string changeVector, T document, ForceRevisionStrategy forceRevisionCreationStrategy = ForceRevisionStrategy.None)
+        protected PutCommandDataBase(string id, string changeVector, T document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
         {
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Id = id;
             ChangeVector = changeVector;
             Document = document;
-            ForceRevisionCreationStrategy = forceRevisionCreationStrategy;
+            ForceRevisionCreationStrategy = strategy;
         }
 
         public string Id { get; }

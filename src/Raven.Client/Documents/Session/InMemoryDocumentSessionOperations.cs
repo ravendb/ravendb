@@ -198,7 +198,7 @@ namespace Raven.Client.Documents.Session
 
         public readonly bool NoTracking;
        
-        public Dictionary<string, ForceRevisionStrategy> IDsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
+        internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 
@@ -797,7 +797,7 @@ more responsive application.
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
-            PrepareForCreatingRevisionsFromIDs(result);
+            PrepareForCreatingRevisionsFromIds(result);
             PrepareCompareExchangeEntities(result);
 
             if (DeferredCommands.Count > deferredCommandsCount)
@@ -902,15 +902,15 @@ more responsive application.
             return true;
         }
         
-        private void PrepareForCreatingRevisionsFromIDs(SaveChangesData result)
+        private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)
         {
             // Note: here there is no point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
-            foreach (var idEntry in IDsForCreatingForcedRevisions)
+            foreach (var idEntry in IdsForCreatingForcedRevisions)
             {
-                result.SessionCommands.Add(new RevisionsCommandData(idEntry.Key));   
+                result.SessionCommands.Add(new ForceRevisionCommandData(idEntry.Key));   
             }
             
-            IDsForCreatingForcedRevisions.Clear();
+            IdsForCreatingForcedRevisions.Clear();
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
@@ -1044,9 +1044,9 @@ more responsive application.
                 if (entity.Value.Id != null)
                 {
                     // Check if user wants to Force a Revision
-                    if (IDsForCreatingForcedRevisions.TryGetValue(entity.Value.Id, out var creationStrategy))
+                    if (IdsForCreatingForcedRevisions.TryGetValue(entity.Value.Id, out var creationStrategy))
                     {
-                        IDsForCreatingForcedRevisions.Remove(entity.Value.Id);
+                        IdsForCreatingForcedRevisions.Remove(entity.Value.Id);
                         forceRevisionCreationStrategy = creationStrategy;
                     }
                 } 

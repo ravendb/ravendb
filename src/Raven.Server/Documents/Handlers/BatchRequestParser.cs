@@ -861,10 +861,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 case 6:
                     if (*(int*)state.StringBuffer == 1868981570 &&
-                        state.StringBuffer[5] == (byte)'e')
+                        *(short*)(state.StringBuffer + sizeof(int)) == 25970)
                         return ForceRevisionStrategy.Before;
-                    
-                    // Do 'After' on customer demand...
                     
                     ThrowInvalidProperty(state, ctx);
                     break;
