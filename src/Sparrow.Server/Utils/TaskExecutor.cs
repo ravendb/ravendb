@@ -16,18 +16,18 @@ namespace Sparrow.Server.Utils
 
         private class Runner
         {
-            private const string TasksExecuterThreadName = "RavenDB Tasks Executer";
-            private readonly ConcurrentQueue<(WaitCallback,object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
+            private const string TasksExecutorThreadName = "RavenDB Tasks Executor";
+            private readonly ConcurrentQueue<(WaitCallback, object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
 
             private readonly ManualResetEventSlim _event = new ManualResetEventSlim(false);
 
             private void Run()
             {
                 NativeMemory.EnsureRegistered();
-                
+
                 int tries = 0;
                 while (true)
-                {                    
+                {
                     (WaitCallback callback, object state) result;
                     while (_actions.TryDequeue(out result))
                     {
@@ -56,7 +56,7 @@ namespace Sparrow.Server.Utils
                     {
                         _event.WaitHandle.WaitOne();
                         _event.Reset();
-                        
+
                         // Nothing we can do here, just block.
                         tries = 0;
                     }
@@ -74,7 +74,7 @@ namespace Sparrow.Server.Utils
                 new Thread(Run)
                 {
                     IsBackground = true,
-                    Name = TasksExecuterThreadName
+                    Name = TasksExecutorThreadName
                 }.Start();
             }
         }
@@ -116,7 +116,7 @@ namespace Sparrow.Server.Utils
                 if (callback == null)
                     return;
 
-                if(Interlocked.CompareExchange(ref _callback, null, callback) != callback)
+                if (Interlocked.CompareExchange(ref _callback, null, callback) != callback)
                     return;
 
                 try
@@ -125,7 +125,7 @@ namespace Sparrow.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    var logger = Logging.LoggingSource.Instance.GetLogger<RunOnce>("TaskExecuter");
+                    var logger = Logging.LoggingSource.Instance.GetLogger<RunOnce>("TaskExecutor");
                     if (logger.IsOperationsEnabled)
                         logger.Operations("Failed to execute task", e);
                 }
