@@ -123,7 +123,7 @@ limit 1")
 
                     var metadata = s.Advanced.GetMetadataFor(d);
 
-                    Assert.Equal(48.99, Math.Round((double)metadata.GetObject("@spatial-result")["Distance"], 2));
+                    Assert.Equal(48.99, Math.Round((double)metadata.GetObject("@spatial")["Distance"], 2));
                 }
 
             }
@@ -149,7 +149,7 @@ limit 1")
 
                     var metadata = s.Advanced.GetMetadataFor(d);
 
-                    Assert.Equal(48.99, Math.Round((double)metadata.GetObject("@spatial-result")["Distance"], 2));
+                    Assert.Equal(48.99, Math.Round((double)metadata.GetObject("@spatial")["Distance"], 2));
                 }
 
             }
@@ -214,7 +214,7 @@ select {
 
                     var metadata = s.Advanced.GetMetadataFor(d);
 
-                    Assert.Equal(40.1, Math.Round((double)metadata.GetObject("@spatial-result")["Distance"], 1));
+                    Assert.Equal(40.1, Math.Round((double)metadata.GetObject("@spatial")["Distance"], 1));
                 }
 
             }
