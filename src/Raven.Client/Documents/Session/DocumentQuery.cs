@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -949,17 +948,6 @@ namespace Raven.Client.Documents.Session
 
             return this;
         }
-        /// <inheritdoc />
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        /// <inheritdoc />
-        public IEnumerator<T> GetEnumerator()
-        {
-            return ExecuteQueryOperation(null).GetEnumerator();
-        }
 
         /// <inheritdoc />
         T IDocumentQueryBase<T>.First()
@@ -1006,6 +994,13 @@ namespace Raven.Client.Documents.Session
             return QueryOperation.Complete<T>();
         }
 
+        private T[] ExecuteQueryOperationAsArray(int? take)
+        {
+            ExecuteQueryOperationInternal(take);
+
+            return QueryOperation.CompleteAsArray<T>();
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ExecuteQueryOperationInternal(int? take)
         {
@@ -1035,6 +1030,18 @@ namespace Raven.Client.Documents.Session
             var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
 
             return ((DocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation);
+        }
+
+        /// <inheritdoc />
+        List<T> IDocumentQueryBase<T>.ToList()
+        {
+            return ExecuteQueryOperation(null);
+        }
+
+        /// <inheritdoc />
+        T[] IDocumentQueryBase<T>.ToArray()
+        {
+            return ExecuteQueryOperationAsArray(null);
         }
 
         /// <inheritdoc />

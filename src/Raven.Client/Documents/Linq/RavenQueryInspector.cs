@@ -80,7 +80,9 @@ namespace Raven.Client.Documents.Linq
         public IEnumerator<T> GetEnumerator()
         {
             var execute = _provider.Execute(_expression);
-            return ((IEnumerable<T>)execute).GetEnumerator();
+            return ((IDocumentQueryBase<T>)execute)
+                .ToList()
+                .GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

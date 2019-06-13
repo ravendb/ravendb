@@ -63,7 +63,7 @@ select new {Name = g.Key, CreatedTime = createdTime}
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.DocumentQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
+                    session.Advanced.DocumentQuery<object>("test").WaitForNonStaleResults().ToArray();
                 }
 
                 RavenTestHelper.AssertNoIndexErrors(store);
