@@ -88,6 +88,11 @@ namespace Raven.Server.ServerWide.Commands
         {
             configuration.Name = GetTaskNameForDatabase(configuration.Name);
 
+            UpdateSettingsForDatabase(configuration, databaseName);
+        }
+
+        public static void UpdateSettingsForDatabase(PeriodicBackupConfiguration configuration, string databaseName)
+        {
             var localSettings = configuration.LocalSettings;
             if (localSettings?.FolderPath != null)
             {

@@ -10,8 +10,8 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -24,6 +24,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -56,6 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly CancellationToken _databaseShutdownCancellationToken;
         public readonly OperationCancelToken TaskCancelToken;
         private readonly BackupResult _backupResult;
+        private readonly bool _isServerWide;
 
         public BackupTask(
             ServerStore serverStore, 
@@ -73,6 +75,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _startTime = periodicBackup.StartTime;
             _periodicBackup = periodicBackup;
             _configuration = periodicBackup.Configuration;
+            _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
             _previousBackupStatus = periodicBackup.BackupStatus;
             _isFullBackup = isFullBackup;
             _backupToLocalFolder = backupToLocalFolder;
@@ -156,8 +159,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
-                // update the local configuration before starting the local backup
-                _configuration.LocalSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x));
+                await UpdateConfigurationFromScript();
 
                 GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
@@ -173,7 +175,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    await UpdateRemoteConfigurationFromScript();
                     await UploadToServer(backupFilePath, folderName, fileName, onProgress);
                 }
                 finally
@@ -271,13 +272,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task UpdateRemoteConfigurationFromScript()
+        private async Task UpdateConfigurationFromScript()
         {
+            _configuration.LocalSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x));
             _configuration.S3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x));
             _configuration.GlacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x));
             _configuration.AzureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x));
             _configuration.GoogleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x));
             _configuration.FtpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x));
+
+            if (_isServerWide == false)
+                return;
+
+            PutServerWideBackupConfigurationCommand.UpdateSettingsForDatabase(_configuration, _database.Name);
         }
 
         private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> resultConvertFunc)
