@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task CanCreateBackupUsingConfigurationFromBackupScript()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -349,7 +349,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(1, record2.PeriodicBackups.Count);
                 Assert.Equal($"{ServerWideBackupConfiguration.NamePrefix}, {putConfiguration.GetDefaultTaskName()} #2", record2.PeriodicBackups.First().Name);
-                
+
                 await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation(result2.Name));
                 serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result2.Name));
                 Assert.Null(serverWideBackupConfiguration);
