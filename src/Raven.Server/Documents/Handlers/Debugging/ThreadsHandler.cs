@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
@@ -19,12 +21,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator)]
         public Task StackTrace()
         {
-            if (PlatformDetails.RunningOnPosix)
-                throw new NotSupportedException("Stack Traces Capture is not supported on POSIX.");
-
-            if (Debugger.IsAttached)
-                throw new InvalidOperationException("Cannot get stack traces when debugger is attached");
-
             var threadIds = GetStringValuesQueryString("threadId", required: false);
             var includeStackObjects = GetBoolValueQueryString("includeStackObjects", required: false) ?? false;
 
@@ -79,15 +75,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public static void OutputResultToStream(StreamWriter sw, HashSet<string> threadIds = null, bool includeStackObjects = false)
         {
-            var ravenDebugExec = Path.Combine(AppContext.BaseDirectory, "Raven.Debug.exe");
+            var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
+                PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
+            );
+
             if (File.Exists(ravenDebugExec) == false)
                 throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
 
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 var sb = new StringBuilder($"stack-traces --pid {currentProcess.Id}");
+
+                if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                    sb.Append(" --wait");
 
                 if (threadIds != null && threadIds.Count > 0)
                 {
@@ -103,18 +106,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (includeStackObjects)
                     sb.Append(" --includeStackObjects");
 
+                var startup = new ProcessStartInfo
+                {
+                    Arguments = sb.ToString(),
+                    FileName = ravenDebugExec,
+                    WindowStyle = ProcessWindowStyle.Normal,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardInput = true,
+                    UseShellExecute = false
+                };
+                if (PlatformDetails.RunningOnPosix == false)
+                    startup.LoadUserProfile = false;
+
                 var process = new Process
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        Arguments = sb.ToString(),
-                        FileName = ravenDebugExec,
-                        WindowStyle = ProcessWindowStyle.Normal,
-                        LoadUserProfile = false,
-                        RedirectStandardError = true,
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false
-                    },
+                    StartInfo = startup,
                     EnableRaisingEvents = true
                 };
 
@@ -127,12 +134,35 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 process.BeginErrorReadLine();
                 process.BeginOutputReadLine();
 
-                process.WaitForExit();
+                if(PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                {
+                    // enable this process to attach to us
+                    prctl(PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
 
+                    process.StandardInput.WriteLine("go");// value is meaningless, just need a new line
+                    process.StandardInput.Flush();
+                }
+
+                try
+                {
+                    process.WaitForExit();
+                }
+                finally
+                {
+                    if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                    {
+                        // disable attachments 
+                        prctl(PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                    }
+                }
                 if (process.ExitCode != 0)
                     throw new InvalidOperationException("Could not read stack traces, " +
                                                         $"exit code: {process.ExitCode}, error: {sb}");
             }
         }
+
+        [DllImport("libc", SetLastError = true)]
+        private static extern int prctl(int option, UIntPtr arg2, UIntPtr arg3, UIntPtr arg4, UIntPtr arg5);
+        private const int PR_SET_PTRACER = 0x59616d61;
     }
 }
