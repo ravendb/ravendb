@@ -11,6 +11,7 @@ using Sparrow.Extensions;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -620,10 +621,20 @@ namespace Sparrow
 
     public sealed class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
     {
+        internal static readonly int ExternalAlignedSize;
+
         public const int MinBlockSizeInBytes = 4 * 1024; // If this is changed, we need to change also LogMinBlockSize.
         public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes;
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
+
+        static unsafe ByteStringContext()
+        {
+            //We want to be sure that each allocation is aligned to DWORD to minimize read time. The allocation will be at least the size of the struct
+            ExternalAlignedSize = sizeof(ByteStringStorage) + (sizeof(long) - sizeof(ByteStringStorage) % sizeof(long));
+
+            Debug.Assert((PlatformDetails.Is32Bits ? 24 : 32) == ExternalAlignedSize, "(PlatformDetails.Is32Bits ? 24 : 32) == ExternalAlignedSize");
+        }
 
         public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag, int allocationBlockSize = DefaultAllocationBlockSizeInBytes) : base(lowMemoryFlag, allocationBlockSize)
         { }
@@ -698,7 +709,6 @@ namespace Sparrow
 
 
         private const int ExternalFastPoolSize = 16;
-        private const int ExternalAlignedSize = 32 ; // sizeof(struct) can't be calculate at compile time (https://github.com/dotnet/roslyn/issues/15116) and we want it const for better memory usage (less space and more likely to be on cash) 
 
         private int _externalCurrentLeft = 0;
         private int _externalFastPoolCount = 0;
@@ -706,11 +716,10 @@ namespace Sparrow
         private readonly FastStack<IntPtr> _externalStringPool;
         private SegmentInformation _externalCurrent;
 
+
+
         public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag, int allocationBlockSize = ByteStringContext.DefaultAllocationBlockSizeInBytes)
         {
-            //We want to be sure that each allocation is aligned to DWORD to minimize read time. The allocation will be at least the size of the struct
-            Debug.Assert((sizeof(ByteStringStorage) + (sizeof(long) - sizeof(ByteStringStorage) % sizeof(long))) == ExternalAlignedSize);
-
             if (allocationBlockSize < ByteStringContext.MinBlockSizeInBytes)
                 throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
 
@@ -745,7 +754,7 @@ namespace Sparrow
 
             _externalStringPool.Clear();
             _externalFastPoolCount = 0;
-            _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / ExternalAlignedSize;
+            _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / ByteStringContext.ExternalAlignedSize;
 
             Debug.Assert(_wholeSegments.Count >= 2);
             // We need to make ensure that the _internalCurrent is linked to an unmanaged segment
@@ -805,7 +814,7 @@ namespace Sparrow
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
 
-            _currentlyAllocated += ExternalAlignedSize;
+            _currentlyAllocated += ByteStringContext.ExternalAlignedSize;
 
             ByteStringStorage* storagePtr;
             if (_externalFastPoolCount > 0)
@@ -826,7 +835,7 @@ namespace Sparrow
                 }
 
                 storagePtr = (ByteStringStorage*)_externalCurrent.Current;
-                _externalCurrent.Current += ExternalAlignedSize;
+                _externalCurrent.Current += ByteStringContext.ExternalAlignedSize;
                 _externalCurrentLeft--;
             }
 
@@ -1040,7 +1049,7 @@ namespace Sparrow
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
 
-            _currentlyAllocated -= ExternalAlignedSize;
+            _currentlyAllocated -= ByteStringContext.ExternalAlignedSize;
 
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
@@ -1167,7 +1176,7 @@ namespace Sparrow
             byte* end = start + memorySegment.Size;
 
             _externalCurrent = new SegmentInformation ( memorySegment, start, end, true );
-            _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / ExternalAlignedSize;
+            _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / ByteStringContext.ExternalAlignedSize;
 
             _wholeSegments.Add(_externalCurrent);
         }
