@@ -218,7 +218,8 @@ namespace Raven.Client.Embedded
         }
         public void Dispose()
         {
-            Inner.Dispose();
+            if (_inner != null)
+                _inner.Dispose();
         }
 
         public event EventHandler AfterDispose
