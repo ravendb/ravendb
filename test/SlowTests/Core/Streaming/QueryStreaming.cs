@@ -100,9 +100,9 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
 
-                    Assert.Equal(stats.IndexName, "Users/ByName");
-                    Assert.Equal(stats.TotalResults, 100);
-                    Assert.Equal(stats.IndexTimestamp.Year, DateTime.Now.Year);
+                    Assert.Equal("Users/ByName", stats.IndexName);
+                    Assert.Equal(100, stats.TotalResults);
+                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year);
                 }
 
                 using (var session = store.OpenSession())
@@ -116,9 +116,9 @@ namespace SlowTests.Core.Streaming
                         Assert.IsType<User>(reader.Current.Document);
                     }
 
-                    Assert.Equal(stats.IndexName, "Users/ByName");
-                    Assert.Equal(stats.TotalResults, 100);
-                    Assert.Equal(stats.IndexTimestamp.Year, DateTime.Now.Year);
+                    Assert.Equal("Users/ByName", stats.IndexName);
+                    Assert.Equal(100, stats.TotalResults);
+                    Assert.Equal(DateTime.Now.Year, stats.IndexTimestamp.Year); 
                 }
             }
         }
