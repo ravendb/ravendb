@@ -6,7 +6,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -21,22 +24,38 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator)]
         public Task StackTrace()
         {
+            if (PlatformDetails.RunningOnMacOsx)
+                throw new NotSupportedException("Capturing live stack traces is not supported by RavenDB on MacOSX");
+
             var threadIds = GetStringValuesQueryString("threadId", required: false);
             var includeStackObjects = GetBoolValueQueryString("includeStackObjects", required: false) ?? false;
 
-            using (var stream = new MemoryStream())
+            var sp = Stopwatch.StartNew();
+            var threadsUsage = new ThreadsUsage();
+
+            using (var sw = new StringWriter())
             {
-                using (var sw = new StreamWriter(stream))
+                OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
+
+                var result = JObject.Parse(sw.GetStringBuilder().ToString());
+
+                var wait = 100 - sp.ElapsedMilliseconds;
+                if (wait > 0)
                 {
-                    OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
-                 
-                    sw.Flush();
-                    
-                    stream.Position = 0;
-                    stream.WriteTo(ResponseBodyStream());    
+                    // I expect this to be _rare_, but we need to wait to get a correct measure of the cpu
+                    Thread.Sleep((int)wait);
+                }
+
+                var threadStats = threadsUsage.Calculate();
+                result["Threads"] = JArray.FromObject(threadStats.List);
+
+                using (var writer = new StreamWriter(ResponseBodyStream()))
+                {
+                    result.WriteTo(new JsonTextWriter(writer) { Indentation = 4 });
+                    writer.Flush();
                 }
             }
-            
+
             return Task.CompletedTask;
         }
 
@@ -76,7 +95,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void OutputResultToStream(StreamWriter sw, HashSet<string> threadIds = null, bool includeStackObjects = false)
+        public static void OutputResultToStream(TextWriter sw, HashSet<string> threadIds = null, bool includeStackObjects = false)
         {
             var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
                 PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
@@ -134,7 +153,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 process.BeginErrorReadLine();
                 process.BeginOutputReadLine();
 
-                if(PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
                 {
                     // enable this process to attach to us
                     prctl(PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
