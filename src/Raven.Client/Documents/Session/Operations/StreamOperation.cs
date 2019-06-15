@@ -162,17 +162,18 @@ namespace Raven.Client.Documents.Session.Operations
 
         public IAsyncEnumerator<BlittableJsonReaderObject> SetResultAsync(StreamResult response)
         {
-            return new YieldStreamResults(_session, response, _isQueryStream);
+            return new YieldStreamResults(_session, response, _isQueryStream, _statistics);
         }
 
         private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>
         {
-            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream, bool isQueryStream)
+            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream, bool isQueryStream, StreamQueryStatistics streamQueryStatistics)
             {
                 _response = stream;
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
                 _session = session;
                 _isQueryStream = isQueryStream;
+                _streamQueryStatistics = streamQueryStatistics;
             }
 
             private readonly StreamResult _response;
@@ -183,6 +184,7 @@ namespace Raven.Client.Documents.Session.Operations
             private bool _initialized;
             private JsonOperationContext.ReturnBuffer _returnBuffer;
             private readonly bool _isQueryStream;
+            private readonly StreamQueryStatistics _streamQueryStatistics;
             private readonly PeepingTomStream _peepingTomStream;
             private int _docsCountOnCachedRenewSession;
             private bool _cachedItemsRenew;
@@ -256,7 +258,7 @@ namespace Raven.Client.Documents.Session.Operations
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_isQueryStream)
-                    HandleStreamQueryStats(_session.Context, _response, _parser, _state, _buffer);
+                    HandleStreamQueryStats(_session.Context, _response, _parser, _state, _buffer, _streamQueryStatistics);
 
                 var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _peepingTomStream, _parser, _state, _buffer);
 
