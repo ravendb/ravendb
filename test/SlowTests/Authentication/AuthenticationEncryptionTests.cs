@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
@@ -24,29 +26,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanUseEncryption()
         {
-            var serverCertPath = SetupServerAuthentication();
-            var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            var buffer = new byte[32];
-            using (var rand = RandomNumberGenerator.Create())
-            {
-                rand.GetBytes(buffer);
-            }
-            var base64Key = Convert.ToBase64String(buffer);
-
-            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-            try
-            {
-                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-            }
-
-            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert);
 
             using (var store = GetDocumentStore(new Options
             {
