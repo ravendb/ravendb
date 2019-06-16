@@ -160,9 +160,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 // update the local configuration before starting the local backup
-                _configuration.LocalSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
+                var localSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
 
-                GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
+                GenerateFolderNameAndBackupDirectory(localSettings, now, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
@@ -176,7 +176,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    await UpdateRemoteConfigurationFromScript();
                     await UploadToServer(backupFilePath, folderName, fileName, onProgress);
                 }
                 finally
@@ -272,15 +271,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     await WriteStatus(runningBackupStatus, onProgress);
                 }
             }
-        }
-
-        private async Task UpdateRemoteConfigurationFromScript()
-        {
-            _configuration.S3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
-            _configuration.GlacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x), null); // TODO [grisha] - not supported yet
-            _configuration.AzureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
-            _configuration.GoogleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
-            _configuration.FtpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
         }
 
         private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, Func<T, T> updateServerWideSettingsFunc)
@@ -392,7 +382,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void GenerateFolderNameAndBackupDirectory(string now, out string folderName, out PathSetting backupDirectory)
+        private void GenerateFolderNameAndBackupDirectory(LocalSettings localSettings, string now, out string folderName, out PathSetting backupDirectory)
         {
             if (_isFullBackup)
             {
@@ -401,7 +391,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var prefix = counter++ == 0 ? string.Empty : $"-{counter++:D2}";
                     folderName = $"{now}{prefix}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{_configuration.BackupType.ToString().ToLower()}";
-                    backupDirectory = _backupToLocalFolder ? new PathSetting(_configuration.LocalSettings.FolderPath).Combine(folderName) : _tempBackupPath;
+                    backupDirectory = _backupToLocalFolder ? new PathSetting(localSettings.FolderPath).Combine(folderName) : _tempBackupPath;
                 } while (_backupToLocalFolder && DirectoryContainsBackupFiles(backupDirectory.FullPath, IsAnyBackupFile));
 
                 if (Directory.Exists(backupDirectory.FullPath) == false)
@@ -759,9 +749,15 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
+            var s3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
+            var glacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x), null); // TODO [grisha] - not supported yet
+            var azureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
+            var googleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
+            var ftpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
+
             var tasks = new List<Task>();
 
-            CreateUploadTaskIfNeeded(_configuration.S3Settings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded(s3Settings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
                 {
                     var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
@@ -769,12 +765,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                 },
                 _backupResult.S3Backup, onProgress);
 
-            CreateUploadTaskIfNeeded(_configuration.GlacierSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded(glacierSettings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
                     await UploadToGlacier(settings, stream, folderName, fileName, progress),
                 _backupResult.GlacierBackup, onProgress);
 
-            CreateUploadTaskIfNeeded(_configuration.AzureSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded(azureSettings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
                 {
                     var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
@@ -782,7 +778,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 },
                 _backupResult.AzureBackup, onProgress);
 
-            CreateUploadTaskIfNeeded(_configuration.GoogleCloudSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded(googleCloudSettings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
                 {
                     var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
@@ -790,7 +786,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 },
                 _backupResult.GoogleCloudBackup, onProgress);
 
-            CreateUploadTaskIfNeeded(_configuration.FtpSettings, tasks, backupPath, _isFullBackup,
+            CreateUploadTaskIfNeeded(ftpSettings, tasks, backupPath, _isFullBackup,
                 async (settings, stream, progress) =>
                     await UploadToFtp(settings, stream, folderName, fileName, progress),
                 _backupResult.FtpBackup, onProgress);
