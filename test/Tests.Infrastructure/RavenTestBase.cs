@@ -718,7 +718,7 @@ namespace FastTests
 
             return serverCertPath;
         }
-        protected string SetupEncryptedDatabase(out X509Certificate2 adminCert, [CallerMemberName] string caller = null)
+        protected string SetupEncryptedDatabase(out X509Certificate2 adminCert,out byte[] masterKey, [CallerMemberName] string caller = null)
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName(caller);
@@ -729,6 +729,8 @@ namespace FastTests
             {
                 rand.GetBytes(buffer);
             }
+
+            masterKey = buffer;
 
             var base64Key = Convert.ToBase64String(buffer);
 

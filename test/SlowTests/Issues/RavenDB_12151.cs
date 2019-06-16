@@ -119,7 +119,7 @@ namespace SlowTests.Issues
         [Fact]
         public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
-            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert);
+            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
 
             using (var store = GetDocumentStore(new Options()
             {
