@@ -1280,7 +1280,7 @@ namespace Raven.Server.Documents.Indexes
         {
             AlertRaised alert = null;
             int numberOfTimesSlept = 0;
-            while (DocumentDatabase.ServerStore.Server.CpuCreditsAlertRaised.IsRaised() &&
+            while (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() &&
                 DocumentDatabase.DatabaseShutdown.IsCancellationRequested == false)
             {
                 // give us a bit more than a measuring cycle to gain more CPU credits
@@ -3275,7 +3275,7 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsAlertRaised;
+            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
             if (cpuCreditsAlertFlag.IsRaised())
             {
                 HandleStoppedBatchesConcurrently(stats, count,

@@ -34,21 +34,21 @@ namespace Raven.Server.Config.Categories
         [Description("EXPERT: To let RavenDB manage burstable instance performance by scaling down background operations")]
         [DefaultValue(null)]
         [ConfigurationEntry("Server.CpuCredits.Base", ConfigurationEntryScope.ServerWideOnly)]
-        public int? CpuCreditsBase { get; set; }
+        public double? CpuCreditsBase { get; set; }
 
         [Description("EXPERT: To let RavenDB manage burstable instance performance by scaling down background operations")]
         [DefaultValue(null)]
         [ConfigurationEntry("Server.CpuCredits.Max", ConfigurationEntryScope.ServerWideOnly)]
-        public int? CpuCreditsMax { get; set; }
+        public double? CpuCreditsMax { get; set; }
 
-        [Description("EXPERT: To let RavenDB manage burstable instance performance by scaling down background operations")]
+        [Description("EXPERT: When CPU credits are exhausted to the threshold, start stopping background tasks.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Server.CpuCredits.Threshold", ConfigurationEntryScope.ServerWideOnly)]
-        public int? CpuCreditsThreshold { get; set; }
+        [ConfigurationEntry("Server.CpuCredits.ExhaustionBackgroundTasksThreshold", ConfigurationEntryScope.ServerWideOnly)]
+        public double? CpuCreditsExhaustionBackgroundTasksThreshold { get; set; }
 
-        [Description("EXPERT: To let RavenDB manage burstable instance performance by scaling down background operations")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Server.CpuCredits.ExhaustionShouldTriggerFailover", ConfigurationEntryScope.ServerWideOnly)]
-        public bool CpuCreditsExhaustionShouldTriggerFailover { get; set; }
+        [Description("EXPERT: When CPU credits are exhausted to the threshold, start rejecting requests to databases.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.ExhaustionFailoverThreshold", ConfigurationEntryScope.ServerWideOnly)]
+        public double? CpuCreditsExhaustionFailoverThreshold { get; set; }
     }
 }

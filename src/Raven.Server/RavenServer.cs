@@ -279,16 +279,21 @@ namespace Raven.Server
 
                 if (Configuration.Server.CpuCreditsBase != null ||
                     Configuration.Server.CpuCreditsMax != null ||
-                    Configuration.Server.CpuCreditsThreshold != null)
+                    Configuration.Server.CpuCreditsExhaustionFailoverThreshold != null ||
+                    Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold != null)
                 {
                     if (Configuration.Server.CpuCreditsBase == null ||
-                        Configuration.Server.CpuCreditsMax == null ||
-                        Configuration.Server.CpuCreditsThreshold == null)
-                        throw new InvalidOperationException("If Server.CpuCreditsBase, Server.CpuCreditsMax and Server.CpuCreditsThreshold must be specified together");
+                        Configuration.Server.CpuCreditsMax == null)
+                        throw new InvalidOperationException("Both Server.CpuCreditsBase and Server.CpuCreditsMax must be specified");
 
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
-                    CpuCreditsBalance.Threshold = Configuration.Server.CpuCreditsThreshold.Value;
+                    CpuCreditsBalance.BackgroundTasksThreshold = 
+                        // default to 1/4 of the base CPU credits 
+                        Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold ?? CpuCreditsBalance.BaseCredits / 4;
+                    CpuCreditsBalance.FailoverThreshold = 
+                        // default to disabled
+                        Configuration.Server.CpuCreditsExhaustionFailoverThreshold ?? -1;
 
                     var _ = StartMonitoringCpuCredits();
                 }
@@ -303,21 +308,26 @@ namespace Raven.Server
             }
         }
 
-        public MultipleUseFlag CpuCreditsAlertRaised = new MultipleUseFlag();
         public CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
         public class CpuCreditsState : IDynamicJson
         {
             public bool Used;
             public double BaseCredits;
             public double MaxCredits;
-            public double Threshold;
+            public double BackgroundTasksThreshold;
+            public double FailoverThreshold;
             public double RemainingCpuCredits;
-            public double ThresholdReleaseValue;
+            public double BackgroundTasksThresholdReleaseValue;
+            public double FailoverThresholdReleaseValue;
             public double CreditsGainedPerSecond;
             public double CurrentConsumption;
             public double MachineCpuUsage;
             public double[] History = new double[60 * 60];
             public int HistoryCurrentIndex;
+
+            public MultipleUseFlag BackgroundTasksAlertRaised = new MultipleUseFlag();
+            public MultipleUseFlag FailoverAlertRaised = new MultipleUseFlag();
+
 
             public DynamicJsonValue ToJson()
             {
@@ -342,9 +352,11 @@ namespace Raven.Server
                     [nameof(Used)] = Used,
                     [nameof(BaseCredits)] = BaseCredits,
                     [nameof(MaxCredits)] = MaxCredits,
-                    [nameof(Threshold)] = Threshold,
+                    [nameof(FailoverThreshold)] = FailoverThreshold,
+                    [nameof(BackgroundTasksThreshold)] = BackgroundTasksThreshold,
                     [nameof(RemainingCpuCredits)] = RemainingCpuCredits,
-                    [nameof(ThresholdReleaseValue)] = ThresholdReleaseValue,
+                    [nameof(BackgroundTasksThresholdReleaseValue)] = BackgroundTasksThresholdReleaseValue,
+                    [nameof(FailoverThresholdReleaseValue)] = FailoverThresholdReleaseValue,
                     [nameof(CreditsGainedPerSecond)] = CreditsGainedPerSecond,
                     [nameof(CurrentConsumption)] = CurrentConsumption,
                     [nameof(MachineCpuUsage)] = MachineCpuUsage,
@@ -357,11 +369,12 @@ namespace Raven.Server
         {
             CpuCreditsBalance.Used = true;
             CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.BaseCredits;
-            CpuCreditsBalance.ThresholdReleaseValue = CpuCreditsBalance.Threshold * 1.25;
+            CpuCreditsBalance.BackgroundTasksThresholdReleaseValue = CpuCreditsBalance.BackgroundTasksThreshold * 1.25;
+            CpuCreditsBalance.FailoverThresholdReleaseValue = CpuCreditsBalance.FailoverThreshold * 1.25;
             CpuCreditsBalance.CreditsGainedPerSecond = CpuCreditsBalance.BaseCredits / 3600;
 
-            var remainingTimeToAlert = 15;
-            AlertRaised alert = null;
+            int remainingTimeToBackgroundAlert = 15, remainingTimeToFailvoerAlert = 5;
+            AlertRaised backgroundTasksAlert = null, failoverAlert = null;
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
             {
                 var (overallMachineCpuUsage, _) = CpuUsageCalculator.Calculate();
@@ -382,32 +395,23 @@ namespace Raven.Server
                 if (++CpuCreditsBalance.HistoryCurrentIndex > CpuCreditsBalance.History.Length)
                     CpuCreditsBalance.HistoryCurrentIndex = 0;
 
-                if (CpuCreditsBalance.RemainingCpuCredits < CpuCreditsBalance.Threshold)
-                {
-                    if (CpuCreditsAlertRaised.IsRaised() == false)
-                    {
-                        CpuCreditsAlertRaised.Raise();
-                    }
-                    else if(alert == null && remainingTimeToAlert-- > 0)
-                    {
-                        alert = AlertRaised.Create(null, "CPU credits balance exhausted",
-                            $"The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
-                            $"RavenDB will throttle internal processes to reduce CPU consumption such as indexing, ETL processes and backups.",
-                            AlertType.Throttling_CpuCreditsBalance,
-                            NotificationSeverity.Warning);
-                        ServerStore.NotificationCenter.Add(alert);
-                    }
-                }
-                if(CpuCreditsAlertRaised.IsRaised() && CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.ThresholdReleaseValue)
-                {
-                    CpuCreditsAlertRaised.Lower();
-                    if(alert != null)
-                    {
-                        ServerStore.NotificationCenter.Dismiss(alert.Id);
-                        alert = null;
-                        remainingTimeToAlert = 15;
-                    }
-                }
+                MaybeRaiseAlert(CpuCreditsBalance.BackgroundTasksThreshold,
+                    CpuCreditsBalance.BackgroundTasksThresholdReleaseValue,
+                    CpuCreditsBalance.BackgroundTasksAlertRaised,
+                    "The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
+                    "RavenDB will throttle internal processes to reduce CPU consumption such as indexing, ETL processes and backups.",
+                    15,
+                    ref backgroundTasksAlert,
+                    ref remainingTimeToBackgroundAlert);
+
+                MaybeRaiseAlert(CpuCreditsBalance.FailoverThreshold,
+                    CpuCreditsBalance.FailoverThresholdReleaseValue,
+                    CpuCreditsBalance.FailoverAlertRaised,
+                    "The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
+                    "rejecting requests to databases to alleviate machine load.",
+                    5,
+                    ref failoverAlert,
+                    ref remainingTimeToFailvoerAlert);
 
                 try
                 {
@@ -418,6 +422,42 @@ namespace Raven.Server
                     return;
                 }
 
+            }
+
+            void MaybeRaiseAlert(
+                double threshold, 
+                double threadholdReleaseValue, 
+                MultipleUseFlag alertFlag,
+                string alertMessage,
+                int defaultTimeToAlert,
+                ref AlertRaised alert, 
+                ref int remainingTimeToAlert)
+            {
+                if (CpuCreditsBalance.RemainingCpuCredits < threshold)
+                {
+                    if (alertFlag.IsRaised() == false)
+                    {
+                        alertFlag.Raise();
+                        return;
+                    }
+                    if (alert == null && remainingTimeToAlert-- > 0)
+                    {
+                        alert = AlertRaised.Create(null, "CPU credits balance exhausted", alertMessage,
+                            AlertType.Throttling_CpuCreditsBalance,
+                            NotificationSeverity.Warning);
+                        ServerStore.NotificationCenter.Add(alert);
+                    }
+                }
+                if (alertFlag.IsRaised() && CpuCreditsBalance.RemainingCpuCredits > threadholdReleaseValue)
+                {
+                    alertFlag.Lower();
+                    if (alert != null)
+                    {
+                        ServerStore.NotificationCenter.Dismiss(alert.Id);
+                        alert = null;
+                        remainingTimeToAlert = defaultTimeToAlert;
+                    }
+                }
             }
         }
 
