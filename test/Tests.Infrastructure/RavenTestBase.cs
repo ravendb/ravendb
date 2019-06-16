@@ -65,6 +65,36 @@ namespace FastTests
 
         private readonly object _getDocumentStoreSync = new object();
 
+        protected string EncryptedServer(out X509Certificate2 adminCert, out string name)
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var buffer = new byte[32];
+            using (var rand = RandomNumberGenerator.Create())
+            {
+                rand.GetBytes(buffer);
+            }
+
+            var base64Key = Convert.ToBase64String(buffer);
+
+            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+            try
+            {
+                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // so we fall back to a file
+                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
+            }
+
+            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+            name = dbName;
+            return Convert.ToBase64String(buffer);
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
         {
             if (Servers.Count == 0)
