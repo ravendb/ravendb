@@ -1,7 +1,9 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -45,6 +47,12 @@ namespace Raven.Server.ServerWide.Commands
                     var backup = record?.PeriodicBackups?.Find(x => x.TaskId == TaskId);
                     if (backup != null)
                     {
+                        if (backup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var action = Disable ? "disable" : "enable";
+                            throw new InvalidOperationException($"Can't {action} task name '{backup.Name}', because it is a server wide backup task");
+                        }
+
                         backup.Disabled = Disable;
                     }
                     break;

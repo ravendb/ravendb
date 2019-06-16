@@ -142,6 +142,32 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task ToggleDisableServerWideBackupFails()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
+                var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
+
+                var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, false)));
+                Assert.Contains("Can't enable task name 'Server Wide Backup, Backup w/o destinations', because it is a server wide backup task", e.Message);
+
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, true)));
+                Assert.Contains("Can't disable task name 'Server Wide Backup, Backup w/o destinations', because it is a server wide backup task", e.Message);
+            }
+        }
+
+        [Fact]
         public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
         {
             using (var store = GetDocumentStore())
