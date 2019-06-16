@@ -84,7 +84,7 @@ namespace Raven.Server.ServerWide.Commands
             return $"{ServerWideBackupConfiguration.NamePrefix}, {backupConfigurationName}";
         }
 
-        public static void UpdateTemplateForDatabase(PeriodicBackupConfiguration configuration, string databaseName)
+        public static void UpdateTemplateForDatabase(PeriodicBackupConfiguration configuration, string databaseName, bool isDatabaseEncrypted)
         {
             configuration.Name = GetTaskNameForDatabase(configuration.Name);
 
@@ -97,6 +97,17 @@ namespace Raven.Server.ServerWide.Commands
             UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, databaseName);
 
             UpdateSettingsForFtp(configuration.FtpSettings, databaseName);
+
+            if (isDatabaseEncrypted && 
+                (configuration.BackupEncryptionSettings == null || 
+                 configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None))
+            {
+                // if the database is encrypted, the backup should be encrypted as well
+                configuration.BackupEncryptionSettings = new BackupEncryptionSettings
+                {
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                };
+            }
         }
 
         public static FtpSettings UpdateSettingsForFtp(FtpSettings ftpSettings, string databaseName)

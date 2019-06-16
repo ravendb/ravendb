@@ -1325,7 +1325,7 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
-                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name);
+                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
                             addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
                         }
                         
@@ -2832,10 +2832,12 @@ namespace Raven.Server.ServerWide
                     var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
                     long? oldTaskId = null;
 
+                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
+
                     var newBackups = new DynamicJsonArray();
                     var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
                     var databaseName = key.Substring(dbKey.Length);
-                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName);
+                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName, encrypted);
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
                     {
