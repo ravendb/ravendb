@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes", "RESET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes", "RESET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task Reset()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -713,7 +713,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task Terms()
         {
             var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
@@ -910,7 +910,7 @@ namespace Raven.Server.Documents.Handlers
 
         }
 
-        [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes/try", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task TestJavaScriptIndex()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

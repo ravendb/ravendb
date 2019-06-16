@@ -999,7 +999,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task CompactDatabase()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1205,7 +1205,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabases()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1223,7 +1223,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabaseOffline()
         {
             ServerStore.EnsureNotPassive();

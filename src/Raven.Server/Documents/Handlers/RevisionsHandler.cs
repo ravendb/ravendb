@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task Revert()
         {
             RevertRevisionsRequest configuration;

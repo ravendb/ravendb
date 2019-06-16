@@ -122,7 +122,8 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
-                    if (_ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
+                    if (tryMatch.Value.DisableOnCpuCreditsExhaustion && 
+                        _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
                         RejectRequestBecauseOfCpuThreshold(context);
                         return;
