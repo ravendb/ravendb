@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
@@ -113,6 +116,27 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
+        {
+            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert);
+
+            using (var store = GetDocumentStore(new Options()
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                Path = NewDataPath(),
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.EncryptedTransactionSizeLimit)] = "2";
+                    r.Encrypted = true;
+                }
+            }))
+            {
+                RunTest(store, "Reached transaction size limit");
+            }
+        }
         private void RunTest(DocumentStore store, string endOfPatchReason)
         {
             using (var bulk = store.BulkInsert())
