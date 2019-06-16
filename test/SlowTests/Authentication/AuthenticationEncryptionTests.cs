@@ -26,7 +26,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanUseEncryption()
         {
-            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert);
+            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
 
             using (var store = GetDocumentStore(new Options
             {
