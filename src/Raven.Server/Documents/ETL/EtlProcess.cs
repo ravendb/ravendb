@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.ETL
                 // although need to respect below criteria
             }
 
-            if (_serverStore.Server.CpuCreditsAlertRaised.IsRaised())
+            if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
             {
                 var reason = $"Stopping the batch after {stats.Duration} because the CPU credits balance is almost completely used";
 
@@ -776,7 +776,7 @@ namespace Raven.Server.Documents.ETL
         {
             AlertRaised alert = null;
             int numberOfTimesSlept = 0;
-            while (_serverStore.Server.CpuCreditsAlertRaised.IsRaised() &&
+            while (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() &&
                 Database.DatabaseShutdown.IsCancellationRequested == false)
             {
                 // give us a bit more than a measuring cycle to gain more CPU credits

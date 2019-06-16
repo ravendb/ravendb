@@ -108,7 +108,7 @@ namespace Raven.Server.Routing
                 if (tryMatch.Value.CorsMode != CorsMode.None)
                 {
                     RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, tryMatch.Value.CorsMode);
-                    
+
                     // don't authorize preflight requests: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
                     skipAuthorization = context.Request.Method == "OPTIONS";
                 }
@@ -122,13 +122,10 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
-                    if (_ravenServer.CpuCreditsAlertRaised.IsRaised())
+                    if (_ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
-                        if (_ravenServer.Configuration.Server.CpuCreditsExhaustionShouldTriggerFailover)
-                        {
-                            RejectRequestBecauseOfCpuThreshold(context);
-                            return;
-                        }
+                        RejectRequestBecauseOfCpuThreshold(context);
+                        return;
                     }
 
                     using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
@@ -222,7 +219,7 @@ namespace Raven.Server.Routing
                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
 
                             var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
-                            if(conLifetime != null)
+                            if (conLifetime != null)
                             {
                                 var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
                                  $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
@@ -280,9 +277,9 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                             // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
-                                return true; 
+                                return true;
                             goto case null;
-                         
+
                         case RavenServer.AuthenticationStatus.Allowed:
                             if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;
