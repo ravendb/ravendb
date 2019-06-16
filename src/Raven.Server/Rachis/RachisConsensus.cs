@@ -429,20 +429,7 @@ namespace Raven.Server.Rachis
                 }
 
                 CurrentState = RachisState.Follower;
-                if (topology.Members.Count == 1)
-                {
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    {
-                        using (ctx.OpenWriteTransaction())
-                        {
-                            SwitchToSingleLeader(ctx);
-                            ctx.Transaction.Commit();
-                        }
-
-                    }
-                }
-                else
-                    Timeout.Start(SwitchToCandidateStateOnTimeout);
+                Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
             catch (Exception)
             {
@@ -822,15 +809,6 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateStateOnTimeout()
         {
-            if (RequestSnapshot)
-            {
-                // we aren't allowed to be elected for leadership if we requested a snapshot 
-                if (Log.IsInfoEnabled)
-                {
-                    Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
-                }
-                return;
-            }
             SwitchToCandidateState("Election timeout");
         }
 
@@ -865,12 +843,14 @@ namespace Raven.Server.Rachis
                         // we aren't a member, nothing that we can do here
                         return;
                     }
-                    if (clusterTopology.Members.Count == 1)
+                    if (clusterTopology.AllNodes.Count == 1 && 
+                        clusterTopology.Members.Count == 1)
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
+                            Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
                         }
+
                         SwitchToSingleLeader(context);
                         ctx.Commit();
                         return;
