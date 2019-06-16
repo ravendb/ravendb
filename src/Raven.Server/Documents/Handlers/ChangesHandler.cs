@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
     public class ChangesHandler : DatabaseRequestHandler
     {
         private static readonly string StudioMarker = "fromStudio";
-        [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetChanges()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

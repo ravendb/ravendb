@@ -30,13 +30,13 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task Post()
         {
             return HandleQuery(HttpMethod.Post);
         }
 
-        [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task Get()
         {
             return HandleQuery(HttpMethod.Get);
@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries/test", "PATCH", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task PatchTest()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task Patch()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async

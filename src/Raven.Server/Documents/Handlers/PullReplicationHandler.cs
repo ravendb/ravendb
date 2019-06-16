@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/pull-replication/generate-certificate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion =true)]
         public Task GeneratePullReplicationCertificate()
         {
             if (ServerStore.Server.Certificate?.Certificate == null)

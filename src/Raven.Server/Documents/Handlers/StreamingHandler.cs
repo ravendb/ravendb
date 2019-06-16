@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task StreamDocsGet()
         {
             var start = GetStart();
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/queries", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamQueryGet()
         {
             // ReSharper disable once ArgumentsStyleLiteral
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/queries", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task StreamQueryPost()
         {
             // ReSharper disable once ArgumentsStyleLiteral
