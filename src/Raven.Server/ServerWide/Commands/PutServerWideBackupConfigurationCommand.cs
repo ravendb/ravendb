@@ -88,51 +88,76 @@ namespace Raven.Server.ServerWide.Commands
         {
             configuration.Name = GetTaskNameForDatabase(configuration.Name);
 
-            UpdateSettingsForDatabase(configuration, databaseName);
+            UpdateSettingsForLocal(configuration.LocalSettings, databaseName);
+
+            UpdateSettingsForS3(configuration.S3Settings, databaseName);
+
+            UpdateSettingsForAzure(configuration.AzureSettings, databaseName);
+
+            UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, databaseName);
+
+            UpdateSettingsForFtp(configuration.FtpSettings, databaseName);
         }
 
-        public static void UpdateSettingsForDatabase(PeriodicBackupConfiguration configuration, string databaseName)
+        public static FtpSettings UpdateSettingsForFtp(FtpSettings ftpSettings, string databaseName)
         {
-            var localSettings = configuration.LocalSettings;
-            if (localSettings?.FolderPath != null)
-            {
-                localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, Path.DirectorySeparatorChar);
-            }
-
-            var s3Settings = configuration.S3Settings;
-            if (s3Settings != null)
-            {
-                s3Settings.RemoteFolderName = GetUpdatedPath(s3Settings.RemoteFolderName);
-            }
-
-            var azureSettings = configuration.AzureSettings;
-            if (azureSettings != null)
-            {
-                azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName);
-            }
-
-            var googleCloudSettings = configuration.GoogleCloudSettings;
-            if (googleCloudSettings != null)
-            {
-                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName);
-            }
-
-            var ftpSettings = configuration.FtpSettings;
             if (ftpSettings?.Url != null)
             {
-                ftpSettings.Url = GetUpdatedPath(ftpSettings.Url);
+                ftpSettings.Url = GetUpdatedPath(ftpSettings.Url, databaseName);
             }
 
-            string GetUpdatedPath(string str, char separator = '/')
+            return ftpSettings;
+        }
+
+        public static GoogleCloudSettings UpdateSettingsForGoogleCloud(GoogleCloudSettings googleCloudSettings, string databaseName)
+        {
+            if (googleCloudSettings != null)
             {
-                if (str == null)
-                    return databaseName;
-
-                if (str.EndsWith(separator) == false)
-                    str += separator;
-
-                return str + databaseName;
+                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName, databaseName);
             }
+
+            return googleCloudSettings;
+        }
+
+        public static AzureSettings UpdateSettingsForAzure(AzureSettings azureSettings, string databaseName)
+        {
+            if (azureSettings != null)
+            {
+                azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName, databaseName);
+            }
+
+            return azureSettings;
+        }
+
+        public static S3Settings UpdateSettingsForS3(S3Settings s3Settings, string databaseName)
+        {
+            if (s3Settings != null)
+            {
+                s3Settings.RemoteFolderName = GetUpdatedPath(s3Settings.RemoteFolderName, databaseName);
+            }
+
+            return s3Settings;
+        }
+
+        public static LocalSettings UpdateSettingsForLocal(LocalSettings localSettings, string databaseName)
+        {
+            if (localSettings?.FolderPath != null)
+            {
+                localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, databaseName, Path.DirectorySeparatorChar);
+            }
+
+            return localSettings;
+        }
+
+        private static string GetUpdatedPath(string str, string databaseName, char separator = '/')
+        {
+            if (str == null)
+                return databaseName;
+
+            if (str.EndsWith(separator) == false)
+                str += separator;
+
+            return str + databaseName;
         }
     }
 }
