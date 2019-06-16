@@ -408,6 +408,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (periodicBackup.RunningTask != null)
                     return periodicBackup.RunningBackupTaskId ?? -1;
 
+                if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
+                {
+                    throw new MaxNumberOfConcurrentBackupsException(
+                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
+                        $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.");
+                }
+
                 if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
                 {
                     throw new MaxNumberOfConcurrentBackupsException(
