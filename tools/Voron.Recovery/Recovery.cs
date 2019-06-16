@@ -321,7 +321,7 @@ namespace Voron.Recovery
                                                 break;
                                             }
                                             
-                                            valid = ValidateOverflowPage(nextPage, eof, (long)nextStreamHeader, ref mem);
+                                            valid = ValidateOverflowPage(nextPage, eof, startOffset, ref mem);
                                             
                                             //we already advance the pointer inside the validation
                                             if (valid == false)
@@ -509,8 +509,6 @@ namespace Voron.Recovery
                 tx.Dispose();
                 tx = new TempPagerTransaction();
             }
-
-            PageHeader header = *(PageHeader*)mem;
 
             long pageNumber = (long)((PageHeader*)mem)->PageNumber;
             var res = Pager.AcquirePagePointer(tx, pageNumber);
@@ -884,7 +882,7 @@ namespace Voron.Recovery
             //pageHeader might be a buffer address we need to verify we don't exceed the original memory boundary here
             var numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             var sizeOfPages = numberOfPages * _pageSize;
-            var endOfOverflow = startOffset + sizeOfPages;
+            var endOfOverflow = (long)mem + sizeOfPages;
             // the endOfOverflow can be equal to eof if the last page is overflow
             if (endOfOverflow > (long)eof)
             {
