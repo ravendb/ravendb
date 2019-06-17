@@ -17,7 +17,8 @@ class glacierSettings extends amazonSettings {
             this.awsAccessKey,
             this.awsSecretKey,
             this.awsRegionName,
-            this. selectedAwsRegion
+            this.remoteFolderName,
+            this.selectedAwsRegion
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -61,6 +62,7 @@ class glacierSettings extends amazonSettings {
             AwsRegionName: null,
             AwsSecretKey: null,
             AwsSessionToken: null,
+            RemoteFolderName: null,
             VaultName: null,
             GetBackupConfigurationScript: null
         }, allowedRegions);
