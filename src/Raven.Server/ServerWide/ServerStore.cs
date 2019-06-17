@@ -157,6 +157,10 @@ namespace Raven.Server.ServerWide
 
             _server.ServerCertificateChanged += OnServerCertificateChanged;
 
+            HasFixedPort = Configuration.Core.ServerUrls == null ||
+                           Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
+                           uri.Port != 0;
+
             var maxConcurrentBackupsTasks = Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue;
             ConcurrentBackupsSemaphore = new SemaphoreSlim(maxConcurrentBackupsTasks);
         }
@@ -431,10 +435,8 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-        public bool HasFixedPort =>
-            Configuration.Core.ServerUrls == null ||
-            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
-            uri.Port != 0;
+
+        public bool HasFixedPort { get; internal set; }
 
         public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
