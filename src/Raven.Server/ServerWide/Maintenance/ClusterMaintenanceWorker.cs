@@ -135,7 +135,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             report.ServerReport = new ServerReport
             {
-                OutOfCpuCredits = _server.Server.CpuCreditsBalance.HasEnoughCredit == false
+                OutOfCpuCredits = _server.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised()
             };
 
             using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))

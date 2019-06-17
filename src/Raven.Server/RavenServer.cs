@@ -328,8 +328,6 @@ namespace Raven.Server
             public MultipleUseFlag BackgroundTasksAlertRaised = new MultipleUseFlag();
             public MultipleUseFlag FailoverAlertRaised = new MultipleUseFlag();
 
-            public bool HasEnoughCredit => Used == false || RemainingCpuCredits > Threshold;
-
             public DynamicJsonValue ToJson()
             {
                 var historyByMinute = new DynamicJsonArray();
