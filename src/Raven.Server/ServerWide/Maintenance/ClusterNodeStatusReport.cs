@@ -154,8 +154,16 @@ namespace Raven.Server.ServerWide.Maintenance
             Error = error;
             UpdateDateTime = updateDateTime;
 
-            LastSuccessfulUpdateDateTime = lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
-            
+            if (ServerReport.OutOfCpuCredits == true)
+            {
+                // we don't want to give any grace time if the node is out of credits
+                LastSuccessfulUpdateDateTime = DateTime.MinValue;
+            }
+            else
+            {
+                LastSuccessfulUpdateDateTime = lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
+            }
+
             LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
             foreach (var dbReport in report)
             {
