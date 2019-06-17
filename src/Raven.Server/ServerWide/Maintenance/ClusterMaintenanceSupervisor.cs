@@ -110,7 +110,9 @@ namespace Raven.Server.ServerWide.Maintenance
             public string Url { get; }
 
             public ClusterNodeStatusReport ReceivedReport = new ClusterNodeStatusReport(
-                new Dictionary<string, DatabaseStatusReport>(), ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
+                new ServerReport(),
+                new Dictionary<string, DatabaseStatusReport>(), 
+                ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
                 null, DateTime.MinValue, null);
 
             private bool _isDisposed;
@@ -239,7 +241,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                         _log.Info("Exception occurred while reading the report from the connection", e);
                                     }
 
-                                    ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
+                                    ReceivedReport = new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>(),
                                         ClusterNodeStatusReport.ReportStatus.Error,
                                         e,
                                         DateTime.UtcNow,
@@ -247,8 +249,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                     break;
                                 }
-
-                                var nodeReport = BuildReport(rawReport);
+                                
+                                var nodeReport = BuildReport(rawReport, connection.SupportedFeatures);
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
 
                                 UpdateNodeReportIfNeeded(nodeReport, unchangedReports);
@@ -265,7 +267,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             _log.Info($"Exception was thrown while collecting info from {ClusterTag}", e);
                         }
 
-                        ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
+                        ReceivedReport = new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>(),
                             ClusterNodeStatusReport.ReportStatus.Error,
                             e,
                             DateTime.UtcNow,
@@ -321,17 +323,34 @@ namespace Raven.Server.ServerWide.Maintenance
                     _log.Info("Timeout occurred while collecting info report.");
                 }
 
-                ReceivedReport = new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>(),
+                ReceivedReport = new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>(),
                     ClusterNodeStatusReport.ReportStatus.Timeout,
                     null,
                     DateTime.UtcNow,
                     _lastSuccessfulReceivedReport);
             }
 
-            private ClusterNodeStatusReport BuildReport(BlittableJsonReaderObject rawReport)
+            private ClusterNodeStatusReport BuildReport(BlittableJsonReaderObject rawReport, TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
             {
                 using (rawReport)
                 {
+                    if (supportedFeatures.Heartbeats.IncludeServerInfo)
+                    {
+                        var maintenanceReport = JsonDeserializationServer.MaintenanceReport(rawReport);
+
+                        var status = maintenanceReport.ServerReport.OutOfCpuCredits == true
+                            ? ClusterNodeStatusReport.ReportStatus.OutOfCredits
+                            : ClusterNodeStatusReport.ReportStatus.Ok;
+
+                        return new ClusterNodeStatusReport(
+                            maintenanceReport.ServerReport,
+                            maintenanceReport.DatabasesReport,
+                            status,
+                            null,
+                            DateTime.UtcNow,
+                            _lastSuccessfulReceivedReport);
+                    }
+
                     var report = new Dictionary<string, DatabaseStatusReport>();
                     foreach (var property in rawReport.GetPropertyNames())
                     {
@@ -340,6 +359,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     return new ClusterNodeStatusReport(
+                        null,
                         report,
                         ClusterNodeStatusReport.ReportStatus.Ok,
                         null,
