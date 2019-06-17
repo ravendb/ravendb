@@ -246,6 +246,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [InlineData(EastRegion1)]
+        [InlineData(WestRegion2)]
+        public async Task upload_archive_with_remote_folder_name(string region)
+        {
+            var vaultName = $"testing-{Guid.NewGuid()}";
+
+            var glacierSettings = GetGlacierSettings(region, vaultName);
+            glacierSettings.RemoteFolderName = Guid.NewGuid().ToString();
+            using (var client = new RavenAwsGlacierClient(glacierSettings))
+            {
+                await client.PutVault();
+
+                var archiveId = await client.UploadArchive(
+                    new MemoryStream(Encoding.UTF8.GetBytes("321")),
+                    "sample description");
+
+                Assert.NotNull(archiveId);
+            }
+        }
+
+        [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1, WestRegion2)]
         [InlineData(WestRegion2, EastRegion1)]
         public async Task can_get_correct_error_glacier(string region1, string region2)
