@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -14,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
@@ -1234,21 +1236,60 @@ namespace Raven.Server.Documents
             DatabaseTopology databaseTopology,
             IDatabaseTask configuration,
             IDatabaseTaskStatus taskStatus,
-            bool useLastResponsibleNodeIfNoAvailableNodes = false)
+            bool keepTaskOnOriginalMemberNode = false)
         {
             var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
                 ServerStore.Engine.CurrentState, configuration,
                 getLastResponsibleNode:
-                () => ServerStore.LicenseManager.GetLastResponsibleNodeForTask(
-                    taskStatus,
-                    databaseTopology,
-                    configuration,
-                    NotificationCenter));
+                () =>
+                {
+                    // first time this task is assigned
+                    var lastResponsibleNode = taskStatus?.NodeTag;
+                    if (lastResponsibleNode == null)
+                        return null;
 
-            if (whoseTaskIsIt == null && useLastResponsibleNodeIfNoAvailableNodes)
-                return taskStatus.NodeTag;
+                    // avoid moving backup tasks when the machine is out of CPU credit
+                    if (taskStatus is PeriodicBackupStatus)
+                    {
+                        if (databaseTopology.Rehabs.Contains(lastResponsibleNode) &&
+                            databaseTopology.PromotablesStatus.TryGetValue(lastResponsibleNode, out var status) &&
+                            status == DatabasePromotionStatus.OutOfCpuCredits)
+                        {
+                            return lastResponsibleNode;
+                        }
+                    }
+
+                    // can't redistribute, keep it on the original node
+                    if (ServerStore.LicenseManager.HasHighlyAvailableTasks() == false)
+                    {
+                        RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode);
+                        return lastResponsibleNode;
+                    }
+
+                    // keep the task on the original node
+                    if (keepTaskOnOriginalMemberNode &&
+                        databaseTopology.Members.Contains(lastResponsibleNode))
+                        return lastResponsibleNode;
+
+                    return null;
+
+                });
+
+            if (whoseTaskIsIt == null && taskStatus is PeriodicBackupStatus)
+                return taskStatus.NodeTag; // we don't want to stop backup process
 
             return whoseTaskIsIt;
+        }
+
+        private void RaiseAlertIfNecessary(DatabaseTopology databaseTopology, IDatabaseTask configuration, string lastResponsibleNode)
+        {
+            // raise alert if redistribution is necessary 
+            if (databaseTopology.Count > 1 &&
+                databaseTopology.Members.Contains(lastResponsibleNode) == false)
+            {
+                var alert = LicenseManager.CreateHighlyAvailableTasksAlert(databaseTopology, configuration, lastResponsibleNode);
+                NotificationCenter.Add(alert);
+            }
         }
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
