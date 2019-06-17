@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
