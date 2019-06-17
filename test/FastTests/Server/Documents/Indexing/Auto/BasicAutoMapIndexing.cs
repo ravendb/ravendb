@@ -963,7 +963,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
                                     {
                                         {
                                             database.Name, new DatabaseStatusReport
@@ -1023,7 +1023,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
                                     {
                                         {
                                             database.Name, new DatabaseStatusReport
@@ -1083,7 +1083,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
                                     {
                                         {
                                             database.Name, new DatabaseStatusReport
@@ -1143,7 +1143,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
                                     {
                                         {
                                             database.Name, new DatabaseStatusReport
@@ -1203,7 +1203,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
-                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new Dictionary<string, DatabaseStatusReport>
+                                Server.ServerStore.NodeTag, new ClusterNodeStatusReport(new ServerReport(), new Dictionary<string, DatabaseStatusReport>
                                     {
                                         {
                                             database.Name, new DatabaseStatusReport
