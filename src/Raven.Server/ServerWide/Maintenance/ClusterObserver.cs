@@ -818,7 +818,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         reason = $"Node in rehabilitation due to timeout reached trying to get stats from node.{Environment.NewLine}";
                         break;
                     case ClusterNodeStatusReport.ReportStatus.OutOfCredits:
-                        reason = $"Node in rehabilitation because it is out of credit.{Environment.NewLine}";
+                        reason = $"Node in rehabilitation because it run out of CPU credits.{Environment.NewLine}";
                         break;
                     default:
                         reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'.{Environment.NewLine}";
