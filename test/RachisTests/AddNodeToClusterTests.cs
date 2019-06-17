@@ -16,9 +16,12 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -563,6 +566,31 @@ namespace RachisTests
             }
         }
 
+        [Fact]
+        public async Task ResetServerShouldPreserveTopology()
+        {
+            var cluster = await CreateRaftCluster(3, shouldRunInMemory: false);
+            var followers = cluster.Nodes.Where(x => x != cluster.Leader);
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            foreach (var follower in followers)
+            {
+                
+                while (cluster.Leader.ServerStore.Engine.CurrentLeader.TryModifyTopology(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url, Leader.TopologyModification.NonVoter, out var task) == false)
+                {
+                    await task;
+                }
+            }
+
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
+            cluster.Leader = GetNewServer(deletePrevious: false, runInMemory: false, partialPath: result.DataDir, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
+            });
+
+            var topology = cluster.Leader.ServerStore.GetClusterTopology();
+            Assert.Equal(3, topology.AllNodes.Count);
+        }
         private async Task WaitForAssertion(Action action)
         {
             var sp = Stopwatch.StartNew();
