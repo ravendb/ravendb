@@ -92,11 +92,13 @@ namespace Raven.Server.ServerWide.Commands
 
             UpdateSettingsForS3(configuration.S3Settings, databaseName);
 
+            UpdateSettingsForGlacier(configuration.GlacierSettings, databaseName);
+
             UpdateSettingsForAzure(configuration.AzureSettings, databaseName);
 
-            UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, databaseName);
-
             UpdateSettingsForFtp(configuration.FtpSettings, databaseName);
+
+            UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, databaseName);
 
             if (isDatabaseEncrypted)
             {
@@ -108,54 +110,52 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static FtpSettings UpdateSettingsForFtp(FtpSettings ftpSettings, string databaseName)
-        {
-            if (ftpSettings?.Url != null)
-            {
-                ftpSettings.Url = GetUpdatedPath(ftpSettings.Url, databaseName);
-            }
-
-            return ftpSettings;
-        }
-
-        public static GoogleCloudSettings UpdateSettingsForGoogleCloud(GoogleCloudSettings googleCloudSettings, string databaseName)
-        {
-            if (googleCloudSettings != null)
-            {
-                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName, databaseName);
-            }
-
-            return googleCloudSettings;
-        }
-
-        public static AzureSettings UpdateSettingsForAzure(AzureSettings azureSettings, string databaseName)
-        {
-            if (azureSettings != null)
-            {
-                azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName, databaseName);
-            }
-
-            return azureSettings;
-        }
-
-        public static S3Settings UpdateSettingsForS3(S3Settings s3Settings, string databaseName)
-        {
-            if (s3Settings != null)
-            {
-                s3Settings.RemoteFolderName = GetUpdatedPath(s3Settings.RemoteFolderName, databaseName);
-            }
-
-            return s3Settings;
-        }
-
-        public static LocalSettings UpdateSettingsForLocal(LocalSettings localSettings, string databaseName)
+        public static void UpdateSettingsForLocal(LocalSettings localSettings, string databaseName)
         {
             if (localSettings?.FolderPath != null)
             {
                 localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, databaseName, Path.DirectorySeparatorChar);
             }
+        }
 
-            return localSettings;
+        public static void UpdateSettingsForS3(S3Settings s3Settings, string databaseName)
+        {
+            if (s3Settings != null)
+            {
+                s3Settings.RemoteFolderName = GetUpdatedPath(s3Settings.RemoteFolderName, databaseName);
+            }
+        }
+
+        public static void UpdateSettingsForGlacier(GlacierSettings glacierSettings, string databaseName)
+        {
+            if (glacierSettings != null)
+            {
+                glacierSettings.RemoteFolderName = GetUpdatedPath(glacierSettings.RemoteFolderName, databaseName);
+            }
+        }
+
+        public static void UpdateSettingsForAzure(AzureSettings azureSettings, string databaseName)
+        {
+            if (azureSettings != null)
+            {
+                azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName, databaseName);
+            }
+        }
+
+        public static void UpdateSettingsForFtp(FtpSettings ftpSettings, string databaseName)
+        {
+            if (ftpSettings?.Url != null)
+            {
+                ftpSettings.Url = GetUpdatedPath(ftpSettings.Url, databaseName);
+            }
+        }
+
+        public static void UpdateSettingsForGoogleCloud(GoogleCloudSettings googleCloudSettings, string databaseName)
+        {
+            if (googleCloudSettings != null)
+            {
+                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName, databaseName);
+            }
         }
 
         private static string GetUpdatedPath(string str, string databaseName, char separator = '/')

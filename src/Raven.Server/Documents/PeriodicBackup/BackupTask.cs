@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, Func<T, T> updateServerWideSettingsFunc)
+        private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, Action<T> updateServerWideSettingsFunc)
                 where T : BackupSettings
         {
             if (backupSettings == null)
@@ -354,8 +354,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     ms.Position = 0;
                     var configuration = await context.ReadForMemoryAsync(ms, "backup-configuration-from-script");
                     var result = deserializeSettingsFunc(configuration);
-                    if (_isServerWide && updateServerWideSettingsFunc != null)
-                        return updateServerWideSettingsFunc(result);
+                    if (_isServerWide)
+                        updateServerWideSettingsFunc?.Invoke(result);
 
                     return result;
                 }
@@ -750,7 +750,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
             var s3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
-            var glacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x), null); // TODO [grisha] - not supported yet
+            var glacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, _database.Name));
             var azureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
             var googleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
             var ftpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
@@ -950,7 +950,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(_database.Name, folderName, fileName);
+                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 var archiveId = await client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' to Glacier, archive ID: {archiveId}");
