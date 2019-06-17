@@ -284,7 +284,7 @@ namespace Raven.Server
                 {
                     if (Configuration.Server.CpuCreditsBase == null ||
                         Configuration.Server.CpuCreditsMax == null)
-                        throw new InvalidOperationException("Both Server.CpuCreditsBase and Server.CpuCreditsMax must be specified");
+                        throw new InvalidOperationException($"Both {RavenConfiguration.GetKey(s=> s.Server.CpuCreditsBase)} and {RavenConfiguration.GetKey(s => s.Server.CpuCreditsMax)} must be specified");
 
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
