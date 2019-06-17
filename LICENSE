@@ -38,9 +38,14 @@ scope of the license received will be determined based upon which license
 you select to purchase from the Raven DB buy page (the “Buy Page”). All
 such licenses grant you the non-exclusive, non-transferable, nonsublicensable
 right to use the provided Software and modify non-compiled
-source files of the provided Software, all for your own commercial purposes,
+source files of the provided Software, all for your own internal commercial purposes,
 and subject to the terms and conditions of this Agreement and any other
 restrictions and obligations set forth on the Buy Page.
+
+Notwithstanding anything to the contrary in the foregoing paragraph, 
+you may host the Software on behalf of your end users solely in conjunction with your 
+applications; provided that yours' end users shall not, at any time, access the Software
+directly, without a written consent of the Licensor.
 
 2. Ownership
 
@@ -176,9 +181,10 @@ expenses incurred by such prevailing party in the litigation.
 
 8. Support
 
-This EULA does not address support issues. Support, if any, will be provided
-only pursuant to a separate mutual written support agreement between the
-parties.
+Hibernating Rhinos Ltd provides support for customer who purchased the support options
+shown at: https://ravendb.net/support. Any support will be provided  pursuant to 
+the Support Policy which is incorporated by reference into this EULA and which may be 
+amended from time to time.
 
 9. Changes to the Agreement
 
