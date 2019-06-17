@@ -950,7 +950,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _database.Name, folderName, fileName);
                 var archiveId = await client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' to Glacier, archive ID: {archiveId}");
