@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var databaseRecord = GetDatabaseRecord();
             var backupStatus = GetBackupStatus(taskId);
-            return _database.WhoseTaskIsIt(databaseRecord.Topology, periodicBackup.Configuration, backupStatus, useLastResponsibleNodeIfNoAvailableNodes: true);
+            return _database.WhoseTaskIsIt(databaseRecord.Topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -722,7 +722,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var backupStatus = GetBackupStatus(configuration.TaskId);
-            var whoseTaskIsIt = _database.WhoseTaskIsIt(databaseRecord.Topology, configuration, backupStatus, useLastResponsibleNodeIfNoAvailableNodes: true);
+            var whoseTaskIsIt = _database.WhoseTaskIsIt(databaseRecord.Topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
                 return TaskStatus.Disabled;
 

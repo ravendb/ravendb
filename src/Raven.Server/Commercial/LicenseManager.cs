@@ -1457,46 +1457,28 @@ namespace Raven.Server.Commercial
             return _licenseStatus.HasHighlyAvailableTasks;
         }
 
-        public string GetLastResponsibleNodeForTask(
-            IDatabaseTaskStatus databaseTaskStatus,
-            DatabaseTopology databaseTopology,
-            IDatabaseTask databaseTask,
-            NotificationCenter.NotificationCenter notificationCenter)
+        public static AlertRaised CreateHighlyAvailableTasksAlert(DatabaseTopology databaseTopology, IDatabaseTask databaseTask, string lastResponsibleNode)
         {
-            if (_licenseStatus.HasHighlyAvailableTasks)
-                return null;
-
-            var lastResponsibleNode = databaseTaskStatus?.NodeTag;
-            if (lastResponsibleNode == null)
-                return null;
-
-            if (databaseTopology.Count > 1 &&
-                databaseTopology.Members.Contains(lastResponsibleNode) == false)
-            {
-                var taskName = databaseTask.GetTaskName();
-                var message = $"Node {lastResponsibleNode} cannot execute the task: '{taskName}'";
-                var alert = AlertRaised.Create(
-                    null,
-                    $@"You've reached your license limit ({EnumHelper.GetDescription(LimitType.HighlyAvailableTasks)})",
-                    message,
-                    AlertType.LicenseManager_HighlyAvailableTasks,
-                    NotificationSeverity.Warning,
-                    key: message,
-                    details: new MessageDetails
-                    {
-                        Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be executed " +
-                                  $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
-                                  $"or by any other node because your current license " +
-                                  $"doesn't include highly available tasks feature. " + Environment.NewLine +
-                                  $"You can choose a different mentor node that will execute the task " +
-                                  $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
-                                  $"Upgrading the license will allow RavenDB to manage that automatically."
-                    });
-
-                notificationCenter.Add(alert);
-            }
-
-            return lastResponsibleNode;
+            var taskName = databaseTask.GetTaskName();
+            var message = $"Node {lastResponsibleNode} cannot execute the task: '{taskName}'";
+            var alert = AlertRaised.Create(
+                null,
+                $@"You've reached your license limit ({EnumHelper.GetDescription(LimitType.HighlyAvailableTasks)})",
+                message,
+                AlertType.LicenseManager_HighlyAvailableTasks,
+                NotificationSeverity.Warning,
+                key: message,
+                details: new MessageDetails
+                {
+                    Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be executed " +
+                              $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
+                              $"or by any other node because your current license " +
+                              $"doesn't include highly available tasks feature. " + Environment.NewLine +
+                              $"You can choose a different mentor node that will execute the task " +
+                              $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
+                              $"Upgrading the license will allow RavenDB to manage that automatically."
+                });
+            return alert;
         }
 
         private static string GetTaskType(IDatabaseTask databaseTask)
