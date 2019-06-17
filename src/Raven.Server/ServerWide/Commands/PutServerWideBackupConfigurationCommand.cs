@@ -98,9 +98,7 @@ namespace Raven.Server.ServerWide.Commands
 
             UpdateSettingsForFtp(configuration.FtpSettings, databaseName);
 
-            if (isDatabaseEncrypted && 
-                (configuration.BackupEncryptionSettings == null || 
-                 configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.None))
+            if (isDatabaseEncrypted)
             {
                 // if the database is encrypted, the backup should be encrypted as well
                 configuration.BackupEncryptionSettings = new BackupEncryptionSettings

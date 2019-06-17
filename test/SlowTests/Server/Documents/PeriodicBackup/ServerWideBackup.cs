@@ -470,9 +470,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Theory]
-        [InlineData(null)]
         [InlineData(EncryptionMode.None)]
-        public async Task ServerWideBackupShouldBeEncryptedForEncryptedDatabase(EncryptionMode? encryptionMode)
+        [InlineData(EncryptionMode.UseProvidedKey)]
+        [InlineData(EncryptionMode.UseDatabaseKey)]
+        public async Task ServerWideBackupShouldBeEncryptedForEncryptedDatabase(EncryptionMode encryptionMode)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
@@ -497,9 +498,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 */6 * * *"
                 };
 
-                if (encryptionMode != null)
+                switch (encryptionMode)
                 {
-                    serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings {EncryptionMode = EncryptionMode.None};
+                    case EncryptionMode.None:
+                        serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.None,
+                        };
+                        break;
+                    case EncryptionMode.UseDatabaseKey:
+                        serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseDatabaseKey
+                        };
+                        break;
+                    case EncryptionMode.UseProvidedKey:
+                        serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseProvidedKey,
+                            Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                        };
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(encryptionMode), encryptionMode, null);
                 }
 
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
