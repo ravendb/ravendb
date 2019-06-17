@@ -17,7 +17,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class Aws : NoDisposalNeeded
     {
-        
         private const string AwsAccessKey = "<aws_access_key>";
         private const string AwsSecretKey = "<aws_secret_key>";
         private const string AwsSessionToken = "<aws_session_token>";
