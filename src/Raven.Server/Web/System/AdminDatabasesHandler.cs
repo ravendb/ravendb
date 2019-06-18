@@ -219,7 +219,6 @@ namespace Raven.Server.Web.System
                 auditLog.Info($"Database {name} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
             }
 
-
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -229,6 +228,9 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+                if (databaseRecord.Encrypted)
+                    ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
+
                 if (string.IsNullOrWhiteSpace(databaseRecord.DatabaseName))
                     throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
