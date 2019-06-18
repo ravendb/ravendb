@@ -55,6 +55,9 @@ namespace Raven.Client.Documents.Session
             DocumentInfo documentInfo,
             bool removeIdentityProperty = true)
         {
+            if (value == null)
+                return null;
+
             if (value is ValueType ||
                 value is string ||
                 value is BlittableJsonReaderArray)

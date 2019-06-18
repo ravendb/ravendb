@@ -1009,6 +1009,26 @@ namespace SlowTests.Cluster
             }
         }
 
+        [Fact]
+        public async Task CanAddNullValueToCompareExchange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    const string id = "test/user";
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue<string>(id, null);
+                    await session.SaveChangesAsync();
+
+                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id);
+                    Assert.Equal(null, compareExchangeValue.Value);
+                }
+            }
+        }
+
         private class UserByName : AbstractIndexCreationTask<User>
         {
             public UserByName()
