@@ -295,7 +295,7 @@ namespace Raven.Server
                         // default to disabled
                         Configuration.Server.CpuCreditsExhaustionFailoverThreshold ?? -1;
 
-                    PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+                    _cpuCreditsMonitoring = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
                     {
                         try
                         {
@@ -1867,6 +1867,7 @@ namespace Raven.Server
         public SnmpWatcher SnmpWatcher;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
+        private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;
 
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
@@ -2139,6 +2140,7 @@ namespace Raven.Server
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => AfterDisposal?.Invoke());
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
+                ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
                 ea.Execute(() => CpuUsageCalculator.Dispose());
 
                 ea.ThrowIfNeeded();
