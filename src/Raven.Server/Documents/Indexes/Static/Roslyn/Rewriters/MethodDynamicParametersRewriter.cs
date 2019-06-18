@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -9,13 +7,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public sealed class MethodDynamicParametersRewriter : CSharpSyntaxRewriter
     {
-        public static readonly MethodDynamicParametersRewriter Instance = new MethodDynamicParametersRewriter();
-
-        private MethodDynamicParametersRewriter()
-        {
-        }
+        public SemanticModel SemanticModel { get; internal set; }
 
         private const string DynamicString = "dynamic";
+
+        private const string SystemNamespacePrefix = "System.";
+
+        private const string IEnumerableString = "System.Collections.IEnumerable";
+
+        private INamedTypeSymbol IEnumerableSymbol; 
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
@@ -48,12 +48,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return methodDeclarationSyntax;
         }
 
-        private static ParameterListSyntax RewriteParametersToDynamicTypes(MethodDeclarationSyntax node)
+        private ParameterListSyntax RewriteParametersToDynamicTypes(MethodDeclarationSyntax node)
         {
+            IEnumerableSymbol = SemanticModel.Compilation.GetTypeByMetadataName(IEnumerableString);
+
             var originalParameters = node.ParameterList.Parameters;
+            var first = true;
             var sb = new StringBuilder();
             sb.Append('(');
-            var first = true;
+
             foreach (var param in originalParameters)
             {
                 if (first)
@@ -71,12 +74,86 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     continue;
                 }
 
-                sb.Append($"{DynamicString} {param.Identifier.WithoutTrivia()}");
+                var symbol = SemanticModel.GetDeclaredSymbol(param);
+                var typeStr = symbol.Type.ToString();
+
+                if (typeStr.StartsWith(SystemNamespacePrefix) == false)
+                {
+                    // change to dynamic
+                    sb.Append($"{DynamicString} {param.Identifier.WithoutTrivia()}");
+                    continue;
+                }
+
+                if (param.Type is GenericNameSyntax genericNameSyntax && 
+                    symbol.Type.AllInterfaces.Contains(IEnumerableSymbol))
+                {
+                    // handle generic type arguments of collection
+
+                    var any = false;
+                    var newArgsBuilder = ChangeGenericTypeArgumentsToDynamicIfNeeded(genericNameSyntax, ref any);
+
+                    if (any)
+                    {
+                        // we changed some of the generic argument types to dynamic,
+                        // create a new parameter with the modified type-argument list
+                        var newParam = $"{genericNameSyntax.Identifier.Text}<{newArgsBuilder}> {param.Identifier.WithoutTrivia()}";
+                        sb.Append(newParam);
+                        continue;
+                    }                 
+                }
+
+                // no need to change to dynamic, keep original type
+                sb.Append(param);
             }
 
             sb.Append(')');
 
             return SyntaxFactory.ParseParameterList(sb.ToString());
+        }
+
+        private StringBuilder ChangeGenericTypeArgumentsToDynamicIfNeeded(GenericNameSyntax gns, ref bool anyChanges)
+        {
+            var first = true;
+            var sb = new StringBuilder();
+
+            foreach (var arg in gns.TypeArgumentList.Arguments)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    sb.Append(", ");
+                }
+
+                var genericTypeSymbol = SemanticModel.GetTypeInfo(arg).Type;
+
+                if (genericTypeSymbol.ToString().StartsWith(SystemNamespacePrefix))
+                {
+                    if (arg is GenericNameSyntax innerGenericNameSyntax &&
+                        genericTypeSymbol.AllInterfaces.Contains(IEnumerableSymbol))
+                    {
+                        // recursive call
+                        var newBuilder = ChangeGenericTypeArgumentsToDynamicIfNeeded(innerGenericNameSyntax, ref anyChanges);
+                        var newGenericType = $"{innerGenericNameSyntax.Identifier.Text}<{newBuilder}>";
+                        sb.Append(newGenericType);
+                    }
+                    else
+                    {
+                        // keep original type
+                        sb.Append(arg);
+                    }
+                }
+                else
+                {
+                    // change to dynamic
+                    anyChanges = true;
+                    sb.Append(DynamicString);
+                }
+            }
+
+            return sb;
         }
     }
 }
