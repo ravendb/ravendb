@@ -1303,7 +1303,7 @@ namespace Sparrow.Json
             }
         }
 
-        public bool Contains(LazyStringValue propertyName)
+        public bool Contains(string propertyName)
         {
             AssertContextNotDisposed();
 
