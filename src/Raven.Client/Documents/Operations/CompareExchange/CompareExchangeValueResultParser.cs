@@ -37,16 +37,14 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 }
                 else
                 {
-                    BlittableJsonReaderObject val = null;
-                    raw?.TryGet("Object", out val);
-                    if (val == null)
+                    if (raw == null || raw.Contains("Object") == false)
                     {
                         results[key] = new CompareExchangeValue<T>(key, index, default);
                     }
                     else
                     {
-                        var converted = (T)EntityToBlittable.ConvertToEntity(typeof(T), null, val, conventions);
-                        results[key] = new CompareExchangeValue<T>(key, index, converted);
+                        var converted = (ResultHolder<T>)EntityToBlittable.ConvertToEntity(typeof(ResultHolder<T>), null, raw, conventions);
+                        results[key] = new CompareExchangeValue<T>(key, index, converted.Object);
                     }
                 }
             }
@@ -61,6 +59,11 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             var value = GetValues(response, conventions).FirstOrDefault();
             return value.Value;
+        }
+
+        private class ResultHolder<T>
+        {
+            public T Object;
         }
     }
 }
