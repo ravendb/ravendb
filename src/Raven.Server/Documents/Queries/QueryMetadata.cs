@@ -553,7 +553,7 @@ namespace Raven.Server.Documents.Queries
             sb.Append("function ").Append(SelectOutput).Append("(");
             int index = 0;
             var args = new SelectField[IsGraph ?
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count : 
+                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count :
                 RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
@@ -762,7 +762,17 @@ namespace Raven.Server.Documents.Queries
         {
             if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
             {
-                return new OrderByField(new QueryFieldName("id()", false), OrderByFieldType.String, asc, MethodType.Id);
+                if (orderingType == OrderByFieldType.Implicit)
+                    orderingType = OrderByFieldType.String;
+
+                switch (orderingType)
+                {
+                    case OrderByFieldType.AlphaNumeric:
+                    case OrderByFieldType.String:
+                        return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id);
+                    default:
+                        throw new InvalidQueryException("Invalid ORDER BY 'id()' call, this field can only be sorted as a string or alphanumeric value, but got " + orderingType, QueryText, parameters);
+                }
             }
 
             if (me.Name.Equals("custom", StringComparison.OrdinalIgnoreCase))
@@ -1066,7 +1076,7 @@ namespace Raven.Server.Documents.Queries
                             {
                                 if (!RootAliasPaths.ContainsKey(argumentExpression.FieldValue))
                                     ThrowUnknownAlias(argumentExpression.FieldValue, parameters);
-                                return SelectField.CreateMethodCall("id", alias, new []{ SelectField.Create(QueryFieldName.DocumentId, argumentExpression.FieldValue)  });
+                                return SelectField.CreateMethodCall("id", alias, new[] { SelectField.Create(QueryFieldName.DocumentId, argumentExpression.FieldValue) });
                             }
                         }
 
@@ -1369,7 +1379,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (IsGraph)
             {
-               return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
+                return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
             }
 
             if (_aliasToName.TryGetValue(fe.Compound[0].Value, out var indexFieldName) &&
@@ -1382,8 +1392,8 @@ namespace Raven.Server.Documents.Queries
             }
             if (fe.Compound.Count == 1)
                 return new QueryFieldName(fe.Compound[0].Value, fe.IsQuoted);
-           
-            if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+
+            if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
             {
                 if (fe.Compound.Count == 2)
                 {
