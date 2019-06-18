@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -19,11 +20,12 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class PeriodicBackupTestsSlow : RavenTestBase
+    public class PeriodicBackupTestsSlow : ClusterTestBase
     {
         [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory()
@@ -781,6 +783,79 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(300, dic["votes"]);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task BackupTaskShouldStayOnTheOriginalNode()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var cluster = await CreateRaftCluster(5);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ReplicationFactor = 5,
+                Server = cluster.Leader
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    await session.SaveChangesAsync();
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(session.Advanced.RequestExecutor.TopologyNodes, "users/1", u => u.Name == "oren",
+                        TimeSpan.FromSeconds(15)));
+
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+                var operation = new UpdatePeriodicBackupOperation(config);
+                var result = await store.Maintenance.SendAsync(operation);
+                var periodicBackupTaskId = result.TaskId;
+
+                await WaitForRaftIndexToBeAppliedInCluster(periodicBackupTaskId, TimeSpan.FromSeconds(15));
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, result.TaskId));
+
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(180));
+                Assert.True(done, "Failed to complete the backup in time");
+
+                var backupInfo = new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup);
+                var backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
+                var originalNode = backupInfoResult.ResponsibleNode.NodeTag;
+
+                var toDelete = cluster.Nodes.First(n => n.ServerStore.NodeTag != originalNode);
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: toDelete.ServerStore.NodeTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
+
+                var nodesCount = await WaitForValueAsync(async () =>
+                {
+                    var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    if (res == null)
+                    {
+                        return -1;
+                    }
+
+                    return res.Topology.Count;
+                }, 4);
+
+                Assert.Equal(4, nodesCount);
+
+                backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupInfoResult.TaskId));
+
+                getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(180));
+                Assert.True(done, "Failed to complete the backup in time");
+
+                backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
+                Assert.Equal(originalNode, backupInfoResult.ResponsibleNode.NodeTag);
             }
         }
 
