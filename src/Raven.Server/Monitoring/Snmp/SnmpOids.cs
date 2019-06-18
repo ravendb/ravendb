@@ -54,6 +54,27 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Machine CPU usage in %")]
             public const string MachineCpu = "1.5.2";
 
+            [Description("CPU Credits Base")]
+            public const string CpuCreditsBase = "1.5.3.1";
+
+            [Description("CPU Credits Max")]
+            public const string CpuCreditsMax = "1.5.3.2";
+
+            [Description("CPU Credits Remaining")]
+            public const string CpuCreditsRemaining = "1.5.3.3";
+
+            [Description("CPU Credits Gained Per Second")]
+            public const string CpuCreditsCurrentConsumption = "1.5.3.4";
+
+            [Description("CPU Credits Background Tasks Alert Raised")]
+            public const string CpuCreditsBackgroundTasksAlertRaised = "1.5.3.5";
+
+            [Description("CPU Credits Failover Alert Raised")]
+            public const string CpuCreditsFailoverAlertRaised = "1.5.3.6";
+
+            [Description("CPU Credits Any Alert Raised")]
+            public const string CpuCreditsAlertRaised = "1.5.3.7";
+
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
 
