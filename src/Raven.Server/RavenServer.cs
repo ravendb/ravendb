@@ -295,7 +295,18 @@ namespace Raven.Server
                         // default to disabled
                         Configuration.Server.CpuCreditsExhaustionFailoverThreshold ?? -1;
 
-                    var _ = StartMonitoringCpuCredits();
+                    PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+                    {
+                        try
+                        {
+                            StartMonitoringCpuCredits();
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Fatal exception occured during cpu credit monitoring", e);
+                        }
+                    }, null, "CPU Credits Monitoring");
                 }
 
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
@@ -364,7 +375,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task StartMonitoringCpuCredits()
+        private void StartMonitoringCpuCredits()
         {
             CpuCreditsBalance.Used = true;
             CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.BaseCredits;
@@ -376,51 +387,58 @@ namespace Raven.Server
             AlertRaised backgroundTasksAlert = null, failoverAlert = null;
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
             {
-                var (overallMachineCpuUsage, _) = CpuUsageCalculator.Calculate();
-                var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
-                CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
-                CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;
-                CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex];
-                CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex] = utilizationOverAllCores;
+                try
+                {
+                    var (overallMachineCpuUsage, _) = CpuUsageCalculator.Calculate();
+                    var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
+                    CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
+                    CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;
+                    CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex];
+                    CpuCreditsBalance.History[CpuCreditsBalance.HistoryCurrentIndex] = utilizationOverAllCores;
 
-                CpuCreditsBalance.RemainingCpuCredits -= utilizationOverAllCores; // how much we spent this second
-                CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.CreditsGainedPerSecond; // how much we earned this second
+                    CpuCreditsBalance.RemainingCpuCredits -= utilizationOverAllCores; // how much we spent this second
+                    CpuCreditsBalance.RemainingCpuCredits += CpuCreditsBalance.CreditsGainedPerSecond; // how much we earned this second
 
-                if (CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.MaxCredits)
-                    CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
-                if (CpuCreditsBalance.RemainingCpuCredits < 0)
-                    CpuCreditsBalance.RemainingCpuCredits = 0;
+                    if (CpuCreditsBalance.RemainingCpuCredits > CpuCreditsBalance.MaxCredits)
+                        CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
+                    if (CpuCreditsBalance.RemainingCpuCredits < 0)
+                        CpuCreditsBalance.RemainingCpuCredits = 0;
 
-                if (++CpuCreditsBalance.HistoryCurrentIndex > CpuCreditsBalance.History.Length)
-                    CpuCreditsBalance.HistoryCurrentIndex = 0;
+                    if (++CpuCreditsBalance.HistoryCurrentIndex >= CpuCreditsBalance.History.Length)
+                        CpuCreditsBalance.HistoryCurrentIndex = 0;
 
-                MaybeRaiseAlert(CpuCreditsBalance.BackgroundTasksThreshold,
-                    CpuCreditsBalance.BackgroundTasksThresholdReleaseValue,
-                    CpuCreditsBalance.BackgroundTasksAlertRaised,
-                    "The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
-                    "RavenDB will throttle internal processes to reduce CPU consumption such as indexing, ETL processes and backups.",
-                    15,
-                    ref backgroundTasksAlert,
-                    ref remainingTimeToBackgroundAlert);
+                    MaybeRaiseAlert(CpuCreditsBalance.BackgroundTasksThreshold,
+                        CpuCreditsBalance.BackgroundTasksThresholdReleaseValue,
+                        CpuCreditsBalance.BackgroundTasksAlertRaised,
+                        "The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
+                        "RavenDB will throttle internal processes to reduce CPU consumption such as indexing, ETL processes and backups.",
+                        15,
+                        ref backgroundTasksAlert,
+                        ref remainingTimeToBackgroundAlert);
 
-                MaybeRaiseAlert(CpuCreditsBalance.FailoverThreshold,
-                    CpuCreditsBalance.FailoverThresholdReleaseValue,
-                    CpuCreditsBalance.FailoverAlertRaised,
-                    "The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
-                    "rejecting requests to databases to alleviate machine load.",
-                    5,
-                    ref failoverAlert,
-                    ref remainingTimeToFailvoerAlert);
+                    MaybeRaiseAlert(CpuCreditsBalance.FailoverThreshold,
+                        CpuCreditsBalance.FailoverThresholdReleaseValue,
+                        CpuCreditsBalance.FailoverAlertRaised,
+                        "The CPU credits balance for this instance is nearly exhausted (see /debug/cpu-credits endpoint for details), " +
+                        "rejecting requests to databases to alleviate machine load.",
+                        5,
+                        ref failoverAlert,
+                        ref remainingTimeToFailvoerAlert);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Unhandled exception occured during cpu credit monitoring", e);
+                }
 
                 try
                 {
-                    await Task.Delay(1000, ServerStore.ServerShutdown);
+                    Task.Delay(1000).Wait(ServerStore.ServerShutdown);
                 }
                 catch (OperationCanceledException)
                 {
                     return;
                 }
-
             }
 
             void MaybeRaiseAlert(
