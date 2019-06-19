@@ -588,19 +588,6 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        /// Uses serializer defined and customized in conventions for query parameters serialization
-        /// </summary>
-        public bool UseConventionsSerializerForQueryParametersSerialization
-        {
-            get => _useConventionsSerializerForQueryParametersSerialization;
-            set
-            {
-                AssertNotFrozen();
-                _useConventionsSerializerForQueryParametersSerialization = value;
-            }
-        }
-
-        /// <summary>
         /// Changes the location of topology cache files. By default it is set to application base directory (AppContext.BaseDirectory)
         /// </summary>
         public string TopologyCacheLocation
