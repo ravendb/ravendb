@@ -159,6 +159,8 @@ namespace Raven.Client.Documents.Commands.Batches
         {
             foreach (var command in _commands)
                 command?.Dispose();
+
+            Result?.Results?.Dispose();
         }
 
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
