@@ -46,8 +46,7 @@ namespace Raven.Client.Documents.Session
             return props;
         }
 
-
-        internal static object ConvertToBlittableIfNeeded(
+        internal static object ConvertToBlittableForCompareExchangeIfNeeded(
             object value,
             DocumentConventions conventions,
             JsonOperationContext context,
@@ -66,7 +65,7 @@ namespace Raven.Client.Documents.Session
             if (value is IEnumerable enumerable && !(enumerable is IDictionary))
             {
                 return enumerable.Cast<object>()
-                    .Select(v => ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo, removeIdentityProperty));
+                    .Select(v => ConvertToBlittableForCompareExchangeIfNeeded(v, conventions, context, serializer, documentInfo, removeIdentityProperty));
             }
 
             using (var writer = new BlittableJsonWriter(context, documentInfo))
