@@ -10,12 +10,14 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 {
     internal static class CompareExchangeValueResultParser<T>
     {
-        public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static Dictionary<string, CompareExchangeValue<T>> GetValues(JsonOperationContext context, BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response.TryGet("Results", out BlittableJsonReaderArray items) == false)
                 throw new InvalidDataException("Response is invalid. Results is missing.");
 
+            LazyStringValue lsv = null;
             var results = new Dictionary<string, CompareExchangeValue<T>>();
+
             foreach (BlittableJsonReaderObject item in items)
             {
                 if (item == null)
@@ -37,7 +39,10 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 }
                 else
                 {
-                    if (raw == null || raw.Contains("Object") == false)
+                    if (lsv == null)
+                        lsv = context.GetLazyString("Object");
+
+                    if (raw == null || raw.Contains(lsv) == false)
                     {
                         results[key] = new CompareExchangeValue<T>(key, index, default);
                     }
@@ -52,12 +57,12 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return results;
         }
 
-        public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static CompareExchangeValue<T> GetValue(JsonOperationContext context, BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response == null)
                 return null;
 
-            var value = GetValues(response, conventions).FirstOrDefault();
+            var value = GetValues(context, response, conventions).FirstOrDefault();
             return value.Value;
         }
 
