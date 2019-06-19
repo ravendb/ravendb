@@ -214,6 +214,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
+        private bool _useConventionsSerializerForQueryParametersSerialization;
 
         public Func<MemberInfo, string> PropertyNameConverter
         {
@@ -583,6 +584,19 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _operationStatusFetchMode = value;
+            }
+        }
+
+        /// <summary>
+        /// Uses serializer defined and customized in conventions for query parameters serialization
+        /// </summary>
+        public bool UseConventionsSerializerForQueryParametersSerialization
+        {
+            get => _useConventionsSerializerForQueryParametersSerialization;
+            set
+            {
+                AssertNotFrozen();
+                _useConventionsSerializerForQueryParametersSerialization = value;
             }
         }
 
