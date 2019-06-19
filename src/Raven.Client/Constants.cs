@@ -169,6 +169,8 @@ namespace Raven.Client
 
                 public const string Expires = "@expires";
 
+                public const string Refresh = "@refresh";
+
                 public const string HasValue = "HasValue";
 
                 public const string Etag = "@etag";

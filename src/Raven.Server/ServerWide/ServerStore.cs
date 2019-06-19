@@ -1559,6 +1559,18 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editExpiration);
         }
 
+        public Task<(long Index, object Result)> ModifyDatabaseRefresh(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var refresh = JsonDeserializationCluster.RefreshConfiguration(configurationJson);
+            if (refresh.RefreshFrequencyInSec <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Refresh frequency for database '{databaseName}' must be greater than 0.");
+            }
+            var editExpiration = new EditRefreshCommand(refresh, databaseName, raftRequestId);
+            return SendToLeaderAsync(editExpiration);
+        }
+
         public Task<(long Index, object Result)> PutServerWideBackupConfigurationAsync(ServerWideBackupConfiguration configuration, string raftRequestId)
         {
             var command = new PutServerWideBackupConfigurationCommand(configuration, raftRequestId);
