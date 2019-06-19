@@ -359,7 +359,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     return new ClusterNodeStatusReport(
-                        null,
+                        new ServerReport(),
                         report,
                         ClusterNodeStatusReport.ReportStatus.Ok,
                         null,
