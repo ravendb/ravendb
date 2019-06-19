@@ -17,7 +17,6 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = documentStore =>
                 {
-                    documentStore.Conventions.UseConventionsSerializerForQueryParametersSerialization = true;
                     documentStore.Conventions.CustomizeJsonSerializer = serializer => serializer.Converters.Add(new NumberJsonConverter());
                 }
             }))
