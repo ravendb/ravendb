@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
@@ -52,6 +53,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromClusterCommand> RemoveNodeFromClusterCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromClusterCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, RefreshConfiguration> RefreshConfiguration = GenerateJsonDeserializationRoutine<RefreshConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
@@ -110,6 +113,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
+            [nameof(EditRefreshCommand)] = GenerateJsonDeserializationRoutine<EditRefreshCommand>(),
             [nameof(DeleteDatabaseCommand)] = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>(),
             [nameof(IncrementClusterIdentityCommand)] = GenerateJsonDeserializationRoutine<IncrementClusterIdentityCommand>(),
             [nameof(IncrementClusterIdentitiesBatchCommand)] = GenerateJsonDeserializationRoutine<IncrementClusterIdentitiesBatchCommand>(),

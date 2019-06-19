@@ -43,5 +43,11 @@ namespace Raven.Server.Documents.Handlers
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config", GetRaftRequestIdFromQuery());
         }
+
+        [RavenAction("/databases/*/admin/refresh/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigRefresh()
+        {
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-refresh-config", GetRaftRequestIdFromQuery());
+        }
     }
 }

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
@@ -65,6 +66,8 @@ namespace Raven.Client.ServerWide
         public RevisionsConfiguration Revisions;
 
         public ExpirationConfiguration Expiration;
+
+        public RefreshConfiguration Refresh;
 
         public List<PeriodicBackupConfiguration> PeriodicBackups = new List<PeriodicBackupConfiguration>();
 
