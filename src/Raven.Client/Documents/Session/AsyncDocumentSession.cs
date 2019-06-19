@@ -139,10 +139,16 @@ namespace Raven.Client.Documents.Session
 
                 if (NoTracking)
                     throw new InvalidOperationException($"Cannot execute '{nameof(SaveChangesAsync)}' when entity tracking is disabled in session.");
-
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-                UpdateSessionAfterSaveChanges(command.Result);
-                saveChangesOperation.SetResult(command.Result);
+                try
+                {
+                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    UpdateSessionAfterSaveChanges(command.Result);
+                    saveChangesOperation.SetResult(command.Result);
+                }
+                finally
+                {
+                    command.Result?.Results?.Dispose();
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -49,8 +50,8 @@ namespace Sparrow.Json
         }
 
         private int _numberOfAllocatedPathCaches = -1;
-        private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
-        private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
+        private PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
+        private Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
@@ -1036,7 +1037,10 @@ namespace Sparrow.Json
 
                 _pooledArrays = null;
             }
-        }
+            //TODO:Don't PR this, just testing.
+            PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
+            Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
+    }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
         {
