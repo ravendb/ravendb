@@ -75,7 +75,9 @@ namespace SlowTests.Issues
 
         private class Document
         {
+#pragma warning disable 649
             public string Id;
+#pragma warning restore 649
             public DocumentStatistics Statistics;
         }
 
