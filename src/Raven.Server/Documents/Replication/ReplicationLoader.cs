@@ -925,7 +925,7 @@ namespace Raven.Server.Documents.Replication
             {
                 Node = node,
                 External = external,
-                MaxConnectionTimeout = Database.Configuration.Replication.RetryReplicateMaxTimeout.AsTimeSpan.TotalMilliseconds
+                MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
             };
             _outgoingFailureInfo.TryAdd(node, shutdownInfo);
             try
