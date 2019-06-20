@@ -43,8 +43,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 await UpdateDatabaseRecord(context, record =>
                 {
+                    var oldClientEtag = record.Client?.Etag ?? 0;
                     record.Client = clientConfiguration;
-                    record.Client.Etag++; // we don't care _what_ the value is, just that it is changing
+                    record.Client.Etag = ++oldClientEtag;
                 });
             }
 
