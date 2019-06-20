@@ -17,6 +17,11 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
+        public override void UpdateValue(long index)
+        {
+            Value.Etag = index;
+        }
+
         public override DynamicJsonValue ValueToJson()
         {
             return Value?.ToJson();
