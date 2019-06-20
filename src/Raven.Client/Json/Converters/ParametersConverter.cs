@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json;
-using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -16,7 +15,7 @@ namespace Raven.Client.Json.Converters
         private static readonly HashSet<Assembly> RavenAssemblies = new HashSet<Assembly>
         {
             typeof(ParametersConverter).Assembly,
-            typeof(ByteString).Assembly
+            typeof(LazyStringValue).Assembly
         };
 
         private ParametersConverter()
