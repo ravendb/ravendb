@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                     }
                     else
                     {
-                        var converted = (ResultHolder<T>)EntityToBlittable.ConvertToEntity(typeof(ResultHolder<T>), null, raw, conventions);
+                        var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
                         results[key] = new CompareExchangeValue<T>(key, index, converted.Object);
                     }
                 }
@@ -66,9 +66,11 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             return value.Value;
         }
 
-        private class ResultHolder<T>
+        private class ResultHolder
         {
+#pragma warning disable 649
             public T Object;
+#pragma warning restore 649
         }
     }
 }
