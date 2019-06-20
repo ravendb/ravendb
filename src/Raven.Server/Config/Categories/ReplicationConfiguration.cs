@@ -28,8 +28,8 @@ namespace Raven.Server.Config.Categories
         [Description("Max retry timeout in seconds on replication failure.")]
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Replication.RetryReplicateMaxTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting RetryReplicateMaxTimeout { get; set; }
+        [ConfigurationEntry("Replication.RetryMaxTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting RetryMaxTimeout { get; set; }
 
         [Description("Maximum number of items replication will send in single batch, null means we will not cut the batch by number of items")]
         [DefaultValue(16*1024)]
