@@ -74,6 +74,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return results.ToArray();
         }
 
+        private static readonly string IndexesStaticNamespace = "Raven.Server.Documents.Indexes.Static";
+
+
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
@@ -87,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName(typeof(CreateFieldOptions).Namespace)),
 
-            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName(IndexesStaticNamespace)),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Linq")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
         };
@@ -221,15 +224,18 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) res;
-
             var syntaxTrees = new List<SyntaxTree>();
-
             var @using = new HashSet<string>();
+
             foreach (var ext in extensions)
             {
-                var tree = SyntaxFactory.ParseSyntaxTree(ext.Value);
+                var tree = SyntaxFactory.ParseSyntaxTree(AddUsingIndexStatic(ext.Value));
                 syntaxTrees.Add(tree);
-                var ns = tree.GetRoot().DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+
+                var ns = tree.GetRoot().DescendantNodes()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .FirstOrDefault();
+
                 if (ns != null)
                 {
                     @using.Add(ns.Name.ToString());
@@ -263,16 +269,20 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var tree in syntaxTrees) //now do the rewrites
             {
-                var model = tempCompilation.GetSemanticModel(tree, true);
-                rewriter.SemanticModel = model;
-                var rewritten = rewriter.Visit(tree.GetRoot());
-                res.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten));
-            }
+                rewriter.SemanticModel = tempCompilation.GetSemanticModel(tree);
 
+                var rewritten = rewriter.Visit(tree.GetRoot()).NormalizeWhitespace();
+                res.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten));
+
+            }
 
             return res;
         }
 
+        private static string AddUsingIndexStatic(string ext)
+        {
+            return $"using {IndexesStaticNamespace};{Environment.NewLine}{ext}";
+        }
 
         private static MetadataReference[] GetReferences()
         {
