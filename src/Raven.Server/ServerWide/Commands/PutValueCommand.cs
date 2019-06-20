@@ -23,6 +23,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract DynamicJsonValue ValueToJson();
 
+        public virtual void UpdateValue(long index) { }
+
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             if (Name == ServerStore.LicenseStorageKey ||
