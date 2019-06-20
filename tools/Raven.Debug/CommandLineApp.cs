@@ -107,7 +107,17 @@ namespace Raven.Debug
                     }
                     catch (Exception e)
                     {
-                        return ExitWithError($"Failed to show the stacktrace. Error: {e}", cmd);
+                        string desc;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == false)
+                            desc = "";
+                        else
+                        {
+                            var apppath = typeof(CommandLineApp).Assembly.Location;
+                            desc =
+                                $"Make sure to 'sudo chown root:root {apppath}', 'sudo chmod +s {apppath}', 'sudo apt install libc6-dev', 'sudo setcap cap_sys_ptrace=eip {apppath}', 'sudo setcap cap_sys_ptrace=eip {apppath}'. ";
+                        }
+
+                        return ExitWithError($"Failed to show the stacktrace. {desc}Error: {e}", cmd);
                     }
                 });
             });
