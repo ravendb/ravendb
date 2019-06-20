@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.Replication;
+﻿using System;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -49,6 +50,10 @@ namespace Raven.Server.ServerWide.Commands
             {
                 PullReplicationAsSink.Name = record.EnsureUniqueTaskName(PullReplicationAsSink.GetDefaultTaskName());
             }
+
+            if (string.IsNullOrEmpty(PullReplicationAsSink.ConnectionStringName))
+                throw new ArgumentNullException(nameof(PullReplicationAsSink.ConnectionStringName));
+
             record.EnsureTaskNameIsNotUsed(PullReplicationAsSink.Name);
             record.SinkPullReplications.Add(PullReplicationAsSink);
             return null;
