@@ -46,10 +46,9 @@ namespace Raven.Server.Documents.Handlers
             var configuration = Database.ClientConfiguration;
             long etag = configuration?.Etag ?? -1;
             var serverConfiguration = GetServerClientConfiguration(out long serverIndex);
-            etag = Hashing.Combine(etag, serverConfiguration?.Etag ?? -2);
+            etag = Hashing.Combine(etag, serverIndex);
             if (inherit)
             {
-
                 if (configuration == null || configuration.Disabled)
                 {
                     if (serverConfiguration != null)
@@ -100,10 +99,14 @@ namespace Raven.Server.Documents.Handlers
             {
                 using (context.OpenReadTransaction())
                 {
-                    var clientConfigurationJson = ServerStore.Cluster.Read(context, Constants.Configuration.ClientId, out index);
-                    return clientConfigurationJson != null
+                    var clientConfigurationJson = ServerStore.Cluster.Read(context, Constants.Configuration.ClientId, out _);
+                    var config =  clientConfigurationJson != null
                         ? JsonDeserializationServer.ClientConfiguration(clientConfigurationJson)
                         : null;
+
+                    index = config?.Etag ?? ServerStore.LastClientConfigurationIndex;
+
+                    return config;
                 }
             }
         }

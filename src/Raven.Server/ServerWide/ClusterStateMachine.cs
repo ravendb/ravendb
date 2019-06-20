@@ -1129,6 +1129,8 @@ namespace Raven.Server.ServerWide
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
 
+                command.UpdateValue(index);
+
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
                 using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
