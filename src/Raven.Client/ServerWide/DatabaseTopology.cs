@@ -16,7 +16,8 @@ namespace Raven.Client.ServerWide
         IndexNotUpToDate,
         ChangeVectorNotMerged,
         WaitingForResponse,
-        Ok
+        Ok,
+        OutOfCpuCredits
     }
 
     public interface IDatabaseTask

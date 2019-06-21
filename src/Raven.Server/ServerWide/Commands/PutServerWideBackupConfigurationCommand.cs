@@ -84,50 +84,89 @@ namespace Raven.Server.ServerWide.Commands
             return $"{ServerWideBackupConfiguration.NamePrefix}, {backupConfigurationName}";
         }
 
-        public static void UpdateTemplateForDatabase(PeriodicBackupConfiguration configuration, string databaseName)
+        public static void UpdateTemplateForDatabase(PeriodicBackupConfiguration configuration, string databaseName, bool isDatabaseEncrypted)
         {
             configuration.Name = GetTaskNameForDatabase(configuration.Name);
 
-            var localSettings = configuration.LocalSettings;
+            UpdateSettingsForLocal(configuration.LocalSettings, databaseName);
+
+            UpdateSettingsForS3(configuration.S3Settings, databaseName);
+
+            UpdateSettingsForGlacier(configuration.GlacierSettings, databaseName);
+
+            UpdateSettingsForAzure(configuration.AzureSettings, databaseName);
+
+            UpdateSettingsForFtp(configuration.FtpSettings, databaseName);
+
+            UpdateSettingsForGoogleCloud(configuration.GoogleCloudSettings, databaseName);
+
+            if (isDatabaseEncrypted)
+            {
+                // if the database is encrypted, the backup should be encrypted as well
+                configuration.BackupEncryptionSettings = new BackupEncryptionSettings
+                {
+                    EncryptionMode = EncryptionMode.UseDatabaseKey
+                };
+            }
+        }
+
+        public static void UpdateSettingsForLocal(LocalSettings localSettings, string databaseName)
+        {
             if (localSettings?.FolderPath != null)
             {
-                localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, Path.DirectorySeparatorChar);
+                localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, databaseName, Path.DirectorySeparatorChar);
             }
+        }
 
-            var s3Settings = configuration.S3Settings;
+        public static void UpdateSettingsForS3(S3Settings s3Settings, string databaseName)
+        {
             if (s3Settings != null)
             {
-                s3Settings.RemoteFolderName = GetUpdatedPath(s3Settings.RemoteFolderName);
+                s3Settings.RemoteFolderName = GetUpdatedPath(s3Settings.RemoteFolderName, databaseName);
             }
+        }
 
-            var azureSettings = configuration.AzureSettings;
+        public static void UpdateSettingsForGlacier(GlacierSettings glacierSettings, string databaseName)
+        {
+            if (glacierSettings != null)
+            {
+                glacierSettings.RemoteFolderName = GetUpdatedPath(glacierSettings.RemoteFolderName, databaseName);
+            }
+        }
+
+        public static void UpdateSettingsForAzure(AzureSettings azureSettings, string databaseName)
+        {
             if (azureSettings != null)
             {
-                azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName);
+                azureSettings.RemoteFolderName = GetUpdatedPath(azureSettings.RemoteFolderName, databaseName);
             }
+        }
 
-            var googleCloudSettings = configuration.GoogleCloudSettings;
-            if (googleCloudSettings != null)
-            {
-                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName);
-            }
-
-            var ftpSettings = configuration.FtpSettings;
+        public static void UpdateSettingsForFtp(FtpSettings ftpSettings, string databaseName)
+        {
             if (ftpSettings?.Url != null)
             {
-                ftpSettings.Url = GetUpdatedPath(ftpSettings.Url);
+                ftpSettings.Url = GetUpdatedPath(ftpSettings.Url, databaseName);
             }
+        }
 
-            string GetUpdatedPath(string str, char separator = '/')
+        public static void UpdateSettingsForGoogleCloud(GoogleCloudSettings googleCloudSettings, string databaseName)
+        {
+            if (googleCloudSettings != null)
             {
-                if (str == null)
-                    return databaseName;
-
-                if (str.EndsWith(separator) == false)
-                    str += separator;
-
-                return str + databaseName;
+                googleCloudSettings.RemoteFolderName = GetUpdatedPath(googleCloudSettings.RemoteFolderName, databaseName);
             }
+        }
+
+        private static string GetUpdatedPath(string str, string databaseName, char separator = '/')
+        {
+            if (str == null)
+                return databaseName;
+
+            if (str.EndsWith(separator) == false)
+                str += separator;
+
+            return str + databaseName;
         }
     }
 }

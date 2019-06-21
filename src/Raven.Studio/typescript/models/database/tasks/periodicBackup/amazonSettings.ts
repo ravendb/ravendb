@@ -5,6 +5,7 @@ abstract class amazonSettings extends backupSettings {
     awsAccessKey = ko.observable<string>();
     awsSecretKey = ko.observable<string>();
     awsRegionName = ko.observable<string>();
+    remoteFolderName = ko.observable<string>();
 
     selectedAwsRegion = ko.observable<string>();
     
@@ -44,6 +45,7 @@ abstract class amazonSettings extends backupSettings {
         this.awsAccessKey(dto.AwsAccessKey);
         this.awsSecretKey(dto.AwsSecretKey);
         this.awsRegionName(dto.AwsRegionName);
+        this.remoteFolderName(dto.RemoteFolderName);
 
         const lowerCaseRegionName = !dto.AwsRegionName ? "" : dto.AwsRegionName.toLowerCase();
         const region = this.availableAwsRegionEndpoints.find(x => x.value === lowerCaseRegionName);
@@ -166,6 +168,7 @@ abstract class amazonSettings extends backupSettings {
         dto.AwsAccessKey = this.awsAccessKey();
         dto.AwsSecretKey = this.awsSecretKey();
         dto.AwsRegionName = this.awsRegionName();
+        dto.RemoteFolderName = this.remoteFolderName();
         return dto;
     }
 }

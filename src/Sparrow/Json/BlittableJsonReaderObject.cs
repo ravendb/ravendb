@@ -1433,9 +1433,9 @@ namespace Sparrow.Json
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
-            for (int i = 0; i < _propCount; i++)
+            for (var i = 0; i < _propCount; i++)
             {
-                GetPropertyTypeAndPosition(i, metadataSize, out BlittableJsonToken token, out int position, out int id);
+                GetPropertyTypeAndPosition(i, metadataSize, out _, out _, out var id);
 
                 if (propertyName == GetPropertyName(id))
                     return true;

@@ -17,6 +17,34 @@ namespace Raven.Server.ServerWide.Maintenance
         NoChange = 32
     }
 
+    public class MaintenanceReport : IDynamicJson
+    {
+        public ServerReport ServerReport;
+        public Dictionary<string, DatabaseStatusReport> DatabasesReport;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ServerReport)] = ServerReport,
+                [nameof(DatabasesReport)] = DynamicJsonValue.Convert(DatabasesReport)
+            };
+        }
+    }
+
+    public class ServerReport : IDynamicJson
+    {
+        public bool? OutOfCpuCredits;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(OutOfCpuCredits)] = OutOfCpuCredits
+            };
+        }
+    }
+
     public class DatabaseStatusReport : IDynamicJson
     {
         public string Name;
@@ -94,10 +122,13 @@ namespace Raven.Server.ServerWide.Maintenance
             WaitingForResponse,
             Timeout,
             Error,
-            Ok
+            Ok,
+            OutOfCredits
         }
 
         public readonly Dictionary<string, DatabaseStatusReport> Report;
+
+        public readonly ServerReport ServerReport;
 
         public readonly Dictionary<string, DateTime> LastGoodDatabaseStatus;
 
@@ -110,19 +141,29 @@ namespace Raven.Server.ServerWide.Maintenance
         public readonly DateTime LastSuccessfulUpdateDateTime;
 
         public ClusterNodeStatusReport(
-            Dictionary<string, DatabaseStatusReport> report, 
+            ServerReport serverReport,
+            Dictionary<string, DatabaseStatusReport> report,
             ReportStatus reportStatus, 
             Exception error, 
             DateTime updateDateTime, 
             ClusterNodeStatusReport lastSuccessfulReport)
         {
+            ServerReport = serverReport;
             Report = report;
             Status = reportStatus;
             Error = error;
             UpdateDateTime = updateDateTime;
 
-            LastSuccessfulUpdateDateTime = lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
-            
+            if (ServerReport.OutOfCpuCredits == true)
+            {
+                // we don't want to give any grace time if the node is out of credits
+                LastSuccessfulUpdateDateTime = DateTime.MinValue;
+            }
+            else
+            {
+                LastSuccessfulUpdateDateTime = lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
+            }
+
             LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
             foreach (var dbReport in report)
             {

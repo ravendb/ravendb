@@ -9,6 +9,8 @@ namespace Raven.Server.Routing
     {
         public bool IsDebugInformationEndpoint { get; set; }
 
+        public bool DisableOnCpuCreditsExhaustion { get; set; }
+
         public CorsMode CorsMode { get; set; }
 
         public string Path { get; }

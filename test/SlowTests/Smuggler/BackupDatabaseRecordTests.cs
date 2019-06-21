@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -1211,6 +1213,134 @@ namespace SlowTests.Smuggler
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanRestoreSubscriptionsFromBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                store.Subscriptions.Create<User>(x => x.Name == "Marcin");
+                store.Subscriptions.Create<User>();
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config)).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                SpinWait.SpinUntil(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                }, TimeSpan.FromSeconds(15));
+
+                await ValidateSubscriptions(store);
+
+                // restore the database with a different name
+                var restoredDatabaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = restoredDatabaseName
+                }))
+                {
+                    using (var restoredStore = new DocumentStore
+                    {
+                        Urls = store.Urls,
+                        Database = restoredDatabaseName
+                    })
+                    {
+                        restoredStore.Initialize();
+                        var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
+
+                        Assert.Equal(2, subscriptions.Count);
+
+                        var taskIds = subscriptions
+                            .Select(x => x.SubscriptionId)
+                            .ToHashSet();
+
+                        Assert.Equal(2, taskIds.Count);
+
+                        foreach (var subscription in subscriptions)
+                        {
+                            Assert.NotNull(subscription.SubscriptionName);
+                            Assert.NotNull(subscription.Query);
+                        }
+
+                        await ValidateSubscriptions(restoredStore);
+                    }
+                }
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                var dir = Directory.GetDirectories(backupPath).First();
+                var file = Directory.GetFiles(dir).First();
+
+                var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                op.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                var subscriptions = store.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(2, subscriptions.Count);
+
+                var taskIds = subscriptions
+                    .Select(x => x.SubscriptionId)
+                    .ToHashSet();
+
+                Assert.Equal(2, taskIds.Count);
+
+                foreach (var subscription in subscriptions)
+                {
+                    Assert.NotNull(subscription.SubscriptionName);
+                    Assert.NotNull(subscription.Query);
+                }
+
+                await ValidateSubscriptions(store);
+            }
+        }
+        private async Task ValidateSubscriptions(DocumentStore restoredStore)
+        {
+            var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
+
+            int count = 0;
+
+            foreach (var sub in subscriptions)
+            {
+                var worker = restoredStore.Subscriptions.GetSubscriptionWorker<User>(sub.SubscriptionName);
+                var t = worker.Run((batch) =>
+                {
+                    Interlocked.Add(ref count, batch.NumberOfItemsInBatch);
+                });
+                GC.KeepAlive(t);
+            }
+
+            using (var session = restoredStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marcin" }, "users/1");
+                session.Store(new User { Name = "Karmel" }, "users/2");
+                session.SaveChanges();
+            }
+
+            var actual = await WaitForValueAsync(() => count, 3);
+            Assert.Equal(3, actual);
+
+            foreach (var subscription in subscriptions)
+            {
+                Assert.NotNull(subscription.SubscriptionName);
+                Assert.NotNull(subscription.Query);
             }
         }
 

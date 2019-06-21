@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var databaseRecord = GetDatabaseRecord();
             var backupStatus = GetBackupStatus(taskId);
-            return _database.WhoseTaskIsIt(databaseRecord.Topology, periodicBackup.Configuration, backupStatus, useLastResponsibleNodeIfNoAvailableNodes: true);
+            return _database.WhoseTaskIsIt(databaseRecord.Topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -407,6 +407,13 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (periodicBackup.RunningTask != null)
                     return periodicBackup.RunningBackupTaskId ?? -1;
+
+                if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
+                {
+                    throw new MaxNumberOfConcurrentBackupsException(
+                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
+                        $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.");
+                }
 
                 if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
                 {
@@ -715,7 +722,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var backupStatus = GetBackupStatus(configuration.TaskId);
-            var whoseTaskIsIt = _database.WhoseTaskIsIt(databaseRecord.Topology, configuration, backupStatus, useLastResponsibleNodeIfNoAvailableNodes: true);
+            var whoseTaskIsIt = _database.WhoseTaskIsIt(databaseRecord.Topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
                 return TaskStatus.Disabled;
 

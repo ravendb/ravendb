@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostGet()
         {
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Handlers
             return numberOfResults;
         }
 
-        [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task Delete()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "PATCH", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs", "PATCH", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task Patch()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");

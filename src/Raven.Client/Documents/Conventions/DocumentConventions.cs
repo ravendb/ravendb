@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Conventions
         {
             private readonly DocumentConventions _conventions;
             private readonly AggressiveCacheOptions _aggressiveCacheOptions;
-            
+
             internal AggressiveCacheConventions(DocumentConventions conventions)
             {
                 _conventions = conventions;
@@ -207,7 +207,6 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
-
         public Func<MemberInfo, string> PropertyNameConverter
         {
             get => _propertyNameConverter;

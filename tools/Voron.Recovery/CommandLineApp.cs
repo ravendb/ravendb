@@ -69,6 +69,8 @@ namespace Voron.Recovery
 
                 var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
 
+                var masterKey = cmd.Option("--MasterKey", "Encryption key: base64 string of the encryption master key", CommandOptionType.SingleValue);
+
                 cmd.OnExecute(() =>
                 {
                     VoronRecoveryConfiguration config = new VoronRecoveryConfiguration
@@ -161,6 +163,21 @@ namespace Voron.Recovery
                         config.LoggingMode = mode;
                     }
 
+                    if (masterKey.HasValue())
+                    {
+                        var value = masterKey.Value();
+                        byte[] key;
+                        try
+                        {
+                            key = Convert.FromBase64String(value);
+                        }
+                        catch
+                        {
+                            return ExitWithError($"{nameof(config.MasterKey)} argument value ({value}) is not a valid base64 string", cmd);
+                        }
+                           
+                        config.MasterKey = key;
+                    }
                     using (var recovery = new Recovery(config))
                     {
                         var cts = new CancellationTokenSource();

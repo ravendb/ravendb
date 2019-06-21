@@ -34,6 +34,8 @@ _flush_file(int32_t fd)
   return fsync(fd);
 }
 
+#define SMB2_MAGIC_NUMBER 0xfe534d42
+
 PRIVATE int32_t
 _sync_directory_allowed(int32_t dir_fd)
 {
@@ -46,6 +48,7 @@ _sync_directory_allowed(int32_t dir_fd)
   case NFS_SUPER_MAGIC:
   case CIFS_MAGIC_NUMBER:
   case SMB_SUPER_MAGIC:
+  case SMB2_MAGIC_NUMBER:
     return SYNC_DIR_NOT_ALLOWED;
   default:
     return SYNC_DIR_ALLOWED;

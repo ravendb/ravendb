@@ -30,5 +30,25 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1)]
         [ConfigurationEntry("Server.NumberOfUnusedCoresByIndexes", ConfigurationEntryScope.ServerWideOnly)]
         public int NumberOfUnusedCoresByIndexes { get; set; }
+
+        [Description("EXPERT: To let RavenDB manage burstable instance performance by scaling down background operations")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.Base", ConfigurationEntryScope.ServerWideOnly)]
+        public double? CpuCreditsBase { get; set; }
+
+        [Description("EXPERT: To let RavenDB manage burstable instance performance by scaling down background operations")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.Max", ConfigurationEntryScope.ServerWideOnly)]
+        public double? CpuCreditsMax { get; set; }
+
+        [Description("EXPERT: When CPU credits are exhausted to the threshold, start stopping background tasks.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.ExhaustionBackgroundTasksThreshold", ConfigurationEntryScope.ServerWideOnly)]
+        public double? CpuCreditsExhaustionBackgroundTasksThreshold { get; set; }
+
+        [Description("EXPERT: When CPU credits are exhausted to the threshold, start rejecting requests to databases.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.ExhaustionFailoverThreshold", ConfigurationEntryScope.ServerWideOnly)]
+        public double? CpuCreditsExhaustionFailoverThreshold { get; set; }
     }
 }

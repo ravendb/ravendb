@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task Try()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

@@ -17,7 +17,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class Aws : NoDisposalNeeded
     {
-        
         private const string AwsAccessKey = "<aws_access_key>";
         private const string AwsSecretKey = "<aws_secret_key>";
         private const string AwsSessionToken = "<aws_session_token>";
@@ -234,6 +233,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var vaultName = $"testing-{Guid.NewGuid()}";
 
             using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName)))
+            {
+                await client.PutVault();
+
+                var archiveId = await client.UploadArchive(
+                    new MemoryStream(Encoding.UTF8.GetBytes("321")),
+                    "sample description");
+
+                Assert.NotNull(archiveId);
+            }
+        }
+
+        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [InlineData(EastRegion1)]
+        [InlineData(WestRegion2)]
+        public async Task upload_archive_with_remote_folder_name(string region)
+        {
+            var vaultName = $"testing-{Guid.NewGuid()}";
+
+            var glacierSettings = GetGlacierSettings(region, vaultName);
+            glacierSettings.RemoteFolderName = Guid.NewGuid().ToString();
+            using (var client = new RavenAwsGlacierClient(glacierSettings))
             {
                 await client.PutVault();
 

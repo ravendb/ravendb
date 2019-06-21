@@ -238,6 +238,9 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+                if (databaseRecord.Encrypted)
+                    ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
+
                 if (string.IsNullOrWhiteSpace(databaseRecord.DatabaseName))
                     throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
@@ -999,7 +1002,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task CompactDatabase()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1205,7 +1208,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/migrate", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabases()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1223,7 +1226,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabaseOffline()
         {
             ServerStore.EnsureNotPassive();

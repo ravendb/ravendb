@@ -380,5 +380,39 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public async Task CanReplicateHiLoTombstone()
+        {
+            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo1" }))
+            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = s => s + "_foo2" }))
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "marker/doc");
+                    s1.Store(new User { Name = "Egor" });
+                    s1.SaveChanges();
+                }
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete("Raven/Hilo/users");
+                    s1.SaveChanges();
+                }
+                using (var s2 = store2.OpenSession())
+                {
+                    for (var i = 0; i < 32; i++)
+                    {
+                        s2.Store(new User
+                        {
+                            Name = $"user2_{i}"
+                        });
+                    }
+                    s2.SaveChanges();
+                }
+                await SetupReplicationAsync(store1, store2);
+                var marker = WaitForDocumentToReplicate<User>(store2, "marker/doc", 15 * 1000);
+                Assert.NotNull(marker);
+            }
+        }
     }
 }

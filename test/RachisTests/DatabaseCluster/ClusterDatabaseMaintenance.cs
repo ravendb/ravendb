@@ -733,6 +733,27 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task OutOfCpuCreditShouldMoveToRehab()
+        {
+            var cluster = await CreateRaftCluster(3);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3
+            }))
+            {
+                cluster.Nodes[0].CpuCreditsBalance.BackgroundTasksAlertRaised.Raise();
+                var rehabs = await WaitForValueAsync(async () => await GetRehabCount(store, store.Database), 1);
+                Assert.Equal(1, rehabs);
+
+                cluster.Nodes[0].CpuCreditsBalance.BackgroundTasksAlertRaised.Lower();
+                var members = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
+                Assert.Equal(3, members);
+            }
+        }
+
         private static async Task<int> GetPromotableCount(IDocumentStore store, string databaseName)
         {
             var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));

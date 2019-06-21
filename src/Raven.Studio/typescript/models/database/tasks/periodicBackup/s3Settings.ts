@@ -3,24 +3,22 @@ import jsonUtil = require("common/jsonUtil");
 
 class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
-    remoteFolderName = ko.observable<string>();
 
     constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>) {
         super(dto, "S3", allowedRegions);
 
         this.bucketName(dto.BucketName);
-        this.remoteFolderName(dto.RemoteFolderName);
 
         this.initValidation();
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.enabled,
             this.bucketName,
-            this.remoteFolderName,
             this.awsAccessKey,
             this.awsSecretKey,
             this.awsRegionName,
-            this. selectedAwsRegion
+            this.remoteFolderName,
+            this.selectedAwsRegion
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -87,7 +85,6 @@ class s3Settings extends amazonSettings {
     toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.S3Settings;
         dto.BucketName = this.bucketName();
-        dto.RemoteFolderName = this.remoteFolderName();
         return dto;
     }
 
