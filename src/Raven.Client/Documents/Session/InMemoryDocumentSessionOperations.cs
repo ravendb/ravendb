@@ -857,7 +857,7 @@ more responsive application.
                 {
                     var djv = new DynamicJsonValue
                     {
-                        ["Object"] = EntityToBlittable.ConvertToBlittableIfNeeded(item.Value.Entity, Conventions, Context, JsonSerializer, documentInfo: null, removeIdentityProperty: false)
+                        ["Object"] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(item.Value.Entity, Conventions, Context, JsonSerializer, documentInfo: null, removeIdentityProperty: false)
                     };
                     var blittable = Context.ReadObject(djv, item.Key);
                     result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
