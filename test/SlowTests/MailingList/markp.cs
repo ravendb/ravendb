@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
@@ -11,14 +8,15 @@ namespace SlowTests.MailingList
 {
     public class markp : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name;
         }
+
         [Fact]
         public void CanQueryUsingInWhenUsingCustomSerialization()
         {
-            using(var store = GetDocumentStore(new Options
+            using (var store = GetDocumentStore(new Options
             {
                 ModifyDocumentStore = ds =>
                 {
@@ -43,7 +41,6 @@ namespace SlowTests.MailingList
                     var r = s.Query<User>().Where(x => x.Name.In("Oren")).ToList();
                     Assert.NotEmpty(r);
                 }
-
             }
         }
     }

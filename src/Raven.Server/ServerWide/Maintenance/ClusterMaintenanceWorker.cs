@@ -75,6 +75,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public void CollectDatabasesStatusReport()
         {
             var lastNodeReport = new Dictionary<string, DatabaseStatusReport>();
+            var report = new MaintenanceReport();
             while (_token.IsCancellationRequested == false)
             {
                 try
@@ -87,9 +88,14 @@ namespace Raven.Server.ServerWide.Maintenance
                             nodeReport = CollectDatabaseInformation(ctx, lastNodeReport);
                         }
 
-                        using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
+                        if (SupportedFeatures.Heartbeats.IncludeServerInfo == false)
                         {
-                            ctx.Write(writer, DynamicJsonValue.Convert(nodeReport));
+                            HeartbeatVersion41200(ctx, nodeReport);
+                        }
+                        else
+                        {
+                            report.DatabasesReport = nodeReport;
+                            HeartbeatVersion42000(ctx, report);
                         }
 
                         lastNodeReport = nodeReport;
@@ -114,6 +120,27 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     _token.WaitHandle.WaitOne(WorkerSamplePeriod);
                 }
+            }
+        }
+
+        private void HeartbeatVersion41200(TransactionOperationContext ctx, Dictionary<string, DatabaseStatusReport> nodeReport)
+        {
+            using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
+            {
+                ctx.Write(writer, DynamicJsonValue.Convert(nodeReport));
+            }
+        }
+
+        private void HeartbeatVersion42000(TransactionOperationContext ctx, MaintenanceReport report)
+        {
+            report.ServerReport = new ServerReport
+            {
+                OutOfCpuCredits = _server.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised()
+            };
+
+            using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
+            {
+                ctx.Write(writer, report.ToJson());
             }
         }
 

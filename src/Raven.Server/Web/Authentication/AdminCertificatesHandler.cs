@@ -34,7 +34,7 @@ namespace Raven.Server.Web.Authentication
     public class AdminCertificatesHandler : RequestHandler
     {
 
-        [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task Generate()
         {
             // one of the first admin action is to create a certificate, so let

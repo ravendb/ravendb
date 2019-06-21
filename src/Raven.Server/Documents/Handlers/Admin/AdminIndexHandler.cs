@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminIndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
             await PutInternal(validatedAsAdmin:true);
         }
 
-        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutJavaScript()
         {
             await PutInternal(validatedAsAdmin: false);

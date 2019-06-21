@@ -81,25 +81,25 @@ namespace Raven.Client.Documents.Session
             return StreamAsync((IAsyncDocumentQuery<T>)query, token);
         }
 
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        {
+            return StreamAsync((IAsyncDocumentQuery<T>)query, out streamQueryStats, token);
+        }
+
         public Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default)
         {
             return StreamIntoAsync((IAsyncDocumentQuery<T>)query, output, token);
         }
 
-        public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default)
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default)
         {
-            var documentQuery = (AsyncDocumentQuery<T>)query;
-            var fieldsToFetch = documentQuery.FieldsToFetchToken;
-            var indexQuery = query.GetIndexQuery();
+            return PerformQueryStreamOperation(query, null, token);
+        }
 
-            var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(indexQuery);
-            await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-            var result = streamOperation.SetResultAsync(command.Result);
-
-            var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
-            queryOperation.NoTracking = true;
-            return new YieldStream<T>(this, query, fieldsToFetch, result, token);
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        {
+            streamQueryStats = new StreamQueryStatistics();
+            return PerformQueryStreamOperation(query, streamQueryStats, token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default)
@@ -107,6 +107,13 @@ namespace Raven.Client.Documents.Session
             var queryInspector = (IRavenQueryProvider)query.Provider;
             var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return StreamAsync(indexQuery, token);
+        }
+
+        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        {
+            var queryInspector = (IRavenQueryProvider)query.Provider;
+            var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
+            return StreamAsync(indexQuery, out streamQueryStats, token);
         }
 
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
@@ -131,6 +138,22 @@ namespace Raven.Client.Documents.Session
             {
                 await command.Result.Stream.CopyToAsync(output, 16 * 1024, token).ConfigureAwait(false);
             }
+        }
+
+        private async Task<IAsyncEnumerator<StreamResult<T>>> PerformQueryStreamOperation<T>(IAsyncDocumentQuery<T> query, StreamQueryStatistics streamQueryStats, CancellationToken token)
+        {
+            var documentQuery = (AsyncDocumentQuery<T>)query;
+            var fieldsToFetch = documentQuery.FieldsToFetchToken;
+            var indexQuery = query.GetIndexQuery();
+
+            var streamOperation = new StreamOperation(this, streamQueryStats);
+            var command = streamOperation.CreateRequest(indexQuery);
+            await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+            var result = streamOperation.SetResultAsync(command.Result);
+
+            var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
+            queryOperation.NoTracking = true;
+            return new YieldStream<T>(this, query, fieldsToFetch, result, token);
         }
     }
 }

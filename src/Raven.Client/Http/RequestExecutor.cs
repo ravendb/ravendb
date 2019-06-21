@@ -420,11 +420,14 @@ namespace Raven.Client.Http
         {
             try
             {
-                if (topologyUpdate == null)
+                if (topologyUpdate == null ||
+                    // if we previous have a topology error, let's see if we can refresh this
+                    // can happen if user tried a request to a db that didn't exist, created it, then try immediately
+                    topologyUpdate.IsFaulted) 
                 {
                     lock (this)
                     {
-                        if (_firstTopologyUpdate == null)
+                        if (_firstTopologyUpdate == null || topologyUpdate == _firstTopologyUpdate)
                         {
                             if (_lastKnownUrls == null)
                                 throw new InvalidOperationException("No known topology and no previously known one, cannot proceed, likely a bug");

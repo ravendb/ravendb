@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -9,26 +8,39 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public sealed class MethodDynamicParametersRewriter : CSharpSyntaxRewriter
     {
-        public static readonly MethodDynamicParametersRewriter Instance = new MethodDynamicParametersRewriter();
-
-        private MethodDynamicParametersRewriter()
-        {
-        }
+        public SemanticModel SemanticModel { get; internal set; }
 
         private const string DynamicString = "dynamic";
+
+        private const string String = "string";
+
+        private const string SystemNamespacePrefix = "System.";
+
+        private const string IEnumerableString = "System.Collections.IEnumerable";
+
+        private const string DynamicArrayString = "DynamicArray";
+
+        private INamedTypeSymbol IEnumerableSymbol; 
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
             //first change method parameters to dynamic
-            var parameterList = RewriteParametersToDynamicTypes(node);
+            var parameterList = RewriteParametersToDynamicTypes(node, out var statements);
 
             //then create new method declaration with the dynamic parameters
             var methodWithModifiedParameterList = node.WithParameterList(parameterList);
-         
+
             //we had a regular method declaration,
             //so we simply create new method declaration based on its body
             if (node.Body != null)
-                return methodWithModifiedParameterList;
+            {
+                if (statements.Count == 0)
+                    return methodWithModifiedParameterList;
+                return methodWithModifiedParameterList.WithBody(methodWithModifiedParameterList.Body
+                    .WithStatements(methodWithModifiedParameterList.Body.Statements.InsertRange(0, statements)));
+            }
+
+            statements.Add(SyntaxFactory.ReturnStatement(node.ExpressionBody.Expression));
 
             //if node.Body == null then we have an arrow function method,
             //so we need to create new method declaration from scratch.
@@ -42,19 +54,22 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         methodWithModifiedParameterList.TypeParameterList,
                         methodWithModifiedParameterList.ParameterList,
                         methodWithModifiedParameterList.ConstraintClauses,
-                        SyntaxFactory.Block(SyntaxFactory.ReturnStatement(node.ExpressionBody.Expression)),
+                        SyntaxFactory.Block(statements),
                         null, methodWithModifiedParameterList.SemicolonToken);
 
             return methodDeclarationSyntax;
         }
 
-        private static ParameterListSyntax RewriteParametersToDynamicTypes(MethodDeclarationSyntax node)
+        private ParameterListSyntax RewriteParametersToDynamicTypes(MethodDeclarationSyntax node, out List<StatementSyntax> statements)
         {
-            var originalParameters = node.ParameterList.Parameters;
+            IEnumerableSymbol = SemanticModel.Compilation.GetTypeByMetadataName(IEnumerableString);
+            statements = new List<StatementSyntax>();
+
+            var first = true;
             var sb = new StringBuilder();
             sb.Append('(');
-            var first = true;
-            foreach (var param in originalParameters)
+
+            foreach (var param in node.ParameterList.Parameters)
             {
                 if (first)
                 {
@@ -65,13 +80,34 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     sb.Append(", ");
                 }
 
-                if (param.Type.ToString() == DynamicString)
+                var typeStr = param.Type.ToString();
+                if (typeStr == DynamicString || typeStr == String)
                 {
                     sb.Append(param);
                     continue;
                 }
 
-                sb.Append($"{DynamicString} {param.Identifier.WithoutTrivia()}");
+                var symbol = SemanticModel.GetDeclaredSymbol(param);
+
+                if (symbol.Type.AllInterfaces.Contains(IEnumerableSymbol))
+                {
+                    // change to DynamicArray
+                    var identifier = param.Identifier.WithoutTrivia();
+                    sb.Append($"{DynamicString} d_{identifier}");
+                    statements.Add(SyntaxFactory.ParseStatement(
+                        $"var {identifier} = new {DynamicArrayString}(d_{identifier});"));
+                    continue;
+                }
+
+                if (symbol.Type.ToString().StartsWith(SystemNamespacePrefix) == false)
+                {
+                    // change to dynamic
+                    sb.Append($"{DynamicString} {param.Identifier.WithoutTrivia()}");
+                    continue;
+                }
+
+                // keep original type
+                sb.Append(param);
             }
 
             sb.Append(')');

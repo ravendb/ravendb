@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
@@ -24,29 +26,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanUseEncryption()
         {
-            var serverCertPath = SetupServerAuthentication();
-            var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            var buffer = new byte[32];
-            using (var rand = RandomNumberGenerator.Create())
-            {
-                rand.GetBytes(buffer);
-            }
-            var base64Key = Convert.ToBase64String(buffer);
-
-            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-            try
-            {
-                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-            }
-
-            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -135,7 +115,7 @@ namespace SlowTests.Authentication
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                
+
                 using (var commands = store.Commands())
                 {
                     // create auto map index
@@ -242,7 +222,7 @@ namespace SlowTests.Authentication
 
                 var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-                
+
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
                 var compactOperation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings

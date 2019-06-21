@@ -4,14 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -1507,38 +1505,5 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
-
-        private string EncryptedServer(out X509Certificate2 adminCert, out string name)
-        {
-            var serverCertPath = SetupServerAuthentication();
-            var dbName = GetDatabaseName();
-            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            var buffer = new byte[32];
-            using (var rand = RandomNumberGenerator.Create())
-            {
-                rand.GetBytes(buffer);
-            }
-
-            var base64Key = Convert.ToBase64String(buffer);
-            
-            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-            try
-            {
-                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-            }
-
-            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-            name = dbName;
-            return Convert.ToBase64String(buffer);
-        }
-
-
     }
-        
 }

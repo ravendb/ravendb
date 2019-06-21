@@ -429,6 +429,12 @@
                             <input data-bind="textInput: vaultName" type="text" class="form-control" />
                         </div>
                     </div>
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: remoteFolderName">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
+                            <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+                        </div>
+                    </div>
                     <div class="row flex-row margin-bottom" data-bind="validationElement: awsRegionName">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
@@ -453,7 +459,7 @@
                             <input data-bind="textInput: awsAccessKey" class="form-control" />
                         </div>
                     </div>
-                    <div class="row flex-row margin-bottom"  data-bind="validationElement: awsSecretKey">
+                    <div class="row flex-row margin-bottom" data-bind="validationElement: awsSecretKey">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key <i class="required"></i></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />

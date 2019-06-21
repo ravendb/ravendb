@@ -66,6 +66,16 @@ namespace Raven.Server.Rachis
                         return;
                     }
 
+                    if (_engine.RequestSnapshot)
+                    {
+                        // we aren't allowed to be elected for leadership if we requested a snapshot 
+                        if (_engine.Log.IsOperationsEnabled)
+                        {
+                            _engine.Log.Operations("we aren't allowed to be elected for leadership if we requested a snapshot");
+                        }
+                        return;
+                    }
+
                     if (IsForcedElection)
                     {
                         CastVoteForSelf(ElectionTerm + 1, "Voting for self in forced elections");

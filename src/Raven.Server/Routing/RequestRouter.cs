@@ -108,7 +108,7 @@ namespace Raven.Server.Routing
                 if (tryMatch.Value.CorsMode != CorsMode.None)
                 {
                     RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, tryMatch.Value.CorsMode);
-                    
+
                     // don't authorize preflight requests: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
                     skipAuthorization = context.Request.Method == "OPTIONS";
                 }
@@ -122,6 +122,13 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
+                    if (tryMatch.Value.DisableOnCpuCreditsExhaustion && 
+                        _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
+                    {
+                        RejectRequestBecauseOfCpuThreshold(context);
+                        return;
+                    }
+
                     using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
                     {
                         if (context.Request.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
@@ -142,6 +149,21 @@ namespace Raven.Server.Routing
             finally
             {
                 Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
+            }
+        }
+
+        private static void RejectRequestBecauseOfCpuThreshold(HttpContext context)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            {
+                ctx.Write(writer,
+                    new DynamicJsonValue
+                    {
+                        ["Type"] = "Error",
+                        ["Message"] = $"The request has been rejected because the CPU credits balance on this instance has been exhausted. See /debug/cpu-credits endpoint for details."
+                    });
             }
         }
 
@@ -198,7 +220,7 @@ namespace Raven.Server.Routing
                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
 
                             var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
-                            if(conLifetime != null)
+                            if (conLifetime != null)
                             {
                                 var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
                                  $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
@@ -256,9 +278,9 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                             // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
-                                return true; 
+                                return true;
                             goto case null;
-                         
+
                         case RavenServer.AuthenticationStatus.Allowed:
                             if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;

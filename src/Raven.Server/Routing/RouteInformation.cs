@@ -22,6 +22,8 @@ namespace Raven.Server.Routing
         public readonly bool SkipUsagesCount;
         public readonly CorsMode CorsMode;
 
+        public bool DisableOnCpuCreditsExhaustion;
+
         private HandleRequest _request;
         private RouteType _typeOfRoute;
 
@@ -34,8 +36,10 @@ namespace Raven.Server.Routing
         }
 
         public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, CorsMode corsMode,
-            bool isDebugInformationEndpoint = false)
+            bool isDebugInformationEndpoint = false, 
+            bool disableOnCpuCreditsExhaustion = false)
         {
+            DisableOnCpuCreditsExhaustion = disableOnCpuCreditsExhaustion;
             AuthorizationStatus = authorizationStatus;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
             Method = method;

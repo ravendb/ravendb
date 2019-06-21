@@ -82,7 +82,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostExport()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -220,7 +220,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return fileStream;
         }
 
-        [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetImport()
         {
             if (HttpContext.Request.Query.ContainsKey("file") == false &&
@@ -248,7 +248,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportFromS3Directory()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
@@ -272,7 +272,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             await BulkImport(files, Path.GetTempPath());
         }
 
-        [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportDirectory()
         {
             var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
@@ -380,7 +380,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate/ravendb", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/smuggler/migrate/ravendb", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateFromRavenDB()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -463,7 +463,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateFromAnotherDatabase()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -631,7 +631,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return migratorFile;
         }
 
-        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportAsync()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -725,7 +725,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/smuggler/import/csv", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task ImportFromCsv()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

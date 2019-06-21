@@ -458,7 +458,7 @@ namespace Raven.Server.ServerWide
                 throw new RachisApplyException($"'{nameof(PutSubscriptionBatchCommand.Commands)}' is missing in '{nameof(PutSubscriptionBatchCommand)}'.");
             }
 
-            UpdateValueForDatabaseCommand updateCommand = null;
+            PutSubscriptionCommand updateCommand = null;
             Exception exception = null;
             var actionsByDatabase = new Dictionary<string, Action>();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -471,7 +471,7 @@ namespace Raven.Server.ServerWide
                         throw new RachisApplyException($"Cannot execute {type} command, wrong format");
                     }
 
-                    updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[nameof(PutSubscriptionCommand)](command);
+                    updateCommand = (PutSubscriptionCommand)JsonDeserializationCluster.Commands[nameof(PutSubscriptionCommand)](command);
 
                     var database = updateCommand.DatabaseName;
                     if (DatabaseExists(context, database) == false)
@@ -480,7 +480,8 @@ namespace Raven.Server.ServerWide
                             $"Cannot set typed value of type {type} for database {database}, because it does not exist");
                     }
 
-                    updateCommand.Execute(context, items, index, record: null, _parent.CurrentState, out _);
+                    var id = updateCommand.FindFreeId(context, index);
+                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
 
                     if (actionsByDatabase.ContainsKey(database) == false)
                     {
@@ -1325,7 +1326,7 @@ namespace Raven.Server.ServerWide
                                 continue;
 
                             var backupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(configurationBlittable);
-                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name);
+                            PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
                             addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
                         }
                         
@@ -1574,6 +1575,8 @@ namespace Raven.Server.ServerWide
                 command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                     throw new RachisApplyException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls");
+
+                command.UpdateValue(index);
 
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, command.Name.ToLowerInvariant(), out Slice valueNameLowered))
@@ -2832,10 +2835,12 @@ namespace Raven.Server.ServerWide
                     var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
                     long? oldTaskId = null;
 
+                    oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
+
                     var newBackups = new DynamicJsonArray();
                     var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
                     var databaseName = key.Substring(dbKey.Length);
-                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName);
+                    PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName, encrypted);
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
                     {
