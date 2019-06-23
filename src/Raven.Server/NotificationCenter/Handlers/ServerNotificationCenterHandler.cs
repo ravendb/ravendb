@@ -45,7 +45,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                     }
 
                     // update the connection with the current cluster topology
-                    writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutRecentClusterTopologyConnectivity;
+                    writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
 
                     await writer.WriteNotifications(isValidFor);
                 }
