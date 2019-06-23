@@ -72,7 +72,8 @@ namespace SlowTests.Issues
                 var sink = new PullReplicationAsSink
                 {
                     HubDefinitionName = "aa",
-                    ConnectionString = connectionString
+                    ConnectionString = connectionString,
+                    ConnectionStringName = connectionString.Name
                 };
 
                 await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
