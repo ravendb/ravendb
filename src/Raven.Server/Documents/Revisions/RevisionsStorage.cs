@@ -250,6 +250,7 @@ namespace Raven.Server.Documents.Revisions
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document,
             DocumentsOperationContext context, string id,
+            long? lastModifiedTicks,
             ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
@@ -283,6 +284,16 @@ namespace Raven.Server.Documents.Revisions
                 DeleteRevisionsFor(context, id);
                 documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
+            }
+
+            if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
+            {
+                if (_database.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
+                {
+                    DeleteRevisionsFor(context, id);
+                    documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+                    return false;
+                }
             }
 
             if (existingDocument == null)

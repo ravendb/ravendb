@@ -785,6 +785,59 @@ namespace SlowTests.Server.Documents.Revisions
 
         }
 
+
+        [Fact]
+        public async Task ClearRevisionsFlagAfterExpiration()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                foreach (var store in new[] { store1, store2 })
+                {
+                    await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration
+                    {
+                        Default = new RevisionsCollectionConfiguration
+                        {
+                            MinimumRevisionAgeToKeep = TimeSpan.FromSeconds(1),
+                        }
+                    });
+                }
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        var user = new User
+                        {
+                            Name = i.ToString()
+
+                        };
+                        await session.StoreAsync(user, "foo/bar");
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(5));
+
+                await SetupReplicationAsync(store1, store2);
+
+                WaitForMarker(store1, store2);
+
+                WaitForUserToContinueTheTest(store2);
+
+                using (var session = store2.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>("foo/bar");
+                    Assert.Equal(0, revisions.Count);
+
+                    var u = session.Load<User>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(u);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.DoesNotContain(nameof(DocumentFlags.HasRevisions), flags);
+                }
+            }
+        }
         private class User
         {
             public string Id { get; set; }
