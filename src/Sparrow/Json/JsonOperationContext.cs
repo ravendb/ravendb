@@ -50,8 +50,8 @@ namespace Sparrow.Json
         }
 
         private int _numberOfAllocatedPathCaches = -1;
-        private PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
-        private Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
+        private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
+        private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
@@ -1037,10 +1037,29 @@ namespace Sparrow.Json
 
                 _pooledArrays = null;
             }
+            
+            ClearUnreturnedPathCache();
+        }
 
-            PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
-            Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
-    }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ClearUnreturnedPathCache()
+        {
+            for (var i = _numberOfAllocatedPathCaches + 1; i < _allocatePathCaches.Length - 1; i++)
+            {
+                var cache = _allocatePathCaches[i];
+
+                //never allocated, no reason to continue seeking
+                if (cache.Path == null)
+                    break;
+
+                //idly there shouldn't be unreleased path cache but we do have placed where we don't dispose of blittable object readers
+                //and rely on the context.Reset to clear unwanted memory, but it didn't take care of the path cache.
+
+                //Clear references for allocated cache paths so the GC can collect them.
+                cache.ByIndex.Clear();
+                cache.Path.Clear();
+            }
+        }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
         {
