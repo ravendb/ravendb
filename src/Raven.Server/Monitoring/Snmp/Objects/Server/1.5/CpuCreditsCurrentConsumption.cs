@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public class CpuCreditsCurrentConsumption : ScalarObjectBase<Gauge32>
+    public class CpuCreditsCurrentConsumption : ScalarObjectBase<OctetString>
     {
         private readonly RavenServer.CpuCreditsState _state;
 
@@ -12,9 +12,9 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             _state = state;
         }
 
-        protected override Gauge32 GetData()
+        protected override OctetString GetData()
         {
-            return new Gauge32((int)_state.CurrentConsumption);
+            return new OctetString(_state.CurrentConsumption.ToString("F1"));
         }
     }
 }
