@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -21,22 +22,27 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private const string DynamicString = "dynamic";
 
         private const string String = "string";
-
+        
         private const string SystemNamespacePrefix = "System.";
 
         private const string IEnumerableString = "System.Collections.IEnumerable";
 
         private const string DynamicArrayString = "DynamicArray";
-
-        private INamedTypeSymbol IEnumerableSymbol;
-        private SemanticModel _semanticModel;
+      
+        private static readonly TypeSyntax DynamicArrayTypeSyntax = SyntaxFactory.ParseTypeName(DynamicArrayString);
 
         private static readonly IdentifierNameSyntax DynamicIdentifier = 
-            SyntaxFactory.IdentifierName(SyntaxFactory.Identifier(DynamicString));
+            SyntaxFactory.IdentifierName(DynamicString);
+
+        private static readonly IdentifierNameSyntax VarIdentifier =
+            SyntaxFactory.IdentifierName("var");
 
         private static readonly GenericNameSyntax IEnumerableDynamicNameSyntax =
             SyntaxFactory.GenericName(SyntaxFactory.Identifier("IEnumerable"),
                 SyntaxFactory.TypeArgumentList(new SeparatedSyntaxList<TypeSyntax>().Add(DynamicIdentifier)));
+
+        private INamedTypeSymbol IEnumerableSymbol;
+        private SemanticModel _semanticModel;
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
@@ -50,6 +56,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 // change return type to dynamic (or IEnumerable<dynamic>)
                 modifiedMethod = modifiedMethod.ReplaceNode(modifiedMethod.ReturnType, newReturnType);
+
+                if (newReturnType == IEnumerableDynamicNameSyntax)
+                {
+                    // need to modify the return statements
+                    // e.g. 'return x' =>  'return new DynamicArray(x)' 
+
+                    modifiedMethod = ModifyReturnStatements(modifiedMethod);
+                }
             }
 
             //if we had a regular method declaration,
@@ -82,23 +96,79 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return methodDeclarationSyntax;
         }
 
+        private static MethodDeclarationSyntax ModifyReturnStatements(MethodDeclarationSyntax method)
+        {
+            var modifiedStatements = method.Body.Statements;
+
+            for (var index = 0; index < method.Body.Statements.Count; index++)
+            {
+                var statement = method.Body.Statements[index];
+
+                StatementSyntax modifiedStatement;
+                if (statement is ReturnStatementSyntax returnStatementSyntax)
+                {
+                    modifiedStatement = ModifySingleStatement(returnStatementSyntax, returnStatementSyntax);
+                    modifiedStatements = modifiedStatements.RemoveAt(index).Insert(index, modifiedStatement);
+                    continue;
+                }
+
+                modifiedStatement = statement;
+                var returnStatements = statement.DescendantNodes().OfType<ReturnStatementSyntax>();
+
+                foreach (var returnStatement in returnStatements)
+                {
+                    modifiedStatement = ModifySingleStatement(returnStatement, modifiedStatement);
+                }
+
+                modifiedStatements = modifiedStatements.RemoveAt(index).Insert(index, modifiedStatement);
+
+            }
+
+            return method.WithBody(method.Body.WithStatements(modifiedStatements));
+
+        }
+
+        private static StatementSyntax ModifySingleStatement(ReturnStatementSyntax returnStatement, StatementSyntax statement)
+        {
+            var newReturnStatement = CreateNewReturnStatement(returnStatement);
+            return statement.ReplaceNode(returnStatement, newReturnStatement);
+        }
+
+        private static ReturnStatementSyntax CreateNewReturnStatement(ReturnStatementSyntax returnStatement)
+        {
+            var argumentList = new SeparatedSyntaxList<ArgumentSyntax>();
+            argumentList = argumentList.Add(SyntaxFactory.Argument(returnStatement.Expression));
+
+            var objectCreationExpression = SyntaxFactory.ObjectCreationExpression(
+                type: DynamicArrayTypeSyntax,
+                argumentList: SyntaxFactory.ArgumentList(argumentList),
+                initializer: null);
+
+            var newReturnStatement = SyntaxFactory.ReturnStatement(
+                returnKeyword: returnStatement.ReturnKeyword,
+                expression: objectCreationExpression,
+                semicolonToken: returnStatement.SemicolonToken);
+
+            return newReturnStatement;
+        }
+
         private bool ShouldModifyReturnType(MethodDeclarationSyntax node, out SyntaxNode returnType)
         {
             returnType = node.ReturnType;
-            var returnSymbol = SemanticModel.GetTypeInfo(returnType);
+            var typeInfo = SemanticModel.GetTypeInfo(returnType);
 
-            if (returnSymbol.Type.SpecialType == SpecialType.System_String ||
+            if (typeInfo.Type.SpecialType == SpecialType.System_String ||
                 returnType.ToString() == DynamicString)
             {
                 return false;
             }
 
-            if (returnSymbol.Type.AllInterfaces.Contains(IEnumerableSymbol))
+            if (typeInfo.Type.AllInterfaces.Contains(IEnumerableSymbol))
             {
                 returnType = IEnumerableDynamicNameSyntax;
             }
 
-            else if (returnSymbol.Type.ToString().StartsWith(SystemNamespacePrefix))
+            else if (typeInfo.Type.ToString().StartsWith(SystemNamespacePrefix))
             {
                 return false;
             }
@@ -143,8 +213,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     // change to DynamicArray
                     var identifier = param.Identifier.WithoutTrivia();
                     sb.Append($"{DynamicString} d_{identifier}");
-                    statements.Add(SyntaxFactory.ParseStatement(
-                        $"var {identifier} = new {DynamicArrayString}(d_{identifier});"));
+
+                    var newStatement = CreateDynamicArrayDeclarationStatement(identifier);
+                    statements.Add(newStatement);
+
                     continue;
                 }
 
@@ -162,6 +234,28 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             sb.Append(')');
 
             return SyntaxFactory.ParseParameterList(sb.ToString());
+        }
+
+        private static LocalDeclarationStatementSyntax CreateDynamicArrayDeclarationStatement(SyntaxToken identifier)
+        {
+            var argumentList = new SeparatedSyntaxList<ArgumentSyntax>();
+            argumentList = argumentList.Add(SyntaxFactory.Argument(SyntaxFactory.IdentifierName($"d_{identifier}")));
+
+            var objectCreationExpression = SyntaxFactory.ObjectCreationExpression(
+                type: DynamicArrayTypeSyntax,
+                argumentList: SyntaxFactory.ArgumentList(argumentList),
+                initializer: null);
+
+            var variables = new SeparatedSyntaxList<VariableDeclaratorSyntax>().Add(
+                SyntaxFactory.VariableDeclarator(
+                    identifier: identifier, 
+                    argumentList: null, 
+                    initializer: SyntaxFactory.EqualsValueClause(objectCreationExpression)));
+
+            var newStatement = SyntaxFactory.LocalDeclarationStatement(
+                SyntaxFactory.VariableDeclaration(VarIdentifier, variables));
+
+            return newStatement;
         }
     }
 }
