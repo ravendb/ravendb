@@ -1229,9 +1229,18 @@ namespace Sparrow.Json
             return _cachedMemoryStreams.Pop();
         }
 
+        private const long MemoryStreamCacheThreshold = Constants.Size.Megabyte;
+        private const int MemoryStreamCacheMaxCapacity = 512;
         public void ReturnMemoryStream(MemoryStream stream)
         {
+            //We don't want to hold big streams in the cache or have too big of a cache
+            if (stream.Capacity > MemoryStreamCacheThreshold || _cachedMemoryStreams.Count >= MemoryStreamCacheMaxCapacity)
+            {
+                return;
+            }
+
             EnsureNotDisposed();
+            
             stream.SetLength(0);
             _cachedMemoryStreams.Push(stream);
         }
