@@ -67,6 +67,7 @@ using Sparrow.Server;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -282,6 +283,7 @@ namespace Raven.Server.ServerWide
 
                                             delay = 500; // on successful read, reset the delay
                                             topologyNotification.NodeTag = _engine.Tag;
+                                            topologyNotification.CurrentState = _engine.CurrentState;
                                             NotificationCenter.Add(topologyNotification);
                                         }
                                     }
@@ -743,7 +745,7 @@ namespace Raven.Server.ServerWide
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.ValueChanged += OnValueChanged;
 
-            _engine.TopologyChanged += OnTopologyChanged;
+            _engine.TopologyChanged += (_, __) => NotifyAboutClusterTopologyAndConnectivityChanges();
             _engine.StateChanged += OnStateChanged;
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -777,10 +779,7 @@ namespace Raven.Server.ServerWide
             }
             Engine.InMemoryDebug.StateChangeTracking.LimitedSizeEnqueue(msg, 10);
 
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                OnTopologyChanged(null, GetClusterTopology(context));
+            NotifyAboutClusterTopologyAndConnectivityChanges();
 
                 // if we are in passive/candidate state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisState.Passive || state.To == RachisState.Passive ||
@@ -792,7 +791,6 @@ namespace Raven.Server.ServerWide
                     }, null);
                 }
             }
-        }
 
         private async Task RefreshOutgoingTasksAsync()
         {
@@ -850,10 +848,21 @@ namespace Raven.Server.ServerWide
             return nodesStatuses ?? new Dictionary<string, NodeStatus>();
         }
 
-        public void NotifyAboutRecentClusterTopologyConnectivity()
+        private readonly MultipleUseFlag _notify = new MultipleUseFlag();
+        public void NotifyAboutClusterTopologyAndConnectivityChanges()
         {
-            TaskExecutor.Execute(_ =>
+            if (_notify.Raise() == false)
+                return;
+
+            Task.Run(async () =>
             {
+                while (_notify.Lower())
+                {
+                    try
+                    {
+                        if (ServerShutdown.IsCancellationRequested)
+                            return;
+
                 var clusterTopology = GetClusterTopology();
 
                 if (_engine.CurrentState != RachisState.Follower)
@@ -875,20 +884,25 @@ namespace Raven.Server.ServerWide
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetClusterTopologyCommand(NodeTag);
-                    clusterRequestExecutor.Execute(command, context);
+                            await clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
                     var response = command.Result;
 
                     OnTopologyChangeInternal(response.Topology, response.Status);
                 }
-            },null);
         }
-
-        public void OnTopologyChanged(object sender, ClusterTopology topologyJson)
+                    catch (TaskCanceledException)
         {
-            if (_engine.CurrentState == RachisState.Follower)
-                return;
-
-            OnTopologyChangeInternal(topologyJson);
+                        // shutdown
+        }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            await Logger.InfoAsync("Unable to notify about cluster topology change", e);
+                        }
+                    }
+                }
+            }, ServerShutdown);
         }
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
@@ -959,11 +973,7 @@ namespace Raven.Server.ServerWide
                     break;
                 case nameof(PutLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        OnTopologyChanged(null, GetClusterTopology(context));
-                    }
+                    NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
             }
         }
