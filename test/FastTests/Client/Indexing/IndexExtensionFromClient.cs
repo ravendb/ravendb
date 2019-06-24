@@ -549,9 +549,8 @@ namespace My.Crazy.Namespace
             }
         }
 
-
         [Fact]
-        public void CanUseMethodFromExtensionsInIndex_WithIEnumerableStringReturnType()
+        public void CanUseMethodFromExtensionsInIndex_WithIEnumerableReturnType()
         {
             using (var store = GetDocumentStore())
             {
@@ -682,7 +681,7 @@ namespace My.Crazy.Namespace
         }
 
         [Fact]
-        public void CanUseMethodFromExtensionsInIndex_WithListStringReturnType()
+        public void CanUseMethodFromExtensionsInIndex_WithListReturnType()
         {
             using (var store = GetDocumentStore())
             {
@@ -906,6 +905,95 @@ namespace My.Crazy.Namespace
                     var person = session.Query<Person, PeopleIndex18>().Single();
 
                     Assert.Equal("aviv", person.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseMethodFromExtensionsInIndex_WithListParameterAndListReturnType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new PeopleIndex19();
+                store.ExecuteIndex(index);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Friends = new List<string>
+                        {
+                            "jerry", "bob"
+                        }
+                    });
+
+                    session.Store(new Person
+                    {
+                        Friends = new List<string>
+                        {
+                            "david"
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+                    Assert.Equal(0, indexErrors[0].Errors.Length);
+
+                    var newFriends = session.Query<PeopleIndex19.Result, PeopleIndex19>()
+                        .Where(p => p.FriendsCount > 3)
+                        .Select(p => p.NewFriends)
+                        .Single();
+
+                    Assert.Equal(4, newFriends.Count);
+                    Assert.Equal("jerry", newFriends[0]);
+                    Assert.Equal("bob", newFriends[1]);
+                    Assert.Equal("ayende", newFriends[2]);
+                    Assert.Equal("ppekrol", newFriends[3]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseMethodFromExtensionsInIndex_WithValueTypeListReturnType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new PeopleIndex20();
+                store.ExecuteIndex(index);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "aviv"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+                    Assert.Equal(0, indexErrors[0].Errors.Length);
+
+                    var numbers = session.Query<PeopleIndex20.Result, PeopleIndex20>()
+                        .Select(p => p.Numbers)
+                        .Single();
+
+                    Assert.Equal(3, numbers.Count);
+                    Assert.Equal(1, numbers[0]);
+                    Assert.Equal(2, numbers[1]);
+                    Assert.Equal(3, numbers[2]);
+
                 }
             }
         }
@@ -1755,6 +1843,109 @@ namespace ETIS
             }
         }
 
+        private class PeopleIndex19 : AbstractIndexCreationTask<Person>
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+
+                public List<string> NewFriends { get; set; }
+
+                public int FriendsCount { get; set; }
+
+            }
+
+            public PeopleIndex19()
+            {
+                Map = people => from person in people
+                                let newFriends = Foo19(person.Friends)
+                                select new Result
+                                {
+                                    Name = person.Name,
+                                    NewFriends = newFriends,
+                                    FriendsCount = newFriends.Count
+                                };
+
+                
+
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    {
+                        "PeopleUtil",
+                        @"
+using System.Collections.Generic;
+using System.Linq;
+namespace ETIS
+{
+    public static class PeopleUtil
+    {
+        public static List<string> Foo19(List<string> friends)
+        {
+            if (friends == null || !friends.Any())
+                return new List<string>();
+
+            return friends.Concat(new []{ ""ayende"", ""ppekrol"" }).ToList();
+        }
+    }
+}
+"
+                    }
+                };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class PeopleIndex20 : AbstractIndexCreationTask<Person>
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+
+                public List<int> Numbers { get; set; }
+
+            }
+
+            public PeopleIndex20()
+            {
+                Map = people => from person in people
+                                select new Result
+                                {
+                                    Name = person.Name,
+                                    Numbers = Foo20()
+                                };
+
+
+
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    {
+                        "PeopleUtil",
+                        @"
+using System.Collections.Generic;
+using System.Linq;
+namespace ETIS
+{
+    public static class PeopleUtil
+    {
+        public static List<int> Foo20()
+        {
+            var x = new List<int>
+            {   
+                1, 2, 3
+            };
+            return x;
+        }
+    }
+}
+"
+                    }
+                };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
     }
 
     public class MyList<T> : List<T>
@@ -1891,6 +2082,23 @@ namespace ETIS
         public static MyEnumerable<string> Foo18(IndexExtensionFromClient.Person p)
         {
             return p.MyEnumerable;
+        }
+
+        public static List<string> Foo19(List<string> friends)
+        {
+            if (friends == null || !friends.Any())
+                return new List<string>();
+
+            return friends.Concat(new []{ "ayende", "ppekrol" }).ToList();
+        }
+
+        public static List<int> Foo20()
+        {
+            var x = new List<int>
+            {   
+                1, 2, 3
+            };
+            return x;
         }
     }
 }
