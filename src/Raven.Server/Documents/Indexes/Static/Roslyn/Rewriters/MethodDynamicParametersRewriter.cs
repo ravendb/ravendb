@@ -144,10 +144,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 argumentList: SyntaxFactory.ArgumentList(argumentList),
                 initializer: null);
 
-            var newReturnStatement = SyntaxFactory.ReturnStatement(
-                returnKeyword: returnStatement.ReturnKeyword,
-                expression: objectCreationExpression,
-                semicolonToken: returnStatement.SemicolonToken);
+            var newReturnStatement = SyntaxFactory.ReturnStatement(objectCreationExpression);
 
             return newReturnStatement;
         }
