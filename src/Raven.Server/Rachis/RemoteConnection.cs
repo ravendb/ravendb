@@ -77,6 +77,7 @@ namespace Raven.Server.Rachis
                 [nameof(RachisHello.ElectionTimeout)] = helloMsg.ElectionTimeout,
                 [nameof(RachisHello.SourceUrl)] = helloMsg.SourceUrl,
                 [nameof(RachisHello.DestinationUrl)] = helloMsg.DestinationUrl,
+                [nameof(RachisHello.ServerBuildVersion)] = ServerVersion.Build
             });
         }
 
