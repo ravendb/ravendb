@@ -37,8 +37,9 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT ONLY. Indicates if license can be renewed from api.ravendb.net")]
         [DefaultValue(true)]
+        [ConfigurationEntry("License.CanRenew", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("License.CanRenewLicense", ConfigurationEntryScope.ServerWideOnly)]
-        public bool CanRenewLicense { get; set; }
+        public bool CanRenew { get; set; }
 
         [Description("EXPERT ONLY. Skip logging of lease license errors")]
         [DefaultValue(false)]

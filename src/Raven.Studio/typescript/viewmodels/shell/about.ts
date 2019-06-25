@@ -183,22 +183,22 @@ class about extends viewModelBase {
            return "icon-cancel";
         });
     }
-    
-    renewLicenseConfigurationSettings = ko.observable<boolean>(false);
-    activateLicenseConfigurationSettings = ko.observable<boolean>(false);
-    forceLicenseUpdateConfigurationSettings = ko.observable<boolean>(false);
+
+    isRenewLicenseEnabled = ko.observable<boolean>(false);
+    isActivateLicenseEnabled = ko.observable<boolean>(false);
+    isForceUpdateEnabled = ko.observable<boolean>(false);
 
     register() {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
     private getLicenseConfigurationSettings() {
-        new getLicenseConfigurationSettingsCommand()
+        return new getLicenseConfigurationSettingsCommand()
             .execute()
-            .done((result: Raven.Server.Web.Studio.LicenseConfigurationSettings) => {
-                    this.renewLicenseConfigurationSettings(result.RenewSettings);
-                    this.forceLicenseUpdateConfigurationSettings(result.ForceUpdateSettings);
-                    this.activateLicenseConfigurationSettings(result.ActivateSettings);
+            .done((result: Raven.Server.Config.Categories.LicenseConfiguration) => {
+                this.isActivateLicenseEnabled(result.CanActivate);
+                this.isRenewLicenseEnabled(result.CanRenew);
+                this.isForceUpdateEnabled(result.CanForceUpdate);
             });
     }
     
