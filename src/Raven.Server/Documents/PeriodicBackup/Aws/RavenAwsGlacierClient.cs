@@ -31,6 +31,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public RavenAwsGlacierClient(GlacierSettings glacierSettings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(glacierSettings, progress, cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(glacierSettings.VaultName))
+                throw new ArgumentException("AWS vault name can't be null or empty");
+
             _vaultName = glacierSettings.VaultName;
         }
 
