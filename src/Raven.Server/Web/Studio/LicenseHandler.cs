@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Server.Commercial;
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -54,17 +55,17 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/configuration", "GET", AuthorizationStatus.ValidUser)]
         public Task GetLicenseConfigurationSettings()
         {
-            var licenseConfiguration = new LicenseConfigurationSettings
-            {
-                RenewSettings = ServerStore.Configuration.Licensing.CanRenewLicense,
-                ActivateSettings = ServerStore.Configuration.Licensing.CanActivate,
-                ForceUpdateSettings = ServerStore.Configuration.Licensing.CanForceUpdate
-            };
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, licenseConfiguration.ToJson());
+                var djv = new DynamicJsonValue
+                {
+                    [nameof(LicenseConfiguration.CanRenew)] = ServerStore.Configuration.Licensing.CanRenew,
+                    [nameof(LicenseConfiguration.CanActivate)] = ServerStore.Configuration.Licensing.CanActivate,
+                    [nameof(LicenseConfiguration.CanForceUpdate)] = ServerStore.Configuration.Licensing.CanForceUpdate
+                };
+                
+                context.Write(writer, djv);
             }
 
             return Task.CompletedTask;
@@ -119,7 +120,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/admin/license/renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task RenewLicense()
         {
-            if (ServerStore.Configuration.Licensing.CanRenewLicense == false)
+            if (ServerStore.Configuration.Licensing.CanRenew == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
                 return;
@@ -131,23 +132,6 @@ namespace Raven.Server.Web.Studio
                 var renewLicense = await ServerStore.LicenseManager.RenewLicense();
                 context.Write(writer, renewLicense.ToJson());
             }
-        }
-    }
-    
-    public class LicenseConfigurationSettings : IDynamicJson
-    {
-        public bool RenewSettings { get; set; }
-        public bool ActivateSettings { get; set; }
-        public bool ForceUpdateSettings { get; set; }
-            
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(RenewSettings)] = RenewSettings,
-                [nameof(ActivateSettings)] = ActivateSettings,
-                [nameof(ForceUpdateSettings)] = ForceUpdateSettings
-            };
         }
     }
 }

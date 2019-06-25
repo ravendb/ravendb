@@ -73,6 +73,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
+using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Meters;
@@ -281,7 +282,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseLimitWarning));
             scripter.AddType(typeof(LicenseSupportInfo));
             scripter.AddType(typeof(LicenseRenewalResult));
-
+            scripter.AddType(typeof(LicenseConfiguration));
+            
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
 
@@ -411,7 +413,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupMode));
             scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
-            scripter.AddType(typeof(LicenseConfigurationSettings));
             
             // compare exchange
             scripter.AddType(typeof(CompareExchangeHandler.CompareExchangeListItem));
