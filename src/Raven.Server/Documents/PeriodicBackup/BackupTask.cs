@@ -193,6 +193,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
+                if (_backupToLocalFolder)
+                {
+                    var localRetentionPolicy = new LocalRetentionPolicy(_configuration.RetentionPolicy, _database.Name, _configuration.LocalSettings.FolderPath);
+                    await localRetentionPolicy.Execute();
+                }
+
                 UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = internalBackupResult.LastDocumentEtag;
                 runningBackupStatus.LastRaftIndex.LastEtag = internalBackupResult.LastRaftIndex;
@@ -364,12 +370,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private bool CheckIfEncrypted()
         {
-            if ((_database.MasterKey != null) &&
-                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey))
+            if (_database.MasterKey != null &&
+                _configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
                 return true;
 
-            return (_configuration.BackupEncryptionSettings != null) &&
-                   (_configuration.BackupEncryptionSettings?.EncryptionMode != EncryptionMode.None);
+            return _configuration.BackupEncryptionSettings != null &&
+                   _configuration.BackupEncryptionSettings?.EncryptionMode != EncryptionMode.None;
         }
 
         private long GetDatabaseEtagForBackup()
@@ -629,13 +635,13 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void BackupTypeValidation()
         {
-            if ((_database.MasterKey == null) &&
-                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey))
+            if (_database.MasterKey == null &&
+                _configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
                 throw new InvalidOperationException("Can't use database key for backup encryption, the key doesn't exist");
 
-            if ((_configuration.BackupType == BackupType.Snapshot && _isFullBackup)
-             && (_configuration.BackupEncryptionSettings != null &&
-                    (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)))
+            if (_configuration.BackupType == BackupType.Snapshot && _isFullBackup && 
+                _configuration.BackupEncryptionSettings != null && 
+                _configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)
                 throw new InvalidOperationException("Can't snapshot encrypted database with different key");
         }
 
