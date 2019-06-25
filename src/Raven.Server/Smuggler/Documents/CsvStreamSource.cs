@@ -22,8 +22,6 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class CsvStreamSource : ISmugglerSource, IDisposable
     {
-        private static readonly string CollectionFullPath = $"{Constants.Documents.Metadata.Key}.{Constants.Documents.Metadata.Collection}";
-
         private readonly DocumentDatabase _database;
         private readonly Stream _stream;
         private readonly DocumentsOperationContext _context;
@@ -36,6 +34,7 @@ namespace Raven.Server.Smuggler.Documents
         private int _idIndex;
         private bool _hasCollection;
         private int _collectionIndex;
+        private readonly Dictionary<int, string> _metadataPositionToPropertyNames = new Dictionary<int, string>();
 
         /// <summary>
         /// This dictionary maps the index of a property to its nested segments.
@@ -80,20 +79,32 @@ namespace Raven.Server.Smuggler.Documents
 
             for (var i = 0; i < _csvReader.Context.HeaderRecord.Length; i++)
             {
-                if (_csvReader.Context.HeaderRecord[i].Equals(Constants.Documents.Metadata.Id))
-                {
-                    _hasId = true;
-                    _idIndex = i;
-                }
-
-                if (_csvReader.Context.HeaderRecord[i].Equals(Constants.Documents.Metadata.Collection) || _csvReader.Context.HeaderRecord[i].Equals(CollectionFullPath))
-                {
-                    _hasCollection = true;
-                    _collectionIndex = i;
-                }
+                var property = _csvReader.Context.HeaderRecord[i];
 
                 if (_csvReader.Context.HeaderRecord[i][0] == '@')
-                    continue;
+                {
+                    if (property == Constants.Documents.Metadata.Id)
+                    {
+                        _hasId = true;
+                        _idIndex = i;
+                        continue;
+                    }
+
+                    if (property.StartsWith(Constants.Documents.Metadata.Key))
+                    {
+                        // metadata fields
+                        var metadataProperty = property.Split(".").Last();
+                        _metadataPositionToPropertyNames[i] = metadataProperty;
+
+                        if (metadataProperty == Constants.Documents.Metadata.Collection)
+                        {
+                            _hasCollection = true;
+                            _collectionIndex = i;
+                        }
+
+                        continue;
+                    }
+                }
 
                 var indexOfDot = _csvReader.Context.HeaderRecord[i].IndexOf('.');
                 //We probably have a nested property
@@ -191,16 +202,20 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var idStr = _hasId ? csvReaderCurrentRecord[_idIndex] : _hasCollection ? $"{csvReaderCurrentRecord[_collectionIndex]}/" : $"{collection}/";
                 var data = new DynamicJsonValue();
-                for (int i = 0; i < csvReaderFieldHeaders.Length; i++)
+                var metadata = new DynamicJsonValue();
+
+                for (var i = 0; i < csvReaderFieldHeaders.Length; i++)
                 {
-                    //ignoring reserved properties
                     if (csvReaderFieldHeaders[i][0] == '@')
                     {
-                        if (_hasCollection && i == _collectionIndex)
+                        if (_idIndex == i)
+                            continue;
+
+                        if (_metadataPositionToPropertyNames.TryGetValue(i, out var propertyName))
                         {
-                            SetCollectionForDocument(csvReaderCurrentRecord[_collectionIndex], data);
+                            metadata[propertyName] = csvReaderCurrentRecord[i];
+                            continue;
                         }
-                        continue;
                     }
 
                     if (_nestedPropertyDictionary != null && _nestedPropertyDictionary.TryGetValue(i, out var segments))
@@ -229,13 +244,16 @@ namespace Raven.Server.Smuggler.Documents
                         }
                         continue;
                     }
+
                     data[csvReaderFieldHeaders[i]] = ParseValue(csvReaderCurrentRecord[i]);
                 }
 
                 if (_hasCollection == false)
                 {
-                    SetCollectionForDocument(collection, data);
+                    metadata[Constants.Documents.Metadata.Collection] = collection;
                 }
+
+                data[Constants.Documents.Metadata.Key] = metadata;
 
                 return new DocumentItem
                 {
@@ -259,15 +277,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 _disposables.Clear();
             }
-        }
-
-        private void SetCollectionForDocument(string collection, DynamicJsonValue data)
-        {
-            var metadata = new DynamicJsonValue
-            {
-                [Constants.Documents.Metadata.Collection] = collection
-            };
-            data[Constants.Documents.Metadata.Key] = metadata;
         }
 
         private object ParseValue(string s)
