@@ -2,12 +2,12 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
-import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
-import renewLicenseCommand = require("commands/licensing/renewLicenseCommand");
 import buildInfo = require("models/resources/buildInfo");
 import generalUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
+import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
+import getLicenseConfigurationSettingsCommand = require("commands/licensing/getLicenseConfigurationSettingsCommand");
 
 class about extends viewModelBase {
 
@@ -183,11 +183,25 @@ class about extends viewModelBase {
            return "icon-cancel";
         });
     }
+    
+    renewLicenseConfigurationSettings = ko.observable<boolean>(false);
+    activateLicenseConfigurationSettings = ko.observable<boolean>(false);
+    forceLicenseUpdateConfigurationSettings = ko.observable<boolean>(false);
 
     register() {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
+    private getLicenseConfigurationSettings() {
+        new getLicenseConfigurationSettingsCommand()
+            .execute()
+            .done((result: Raven.Server.Web.Studio.LicenseConfigurationSettings) => {
+                    this.renewLicenseConfigurationSettings(result.RenewSettings);
+                    this.forceLicenseUpdateConfigurationSettings(result.ForceUpdateSettings);
+                    this.activateLicenseConfigurationSettings(result.ActivateSettings);
+            });
+    }
+    
     private pullLatestVersionInfo() {
         this.spinners.latestVersionUpdates(true);
         return new getLatestVersionInfoCommand()
@@ -245,9 +259,8 @@ class about extends viewModelBase {
 
     activate(args: any) {
         super.activate(args, true);
-        return this.pullLatestVersionInfo();
+        return $.when<any>(this.getLicenseConfigurationSettings(), this.pullLatestVersionInfo());
     }
-    
 }
 
 export = about;

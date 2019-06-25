@@ -411,6 +411,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupMode));
             scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
+            scripter.AddType(typeof(LicenseConfigurationSettings));
             
             // compare exchange
             scripter.AddType(typeof(CompareExchangeHandler.CompareExchangeListItem));
