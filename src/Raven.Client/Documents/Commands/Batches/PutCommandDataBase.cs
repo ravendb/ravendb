@@ -8,7 +8,12 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class PutCommandDataWithBlittableJson : PutCommandDataBase<BlittableJsonReaderObject>
     {
-        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document)
+            : base(id, changeVector, document)
+        {
+        }
+        
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, ForceRevisionStrategy strategy)
             : base(id, changeVector, document, strategy)
         {
         }
@@ -20,7 +25,12 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class PutCommandData : PutCommandDataBase<DynamicJsonValue>
     {
-        public PutCommandData(string id, string changeVector, DynamicJsonValue document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document)
+            : base(id, changeVector, document)
+        {
+        }
+        
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document, ForceRevisionStrategy strategy)
             : base(id, changeVector, document, strategy)
         {
         }
