@@ -10,7 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Http;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -36,41 +36,98 @@ using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreBackupTask
+    public abstract class RestoreBackupTaskBase
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTask>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTaskBase>("Server");
 
         private readonly ServerStore _serverStore;
-        private readonly RestoreBackupConfiguration _restoreConfiguration;
+        protected readonly RestoreBackupConfigurationBase RestoreFromConfiguration;//protect for using in GetFilesForRestore()
         private readonly string _nodeTag;
         private readonly OperationCancelToken _operationCancelToken;
-        private List<string> _filesToRestore;
         private bool _hasEncryptionKey;
         private readonly bool _restoringToDefaultDataDirectory;
 
-        public RestoreBackupTask(ServerStore serverStore,
-            RestoreBackupConfiguration restoreConfiguration,
+        protected RestoreBackupTaskBase(ServerStore serverStore,
+            RestoreBackupConfigurationBase restoreFromConfiguration,
             string nodeTag,
             OperationCancelToken operationCancelToken)
         {
             _serverStore = serverStore;
-            _restoreConfiguration = restoreConfiguration;
+            RestoreFromConfiguration = restoreFromConfiguration;
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
 
-            ValidateArguments(out _restoringToDefaultDataDirectory);
+            if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.DatabaseName))
+                throw new ArgumentException("Database name can't be null or empty");
+
+            if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, _serverStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            _serverStore.EnsureNotPassive();
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (_serverStore.Cluster.ReadDatabase(context, RestoreFromConfiguration.DatabaseName) != null)
+                    throw new ArgumentException($"Cannot restore data to an existing database named {RestoreFromConfiguration.DatabaseName}");
+
+                var clusterTopology = _serverStore.GetClusterTopology(context);
+
+                if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false)
+                {
+                    var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
+                    if (key.Length != 256 / 8)
+                        throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
+
+                    var isEncrypted = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
+                    if (isEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
+                        throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
+                }
+            }
+
+            var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) == false;
+            if (hasRestoreDataDirectory &&
+                HasFilesOrDirectories(RestoreFromConfiguration.DataDirectory))
+                throw new ArgumentException("New data directory must be empty of any files or folders, " +
+                                            $"path: {RestoreFromConfiguration.DataDirectory}");
+
+            if (hasRestoreDataDirectory == false)
+                RestoreFromConfiguration.DataDirectory = GetDataDirectory();
+
+            _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
+
+            _hasEncryptionKey = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
+            if (_hasEncryptionKey)
+            {
+                var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
+
+                if (key.Length != 256 / 8)
+                    throw new InvalidOperationException($"The size of the encryption key must be 256 bits, but was {key.Length * 8} bits.");
+            }
         }
+
+        protected abstract Task<Stream> GetStream(string path);
+
+        protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
+
+        protected abstract Task<List<string>> GetFilesForRestore();
+
+        protected abstract string GetBackupPath(string smugglerFile);
+
+        protected abstract string GetBackupLocation();
 
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
         {
-            var databaseName = _restoreConfiguration.DatabaseName;
+            var databaseName = RestoreFromConfiguration.DatabaseName;
             var result = new RestoreResult
             {
-                DataDirectory = _restoreConfiguration.DataDirectory
+                DataDirectory = RestoreFromConfiguration.DataDirectory
             };
 
             try
             {
+                var filesToRestore = await GetOrderedFilesToRestore();
+
                 using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext serverContext))
                 {
                     if (onProgress == null)
@@ -78,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     Stopwatch sw = null;
                     RestoreSettings restoreSettings = null;
-                    var firstFile = _filesToRestore[0];
+                    var firstFile = filesToRestore[0];
 
                     var extension = Path.GetExtension(firstFile);
                     var snapshotRestore = false;
@@ -92,25 +149,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         sw = Stopwatch.StartNew();
                         if (extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
                         {
-                            _hasEncryptionKey = ((_restoreConfiguration.EncryptionKey != null) ||
-                                                 (_restoreConfiguration.BackupEncryptionSettings?.Key != null));
+                            _hasEncryptionKey = RestoreFromConfiguration.EncryptionKey != null ||
+                                                RestoreFromConfiguration.BackupEncryptionSettings?.Key != null;
                         }
                         // restore the snapshot
-                        restoreSettings = SnapshotRestore(
-                            serverContext,
-                            firstFile,
-                        _restoreConfiguration.DataDirectory,
-                        onProgress,
-                        result);
+                        restoreSettings = await SnapshotRestore(serverContext, firstFile, onProgress, result);
 
-                        if (restoreSettings != null && _restoreConfiguration.SkipIndexes)
+                        if (restoreSettings != null && RestoreFromConfiguration.SkipIndexes)
                         {
                             // remove all indexes from the database record
                             restoreSettings.DatabaseRecord.AutoIndexes = null;
                             restoreSettings.DatabaseRecord.Indexes = null;
                         }
                         // removing the snapshot from the list of files
-                        _filesToRestore.RemoveAt(0);
+                        filesToRestore.RemoveAt(0);
                     }
                     else
                     {
@@ -147,12 +199,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
                     databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
                     if (_restoringToDefaultDataDirectory == false)
-                        databaseRecord.Settings[dataDirectoryConfigurationKey] = _restoreConfiguration.DataDirectory;
+                        databaseRecord.Settings[dataDirectoryConfigurationKey] = RestoreFromConfiguration.DataDirectory;
 
                     if (_hasEncryptionKey)
                     {
                         // save the encryption key so we'll be able to access the database
-                        _serverStore.PutSecretKey(_restoreConfiguration.EncryptionKey,
+                        _serverStore.PutSecretKey(RestoreFromConfiguration.EncryptionKey,
                             databaseName, overwrite: false);
                     }
 
@@ -191,8 +243,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         {
                             if (snapshotRestore)
                             {
-                                RestoreFromSmugglerFile(onProgress, database, firstFile, context);
-                                SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
+                                await RestoreFromSmugglerFile(onProgress, database, firstFile, context);
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
 
                                 result.SnapshotRestore.Processed = true;
 
@@ -212,7 +264,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             }
                             else
                             {
-                                SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
+                                await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
                             }
 
                             result.DatabaseRecord.Processed = true;
@@ -249,27 +301,27 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     Logger.Operations("Failed to restore database", e);
 
                 var alert = AlertRaised.Create(
-                    _restoreConfiguration.DatabaseName,
+                    RestoreFromConfiguration.DatabaseName,
                     "Failed to restore database",
-                    $"Could not restore database named {_restoreConfiguration.DatabaseName}",
+                    $"Could not restore database named {RestoreFromConfiguration.DatabaseName}",
                     AlertType.RestoreError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e));
                 _serverStore.NotificationCenter.Add(alert);
 
-                var databaseRecord = _serverStore.LoadDatabaseRecord(_restoreConfiguration.DatabaseName, out _);
+                var databaseRecord = _serverStore.LoadDatabaseRecord(RestoreFromConfiguration.DatabaseName, out _);
 
                 if (databaseRecord == null)
                 {
                     // delete any files that we already created during the restore
-                    IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
+                    IOExtensions.DeleteDirectory(RestoreFromConfiguration.DataDirectory);
                 }
                 else
                 {
                     databaseRecord.Disabled = false;
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
 
-                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
+                    var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
                 }
 
@@ -279,147 +331,117 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
             finally
             {
-                _operationCancelToken.Dispose();
+                Dispose();
             }
         }
 
-        private void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
+        private async Task<List<string>> GetOrderedFilesToRestore()
         {
-            if (_restoreConfiguration.DisableOngoingTasks == false)
-                return;
+            var files = await GetFilesForRestore();
 
-            if (databaseRecord.ExternalReplications != null)
-            {
-                foreach (var task in databaseRecord.ExternalReplications)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.RavenEtls != null)
-            {
-                foreach (var task in databaseRecord.RavenEtls)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.SqlEtls != null)
-            {
-                foreach (var task in databaseRecord.SqlEtls)
-                {
-                    task.Disabled = true;
-                }
-            }
-
-            if (databaseRecord.PeriodicBackups != null)
-            {
-                foreach (var task in databaseRecord.PeriodicBackups)
-                {
-                    task.Disabled = true;
-                }
-            }
-        }
-
-        private void ValidateArguments(out bool restoringToDefaultDataDirectory)
-        {
-            if (string.IsNullOrWhiteSpace(_restoreConfiguration.BackupLocation))
-                throw new ArgumentException("Backup location can't be null or empty");
-
-            if (Directory.Exists(_restoreConfiguration.BackupLocation) == false)
-                throw new ArgumentException($"Backup location doesn't exist, path: {_restoreConfiguration.BackupLocation}");
-
-            var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(_restoreConfiguration.DataDirectory) == false;
-            if (hasRestoreDataDirectory &&
-                HasFilesOrDirectories(_restoreConfiguration.DataDirectory))
-                throw new ArgumentException("New data directory must be empty of any files or folders, " +
-                                            $"path: {_restoreConfiguration.DataDirectory}");
-
-            if (hasRestoreDataDirectory == false)
-                _restoreConfiguration.DataDirectory = GetDataDirectory();
-
-            restoringToDefaultDataDirectory = IsDefaultDataDirectory(_restoreConfiguration.DataDirectory, _restoreConfiguration.DatabaseName);
-
-            _filesToRestore = GetFilesForRestore(_restoreConfiguration.BackupLocation);
-            if (_filesToRestore.Count == 0)
-                throw new ArgumentException("No files to restore from the backup location, " +
-                                            $"path: {_restoreConfiguration.BackupLocation}");
-
-            _hasEncryptionKey = string.IsNullOrWhiteSpace(_restoreConfiguration.EncryptionKey) == false;
-            if (_hasEncryptionKey)
-            {
-                var key = Convert.FromBase64String(_restoreConfiguration.EncryptionKey);
-
-                if (key.Length != 256 / 8)
-                    throw new InvalidOperationException($"The size of the encryption key must be 256 bits, but was {key.Length * 8} bits.");
-            }
-        }
-
-        private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
-        {
-            var defaultDataDirectory = RavenConfiguration.GetDataDirectoryPath(
-                _serverStore.Configuration.Core,
-                databaseName,
-                ResourceType.Database);
-
-            return PlatformDetails.RunningOnPosix == false
-                ? string.Equals(defaultDataDirectory, dataDirectory, StringComparison.OrdinalIgnoreCase)
-                : string.Equals(defaultDataDirectory, dataDirectory, StringComparison.Ordinal);
-        }
-
-        private string GetDataDirectory()
-        {
-            var dataDirectory =
-                RavenConfiguration.GetDataDirectoryPath(
-                    _serverStore.Configuration.Core,
-                    _restoreConfiguration.DatabaseName,
-                    ResourceType.Database);
-
-            var i = 0;
-            while (HasFilesOrDirectories(dataDirectory))
-                dataDirectory += $"-{++i}";
-
-            return dataDirectory;
-        }
-
-        private List<string> GetFilesForRestore(string backupLocation)
-        {
-            var orderedFiles = Directory.GetFiles(backupLocation)
+            var orderedFiles = files
                 .Where(RestoreUtils.IsBackupOrSnapshot)
                 .OrderBackups();
 
-            if (string.IsNullOrWhiteSpace(_restoreConfiguration.LastFileNameToRestore))
+            if (orderedFiles == null)
+                throw new ArgumentException("No files to restore from the backup location, " +
+                                            $"path: {GetBackupLocation()}");
+
+            if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.LastFileNameToRestore))
                 return orderedFiles.ToList();
 
             var filesToRestore = new List<string>();
+
             foreach (var file in orderedFiles)
             {
                 filesToRestore.Add(file);
-                var fileName = Path.GetFileName(file);
-                if (fileName.Equals(_restoreConfiguration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
+                if (file.Equals(RestoreFromConfiguration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
                     break;
             }
 
             return filesToRestore;
         }
 
-        private void SmugglerRestore(string backupDirectory,
-            DocumentDatabase database,
-            DocumentsOperationContext context,
-            DatabaseRecord databaseRecord,
-            Action<IOperationProgress> onProgress,
-            RestoreResult result)
+        protected async Task<RestoreSettings> SnapshotRestore(JsonOperationContext context, string backupPath,
+            Action<IOperationProgress> onProgress, RestoreResult restoreResult)
+        {
+            Debug.Assert(onProgress != null);
+
+            RestoreSettings restoreSettings = null;
+
+            var fullBackupPath = GetBackupPath(backupPath);
+            using (var zip = await GetZipArchiveForSnapshot(fullBackupPath))
+            {
+                foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
+                {
+                    var directory = zipEntries.Key;
+
+                    if (string.IsNullOrWhiteSpace(directory))
+                    {
+                        foreach (var zipEntry in zipEntries)
+                        {
+                            if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                using (var entryStream = zipEntry.Open())
+                                {
+                                    var stream = RestoreFromConfiguration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey ?
+                                        new DecryptingXChaCha20Oly1305Stream(entryStream, Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey))
+                                        : entryStream;
+
+                                    var json = context.Read(stream, "read database settings for restore");
+                                    json.BlittableValidation();
+
+                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+
+                                    restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
+                                    DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
+
+                                    if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
+                                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+
+                                    if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
+                                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                                }
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    var voronDataDirectory = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
+                    var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
+                        ? voronDataDirectory
+                        : voronDataDirectory.Combine(directory);
+
+                    BackupMethods.Full.Restore(
+                        zipEntries,
+                        restoreDirectory,
+                        journalDir: null,
+                        onProgress: message =>
+                        {
+                            restoreResult.AddInfo(message);
+                            restoreResult.SnapshotRestore.ReadCount++;
+                            onProgress.Invoke(restoreResult.Progress);
+                        },
+                        cancellationToken: _operationCancelToken.Token);
+                }
+            }
+
+            if (restoreSettings == null)
+                throw new InvalidDataException("Cannot restore the snapshot without the settings file!");
+
+            return restoreSettings;
+        }
+
+        protected async Task SmugglerRestore(DocumentDatabase database, List<string> filesToRestore, DocumentsOperationContext context,
+            DatabaseRecord databaseRecord, Action<IOperationProgress> onProgress, RestoreResult result)
         {
             Debug.Assert(onProgress != null);
 
             // the files are already ordered by name
             // take only the files that are relevant for smuggler restore
-            _filesToRestore = _filesToRestore
-                .Where(BackupUtils.IsBackupFile)
-                .OrderBackups()
-                .ToList();
 
-            if (_filesToRestore.Count == 0)
+            if (filesToRestore.Count == 0)
                 return;
 
             // we do have at least one smuggler backup, we'll take the indexes from the last file
@@ -443,13 +465,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
 
-            for (var i = 0; i < _filesToRestore.Count - 1; i++)
+            for (var i = 0; i < filesToRestore.Count - 1; i++)
             {
-                result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{_filesToRestore.Count:#,#;;0}");
+                result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{filesToRestore.Count:#,#;;0}");
                 onProgress.Invoke(result.Progress);
 
-                var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
-                ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options, isLastFile: false,
+                var filePath = GetBackupPath(filesToRestore[i]);
+                await ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options, isLastFile: false,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
                     {
                         // need to enable revisions before import
@@ -458,16 +480,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
-            var lastFilePath = Path.Combine(backupDirectory, _filesToRestore.Last());
+            var lastFilePath = GetBackupPath(filesToRestore.Last());
 
-            result.AddInfo($"Restoring file {_filesToRestore.Count:#,#;;0}/{_filesToRestore.Count:#,#;;0}");
+            result.AddInfo($"Restoring file {filesToRestore.Count:#,#;;0}/{filesToRestore.Count:#,#;;0}");
 
             onProgress.Invoke(result.Progress);
 
-            ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
+            await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
-                    if (_restoreConfiguration.SkipIndexes)
+                    if (this.RestoreFromConfiguration.SkipIndexes)
                         return;
 
                     switch (indexAndType.Type)
@@ -516,15 +538,79 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
         }
+        private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
+        {
+            var defaultDataDirectory = RavenConfiguration.GetDataDirectoryPath(
+                _serverStore.Configuration.Core,
+                databaseName,
+                ResourceType.Database);
 
-        private void ImportSingleBackupFile(DocumentDatabase database,
+            return PlatformDetails.RunningOnPosix == false
+                ? string.Equals(defaultDataDirectory, dataDirectory, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(defaultDataDirectory, dataDirectory, StringComparison.Ordinal);
+        }
+
+        private string GetDataDirectory()
+        {
+            var dataDirectory =
+                RavenConfiguration.GetDataDirectoryPath(
+                    _serverStore.Configuration.Core,
+                    RestoreFromConfiguration.DatabaseName,
+                    ResourceType.Database);
+
+            var i = 0;
+            while (HasFilesOrDirectories(dataDirectory))
+                dataDirectory += $"-{++i}";
+
+            return dataDirectory;
+        }
+
+        private void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
+        {
+            if (RestoreFromConfiguration.DisableOngoingTasks == false)
+                return;
+
+            if (databaseRecord.ExternalReplications != null)
+            {
+                foreach (var task in databaseRecord.ExternalReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.RavenEtls != null)
+            {
+                foreach (var task in databaseRecord.RavenEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.SqlEtls != null)
+            {
+                foreach (var task in databaseRecord.SqlEtls)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.PeriodicBackups != null)
+            {
+                foreach (var task in databaseRecord.PeriodicBackups)
+                {
+                    task.Disabled = true;
+                }
+            }
+        }
+
+        private async Task ImportSingleBackupFile(DocumentDatabase database,
             Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
-            using (var fileStream = File.Open(filePath, FileMode.Open))
+            using (var fileStream = await GetStream(filePath))
             using (var inputStream = GetInputStream(fileStream))
             using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database))
@@ -546,7 +632,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         /// <param name="database"></param>
         /// <param name="smugglerFile"></param>
         /// <param name="context"></param>
-        private void RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, DocumentsOperationContext context)
+        protected async Task RestoreFromSmugglerFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, DocumentsOperationContext context)
         {
             var destination = new DatabaseDestination(database);
 
@@ -556,9 +642,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
                 SkipRevisionCreation = true
             };
-            var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, smugglerFile);
+            // var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, smugglerFile);
+            var lastPath = GetBackupPath(smugglerFile);
 
-            using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            //using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            using (var zip = await GetZipArchiveForSnapshot(lastPath))
             {
                 foreach (var entry in zip.Entries)
                 {
@@ -582,7 +670,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private Stream GetInputStream(Stream fileStream)
         {
-            return _restoreConfiguration.BackupEncryptionSettings?.Key != null ? new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(_restoreConfiguration.BackupEncryptionSettings.Key)) : fileStream;
+            return RestoreFromConfiguration.BackupEncryptionSettings?.Key != null ? new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(RestoreFromConfiguration.BackupEncryptionSettings.Key)) : fileStream;
         }
 
         private Stream GetSnapshotInputStream(Stream fileStream, string database)
@@ -600,89 +688,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return fileStream;
         }
 
-        private RestoreSettings SnapshotRestore(
-            JsonOperationContext context,
-            string backupPath,
-            string dataDirectory,
-            Action<IOperationProgress> onProgress,
-            RestoreResult restoreResult)
-        {
-            Debug.Assert(onProgress != null);
-
-            RestoreSettings restoreSettings = null;
-
-            var voronBackupPath = new VoronPathSetting(backupPath);
-            var voronDataDirectory = new VoronPathSetting(dataDirectory);
-
-            using (var zip = ZipFile.Open(voronBackupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-            {
-                foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
-                {
-                    var directory = zipEntries.Key;
-
-                    if (string.IsNullOrWhiteSpace(directory))
-                    {
-                        foreach (var zipEntry in zipEntries)
-                        {
-                            if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
-                            {
-                                using (var entryStream = zipEntry.Open())
-                                {
-                                    var stream = _restoreConfiguration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey ?
-                                        new DecryptingXChaCha20Oly1305Stream(entryStream, Convert.FromBase64String(_restoreConfiguration.EncryptionKey))
-                                        : entryStream;
-
-                                    var json = context.Read(stream, "read database settings for restore");
-                                    json.BlittableValidation();
-
-                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-
-                                    restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
-                                    DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
-
-                                    if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
-                                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
-
-                                    if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
-                                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
-                                }
-                            }
-                        }
-
-                        continue;
-                    }
-
-                    var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
-                        ? voronDataDirectory
-                        : voronDataDirectory.Combine(directory);
-
-                    BackupMethods.Full.Restore(
-                        zipEntries,
-                        restoreDirectory,
-                        journalDir: null,
-                        onProgress: message =>
-                        {
-                            restoreResult.AddInfo(message);
-                            restoreResult.SnapshotRestore.ReadCount++;
-                            onProgress.Invoke(restoreResult.Progress);
-                        },
-                        cancellationToken: _operationCancelToken.Token);
-                }
-            }
-
-            if (restoreSettings == null)
-                throw new InvalidDataException("Cannot restore the snapshot without the settings file!");
-
-            return restoreSettings;
-        }
-
-        private static bool HasFilesOrDirectories(string location)
+        protected bool HasFilesOrDirectories(string location)
         {
             if (Directory.Exists(location) == false)
                 return false;
 
             return Directory.GetFiles(location).Length > 0 ||
                    Directory.GetDirectories(location).Length > 0;
+        }
+
+        protected virtual void Dispose()
+        {
+            _operationCancelToken.Dispose();
+        }
+
+        public async Task<long> CalculateBackupSizeInBytes()
+        {
+            var zipPath = GetBackupLocation();
+            using (var zip = await GetZipArchiveForSnapshot(zipPath))
+                return zip.Entries.Sum(entry => entry.Length);
         }
     }
 }

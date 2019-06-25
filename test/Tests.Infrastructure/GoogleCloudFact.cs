@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    class GoogleCloudFact : FactAttribute
+    public class GoogleCloudFact : FactAttribute
     {
         private const string BucketNameEnvironmentVariable = "GOOGLE_CLOUD_BUCKET_NAME";
         private const string GoogleCloudCredentialEnvironmentVariable = "GOOGLE_CLOUD_CREDENTIAL";

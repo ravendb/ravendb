@@ -785,6 +785,16 @@ namespace FastTests
             return EnsureDatabaseDeletion(config.DatabaseName, store);
         }
 
+        protected IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreFromS3Configuration config, TimeSpan? timeout = null)
+        {
+            var restoreOperation = new RestoreBackupOperation(config);
+
+            var operation = store.Maintenance.Server.Send(restoreOperation);
+            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+
+            return EnsureDatabaseDeletion(config.DatabaseName, store);
+        }
+
         protected IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
         {
             return new DisposableAction(() =>
