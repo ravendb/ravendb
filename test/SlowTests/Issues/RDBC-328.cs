@@ -45,13 +45,20 @@ namespace SlowTests.Issues
         [Fact]
         public void CanCustomizeSeserializationWithoutAffectingDeserialization()
         {
-            using (var documentStore = GetDocumentStore(new Options
+            using (var documentStore = base.GetDocumentStore(new Options
             {
                 ModifyDocumentStore = x =>
                 {
+                    NeverNullStringConverter converter = new NeverNullStringConverter();
                     x.Conventions.CustomizeJsonSerializer = s =>
                     {
-                        s.Converters.Add(new NeverNullStringConverter());
+                        
+                        s.Converters.Add(converter);
+                    };
+
+                    x.Conventions.CustomizeJsonDeserializer = s =>
+                    {
+                        s.Converters.Remove(converter);
                     };
                 }
             }))
