@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
@@ -22,6 +23,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -691,6 +693,23 @@ namespace Raven.Server.Web
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove("Content-Type");
             HttpContext.Response.Headers.Add("Location", leaderLocation);
+        }
+
+        protected PeriodicBackupConnectionType GetBackupConnectionType()
+        {
+            PeriodicBackupConnectionType connectionType;
+            var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+            if (type == null)
+            {
+                //Backward compatibility
+                connectionType = PeriodicBackupConnectionType.Local;
+            }
+            else if (Enum.TryParse(type, out connectionType) == false)
+            {
+                throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
+            }
+
+            return connectionType;
         }
     }
 }

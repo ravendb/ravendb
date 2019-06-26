@@ -490,17 +490,14 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/restore/points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
-                throw new ArgumentException($"Unknown connection type: {type}");
-
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                var connectionType = GetBackupConnectionType();
+
                 var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "restore-info");
 
                 var restorePoints = new RestorePoints();
-                var sortedList = new SortedList<DateTime, RestorePoint>(new RestoreUtils.DescendedDateComparer());
+                var sortedList = new SortedList<DateTime, RestorePoint>(new RestorePointsBase.DescendedDateComparer());
 
                 switch (connectionType)
                 {
@@ -519,29 +516,17 @@ namespace Raven.Server.Web.System
 
                         if (Directory.Exists(directoryPath) == false)
                             throw new InvalidOperationException($"Path '{directoryPath}' doesn't exist");
-                        
-                        var directories = Directory.GetDirectories(directoryPath).OrderBy(x => x).ToList();
-                        if (directories.Count == 0)
-                        {
-                            // no folders in directory
-                            // will scan the directory for backup files
-                            RestoreUtils.FetchRestorePoints(directoryPath, sortedList, context, assertLegacyBackups: true);
-                        }
-                        else
-                        {
-                            foreach (var directory in directories)
-                            {
-                                RestoreUtils.FetchRestorePoints(directory, sortedList, context);
-                            }
-                        }
+
+                        var localRestoreUtils = new LocalRestorePoints(sortedList, context);
+                        await localRestoreUtils.FetchRestorePoints(directoryPath);
 
                         break;
 
                     case PeriodicBackupConnectionType.S3:
                         var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
-                        using (var client = new RavenAwsS3Client(s3Settings))
+                        using (var s3RestoreUtils = new S3RestorePoints(sortedList, context, s3Settings))
                         {
-                            await RestoreUtils.FetchRestorePointsFromCloud(client, s3Settings, sortedList, context, assertLegacyBackups: true);
+                            await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
                         }
 
                         break;
@@ -567,17 +552,7 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                PeriodicBackupConnectionType connectionType;
-                var type = GetStringValuesQueryString("type",false).FirstOrDefault();
-                if (type == null)
-                {
-                    //Backward compatibility
-                    connectionType = PeriodicBackupConnectionType.Local;
-                }
-                else if (Enum.TryParse(type, out connectionType) == false)
-                {
-                    throw new ArgumentException($"Query string '{type}' was not recognized as valid type"); 
-                }
+                var connectionType = GetBackupConnectionType();
 
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
 
