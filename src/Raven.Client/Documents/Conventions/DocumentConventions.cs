@@ -150,6 +150,7 @@ namespace Raven.Client.Documents.Conventions
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { };
+            CustomizeJsonDeserializer = serializer => { };
 
             BulkInsert = new BulkInsertConventions(this);
 
@@ -203,10 +204,11 @@ namespace Raven.Client.Documents.Conventions
         private bool _throwIfQueryPageSizeIsNotSet;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
+        private Action<JsonSerializer> _customizeJsonDeserializer;
         private TimeSpan? _requestTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
-        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
+        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;        
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
         private bool? _useCompression;
@@ -291,6 +293,22 @@ namespace Raven.Client.Documents.Conventions
                 _customizeJsonSerializer = value;
             }
         }
+
+
+        /// <summary>
+        ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations
+        /// </summary>
+        public Action<JsonSerializer> CustomizeJsonDeserializer
+        {
+            get => _customizeJsonDeserializer;
+            set
+            {
+                AssertNotFrozen();
+                _customizeJsonDeserializer = value;
+            }
+        }
+
+        
 
         /// <summary>
         ///     Gets or sets the max length of Url of GET requests.
@@ -765,13 +783,10 @@ namespace Raven.Client.Documents.Conventions
             return this;
         }
 
-        /// <summary>
-        ///     Creates the serializer.
-        /// </summary>
-        /// <returns></returns>
-        public JsonSerializer CreateSerializer()
+
+        private JsonSerializer CreateInitialSerializer()
         {
-            var jsonSerializer = new JsonSerializer
+            return new JsonSerializer
             {
                 DateParseHandling = DateParseHandling.None,
                 ObjectCreationHandling = ObjectCreationHandling.Auto,
@@ -781,9 +796,10 @@ namespace Raven.Client.Documents.Conventions
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double
             };
+        }
 
-            CustomizeJsonSerializer(jsonSerializer);
-
+        private void PostJsonSerializerInitiation(JsonSerializer jsonSerializer)
+        {
             if (SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
@@ -794,8 +810,30 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
+        }
 
+        /// <summary>
+        ///     Creates the serializer.
+        /// </summary>
+        /// <returns></returns>
+        public JsonSerializer CreateSerializer()
+        {
+            var jsonSerializer = CreateInitialSerializer();
+            CustomizeJsonSerializer(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer);
             return jsonSerializer;
+        }
+
+        /// <summary>
+        ///     Creates the serializer.
+        /// </summary>
+        /// <returns></returns>
+        public JsonSerializer CreateDeserializer()
+        {
+            var jsonSerializer = CreateInitialSerializer();
+            CustomizeJsonDeserializer(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer);
+            return jsonSerializer;            
         }
 
         /// <summary>

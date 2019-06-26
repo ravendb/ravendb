@@ -10,23 +10,22 @@ namespace Raven.Client.Documents.Conventions
 {
     internal class JsonNetBlittableEntitySerializer
     {
-        private readonly ThreadLocal<BlittableJsonReader> _reader;
+        private readonly ThreadLocal<BlittableJsonReader> _reader;                
+        private readonly ThreadLocal<JsonSerializer> _deserializer;
 
-        private readonly ThreadLocal<JsonSerializer> _serializer;
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);
-            _serializer = new ThreadLocal<JsonSerializer>(conventions.CreateSerializer);
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);            
+            _deserializer = new ThreadLocal<JsonSerializer>(conventions.CreateDeserializer);
             _reader = new ThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
         {
             _reader.Value.Init(jsonObject);
-            _serializer.Value.NullValueHandling = NullValueHandling.Ignore;
 
             using (DefaultRavenContractResolver.RegisterExtensionDataSetter((o, key, value) =>
             {
@@ -55,7 +54,7 @@ namespace Raven.Client.Documents.Conventions
                 }
             }))
             {
-                return _serializer.Value.Deserialize(_reader.Value, type);
+                return _deserializer.Value.Deserialize(_reader.Value, type);
             }
         }
     }
