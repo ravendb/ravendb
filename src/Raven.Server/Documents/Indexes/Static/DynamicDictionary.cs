@@ -16,7 +16,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public DynamicDictionary(IEnumerable<KeyValuePair<object, object>> dictionary)
         {
-            _dictionary = (Dictionary<object, object>)dictionary;
+            var tempDictionary = new Dictionary<object, object>();
+
+            foreach (var kvp in dictionary)
+            {
+                tempDictionary[kvp.Key] = kvp.Value;
+            }
+
+            _dictionary = tempDictionary;
         }
 
         IEnumerator<object> IEnumerable<object>.GetEnumerator()
@@ -307,19 +314,19 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicDictionary(_dictionary.Reverse());
         }
 
-        public bool All(Func<KeyValuePair<object, object>, bool> predicate)
+        public bool All(Func<dynamic, bool> predicate)
         {
-            return _dictionary.All(predicate);
+            return Enumerable.All(this, predicate);
+        }
+
+        public bool Any(Func<dynamic, bool> predicate)
+        {
+            return Enumerable.Any(this, predicate);
         }
 
         public bool Any()
         {
-            throw new NotSupportedException();
-        }
-
-        public bool Any(Func<KeyValuePair<object, object>, bool> predicate)
-        {
-            return _dictionary.Any(predicate);
+            return _dictionary.Any();
         }
 
         public DynamicDictionary Append(KeyValuePair<object, object> element)
@@ -477,12 +484,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public long LongCount()
         {
-            return _dictionary.LongCount();
+            return Enumerable.LongCount(_dictionary);
         }
 
-        public long LongCount(Func<KeyValuePair<object, object>, bool> predicate)
+        public long LongCount(Func<dynamic, bool> predicate)
         {
-            return _dictionary.LongCount(predicate);
+            return Enumerable.LongCount(this, predicate);
         }
 
         public DynamicDictionary Zip(DynamicDictionary second, Func<KeyValuePair<object, object>, KeyValuePair<object, object>, KeyValuePair<object, object>> resultSelector)
