@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var files = await GetFilesForRestore();
 
             var orderedFiles = files
-                .Where(RestoreUtils.IsBackupOrSnapshot)
+                .Where(RestorePointsBase.IsBackupOrSnapshot)
                 .OrderBackups();
 
             if (orderedFiles == null)
