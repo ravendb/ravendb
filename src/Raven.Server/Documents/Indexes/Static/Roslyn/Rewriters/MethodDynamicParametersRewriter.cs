@@ -20,8 +20,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         }
 
         private const string DynamicString = "dynamic";
-
-        private const string String = "string";
         
         private const string SystemNamespacePrefix = "System.";
 
@@ -151,31 +149,61 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private bool ShouldModifyReturnType(MethodDeclarationSyntax node, out SyntaxNode returnType)
         {
-            returnType = node.ReturnType;
-            var typeInfo = SemanticModel.GetTypeInfo(returnType);
+            var typeSymbol = SemanticModel.GetTypeInfo(node.ReturnType).Type;
+            return ShouldModifyType(typeSymbol, out returnType);
+        }
 
-            if (typeInfo.Type.SpecialType == SpecialType.System_String ||
-                typeInfo.Type.SpecialType == SpecialType.System_Void ||
-                returnType.ToString() == DynamicString)
+        private bool ShouldModifyType(ITypeSymbol typeSymbol, out SyntaxNode newType)
+        {
+            newType = default;
+            if (typeSymbol.SpecialType == SpecialType.System_String ||
+                typeSymbol.ToString() == DynamicString)
             {
                 return false;
             }
 
-            if (typeInfo.Type.AllInterfaces.Contains(IEnumerableSymbol))
+            if (typeSymbol.AllInterfaces.Contains(IEnumerableSymbol))
             {
-                returnType = IEnumerableDynamicNameSyntax;
+                newType = IEnumerableDynamicNameSyntax;
+                return true;
             }
 
-            else if (typeInfo.Type.ToString().StartsWith(SystemNamespacePrefix))
+            switch (typeSymbol.SpecialType)
             {
-                return false;
+                case SpecialType.None:
+                {
+                    if (typeSymbol.ToString().StartsWith(SystemNamespacePrefix))
+                    {
+                        // keep original type
+                        return false;
+                    }
+
+                    break;
+                }
+                case SpecialType.System_SByte:
+                case SpecialType.System_Int16:
+                case SpecialType.System_Int32:
+                case SpecialType.System_Int64:
+                case SpecialType.System_Byte:
+                case SpecialType.System_UInt16:
+                case SpecialType.System_UInt32:
+                case SpecialType.System_UInt64:
+                case SpecialType.System_Single:
+                case SpecialType.System_Double:
+                case SpecialType.System_Decimal:
+                case SpecialType.System_Object:
+                {
+                    break;
+                }
+                default:
+                {
+                    // keep original type
+                    return false;
+                }
             }
 
-            else
-            {
-                returnType = DynamicIdentifier;
-            }
-
+            // change to dynamic
+            newType = DynamicIdentifier;
             return true;
         }
 
@@ -197,29 +225,21 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     sb.Append(", ");
                 }
 
-                var typeStr = param.Type.ToString();
-                if (typeStr == DynamicString || typeStr == String)
+                var symbol = SemanticModel.GetDeclaredSymbol(param).Type;
+                if (ShouldModifyType(symbol, out var newType))
                 {
-                    sb.Append(param);
-                    continue;
-                }
+                    if (newType == IEnumerableDynamicNameSyntax)
+                    {
+                        // change to DynamicArray
+                        var identifier = param.Identifier.WithoutTrivia();
+                        sb.Append($"{DynamicString} d_{identifier}");
 
-                var symbol = SemanticModel.GetDeclaredSymbol(param);
+                        var newStatement = CreateDynamicArrayDeclarationStatement(identifier);
+                        statements.Add(newStatement);
 
-                if (symbol.Type.AllInterfaces.Contains(IEnumerableSymbol))
-                {
-                    // change to DynamicArray
-                    var identifier = param.Identifier.WithoutTrivia();
-                    sb.Append($"{DynamicString} d_{identifier}");
+                        continue;
+                    }
 
-                    var newStatement = CreateDynamicArrayDeclarationStatement(identifier);
-                    statements.Add(newStatement);
-
-                    continue;
-                }
-
-                if (symbol.Type.ToString().StartsWith(SystemNamespacePrefix) == false)
-                {
                     // change to dynamic
                     sb.Append($"{DynamicString} {param.Identifier.WithoutTrivia()}");
                     continue;
