@@ -118,7 +118,6 @@ namespace Raven.Debug
                                 $"sudo chown root:root {apppath}{Environment.NewLine}" +
                                 $"sudo chmod +s {apppath}{Environment.NewLine}" + 
                                 $"sudo apt install libc6-dev{Environment.NewLine}" + 
-                                $"sudo setcap cap_sys_ptrace=eip {apppath}{Environment.NewLine}" + 
                                 $"sudo setcap cap_sys_ptrace=eip {apppath}{Environment.NewLine}";
                         }
 
