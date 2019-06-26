@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             var typeInfo = SemanticModel.GetTypeInfo(returnType);
 
             if (typeInfo.Type.SpecialType == SpecialType.System_String ||
+                typeInfo.Type.SpecialType == SpecialType.System_Void ||
                 returnType.ToString() == DynamicString)
             {
                 return false;
