@@ -998,6 +998,41 @@ namespace My.Crazy.Namespace
             }
         }
 
+
+        [Fact]
+        public void CanUseMethodFromExtensionsInIndex_WithVoidReturnType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new PeopleIndex21();
+                store.ExecuteIndex(index);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "aviv"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+                    Assert.Equal(0, indexErrors[0].Errors.Length);
+
+                    var person = session.Query<Person, PeopleIndex21>()
+                        .Single();
+
+                    Assert.Equal("aviv", person.Name);
+
+                }
+            }
+        }
+
         private class RealCountry : AbstractIndexCreationTask<Order>
         {
             public RealCountry(string getRealCountry)
@@ -1943,6 +1978,40 @@ namespace ETIS
                 };
 
                 StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class PeopleIndex21 : AbstractIndexCreationTask<Person>
+        {
+
+            public PeopleIndex21()
+            {
+                Map = people => from person in people
+                                select new 
+                                {
+                                    person.Name
+                                };
+
+
+
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    {
+                        "PeopleUtil",
+                        @"
+namespace MyNamespace
+{
+    public static class Program
+    {
+        public static void Foo()
+        {
+        }
+    }
+}
+
+"
+                    }
+                };
             }
         }
 
