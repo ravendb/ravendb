@@ -1007,7 +1007,10 @@ namespace Raven.Server.Rachis
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         initialMessage = remoteConnection.InitFollower(context);
+
+                        ValidateCompatibility(initialMessage);
                         ValidateElectionTimeout(initialMessage);
+
                         using (context.OpenReadTransaction())
                         {
                             clusterTopology = GetTopology(context);
@@ -1018,6 +1021,7 @@ namespace Raven.Server.Rachis
                                                                 "It is possible that you have DNS or routing issues that cause multiple URLs to go to the same node."  +
                                                                 $"Connection from {initialMessage.SourceUrl} and attempted to connect to {initialMessage.DestinationUrl}");
                         }
+
                         sayHello?.Invoke(initialMessage);
                     }
 
@@ -1110,6 +1114,13 @@ namespace Raven.Server.Rachis
 
                 throw;
             }
+        }
+
+        private static void ValidateCompatibility(RachisHello initialMessage)
+        {
+            var version = initialMessage.ServerBuildVersion;
+            if (version == 0 || ServerVersion.IsNightlyOrDev(version))  
+                return;
         }
 
         private void ValidateElectionTimeout(RachisHello initialMessage)

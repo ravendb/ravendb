@@ -26,11 +26,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxFileSize { get; set; }
 
-        [Description("How far back we should retain log entries in days")]
-        [DefaultValue(null)]
-        [MinValue(1)]
-        [TimeUnit(TimeUnit.Days)]
-        [ConfigurationEntry("Logs.RetentionTimeInDays", ConfigurationEntryScope.ServerWideOnly)]
+        [Description("How far back we should retain log entries in hours")]
+        [DefaultValue(3 * 24)]
+        [MinValue(24)]
+        [TimeUnit(TimeUnit.Hours)]
+        [ConfigurationEntry("Logs.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting? RetentionTime { get; set; }
 
         [Description("The maximum size of the log after which the old files will be deleted")]

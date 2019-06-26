@@ -293,7 +293,8 @@ namespace Raven.Server.Documents.Subscriptions
             }
             else if (id.HasValue)
             {
-                subscription = GetSubscriptionFromServerStore(context, id.ToString());
+                name = GetSubscriptionNameById(context, id.Value);
+                subscription = GetSubscriptionFromServerStore(context, name);
             }
             else
             {

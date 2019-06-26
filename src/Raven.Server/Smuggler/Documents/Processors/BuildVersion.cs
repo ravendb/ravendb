@@ -1,10 +1,12 @@
+using Raven.Server.ServerWide;
+
 namespace Raven.Server.Smuggler.Documents.Processors
 {
     public static class BuildVersion
     {
         public static BuildVersionType Type(long buildVersion)
         {
-            if (buildVersion >= 40 && buildVersion < 50)
+            if (ServerVersion.IsNightlyOrDev(buildVersion))
                 return BuildVersionType.V4; // debug / dev version
             if (buildVersion < 40000)
                 return BuildVersionType.V3;

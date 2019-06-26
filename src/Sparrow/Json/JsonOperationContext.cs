@@ -1226,14 +1226,29 @@ namespace Sparrow.Json
                 return new MemoryStream();
             }
 
-            return _cachedMemoryStreams.Pop();
+            var stream = _cachedMemoryStreams.Pop();
+            _sizeOfMemoryStreamCache -= stream.Capacity;
+
+            return stream;
         }
 
+        private const long MemoryStreamCacheThreshold = Constants.Size.Megabyte;
+        private const int MemoryStreamCacheMaxCapacityInBytes = 64 * Constants.Size.Megabyte;
+
+        private long _sizeOfMemoryStreamCache;
         public void ReturnMemoryStream(MemoryStream stream)
         {
+            //We don't want to hold big streams in the cache or have too big of a cache
+            if (stream.Capacity > MemoryStreamCacheThreshold || _sizeOfMemoryStreamCache >= MemoryStreamCacheMaxCapacityInBytes)
+            {
+                return;
+            }
+
             EnsureNotDisposed();
+            
             stream.SetLength(0);
             _cachedMemoryStreams.Push(stream);
+            _sizeOfMemoryStreamCache += stream.Capacity;
         }
 
         public void ReturnMemory(AllocatedMemoryData allocation)

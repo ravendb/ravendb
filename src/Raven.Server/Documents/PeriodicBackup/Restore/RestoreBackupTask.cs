@@ -572,7 +572,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                                 database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
 
-                            smuggler.Execute();
+                            smuggler.Execute(ensureStepsProcessed: true, isLastFile: true);
                         }
                         break;
                     }
