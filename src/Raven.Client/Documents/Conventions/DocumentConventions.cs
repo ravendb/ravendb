@@ -296,7 +296,8 @@ namespace Raven.Client.Documents.Conventions
 
 
         /// <summary>
-        ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations
+        ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations.
+        ///     When creating a JsonSerializer, the CustomizeJsonSerializer is always called before CustomizeJsonDeserializer
         /// </summary>
         public Action<JsonSerializer> CustomizeJsonDeserializer
         {
@@ -831,6 +832,7 @@ namespace Raven.Client.Documents.Conventions
         public JsonSerializer CreateDeserializer()
         {
             var jsonSerializer = CreateInitialSerializer();
+            CustomizeJsonSerializer(jsonSerializer);
             CustomizeJsonDeserializer(jsonSerializer);
             PostJsonSerializerInitiation(jsonSerializer);
             return jsonSerializer;            
