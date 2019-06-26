@@ -47,13 +47,7 @@ namespace Sparrow.Server.Platform
 
             try
             {
-                var toTime = DateTime.MinValue.Ticks;
-                if (File.Exists(toFilename))
-                    toTime = new FileInfo(toFilename).CreationTime.Ticks;
-
-                if (File.Exists(fromFilename) &&
-                    new FileInfo(fromFilename).CreationTime.Ticks > toTime)
-                    File.Copy(fromFilename, toFilename, overwrite: true);
+                File.Copy(fromFilename, toFilename, overwrite: true);
             }
             catch (IOException e)
             {
