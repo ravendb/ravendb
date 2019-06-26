@@ -27,8 +27,8 @@ namespace Raven.Server.Config.Categories
         public Size MaxFileSize { get; set; }
 
         [Description("How far back we should retain log entries in hours")]
-        [DefaultValue(null)]
-        [MinValue(3 * 24)]
+        [DefaultValue(3 * 24)]
+        [MinValue(24)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Logs.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting? RetentionTime { get; set; }
