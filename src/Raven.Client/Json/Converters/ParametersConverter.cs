@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Indexes.Suggestions;
-using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.MoreLikeThis;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -11,6 +11,12 @@ namespace Raven.Client.Json.Converters
     internal sealed class ParametersConverter : RavenJsonConverter
     {
         public static readonly ParametersConverter Instance = new ParametersConverter();
+
+        private static readonly HashSet<Assembly> RavenAssemblies = new HashSet<Assembly>
+        {
+            typeof(ParametersConverter).Assembly,
+            typeof(LazyStringValue).Assembly
+        };
 
         private ParametersConverter()
         {
@@ -26,63 +32,81 @@ namespace Raven.Client.Json.Converters
 
             writer.WriteStartObject();
 
-            foreach (var kvp in (Parameters)value)
+            var oldPreserveReferencesHandling = serializer.PreserveReferencesHandling;
+
+            try
             {
-                writer.WritePropertyName(kvp.Key);
+                serializer.PreserveReferencesHandling = PreserveReferencesHandling.None;
 
-                object v = kvp.Value;
-                if (v is DateTime)
+                foreach (var kvp in (Parameters)value)
                 {
-                    var dateTime = (DateTime)v;
-                    if (dateTime.Kind == DateTimeKind.Unspecified)
-                        dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-                    writer.WriteValue(dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc));
-                }
-                else if (v is DateTimeOffset)
-                {
-                    var dateTimeOffset = (DateTimeOffset)v;
-                    writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
-                }
-                else if (v is object[])
-                {
-                    var oldTypeNameHandling = serializer.TypeNameHandling;
+                    writer.WritePropertyName(kvp.Key);
 
-                    try
+                    var v = kvp.Value;
+
+                    if (v is DateTime dateTime)
                     {
-                        serializer.TypeNameHandling = TypeNameHandling.None;
-
-                        serializer.Serialize(writer, kvp.Value);
+                        if (dateTime.Kind == DateTimeKind.Unspecified)
+                            dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
+                        writer.WriteValue(dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc));
                     }
-                    finally
+                    else if (v is DateTimeOffset dateTimeOffset)
                     {
-                        serializer.TypeNameHandling = oldTypeNameHandling;
+                        writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
+                    }
+                    else if (v is IEnumerable enumerable)
+                    {
+                        var oldTypeNameHandling = serializer.TypeNameHandling;
+
+                        try
+                        {
+                            serializer.TypeNameHandling = TypeNameHandling.None;
+
+                            serializer.Serialize(writer, enumerable);
+                        }
+                        finally
+                        {
+                            serializer.TypeNameHandling = oldTypeNameHandling;
+                        }
+                    }
+                    else if (IsRavenAssembly(v))
+                    {
+                        var oldNullValueHandling = serializer.NullValueHandling;
+                        var oldDefaultValueHandling = serializer.DefaultValueHandling;
+
+                        try
+                        {
+                            serializer.NullValueHandling = NullValueHandling.Ignore;
+                            serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
+
+                            serializer.Serialize(writer, v);
+                        }
+                        finally
+                        {
+                            serializer.NullValueHandling = oldNullValueHandling;
+                            serializer.DefaultValueHandling = oldDefaultValueHandling;
+                        }
+                    }
+                    else
+                    {
+                        serializer.Serialize(writer, v);
                     }
                 }
-                else if (v is MoreLikeThisOptions || v is FacetOptions || v is SuggestionOptions)
-                {
-                    var oldNullValueHandling = serializer.NullValueHandling;
-                    var oldDefaultValueHandling = serializer.DefaultValueHandling;
-
-                    try
-                    {
-                        serializer.NullValueHandling = NullValueHandling.Ignore;
-                        serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
-
-                        serializer.Serialize(writer, kvp.Value);
-                    }
-                    finally
-                    {
-                        serializer.NullValueHandling = oldNullValueHandling;
-                        serializer.DefaultValueHandling = oldDefaultValueHandling;
-                    }
-                }
-                else
-                {
-                    serializer.Serialize(writer, kvp.Value);
-                }
+            }
+            finally
+            {
+                serializer.PreserveReferencesHandling = oldPreserveReferencesHandling;
             }
 
             writer.WriteEndObject();
+        }
+
+        private static bool IsRavenAssembly(object item)
+        {
+            if (item == null)
+                return false;
+
+            return RavenAssemblies.Contains(item.GetType().Assembly);
         }
 
         public override unsafe object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)

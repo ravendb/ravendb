@@ -13,26 +13,25 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Raven.Client.Exceptions.Security;
-using Raven.Client.Http;
-using Raven.Server.Documents.TcpHandlers;
-using Sparrow.Server;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -70,8 +69,9 @@ namespace Raven.Server.Documents.Replication
         private InterruptibleRead _interruptibleRead;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
-
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
+        public event Action<OutgoingReplicationHandler> SuccessfulReplication;
+
         public ReplicationNode Destination;
         private readonly bool _external;
 
@@ -377,10 +377,11 @@ namespace Raven.Server.Documents.Replication
                                 var didWork = documentSender.ExecuteReplicationOnce(scope, ref NextReplicateTicks);
                                 if (documentSender.MissingAttachmentsInLastBatch)
                                     continue;
+
                                 if (didWork == false)
                                     break;
 
-                                if (Destination is ExternalReplication externalReplication && 
+                                if (Destination is ExternalReplication externalReplication &&
                                     IsPullReplicationAsHub == false) // we might have a lot of pull connections and we don't want to keep track of them.
                                 {
                                     var taskId = externalReplication.TaskId;
@@ -420,6 +421,8 @@ namespace Raven.Server.Documents.Replication
                         AddReplicationPulse(ReplicationPulseDirection.OutgoingEnd);
                     }
                 }
+
+                OnSuccessfulReplication();
 
                 //if this returns false, this means either timeout or canceled token is activated                    
                 while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
@@ -1093,6 +1096,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
+        private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
     }
 
     public interface IReportOutgoingReplicationPerformance

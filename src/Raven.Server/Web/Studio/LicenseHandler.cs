@@ -100,6 +100,12 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/admin/license/renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task RenewLicense()
         {
+            if (ServerStore.Configuration.Licensing.CanRenewLicense == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                return;
+            }
+
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

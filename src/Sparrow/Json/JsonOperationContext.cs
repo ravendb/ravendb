@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1035,6 +1036,28 @@ namespace Sparrow.Json
                 }
 
                 _pooledArrays = null;
+            }
+            
+            ClearUnreturnedPathCache();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ClearUnreturnedPathCache()
+        {
+            for (var i = _numberOfAllocatedPathCaches + 1; i < _allocatePathCaches.Length - 1; i++)
+            {
+                var cache = _allocatePathCaches[i];
+
+                //never allocated, no reason to continue seeking
+                if (cache.Path == null)
+                    break;
+
+                //idly there shouldn't be unreleased path cache but we do have placed where we don't dispose of blittable object readers
+                //and rely on the context.Reset to clear unwanted memory, but it didn't take care of the path cache.
+
+                //Clear references for allocated cache paths so the GC can collect them.
+                cache.ByIndex.Clear();
+                cache.Path.Clear();
             }
         }
 
