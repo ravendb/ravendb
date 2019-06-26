@@ -1033,6 +1033,39 @@ namespace My.Crazy.Namespace
             }
         }
 
+        [Fact]
+        public void CanUseMethodFromExtensionsInIndex_WithXmlComments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new PeopleIndex22();
+                store.ExecuteIndex(index);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "aviv"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
+                    Assert.Equal(0, indexErrors[0].Errors.Length);
+
+                    var person = session.Query<Person, PeopleIndex22>()
+                        .Single();
+
+                    Assert.Equal("aviv", person.Name);
+                }
+            }
+        }
+
         private class RealCountry : AbstractIndexCreationTask<Order>
         {
             public RealCountry(string getRealCountry)
@@ -2015,6 +2048,40 @@ namespace MyNamespace
             }
         }
 
+        private class PeopleIndex22 : AbstractIndexCreationTask<Person>
+        {
+            public PeopleIndex22()
+            {
+                Map = people => from person in people
+                                select new
+                                {
+                                    person.Name,
+                                };
+
+
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    {
+                        "PeopleUtil",
+                        @"
+namespace ETIS
+{
+    public static class PeopleUtil
+    {
+        /// <summary>
+        /// It does nothing
+        /// </summary>
+        public static void Foo21()
+        {
+        }
+    }
+}
+"
+                    }
+                };
+            }
+        }
+
     }
 
     public class MyList<T> : List<T>
@@ -2169,5 +2236,13 @@ namespace MyNamespace
             };
             return x;
         }
+
+        /// <summary>
+        /// It does nothing
+        /// </summary>
+        public static void Foo21()
+        {
+        }
+
     }
 }
