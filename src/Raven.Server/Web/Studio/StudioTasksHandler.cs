@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using NCrontab.Advanced;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
@@ -17,6 +19,9 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Config;
 using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Web.Studio
@@ -72,42 +77,63 @@ namespace Raven.Server.Web.Studio
             await info.UpdateDirectoryResult(databaseName: null, error: error);
         }
 
-        [RavenAction("/admin/studio-tasks/folder-path-options", "GET", AuthorizationStatus.Operator)]
-        public Task GetFolderPathOptions()
+        [RavenAction("/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.Operator)]
+        public async Task GetFolderPathOptions()
         {
-            var path = GetStringQueryString("path", required: false);
-            var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
-
-            var folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
+            var connectionType = GetBackupConnectionType();
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, new DynamicJsonValue
+                var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                if (connectionType != PeriodicBackupConnectionType.Local && json == null)
+                    throw new BadRequestException("No JSON was posted.");
+
+                FolderPathOptions folderPathOptions;
+                switch (connectionType)
                 {
-                    [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List)
-                });
+                    case PeriodicBackupConnectionType.Local:
+                        var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
+                        var path = GetStringQueryString("path", required: false);
+                        folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
+                        
+                        break;
+                    case PeriodicBackupConnectionType.S3:
+                        var s3Settings = JsonDeserializationServer.S3Settings(json);
+                        if (s3Settings == null)
+                            throw new BadRequestException("No S3Settings were found.");
+
+                        using (var client = new RavenAwsS3Client(s3Settings))
+                        {
+                            var folders = await client.ListObjects(s3Settings.RemoteFolderName , "/", true);
+                            folderPathOptions = new FolderPathOptions();
+                            foreach (var folder in folders)
+                            {
+                                var fullPath = folder.FullPath;
+                                if (string.IsNullOrWhiteSpace(fullPath))
+                                    continue;
+
+                                folderPathOptions.List.Add(fullPath);
+                            }
+                        }
+                        break;
+                    case PeriodicBackupConnectionType.Glacier:
+                    case PeriodicBackupConnectionType.Azure:
+                    case PeriodicBackupConnectionType.GoogleCloud:
+                    case PeriodicBackupConnectionType.FTP:
+                        throw new NotSupportedException();
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+                
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(folderPathOptions.List)
+                    });
+                }
             }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/studio-tasks/folder-path-options-cloud", "POST", AuthorizationStatus.Operator)]
-        public Task GetFolderPathOptionsCloud()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var dummy = new FolderPathOptions
-                {
-                    List = { @"C:\", @"D:\" }
-                };
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(FolderPathOptions.List)] = TypeConverter.ToBlittableSupportedType(dummy.List)
-                });
-            }
-
-            return Task.CompletedTask;
         }
         
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
