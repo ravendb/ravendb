@@ -51,7 +51,6 @@ class clusterTopologyManager {
         const serverWideClient = changesContext.default.serverNotifications();
 
         serverWideClient.watchClusterTopologyChanges(e => this.onTopologyUpdated(e));
-        serverWideClient.watchReconnect(() => this.fetchTopology());
     }
 
     private onTopologyUpdated(e: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {

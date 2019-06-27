@@ -230,6 +230,11 @@ namespace Raven.Server.Config.Categories
                             {
                                 property.SetValue(this, new Size(Math.Max(Convert.ToInt32(value), minValue.Int32Value), sizeUnit.Unit));
                             }
+                            else if (property.PropertyType == typeof(TimeSetting) ||
+                                     property.PropertyType == typeof(TimeSetting?))
+                            {
+                                property.SetValue(this, new TimeSetting(Math.Max(Convert.ToInt32(value), minValue.Int32Value), timeUnit.Unit));
+                            }
                             else
                             {
                                 throw new NotSupportedException("Min value for " + property.PropertyType + " is not supported. Property name: " + property.Name);

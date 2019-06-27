@@ -873,6 +873,30 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        /// <summary>        
+        /// Perform a search for documents which fields match the searchTerms array.
+        /// Each array element will be checked independently.        
+        /// </summary>
+        /// <typeparam name="T">The type of element of self</typeparam>
+        /// <param name="self">The <see cref="IQueryable{T}"/> to search on</param>
+        /// <param name="fieldSelector">Function returning the field to search on</param>
+        /// <param name="searchTerms">Array of terms to search for.</param>
+        /// <param name="boost">Boost factor for sorting purposes</param>
+        /// <param name="options">Logical operator to use in relation to the previous filtering statement.</param>
+        /// <param name="operator">Determines the logical operator between all of the terms received in searchTerms parameter</param>
+        public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, IEnumerable<string> searchTerms,
+            decimal boost = 1,
+            SearchOptions options = SearchOptions.Guess,
+            SearchOperator @operator = SearchOperator.Or)
+        {
+            var termToSearch = string.Join(" ", searchTerms);
+
+            if (string.IsNullOrEmpty(termToSearch))
+                throw new ArgumentException($"Please add search terms. Cannot search on empty {nameof(searchTerms)} array.");
+
+            return Search(self, fieldSelector, termToSearch, boost, options, @operator);
+        }
+
         /// <summary>
         /// Perform an initial sort by lucene score.
         /// </summary>

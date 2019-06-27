@@ -66,7 +66,13 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress = onProgress ?? (progress => { });
         }
 
-        public SmugglerResult Execute(bool ensureStepsProcessed = true, bool isLastFile = false)
+        /// <summary>
+        /// isLastFile param true by default to correctly restore identities and compare exchange from V41 ravendbdump file.
+        /// </summary>
+        /// <param name="ensureStepsProcessed"></param>
+        /// <param name="isLastFile"></param>
+        /// <returns></returns>
+        public SmugglerResult Execute(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             var result = _result ?? new SmugglerResult();
 
@@ -109,6 +115,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 else
                 {
+                    _options.OperateOnTypes &= ~DatabaseItemType.Identities;
                     _options.OperateOnTypes &= ~DatabaseItemType.CompareExchange;
                     _options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
                 }

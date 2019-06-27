@@ -204,6 +204,14 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ProcessCpu(server.CpuUsageCalculator));
             store.Add(new MachineCpu(server.CpuUsageCalculator));
 
+            store.Add(new CpuCreditsBase(server.CpuCreditsBalance));
+            store.Add(new CpuCreditsMax(server.CpuCreditsBalance));
+            store.Add(new CpuCreditsRemaining(server.CpuCreditsBalance));
+            store.Add(new CpuCreditsCurrentConsumption(server.CpuCreditsBalance));
+            store.Add(new CpuCreditsBackgroundTasksAlertRaised(server.CpuCreditsBalance));
+            store.Add(new CpuCreditsFailoverAlertRaised(server.CpuCreditsBalance));
+            store.Add(new CpuCreditsAlertRaised(server.CpuCreditsBalance));
+
             store.Add(new ServerTotalMemory());
 
             store.Add(new ServerLastRequestTime(server.Statistics));

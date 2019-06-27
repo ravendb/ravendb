@@ -103,8 +103,8 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        HubDefinitionName = "hub"
-
+                        HubDefinitionName = "hub",
+                        ConnectionStringName = "ConnectionName"
                     }));
                     store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
                     {
@@ -283,8 +283,8 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        HubDefinitionName = "hub"
-
+                        HubDefinitionName = "hub",
+                        ConnectionStringName = "ConnectionName"
                     }));
                     store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
                     {
@@ -1045,8 +1045,8 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        HubDefinitionName = "hub"
-
+                        HubDefinitionName = "hub",
+                        ConnectionStringName = "ConnectionName"
                     }));
                     store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
                     {
