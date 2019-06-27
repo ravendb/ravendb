@@ -63,7 +63,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
 
                 var aNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "A");

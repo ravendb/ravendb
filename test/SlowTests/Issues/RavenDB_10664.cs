@@ -25,9 +25,10 @@ namespace SlowTests.Issues
                     Database = dbName,
                     TopologyDiscoveryUrls = new[] {"http://127.0.0.1:12345"}
                 };
-                
-                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                
+
+                var result = await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(dbName, csName)));
                 

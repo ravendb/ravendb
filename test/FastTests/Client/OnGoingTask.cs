@@ -66,12 +66,13 @@ namespace FastTests.Client
 
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = watcher.ConnectionStringName,
                     Database = watcher.Database,
                     TopologyDiscoveryUrls = store.Urls
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
 
                 var replicationOperation = new UpdateExternalReplicationOperation(watcher);
                 var replication = store.Maintenance.Send(replicationOperation);
@@ -114,12 +115,13 @@ namespace FastTests.Client
 
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = "Northwind",
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
 
                 var ravenEtlResult = store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
 
@@ -189,7 +191,8 @@ loadToOrders(orderData);
                     FactoryName = "System.Data.SqlClient"
                 };
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                var result = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result.RaftCommandIndex);
 
                 var sqlEtlResult = store.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration));
 

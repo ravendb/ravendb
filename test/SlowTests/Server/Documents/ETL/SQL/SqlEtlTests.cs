@@ -618,12 +618,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
                     FactoryName = "System.Data.SqlClient",
                 }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var database = GetDatabase(store.Database).Result;
 
@@ -696,12 +697,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
                     FactoryName = "System.Data.SqlClient",
                 }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var database = GetDatabase(store.Database).Result;
 
