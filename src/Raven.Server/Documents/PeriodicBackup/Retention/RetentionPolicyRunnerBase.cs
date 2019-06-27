@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             {
                 var folders = await GetFolders();
 
-                var allBackupFolders = new SortedList<DateTime, string>();
+                var sortedBackupFolders = new SortedList<DateTime, string>();
 
                 foreach (var folder in folders)
                 {
@@ -68,13 +68,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         continue;
                     }
 
-                    allBackupFolders.Add(backupTime, folder);
+                    while (sortedBackupFolders.ContainsKey(backupTime))
+                    {
+                        backupTime = backupTime.AddMilliseconds(1);
+                    }
+
+                    sortedBackupFolders.Add(backupTime, folder);
                 }
 
                 // we are going to keep at least one backup
                 var minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
 
-                if (allBackupFolders.Count <= minimumBackupsToKeep)
+                if (sortedBackupFolders.Count <= minimumBackupsToKeep)
                 {
                     // the number of backups to keep is more than we currently have
                     return;
@@ -84,7 +89,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var deleted = 0L;
                 if (_retentionPolicy.MinimumBackupAgeToKeep.HasValue)
                 {
-                    foreach (var backupFolder in allBackupFolders)
+                    foreach (var backupFolder in sortedBackupFolders)
                     {
                         if (now - backupFolder.Key < _retentionPolicy.MinimumBackupAgeToKeep)
                         {
@@ -101,7 +106,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 }
                 else
                 {
-                    foreach (var backupFolder in allBackupFolders)
+                    foreach (var backupFolder in sortedBackupFolders)
                     {
                         await DeleteFolder(backupFolder.Value);
                         deleted++;
@@ -113,7 +118,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 bool ReachedMinimumBackupsToKeep()
                 {
-                    return allBackupFolders.Count - deleted <= minimumBackupsToKeep;
+                    return sortedBackupFolders.Count - deleted <= minimumBackupsToKeep;
                 }
             }
             catch (NotSupportedException)
