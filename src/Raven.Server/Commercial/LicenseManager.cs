@@ -1312,33 +1312,28 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public void AssertCanAddPeriodicBackup(BlittableJsonReaderObject readerObject)
+        public void AssertCanAddPeriodicBackup(PeriodicBackupConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            if (configuration.BackupType == BackupType.Snapshot &&
+                _licenseStatus.HasSnapshotBackups == false)
             {
-                var backupBlittable = readerObject.Clone(context);
-                var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(backupBlittable);
-                if (configuration.BackupType == BackupType.Snapshot &&
-                    _licenseStatus.HasSnapshotBackups == false)
-                {
-                    const string details = "Your current license doesn't include the snapshot backups feature";
-                    throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
-                }
+                const string details = "Your current license doesn't include the snapshot backups feature";
+                throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
+            }
 
-                if (configuration.HasCloudBackup() && _licenseStatus.HasCloudBackups == false)
-                {
-                    const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
-                    throw GenerateLicenseLimit(LimitType.CloudBackup, details);
-                }
+            if (configuration.HasCloudBackup() && _licenseStatus.HasCloudBackups == false)
+            {
+                const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
+                throw GenerateLicenseLimit(LimitType.CloudBackup, details);
+            }
 
-                if (HasEncryptedBackup(configuration) && _licenseStatus.HasEncryptedBackups == false)
-                {
-                    const string details = "Your current license doesn't include the encrypted backup feature!";
-                    throw GenerateLicenseLimit(LimitType.CloudBackup, details);
-                }
+            if (HasEncryptedBackup(configuration) && _licenseStatus.HasEncryptedBackups == false)
+            {
+                const string details = "Your current license doesn't include the encrypted backup feature!";
+                throw GenerateLicenseLimit(LimitType.CloudBackup, details);
             }
         }
 
