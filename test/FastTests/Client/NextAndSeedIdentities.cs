@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
+﻿using Raven.Client.Documents.Operations.Identities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -8,7 +7,7 @@ namespace FastTests.Client
     public class NextAndSeedIdentities : RavenTestBase
     {
         [Fact]
-        public async Task NextIdentityFor()
+        public void NextIdentityFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -23,12 +22,7 @@ namespace FastTests.Client
                     s.SaveChanges();
                 }
 
-                using (var commands = store.Commands())
-                {
-                    var command = new NextIdentityForCommand("users");
-
-                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
-                }
+                store.Maintenance.Send(new NextIdentityForOperation("users"));
 
                 using (var s = store.OpenSession())
                 {
@@ -60,7 +54,7 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public async Task SeedIdentityFor()
+        public void SeedIdentityFor()
         {
             using (var store = GetDocumentStore())
             {
@@ -75,16 +69,9 @@ namespace FastTests.Client
                     s.SaveChanges();
                 }
 
-                using (var commands = store.Commands())
-                {
-                    var command = new SeedIdentityForCommand("users", 1990);
+                var result1 = store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
 
-                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
-
-                    var result = command.Result;
-
-                    Assert.Equal(1990, result);
-                }
+                Assert.Equal(1990, result1);
 
                 using (var s = store.OpenSession())
                 {
@@ -115,40 +102,24 @@ namespace FastTests.Client
                     Assert.Equal("Avivi", entityWithId1991.LastName);
                 }
 
-                using (var commands = store.Commands())
-                {
-                    var command = new SeedIdentityForCommand("users", 1975);
+                var result2 = store.Maintenance.Send(new SeedIdentityForOperation("users", 1975));
+                Assert.Equal(1991, result2);
 
-                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
-
-                    var result = command.Result;
-
-                    Assert.Equal(1991, result);
-                }
-                using (var commands = store.Commands())
-                {
-                    var command = new SeedIdentityForCommand("users", 1975, forced:true);
-
-                    await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
-
-                    var result = command.Result;
-
-                    Assert.Equal(1975, result);
-                }
+                var result3 = store.Maintenance.Send(new SeedIdentityForOperation("users", 1975, forceUpdate: true));
+                Assert.Equal(1975, result3);
             }
         }
 
         [Fact]
-        public void NextIdentityForCommandShouldCreateANewIdentityIfThereIsNone()
+        public void NextIdentityForOperationShouldCreateANewIdentityIfThereIsNone()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var nextIdentityForCommand = new NextIdentityForCommand("person|");
-                    session.Advanced.RequestExecutor.Execute(nextIdentityForCommand, session.Advanced.Context);
+                    var result = store.Maintenance.Send(new NextIdentityForOperation("person|"));
 
-                    Assert.Equal(1, nextIdentityForCommand.Result);
+                    Assert.Equal(1, result);
                 }
             }
         }
