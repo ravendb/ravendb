@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
     public class RemoveConnectionStringResult
     {
-        [Obsolete("emoveConnectionStringResult.ETag is not supported anymore. Will be removed in next major version of the product. Please use RemoveConnectionStringResult.RaftCommandIndex instead.")]
+        [Obsolete("RemoveConnectionStringResult.ETag is not supported anymore. Will be removed in next major version of the product. Please use RemoveConnectionStringResult.RaftCommandIndex instead.")]
         public long? ETag { get; set; }
 
         public long RaftCommandIndex { get; set; }
