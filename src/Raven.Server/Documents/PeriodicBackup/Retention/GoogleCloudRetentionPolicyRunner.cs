@@ -1,16 +1,15 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class AzureRetentionPolicyRunner : RetentionPolicyRunnerBase
+    public class GoogleCloudRetentionPolicyRunner : RetentionPolicyRunnerBase
     {
-        private readonly RavenAzureClient _client;
+        private readonly RavenGoogleCloudClient _client;
 
-        public AzureRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAzureClient client)
+        public GoogleCloudRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenGoogleCloudClient client)
             : base(retentionPolicy, databaseName)
         {
             _client = client;
@@ -18,17 +17,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         public override Task<List<string>> GetFolders()
         {
-            throw new NotSupportedException();
+            throw new System.NotImplementedException();
         }
 
         public override Task<List<string>> GetFiles(string folder)
         {
-            throw new NotSupportedException();
+            throw new System.NotImplementedException();
         }
 
         public override async Task DeleteFolder(string folder)
         {
-            throw new NotSupportedException();
+            throw new System.NotImplementedException();
         }
     }
 }

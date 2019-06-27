@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
@@ -16,7 +15,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [GoogleCloudFact]
         public void list_buckets()
         {
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
                 var buckets =client.ListBuckets();
                 foreach (var b in buckets)
@@ -30,7 +29,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task uploading_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
                 try
                 {
@@ -51,7 +50,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task download_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
                 try
                 {
@@ -75,13 +74,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task delete_objects()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
                 await client.UploadObjectAsync(
                     fileName,
                     new MemoryStream(Encoding.UTF8.GetBytes("123"))
                 );
-                 await client.DeleteObjectAsync(fileName);
+
+                await client.DeleteObjectAsync(fileName);
                 Assert.Empty(await client.ListObjectsAsync());
             }
         }
@@ -90,7 +90,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task upload_object_with_metadata()
         {
             var fileName = Guid.NewGuid().ToString();
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
                 try
                 {
@@ -119,7 +119,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var file1 = "file1.txt";
             var file2 = "folder1/file2.txt";
-            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.CredentialsJson,GoogleCloudFact.BucketName))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
                 try
                 {
@@ -140,6 +140,5 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
-
     }
 }

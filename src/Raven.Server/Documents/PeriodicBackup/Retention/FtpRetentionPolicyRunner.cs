@@ -2,15 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Azure;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class AzureRetentionPolicyRunner : RetentionPolicyRunnerBase
+    public class FtpRetentionPolicyRunner : RetentionPolicyRunnerBase
     {
-        private readonly RavenAzureClient _client;
+        private readonly RavenFtpClient _client;
 
-        public AzureRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAzureClient client)
+        public FtpRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenFtpClient client)
             : base(retentionPolicy, databaseName)
         {
             _client = client;

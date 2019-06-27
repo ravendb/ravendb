@@ -8,14 +8,14 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public abstract class RetentionPolicyBase
+    public abstract class RetentionPolicyRunnerBase
     {
         private readonly RetentionPolicy _retentionPolicy;
         private readonly string _databaseName;
 
-        protected RetentionPolicyBase(RetentionPolicy retentionPolicy, string databaseName)
+        protected RetentionPolicyRunnerBase(RetentionPolicy retentionPolicy, string databaseName)
         {
             _retentionPolicy = retentionPolicy;
             _databaseName = databaseName;
@@ -53,17 +53,24 @@ namespace Raven.Server.Documents.PeriodicBackup
                             DateTimeStyles.None,
                             out var backupTime) == false)
                     {
+                        // TODO: log this
                         // couldn't parse the backup time
                         continue;
                     }
 
                     if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                    {
+                        // a backup for a different database
                         continue; // a backup for a different database
+                    }
 
                     var files = await GetFiles(folder);
                     var hasFullBackupOrSnapshot = files.Any(IsFullBackupOrSnapshot);
                     if (hasFullBackupOrSnapshot == false)
-                        continue; // no backup files
+                    {
+                        // no backup files
+                        continue;
+                    }
 
                     allBackupFolders.Add(backupTime, folder);
 
@@ -79,7 +86,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
 
-                var minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? long.MaxValue;
+                var minimumBackupsToKeep = Math.Max(_retentionPolicy.MinimumBackupsToKeep ?? 1, 1);
+                // we are going to keep at least one backup
+
                 if (allBackupFolders.Count <= minimumBackupsToKeep)
                 {
                     // the number of backups to keep is more than we currently have
@@ -94,7 +103,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         if (now - backupFolder.Key < _retentionPolicy.MinimumBackupAgeToKeep)
                         {
-                            // allBackupFolders is sorted by date
+                            // all backups are sorted by date
                             break;
                         }
 
@@ -121,6 +130,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     return allBackupFolders.Count - deleted == minimumBackupsToKeep;
                 }
+            }
+            catch (NotSupportedException)
+            {
+                //TODO: log this
             }
             catch (Exception e)
             {

@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class AzureRetentionPolicyRunner : RetentionPolicyRunnerBase
+    public class S3RetentionPolicyRunner : RetentionPolicyRunnerBase
     {
-        private readonly RavenAzureClient _client;
+        private readonly RavenAwsS3Client _client;
 
-        public AzureRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAzureClient client)
+        public S3RetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAwsS3Client client)
             : base(retentionPolicy, databaseName)
         {
             _client = client;
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         public override async Task DeleteFolder(string folder)
         {
-            throw new NotSupportedException();
+            await _client.DeleteObject(folder);
         }
     }
 }

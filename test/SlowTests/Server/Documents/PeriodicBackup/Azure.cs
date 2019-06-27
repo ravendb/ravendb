@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private AzureSettings GenerateAzureSettings(string containerName)
+        public static AzureSettings GenerateAzureSettings(string containerName)
         {
             return new AzureSettings
             {
