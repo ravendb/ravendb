@@ -1165,6 +1165,24 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/unused-databases", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task SetUnusedDatabaseIds()
+        {
+            var database = GetStringQueryString("database");
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var json = context.ReadForDisk(RequestBodyStream(), "unused-databases-ids"))
+            {
+                var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
+                var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
+                await ServerStore.SendToLeaderAsync(command);
+            }
+
+            NoContentStatus();
+        }
+
+
         [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteServerWideBackupConfigurationCommand()
         {

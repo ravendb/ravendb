@@ -85,7 +85,7 @@ namespace Raven.Server.Documents
                             {
                                 var cmd = DeserializeCommand(context, database, strType, readersItr.Current, peepingTomStream);
                                 commandsProgress += cmd.ExecuteDirectly(txs.TxCtx);
-                                TransactionOperationsMerger.UpdateGlobalReplicationInfoBeforeCommit(txs.TxCtx);
+                                database.TxMerger.UpdateGlobalReplicationInfoBeforeCommit(txs.TxCtx);
                             }
                             catch (Exception)
                             {

@@ -12,7 +12,7 @@ namespace Raven.Server.ServerWide.Context
 
         internal string LastDatabaseChangeVector;
         internal Dictionary<string, long> LastReplicationEtagFrom;
-
+        internal bool SkipChangeVectorValidation;
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
             base.Reset(forceResetLongLivedAllocator);

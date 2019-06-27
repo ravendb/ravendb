@@ -280,11 +280,13 @@ namespace Raven.Server.Documents
         public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
         {
             IDisposable removeLockAndReturn = null;
+            string databaseId;
             try
             {
                 try
                 {
-                    removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out _);
+                    removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out var database);
+                    databaseId = database.DbBase64Id;
                 }
                 catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
                 {
@@ -333,7 +335,7 @@ namespace Raven.Server.Documents
             {
                 removeLockAndReturn?.Dispose();
             }
-            NotifyLeaderAboutRemoval(dbName);
+            NotifyLeaderAboutRemoval(dbName, databaseId);
         }
 
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
@@ -341,9 +343,9 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
         }
 
-        private void NotifyLeaderAboutRemoval(string dbName)
+        private void NotifyLeaderAboutRemoval(string dbName,string databaseId)
         {
-            var cmd = new RemoveNodeFromDatabaseCommand(dbName, RaftIdGenerator.NewId())
+            var cmd = new RemoveNodeFromDatabaseCommand(dbName, databaseId, RaftIdGenerator.NewId())
             {
                 NodeTag = _serverStore.NodeTag
             };
@@ -362,7 +364,7 @@ namespace Raven.Server.Documents
 
                     await Task.Delay(TimeSpan.FromSeconds(15));
 
-                    NotifyLeaderAboutRemoval(dbName);
+                    NotifyLeaderAboutRemoval(dbName, databaseId);
                 }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
