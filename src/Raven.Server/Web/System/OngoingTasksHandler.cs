@@ -323,25 +323,21 @@ namespace Raven.Server.Web.System
                             break;
                         case PeriodicBackupTestConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(
-                                azureSettings.AccountName, azureSettings.AccountKey,
-                                azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
+                            using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await azureClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.GoogleCloud:
                             var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
-                            using (var GoogleCloudeClient = new RavenGoogleCloudClient(
-                                googleCloudSettings.GoogleCredentialsJson,googleCloudSettings.BucketName, cancellationToken: ServerStore.ServerShutdown))
+                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await GoogleCloudeClient.TestConnection();
+                                await googleCloudClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.FTP:
                             var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                            using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
-                                ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
+                            using (var ftpClient = new RavenFtpClient(ftpSettings))
                             {
                                 await ftpClient.TestConnection();
                             }

@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class AzureRetentionPolicyRunner : RetentionPolicyRunnerBase
+    public class GlacierRetentionPolicyRunner : RetentionPolicyRunnerBase
     {
-        private readonly RavenAzureClient _client;
+        private readonly RavenAwsGlacierClient _client;
 
-        public AzureRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAzureClient client)
+        public GlacierRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAwsGlacierClient client)
             : base(retentionPolicy, databaseName)
         {
             _client = client;

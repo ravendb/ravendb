@@ -18,6 +18,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 var isEncrypted = CheckIfEncrypted();
                 var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, isEncrypted, out string backupFilePath);
-                var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex, onProgress);
+                var internalBackupResult = await CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex, onProgress);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
                 runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
@@ -191,12 +192,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         IOExtensions.DeleteFile(backupFilePath);
                     }
-                }
-
-                if (_backupToLocalFolder)
-                {
-                    var localRetentionPolicy = new LocalRetentionPolicy(_configuration.RetentionPolicy, _database.Name, _configuration.LocalSettings.FolderPath);
-                    await localRetentionPolicy.Execute();
                 }
 
                 UpdateOperationId(runningBackupStatus);
@@ -537,7 +532,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             public long LastRaftIndex { get; set; }
         }
 
-        private InternalBackupResult CreateLocalBackupOrSnapshot(
+        private async Task<InternalBackupResult> CreateLocalBackupOrSnapshot(
             PeriodicBackupStatus status, string backupFilePath,
             long? startDocumentEtag, long? startRaftIndex, Action<IOperationProgress> onProgress)
         {
@@ -628,6 +623,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     status.LocalBackup.Exception = e.ToString();
                     throw;
                 }
+            }
+
+            if (_backupToLocalFolder)
+            {
+                var localRetentionPolicy = new LocalRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, _configuration.LocalSettings.FolderPath);
+                await localRetentionPolicy.Execute();
             }
 
             return internalBackupResult;
@@ -753,13 +754,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private async Task UploadToServer(string backupPath, string folderName, string fileName, Action<IOperationProgress> onProgress)
         {
-            TaskCancelToken.Token.ThrowIfCancellationRequested();
-
             var s3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
             var glacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, _database.Name));
             var azureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
             var googleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
             var ftpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
+
+            TaskCancelToken.Token.ThrowIfCancellationRequested();
+
 
             var tasks = new List<Task>();
 
@@ -944,6 +946,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info(string.Format($"Successfully uploaded backup file '{fileName}' " +
                                                $"to S3 bucket named: {settings.BucketName}, " +
                                                $"with key: {key}"));
+
+                var runner = new S3RetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, client);
+                await runner.Execute();
             }
         }
 
@@ -960,6 +965,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var archiveId = await client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' to Glacier, archive ID: {archiveId}");
+
+                var runner = new GlacierRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, client);
+                await runner.Execute();
             }
         }
 
@@ -970,12 +978,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             string fileName,
             Progress progress)
         {
-            using (var client = new RavenFtpClient(settings.Url, settings.Port, settings.UserName,
-                settings.Password, settings.CertificateAsBase64, settings.CertificateFileName, progress, TaskCancelToken.Token))
+            using (var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token))
             {
                 await client.UploadFile(folderName, fileName, stream);
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' to an ftp server");
+
+                var runner = new FtpRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, client);
+                await runner.Execute();
             }
         }
 
@@ -987,8 +998,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Progress progress,
             string archiveDescription)
         {
-            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey,
-                settings.StorageContainer, progress, TaskCancelToken.Token))
+            using (var client = new RavenAzureClient(settings, progress, TaskCancelToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 await client.PutBlob(key, stream, new Dictionary<string, string>
@@ -999,6 +1009,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' " +
                                  $"to Azure container: {settings.StorageContainer}, with key: {key}");
+
+                var runner = new AzureRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, client);
+                await runner.Execute();
             }
         }
 
@@ -1010,7 +1023,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Progress progress,
             string archiveDescription)
         {
-            using (var client = new RavenGoogleCloudClient(settings.GoogleCredentialsJson, settings.BucketName, TaskCancelToken.Token, progress))
+            using (var client = new RavenGoogleCloudClient(settings, TaskCancelToken.Token, progress))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 await client.UploadObjectAsync(key, stream, new Dictionary<string, string>
@@ -1021,6 +1034,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' " +
                                  $"to Google cloud storage bucket: {settings.BucketName}");
+
+                var runner = new GoogleCloudRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, client);
+                await runner.Execute();
             }
         }
 

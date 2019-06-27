@@ -5,13 +5,14 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Utils;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
-    public class LocalRetentionPolicy : RetentionPolicyBase
+    public class LocalRetentionPolicyRunner : RetentionPolicyRunnerBase
     {
         private readonly string _folderPath;
 
-        public LocalRetentionPolicy(RetentionPolicy retentionPolicy, string databaseName, string folderPath) : base(retentionPolicy, databaseName)
+        public LocalRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, string folderPath)
+            : base(retentionPolicy, databaseName)
         {
             _folderPath = folderPath;
         }
