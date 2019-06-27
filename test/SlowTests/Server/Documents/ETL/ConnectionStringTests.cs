@@ -23,7 +23,8 @@ namespace SlowTests.Server.Documents.ETL
                     TopologyDiscoveryUrls = new[] { "http://localhost:8080" },
                     Database = "Northwind",
                 };
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                var result0 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result0.RaftCommandIndex);
 
                 var sqlConnectionString = new SqlConnectionString
                 {
@@ -31,7 +32,8 @@ namespace SlowTests.Server.Documents.ETL
                     ConnectionString = SqlEtlTests.GetConnectionString(store),
                 };
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 DatabaseRecord record;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -49,8 +51,10 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.Equal(sqlConnectionString.Name, record.SqlConnectionStrings["SqlConnectionString"].Name);
                 Assert.Equal(sqlConnectionString.ConnectionString, record.SqlConnectionStrings["SqlConnectionString"].ConnectionString);
 
-                store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
-                store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                var result3 = store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result3.RaftCommandIndex);
+                var result4 = store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result4.RaftCommandIndex);
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -75,7 +79,8 @@ namespace SlowTests.Server.Documents.ETL
                     TopologyDiscoveryUrls = new[]{"http://127.0.0.1:8080" },
                     Database = "Northwind",
                 };
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var sqlConnectionString = new SqlConnectionString
                 {
@@ -83,16 +88,20 @@ namespace SlowTests.Server.Documents.ETL
                     ConnectionString = SqlEtlTests.GetConnectionString(store),
                 };
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result2.RaftCommandIndex);
 
                 //update url
                 ravenConnectionString.TopologyDiscoveryUrls = new[]{"http://127.0.0.1:8081"};
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
-                
+                var result3 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                Assert.NotNull(result3.RaftCommandIndex);
+
                 //update name : need to remove the old entry
-                store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                var result4 = store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result4.RaftCommandIndex);
                 sqlConnectionString.Name = "New-Name";
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                var result5 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result5.RaftCommandIndex);
 
                 DatabaseRecord record;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -134,8 +143,10 @@ namespace SlowTests.Server.Documents.ETL
                     ravenConnectionStrings.Add(ravenConnectionStr);
                     sqlConnectionStrings.Add(sqlConnectionStr);
 
-                    store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
-                    store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr));
+                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
+                    Assert.NotNull(result1.RaftCommandIndex);
+                    var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr));
+                    Assert.NotNull(result2.RaftCommandIndex);
                 }
 
                 var result = store.Maintenance.Send(new GetConnectionStringsOperation());
@@ -177,9 +188,10 @@ namespace SlowTests.Server.Documents.ETL
                 ravenConnectionStrings.Add(ravenConnectionStr);
                 sqlConnectionStrings.Add(sqlConnectionStr);
 
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr));
-                
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr));
+                Assert.NotNull(result1.RaftCommandIndex);
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionStr));
+                Assert.NotNull(result2.RaftCommandIndex);
 
                 var result = store.Maintenance.Send(new GetConnectionStringsOperation(connectionStringName: sqlConnectionStr.Name, type: sqlConnectionStr.Type));
                 Assert.True(result.SqlConnectionStrings.Count > 0);

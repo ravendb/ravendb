@@ -16,7 +16,9 @@ namespace SlowTests.Server.Documents.ETL
     {
         protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
-            src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
+            var result1 = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));
+            Assert.NotNull(result1.RaftCommandIndex);
+
             return src.Maintenance.Send(new AddEtlOperation<T>(configuration));
         }
 

@@ -69,7 +69,9 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
                 var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "B");
                 
@@ -177,7 +179,9 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(conflig));
                 var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
                     .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
@@ -278,7 +282,9 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
 
                 var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
