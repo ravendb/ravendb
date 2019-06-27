@@ -145,7 +145,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(BackupType)] = BackupType,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
-                [nameof(BackupEncryptionSettings)] = RetentionPolicy?.ToJson(),
+                [nameof(RetentionPolicy)] = RetentionPolicy?.ToJson(),
                 [nameof(FullBackupFrequency)] = FullBackupFrequency,
                 [nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency,
                 [nameof(LocalSettings)] = LocalSettings?.ToJson(),

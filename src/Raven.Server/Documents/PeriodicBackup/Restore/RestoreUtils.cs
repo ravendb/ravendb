@@ -124,10 +124,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public static bool IsBackupOrSnapshot(string filePath)
         {
             var extension = Path.GetExtension(filePath);
-            return
-                BackupUtils.IsBackupFile(filePath) ||
-                Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+            return BackupUtils.IsBackupFile(filePath) ||
+                   BackupUtils.IsSnapshot(extension);
         }
 
         private static DateTime TryExtractDateFromFileName(string fileName, string filePath)
