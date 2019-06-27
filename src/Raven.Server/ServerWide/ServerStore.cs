@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
@@ -2146,7 +2147,7 @@ namespace Raven.Server.ServerWide
                     {
                         return await _engine.PutAsync(cmd);
                     }
-                    catch (NotLeadingException)
+                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
                     {
                         // if the leader was changed during the PutAsync, we will retry.
                         continue;
