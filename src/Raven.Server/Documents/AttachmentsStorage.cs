@@ -188,11 +188,7 @@ namespace Raven.Server.Documents
 
                     DeleteTombstoneIfNeeded(context, keySlice);
 
-                    var changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, attachmentEtag,
-                        context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context)).ChangeVector;
-                    Debug.Assert(changeVector != null);
-                    context.LastDatabaseChangeVector = changeVector;
-
+                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
                     Debug.Assert(changeVector != null);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -309,25 +305,7 @@ namespace Raven.Server.Documents
 
             if (string.IsNullOrEmpty(changeVector))
             {
-                //We got an NRE here, see RavenDB-13320 it is likley due to TryUpdateChangeVector failing to update which 
-                //means that we either read a higher CV from the context or from the persistent state, most likley from the context.
-                //The code here is meant to give us better error in the case this happens again and should be simplified once RavenDB-13320 is fixed. 
-                var databaseChangeVector = context.LastDatabaseChangeVector;
-                string persistentDatabaseChangeVector = null;
-                if (databaseChangeVector == null)
-                {
-                    databaseChangeVector = persistentDatabaseChangeVector = GetDatabaseChangeVector(context);
-                }
-                var updatedChangeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag,
-                    databaseChangeVector);
-                if (updatedChangeVector.IsValid == false)
-                {
-                    throw new InvalidOperationException($"Was requested to insert attachment name:{name} with hash:{base64Hash} with null change vector. " +
-                                                        $"context.LastDatabaseChangeVector is {context.LastDatabaseChangeVector??"null"}, " +
-                                                        $"persistentDatabaseChangeVector is {persistentDatabaseChangeVector?? "not read"}" );
-                }
-                changeVector = updatedChangeVector.ChangeVector;
-                context.LastDatabaseChangeVector = changeVector;
+                changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
             }
             Debug.Assert(changeVector != null);
             DeleteTombstoneIfNeeded(context, key);
