@@ -642,10 +642,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities | DatabaseItemType.Subscriptions,
                 SkipRevisionCreation = true
             };
-            // var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, smugglerFile);
+
             var lastPath = GetBackupPath(smugglerFile);
 
-            //using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             using (var zip = await GetZipArchiveForSnapshot(lastPath))
             {
                 foreach (var entry in zip.Entries)
