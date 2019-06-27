@@ -581,11 +581,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
+        internal void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
             if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
             {
-                DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
+                _parent.DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
             }
 
             if (context.LastReplicationEtagFrom != null)

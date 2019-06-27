@@ -8,6 +8,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Revisions;
@@ -357,9 +358,60 @@ namespace Raven.Server.Documents
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
+        private List<string> GetUnusedList()
+        {
+            using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var blittableDatabase = DocumentDatabase.ServerStore.Cluster.ReadRawDatabase(context, _name, out _))
+            {
+                if (blittableDatabase.TryGet(nameof(DatabaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray unused) == false)
+                    return null;
+
+                if (unused == null || unused.Length == 0)
+                    return null;
+                var list = new List<string>();
+                foreach (var item in unused)
+                {
+                    list.Add(item.ToString());
+                }
+
+                return list;
+            }
+        }
+
+        public bool TryRemoveUnusedIds(ref string changeVector)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return false;
+
+            var list = GetUnusedList();
+            if (list == null || list.Count == 0)
+                return false;
+
+            var parsed = changeVector.ToChangeVectorList();
+            var removed = false;
+            for (var i = parsed.Count - 1; i >= 0; i--)
+            {
+                var entry = parsed[i];
+                if (list.Contains(entry.DbId))
+                {
+                    list.Remove(entry.DbId);
+                    parsed.Remove(entry);
+                    removed = true;
+                }
+            }
+
+            if (removed == false)
+                return false;
+
+            changeVector = parsed.SerializeVector();
+            return true;
+        } 
+
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref databaseChangeVector);
             changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, changeVector);
             return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector).ChangeVector;
         }
@@ -368,6 +420,8 @@ namespace Raven.Server.Documents
         {
             var changeVector = context.LastDatabaseChangeVector ??
                                (context.LastDatabaseChangeVector = GetDatabaseChangeVector(context));
+
+            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref changeVector);
 
             if (string.IsNullOrEmpty(changeVector))
             {
@@ -389,9 +443,10 @@ namespace Raven.Server.Documents
             return GetNewChangeVector(context, GenerateNextEtag());
         }
 
-        public static void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
-            ThrowOnNotUpdatedChangeVector(context, changeVector);
+            if (TryRemoveUnusedIds(ref changeVector) == false)
+                ThrowOnNotUpdatedChangeVector(context, changeVector);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, changeVector, out var slice))
@@ -403,6 +458,9 @@ namespace Raven.Server.Documents
         [Conditional("DEBUG")]
         private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, string changeVector)
         {
+            if (context.SkipChangeVectorValidation)
+                return;
+
             var globalChangeVector = GetDatabaseChangeVector(context);
 
             if (globalChangeVector != changeVector && 

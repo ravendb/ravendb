@@ -309,6 +309,7 @@ namespace Raven.Server.Documents
                 oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
             }
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
+            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector);
             return (changeVector, nonPersistentFlags);
         }
 
