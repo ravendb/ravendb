@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenAzureClient _client;
 
+        public override string Name => "Azure";
+
         public AzureRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAzureClient client)
             : base(retentionPolicy, databaseName)
         {

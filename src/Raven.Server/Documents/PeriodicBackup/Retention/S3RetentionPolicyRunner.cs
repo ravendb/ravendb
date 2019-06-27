@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenAwsS3Client _client;
 
+        public override string Name => "S3";
+
         public S3RetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAwsS3Client client)
             : base(retentionPolicy, databaseName)
         {

@@ -11,6 +11,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly string _folderPath;
 
+        public override string Name => "Local";
+
         public LocalRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, string folderPath)
             : base(retentionPolicy, databaseName)
         {

@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenFtpClient _client;
 
+        public override string Name => "Glacier";
+
         public FtpRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenFtpClient client)
             : base(retentionPolicy, databaseName)
         {

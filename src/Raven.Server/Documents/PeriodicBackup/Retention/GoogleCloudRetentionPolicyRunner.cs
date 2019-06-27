@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenGoogleCloudClient _client;
 
+        public override string Name => "Google Cloud";
+
         public GoogleCloudRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenGoogleCloudClient client)
             : base(retentionPolicy, databaseName)
         {
