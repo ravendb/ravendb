@@ -85,7 +85,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     return;
                 }
 
-                var now = DateTime.UtcNow;
+                var now = DateTime.Now;
+                // the time in the backup folder name is the local time
+
                 var deleted = 0L;
                 if (_retentionPolicy.MinimumBackupAgeToKeep.HasValue)
                 {
