@@ -1,0 +1,63 @@
+﻿using System;
+using System.Net.Http;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
+using Raven.Client.Util;
+using Sparrow.Json;
+
+namespace Raven.Client.Documents.Operations.Identities
+{
+    public class NextIdentityForOperation : IMaintenanceOperation<long>
+    {
+        private readonly string _identityName;
+
+        public NextIdentityForOperation(string identityName)
+        {
+            _identityName = identityName;
+        }
+
+        public RavenCommand<long> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new NextIdentityForCommand(_identityName);
+        }
+
+        private class NextIdentityForCommand : RavenCommand<long>, IRaftCommand
+        {
+            private readonly string _id;
+
+            public NextIdentityForCommand(string id)
+            {
+                _id = id ?? throw new ArgumentNullException(nameof(id));
+            }
+
+            public override bool IsReadRequest { get; } = false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                EnsureIsNotNullOrEmpty(_id, nameof(_id));
+
+                url = $"{node.Url}/databases/{node.Database}/identity/next?name={UrlEncode(_id)}";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post
+                };
+                return request;
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null || response.TryGet("NewIdentityValue", out long results) == false)
+                {
+                    ThrowInvalidResponse();
+                    return; // never hit
+                }
+
+
+                Result = results;
+            }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+        }
+    }
+}
