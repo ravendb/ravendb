@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public static class RestoreUtils
     {
-        private static readonly Regex BackupFolderRegex = new Regex(@"(.+).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+        private static readonly Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2})(.*).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
         private static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2})", RegexOptions.Compiled);
 
         public static void FetchRestorePoints(
@@ -156,12 +156,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // [Date].ravendb-[Database Name]-[Node Tag]-[Backup Type]
             // [DATE] - format: "yyyy-MM-dd-HH-mm"
             // [Backup Type] - backup/snapshot
-            // example: //2018-02-03-15-34.ravendb-Northwind-A-backup
+            // example 1: //2018-02-03-15-34.ravendb-Northwind-A-backup
+            // example 2: //2018-02-03-15-34-02.ravendb-Northwind-A-backup
 
             var lastFolderName = Path.GetFileName(directoryPath);
             var match = BackupFolderRegex.Match(lastFolderName);
             return match.Success
-                ? (match.Groups[1].Value, match.Groups[2].Value, match.Groups[3].Value)
+                ? (match.Groups[1].Value, match.Groups[3].Value, match.Groups[4].Value)
                 : (null, null, null);
         }
 

@@ -92,16 +92,16 @@ namespace Raven.Server.Documents.PeriodicBackup
             var retentionPolicy = configuration.RetentionPolicy;
             if (retentionPolicy != null && retentionPolicy.Disabled == false)
             {
-                if (retentionPolicy.MinimumBackupAgeToKeep != null &&
-                    retentionPolicy.MinimumBackupAgeToKeep.Value.Ticks <= 0)
-                {
-                    throw new ArgumentException($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive");
-                }
-
                 if (retentionPolicy.MinimumBackupsToKeep != null &&
                     retentionPolicy.MinimumBackupsToKeep.Value <= 0)
                 {
                     throw new ArgumentException($"{nameof(RetentionPolicy.MinimumBackupsToKeep)} must be positive");
+                }
+
+                if (retentionPolicy.MinimumBackupAgeToKeep != null &&
+                    retentionPolicy.MinimumBackupAgeToKeep.Value.Ticks <= 0)
+                {
+                    throw new ArgumentException($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive");
                 }
             }
 
