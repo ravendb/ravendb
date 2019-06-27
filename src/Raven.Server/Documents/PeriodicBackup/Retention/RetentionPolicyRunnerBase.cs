@@ -6,11 +6,14 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
     public abstract class RetentionPolicyRunnerBase
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RetentionPolicyRunnerBase>("BackupTask");
+
         private readonly RetentionPolicy _retentionPolicy;
         private readonly string _databaseName;
 
@@ -25,6 +28,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         public abstract Task<List<string>> GetFiles(string folder);
 
         public abstract Task DeleteFolder(string folder);
+
+        public abstract string Name { get; }
 
         public async Task Execute()
         {
@@ -49,8 +54,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                             DateTimeStyles.None,
                             out var backupTime) == false)
                     {
-                        // TODO: log this
-                        // couldn't parse the backup time
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Failed to parse backup date time for folder: {folder}");
                         continue;
                     }
 
@@ -85,8 +90,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     return;
                 }
 
-                var now = DateTime.Now;
                 // the time in the backup folder name is the local time
+                var now = DateTime.Now;
 
                 var deleted = 0L;
                 if (_retentionPolicy.MinimumBackupAgeToKeep.HasValue)
@@ -125,12 +130,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
             catch (NotSupportedException)
             {
-                // TODO: log this
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Retention Policy for {Name} isn't currently supported");
             }
             catch (Exception e)
             {
                 // failure to delete backups shouldn't result in backup failure
-                // TODO: log this
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to run Retention Policy for {Name}", e);
             }
         }
     }
