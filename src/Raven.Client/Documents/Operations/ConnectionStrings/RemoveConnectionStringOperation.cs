@@ -59,6 +59,9 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
     public class RemoveConnectionStringResult
     {
+        [Obsolete("Not used to get operation result. Use RaftCommandIndex instead")]
         public long? ETag { get; set; }
+
+        public long RaftCommandIndex { get; set; }
     }
 }
