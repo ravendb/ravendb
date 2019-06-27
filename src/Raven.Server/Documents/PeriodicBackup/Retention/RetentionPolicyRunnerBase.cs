@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -31,11 +30,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         {
             if (_retentionPolicy == null ||
                 _retentionPolicy.Disabled ||
-                _retentionPolicy.MinimumBackupsToKeep == null && _retentionPolicy.MinimumBackupAgeToKeep == null)
+                (_retentionPolicy.MinimumBackupsToKeep == null && _retentionPolicy.MinimumBackupAgeToKeep == null))
                 return; // no retention policy
-
-            if (_retentionPolicy.MinimumBackupsToKeep <= 0)
-                return;
 
             try
             {
@@ -65,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     }
 
                     var files = await GetFiles(folder);
-                    var hasFullBackupOrSnapshot = files.Any(IsFullBackupOrSnapshot);
+                    var hasFullBackupOrSnapshot = files.Any(BackupUtils.IsFullBackupOrSnapshot);
                     if (hasFullBackupOrSnapshot == false)
                     {
                         // no backup files
@@ -73,21 +69,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     }
 
                     allBackupFolders.Add(backupTime, folder);
-
-                    bool IsFullBackupOrSnapshot(string filePath)
-                    {
-                        var extension = Path.GetExtension(filePath);
-
-                        return Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                               Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                               Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                               Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-                    }
                 }
 
-
-                var minimumBackupsToKeep = Math.Max(_retentionPolicy.MinimumBackupsToKeep ?? 1, 1);
                 // we are going to keep at least one backup
+                var minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
 
                 if (allBackupFolders.Count <= minimumBackupsToKeep)
                 {
@@ -128,12 +113,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 bool ReachedMinimumBackupsToKeep()
                 {
-                    return allBackupFolders.Count - deleted == minimumBackupsToKeep;
+                    return allBackupFolders.Count - deleted <= minimumBackupsToKeep;
                 }
             }
             catch (NotSupportedException)
             {
-                //TODO: log this
+                // TODO: log this
             }
             catch (Exception e)
             {
