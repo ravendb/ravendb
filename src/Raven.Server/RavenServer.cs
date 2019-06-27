@@ -319,7 +319,8 @@ namespace Raven.Server
             }
         }
 
-        public CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
+        public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
+
         public class CpuCreditsState : IDynamicJson
         {
             public bool Used;

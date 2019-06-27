@@ -21,6 +21,13 @@ namespace Raven.Server.Documents.Handlers
         private (string, string)[] _properties;
         private bool _writeHeader = true;
 
+        private readonly HashSet<string> _metadataPropertiesToSkip = new HashSet<string>
+        {
+            Constants.Documents.Metadata.Attachments,
+            Constants.Documents.Metadata.Counters,
+            Constants.Documents.Metadata.Flags
+        };
+
         protected StreamCsvResultWriter(HttpResponse response, Stream stream, string[] properties = null, string csvFileNamePrefix = "export")
         {
             var csvFileName = $"{csvFileNamePrefix}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv";
@@ -90,6 +97,7 @@ namespace Raven.Server.Documents.Handlers
         {
             return _properties;
         }
+
         private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj, bool addId = true)
         {
             var inMetadata = Constants.Documents.Metadata.Key.Equals(propertyTuple.ParentPath);
@@ -97,13 +105,16 @@ namespace Raven.Server.Documents.Handlers
             {
                 yield return (Constants.Documents.Metadata.Id, Constants.Documents.Metadata.Id);
             }
+
             foreach (var p in obj.GetPropertyNames())
             {
-                //skip properties starting with '@' unless we are in the metadata and we need to export @metadata.@collection
-                if (inMetadata && p.Equals(Constants.Documents.Metadata.Collection) == false)
+                // skip reserved metadata properties
+                if (inMetadata && p.StartsWith('@') && _metadataPropertiesToSkip.Contains(p))
                     continue;
+
                 if (p.StartsWith('@') && p.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
                     continue;
+
                 var path = string.IsNullOrEmpty(propertyTuple.ParentPath) ? BlittablePath.EscapeString(p) : $"{propertyTuple.ParentPath}.{BlittablePath.EscapeString(p)}";
                 var property = string.IsNullOrEmpty(propertyTuple.ParentPath) ? p : $"{propertyTuple.ParentPath}.{p}";
                 if (obj.TryGetMember(p, out var res) && res is BlittableJsonReaderObject)

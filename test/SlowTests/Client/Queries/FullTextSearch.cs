@@ -592,5 +592,36 @@ namespace SlowTests.Client.Queries
                 }
             }
         }
+
+        [Fact]
+        public void Can_search_on_array_of_strings()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Image { Id = "1", Name = "Great Photo buddy" });
+                    session.Store(new Image { Id = "2", Name = "Nice Photo of the sky" });
+                    session.Store(new Image { Id = "3", Name = "Amazing Photo of flying raven" });
+                    session.Store(new Image { Id = "4", Name = "Stunning photo of hibernating rhino" });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var imagesQuery = session.Query<Image>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.Name, new [] { "buddy", "sky", "raven", "rhino" });
+
+                    var images = imagesQuery.ToList();
+                    Assert.Equal(4, images.Count);
+
+                    var query = RavenTestHelper.GetIndexQuery(imagesQuery);
+                    Assert.Equal("from Images where search(Name, $p0)", query.Query);
+                    Assert.True(query.QueryParameters.TryGetValue("p0", out var searchTerms));
+                    Assert.Equal("buddy sky raven rhino", searchTerms);
+                }
+            }
+        }
     }
 }

@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 rewriter.SemanticModel = tempCompilation.GetSemanticModel(tree);
 
                 var rewritten = rewriter.Visit(tree.GetRoot()).NormalizeWhitespace();
-                res.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten));
+                res.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten, new CSharpParseOptions(documentationMode: DocumentationMode.None)));
 
             }
 
