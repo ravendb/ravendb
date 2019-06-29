@@ -33,6 +33,9 @@ namespace Raven.Server.Documents
 
         public void AddIfDocIsHuge(Document doc)
         {
+            if (doc.Data == null)
+                return;
+
             if (doc.Data.Size > _maxWarnSize)
             {
                 _hugeDocs.Set(new Tuple<string, DateTime>(doc.Id, DateTime.UtcNow), doc.Data.Size);

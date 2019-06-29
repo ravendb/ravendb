@@ -66,6 +66,8 @@ namespace Raven.Server.Documents.Queries
 
         public string ServerSideQuery => Metadata.Query.ToString();
 
+        public DocumentFields DocumentFields = DocumentFields.All;
+
         public List<string> Diagnostics;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
