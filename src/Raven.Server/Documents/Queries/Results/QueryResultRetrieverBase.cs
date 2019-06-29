@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Results
             RetrieverScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Retriever), start: false);
             FieldsToFetch = fieldsToFetch;
 
-            DocumentFields = query.DocumentFields ?? DocumentFields.All;
+            DocumentFields = query?.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
