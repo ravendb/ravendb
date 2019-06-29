@@ -50,6 +50,12 @@ namespace Raven.Server.Documents
     public static class EnumExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contain(this DocumentFields current, DocumentFields flag)
+        {
+            return (current & flag) == flag;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Contain(this DocumentFlags current, DocumentFlags flag)
         {
             return (current & flag) == flag;
