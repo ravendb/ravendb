@@ -621,6 +621,9 @@ namespace Raven.Server.Documents
         [Conditional("DEBUG")]
         public static void AssertMetadataWasFiltered(BlittableJsonReaderObject data)
         {
+            if (data == null)
+                return;
+
             var originalNoCacheValue = data.NoCache;
 
             data.NoCache = true;

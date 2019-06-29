@@ -596,7 +596,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -607,7 +607,7 @@ namespace Raven.Server.Documents
                     yield break;
                 }
 
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -689,7 +689,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -706,7 +706,7 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -795,7 +795,7 @@ namespace Raven.Server.Documents
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr, skipValidationInDebug);
+            var doc = TableValueToDocument(context, ref tvr, skipValidationInDebug: skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -1048,9 +1048,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, bool skipValidationInDebug = false)
+        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
-            var document = ParseDocument(context, ref tvr);
+            var document = ParseDocument(context, ref tvr, fields);
 #if DEBUG
             if (skipValidationInDebug == false)
             {
@@ -1063,20 +1063,52 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
+        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
         {
-            var result = new Document
+            if (fields == DocumentFields.All)
             {
-                StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
-                Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
-                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
-            };
+                return new Document
+                {
+                    StorageId = tvr.Id,
+                    LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
+                    Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
+                    Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
+                    Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
+                    ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
+                    LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
+                    Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
+                    TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
+                };
+            }
+
+            var result = new Document();
+
+            if (fields.Contain(DocumentFields.StorageId))
+                result.StorageId = tvr.Id;
+
+            if (fields.Contain(DocumentFields.LowerId))
+                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+
+            if (fields.Contain(DocumentFields.Id))
+                result.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
+
+            if (fields.Contain(DocumentFields.Etag))
+                result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
+
+            if (fields.Contain(DocumentFields.Data))
+                result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
+
+            if (fields.Contain(DocumentFields.ChangeVector))
+                result.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
+
+            if (fields.Contain(DocumentFields.LastModified))
+                result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
+
+            if (fields.Contain(DocumentFields.Flags))
+                result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+
+            if (fields.Contain(DocumentFields.TransactionMarker))
+                result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
 
             return result;
         }
@@ -1087,7 +1119,7 @@ namespace Raven.Server.Documents
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
-            return ParseDocument(context, ref tvr);
+            return ParseDocument(context, ref tvr, DocumentFields.All);
         }
 
         private static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
