@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Queries.Results
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
         private readonly DocumentDatabase _database;
+        private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Queries.Results
         private Dictionary<string, Document> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
 
-        protected readonly IndexQueryServerSide Query;
+        protected readonly DocumentFields DocumentFields;
 
         protected readonly DocumentsStorage DocumentsStorage;
 
@@ -48,13 +49,15 @@ namespace Raven.Server.Documents.Queries.Results
         protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
         {
             _database = database;
-            Query = query;
+            _query = query;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
 
             DocumentsStorage = documentsStorage;
             RetrieverScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Retriever), start: false);
             FieldsToFetch = fieldsToFetch;
+
+            DocumentFields = query.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
@@ -391,11 +394,11 @@ namespace Raven.Server.Documents.Queries.Results
                 string id = document.Id;
                 if (fieldToFetch.QueryField.IsParameter)
                 {
-                    if (Query.QueryParameters == null)
-                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", Query.Query, null);
+                    if (_query.QueryParameters == null)
+                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", _query.Query, null);
 
-                    if (Query.QueryParameters.TryGetMember(fieldToFetch.QueryField.Name, out var nameObject) == false)
-                        throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.Name}' was not provided", Query.Query, Query.QueryParameters);
+                    if (_query.QueryParameters.TryGetMember(fieldToFetch.QueryField.Name, out var nameObject) == false)
+                        throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.Name}' was not provided", _query.Query, _query.QueryParameters);
 
                     name = nameObject.ToString();
                     key = fieldToFetch.QueryField.Alias ?? name;
@@ -428,12 +431,12 @@ namespace Raven.Server.Documents.Queries.Results
                 var val = fieldToFetch.QueryField.Value;
                 if (fieldToFetch.QueryField.ValueTokenType.Value == ValueTokenType.Parameter)
                 {
-                    if (Query == null)
+                    if (_query == null)
                     {
                         value = null;
                         return false; // only happens for debug endpoints and more like this
                     }
-                    Query.QueryParameters.TryGet((string)val, out val);
+                    _query.QueryParameters.TryGet((string)val, out val);
                 }
                 value = val;
                 return true;
@@ -463,11 +466,11 @@ namespace Raven.Server.Documents.Queries.Results
 
                 else if (fieldToFetch.QueryField.IsParameter)
                 {
-                    if (Query.QueryParameters == null)
-                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", Query.Query, (BlittableJsonReaderObject)null);
+                    if (_query.QueryParameters == null)
+                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", _query.Query, (BlittableJsonReaderObject)null);
 
-                    if (Query.QueryParameters.TryGetMember(fieldToFetch.QueryField.SourceAlias, out var id) == false)
-                        throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.SourceAlias}' was not provided", Query.Query, Query.QueryParameters);
+                    if (_query.QueryParameters.TryGetMember(fieldToFetch.QueryField.SourceAlias, out var id) == false)
+                        throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.SourceAlias}' was not provided", _query.Query, _query.QueryParameters);
 
                     _loadedDocumentIds.Add(id.ToString());
                 }
@@ -581,11 +584,11 @@ namespace Raven.Server.Documents.Queries.Results
         {
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
-                args[args.Length - 1] = Query.QueryParameters;
+                args[args.Length - 1] = _query.QueryParameters;
 
                 var value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
-                    Query.Metadata.Query,
+                    _query.Metadata.Query,
                     documentId,
                     args);
 
