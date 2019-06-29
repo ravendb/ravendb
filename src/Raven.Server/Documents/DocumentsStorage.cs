@@ -1081,6 +1081,11 @@ namespace Raven.Server.Documents
                 };
             }
 
+            return ParseDocumentPartial(context, ref tvr, fields);
+        }
+
+        private static Document ParseDocumentPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        {
             var result = new Document();
 
             if (fields.Contain(DocumentFields.StorageId))
