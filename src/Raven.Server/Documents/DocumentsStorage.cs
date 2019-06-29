@@ -405,9 +405,9 @@ namespace Raven.Server.Documents
         {
             var globalChangeVector = GetDatabaseChangeVector(context);
 
-            if (globalChangeVector != changeVector && 
+            if (globalChangeVector != changeVector &&
                 globalChangeVector != null &&
-                globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false && 
+                globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false &&
                 ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
             {
                 throw new InvalidOperationException($"Global Change Vector wasn't updated correctly. " +
@@ -777,7 +777,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public Document Get(DocumentsOperationContext context, string id, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -786,16 +786,16 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Get(context, lowerId, throwOnConflict);
+                return Get(context, lowerId, fields, throwOnConflict);
             }
         }
 
-        public Document Get(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true, bool skipValidationInDebug = false)
+        public Document Get(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
         {
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr, skipValidationInDebug: skipValidationInDebug);
+            var doc = TableValueToDocument(context, ref tvr, fields, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -1057,7 +1057,7 @@ namespace Raven.Server.Documents
                 Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
                 DocumentPutAction.AssertMetadataWasFiltered(document.Data);
                 AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
-            } 
+            }
 #endif
             return document;
         }
@@ -1211,7 +1211,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    flags, 
+                    flags,
                     nonPersistentFlags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
@@ -1262,14 +1262,14 @@ namespace Raven.Server.Documents
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstoneId))
                 {
                     var tombstone = CreateTombstone(
-                        context, 
-                        tombstoneId, 
-                        doc.Etag, 
-                        collectionName, 
-                        doc.ChangeVector, 
-                        modifiedTicks, 
-                        changeVector, 
-                        flags, 
+                        context,
+                        tombstoneId,
+                        doc.Etag,
+                        collectionName,
+                        doc.ChangeVector,
+                        modifiedTicks,
+                        changeVector,
+                        flags,
                         nonPersistentFlags);
                     changeVector = tombstone.ChangeVector;
                     etag = tombstone.Etag;
@@ -1430,12 +1430,12 @@ namespace Raven.Server.Documents
             string docChangeVector,
             long lastModifiedTicks,
             string changeVector,
-            DocumentFlags flags, 
+            DocumentFlags flags,
             NonPersistentDocumentFlags nonPersistentFlags)
         {
             var newEtag = GenerateNextEtag();
 
-            if (string.IsNullOrEmpty(changeVector) && 
+            if (string.IsNullOrEmpty(changeVector) &&
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
@@ -1616,7 +1616,7 @@ namespace Raven.Server.Documents
                 //This is the case where a read transaction reading a collection cached by a later write transaction we can safly ignore it.
                 if (collectionTable == null)
                 {
-                    if(context.Transaction.InnerTransaction.IsWriteTransaction == false)
+                    if (context.Transaction.InnerTransaction.IsWriteTransaction == false)
                         continue;
                     throw new InvalidOperationException($"Cached collection {kvp.Key} is missing its table, this is likley a bug.");
                 }
