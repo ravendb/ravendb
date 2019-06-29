@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries
 
         public string ServerSideQuery => Metadata.Query.ToString();
 
-        public DocumentFields DocumentFields = DocumentFields.All;
+        public DocumentFields? DocumentFields;
 
         public List<string> Diagnostics;
 

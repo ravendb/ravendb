@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {
-                    var doc = DirectGet(null, id, Query.DocumentFields, state);
+                    var doc = DirectGet(null, id, DocumentFields, state);
 
                     if (doc != null)
                         doc.IndexScore = score;
