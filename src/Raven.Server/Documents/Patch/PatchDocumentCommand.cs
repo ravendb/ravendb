@@ -439,15 +439,7 @@ namespace Raven.Server.Documents.Patch
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
             using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
             {
-                try
-                {
-                    PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
-                }
-                catch (Exception e)
-                {
-                    throw new PatchFailedException(_id, e);
-                }
-
+                PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
                 return 1;
             }
         }
