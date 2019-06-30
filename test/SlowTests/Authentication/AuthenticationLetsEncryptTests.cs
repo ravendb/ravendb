@@ -148,13 +148,12 @@ namespace SlowTests.Authentication
                     [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeStaging
                 };
 
-                Server.Dispose();
-
                 DoNotReuseServer(customSettings);
             }
 
-            UseNewLocalServer();
+            Server.Dispose();
 
+            UseNewLocalServer();
 
             // Note: because we use a staging lets encrypt cert, the chain is not trusted.
             // It only works because in the TestBase ctor we do:
