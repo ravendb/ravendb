@@ -50,7 +50,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
             try
             {
-                return result.Value;
+                var index = result.Value;
+                if (index is JavaScriptIndex javaScriptIndex)
+                {
+                    javaScriptIndex.TryRemoveFromCache = () => { IndexCache.TryRemove(key, out _); };
+                }
+                return index;
             }
             catch (Exception)
             {

@@ -247,7 +247,7 @@ namespace FastTests
                 {
                     if (_globalServer == null || _globalServer.Disposed)
                     {
-                        var globalServer = GetNewServer();
+                        var globalServer = GetNewServer(new ServerCreationOptions{RegisterForDisposal = false});
                         using (var currentProcess = Process.GetCurrentProcess())
                         {
                             Console.WriteLine(
@@ -341,24 +341,126 @@ namespace FastTests
             _localServer?.Dispose();
             if (_localServer != null)
                 Servers.Remove(_localServer);
-            _localServer = GetNewServer(customSettings: customSettings ?? _customServerSettings, runInMemory: runInMemory, customConfigPath: customConfigPath);
+            var co = new ServerCreationOptions
+            {
+                CustomSettings = customSettings ?? _customServerSettings,
+                RunInMemory = runInMemory,
+                CustomConfigPath = customConfigPath,
+                RegisterForDisposal = false
+            };
+            _localServer = GetNewServer(co);
         }
 
         private readonly object _getNewServerSync = new object();
+        protected List<RavenServer> ServersForDisposal = new List<RavenServer>();
 
-        protected virtual RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
+        public class ServerCreationOptions
         {
+            private IDictionary<string, string> _customSettings;
+
+            public IDictionary<string, string> CustomSettings
+            {
+                get => _customSettings;
+                set
+                {
+                    AssertNotFrozen();
+                    _customSettings = value;
+                }
+            }
+
+            private bool _deletePrevious = true;
+
+            public bool DeletePrevious
+            {
+                get => _deletePrevious;
+                set
+                {
+                    AssertNotFrozen();
+                    _deletePrevious = value;
+                }
+            }
+
+            private bool _runInMemory = true;
+            public bool RunInMemory
+            {
+                get => _runInMemory;
+                set
+                {
+                    AssertNotFrozen();
+                    _runInMemory = value;
+                }
+            }
+
+            private string _partialPath;
+
+            public string PartialPath
+            {
+                get => _partialPath;
+                set
+                {
+                    AssertNotFrozen();
+                    _partialPath = value;
+                }
+            }
+
+            private string _customConfigPath;
+
+            public string CustomConfigPath
+            {
+                get => _customConfigPath;
+                set
+                {
+                    AssertNotFrozen();
+                    _customConfigPath = value;
+                }
+            }
+
+            private bool _registerForDisposal = true;
+
+            public bool RegisterForDisposal
+            {
+                get => _registerForDisposal;
+                set
+                { 
+                    AssertNotFrozen();
+                    _registerForDisposal = value;
+                }
+            }
+
+            private readonly bool _frozen;
+
+            private void AssertNotFrozen()
+            {
+                if (_frozen)
+                    throw new InvalidOperationException("ServerCreationOptions are frozen and cannot be changed.");
+            }
+
+            public ServerCreationOptions(bool frozen = false)
+            {
+                _frozen = frozen;
+            }
+            private static readonly Lazy<ServerCreationOptions> _default = new Lazy<ServerCreationOptions>(() => new ServerCreationOptions(frozen:true));
+            public static ServerCreationOptions Default => _default.Value;
+        }
+
+        protected virtual RavenServer GetNewServer(ServerCreationOptions options = null)
+        {
+            if (options == null)
+            {
+                options = ServerCreationOptions.Default;
+            }
+
             lock (_getNewServerSync)
             {
-                var configuration = RavenConfiguration.CreateForServer(Guid.NewGuid().ToString(), customConfigPath);
+                var configuration = RavenConfiguration.CreateForServer(Guid.NewGuid().ToString(), options.CustomConfigPath);
 
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat), "1");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter), "3");
                 configuration.SetSetting(RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout), "10");
 
-                if (customSettings != null)
+                if (options.CustomSettings != null)
                 {
-                    foreach (var setting in customSettings)
+                    foreach (var setting in options.CustomSettings)
                     {
                         configuration.SetSetting(setting.Key, setting.Value);
                     }
@@ -366,27 +468,32 @@ namespace FastTests
              
                 configuration.Initialize();
                 configuration.Logs.Mode = LogMode.None;
-                if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls)) == false)
+                if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls)) == false)
                 {
                     configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
                 }
                 configuration.Server.Name = ServerName;
-                configuration.Core.RunInMemory = runInMemory;
+                configuration.Core.RunInMemory = options.RunInMemory;
                 configuration.Core.DataDirectory =
-                    configuration.Core.DataDirectory.Combine(partialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
+                    configuration.Core.DataDirectory.Combine(options.PartialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
-                if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)) == false)
+                if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)) == false)
                 {
                     configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
                 }
 
-                if (deletePrevious)
+                if (options.DeletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
                 var server = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true };
                 server.Initialize();
                 server.ServerStore.ValidateFixedPort = false;
+
+                if (options.RegisterForDisposal)
+                {
+                    ServersForDisposal.Add(server);
+                }
 
                 return server;
             }
@@ -460,6 +567,16 @@ namespace FastTests
                     _localServer = null;
                 });
             }
+
+            foreach (var server in ServersForDisposal)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    server.Dispose();
+                });
+            }
+
+            ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
 
