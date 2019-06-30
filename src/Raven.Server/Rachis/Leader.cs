@@ -672,65 +672,67 @@ namespace Raven.Server.Rachis
             var list = new List<TaskCompletionSource<Task<(long, object)>>>();
             var tasks = new List<Task<(long, object)>>();
             var lostLeadershipException = new NotLeadingException("We are no longer the leader, this leader is disposed");
-            try
+
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenWriteTransaction())
+                try
                 {
-                    var cmdsCount = 0;
-                    _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                    while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
+                    using (context.OpenWriteTransaction())
                     {
-                        if (cmd.Consumed.Raise() == false)
+                        var cmdsCount = 0;
+                        _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
+                        while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
                         {
-                            // if the command was aborted due to timeout, we should skip it.
-                            // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
-                            continue;
-                        }
-
-                        if (_running.IsRaised() == false)
-                        {
-                            cmd.Tcs.TrySetException(lostLeadershipException);
-                            continue;
-                        }
-
-                        list.Add(cmd.Tcs);
-                        _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
-
-                        var djv = cmd.Command.ToJson(context);
-                        var cmdJson = context.ReadObject(djv, "raft/command");
-
-                        if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
-                        {
-                            // if this command is already committed, we can skip it and notify the caller about it
-                            if (lastCommitted >= index) 
+                            if (cmd.Consumed.Raise() == false)
                             {
-                                if (exception != null)
-                                {
-                                    cmd.Tcs.TrySetException(exception);
-                                }
-                                else
-                                {
-                                    if (result != null)
-                                    {
-                                        result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
-                                    }
-
-                                    cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
-                                }
-                                list.Remove(cmd.Tcs);
+                                // if the command was aborted due to timeout, we should skip it.
+                                // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
                                 continue;
                             }
-                        }
-                        else
-                        {
-                            index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                        }
 
-                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                        tasks.Add(tcs.Task);
-                        var state = new
-                            CommandState 
+                            if (_running.IsRaised() == false)
+                            {
+                                cmd.Tcs.TrySetException(lostLeadershipException);
+                                continue;
+                            }
+
+                            list.Add(cmd.Tcs);
+                            _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
+
+                            var djv = cmd.Command.ToJson(context);
+                            var cmdJson = context.ReadObject(djv, "raft/command");
+
+                            if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
+                            {
+                                // if this command is already committed, we can skip it and notify the caller about it
+                                if (lastCommitted >= index)
+                                {
+                                    if (exception != null)
+                                    {
+                                        cmd.Tcs.TrySetException(exception);
+                                    }
+                                    else
+                                    {
+                                        if (result != null)
+                                        {
+                                            result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
+                                        }
+
+                                        cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                                    }
+                                    list.Remove(cmd.Tcs);
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                            }
+
+                            var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                            tasks.Add(tcs.Task);
+                            var state = new
+                                CommandState
                             // we need to add entry inside write tx lock to avoid
                             // a situation when command will be applied (and state set)
                             // before it is added to the entries list
@@ -739,28 +741,29 @@ namespace Raven.Server.Rachis
                                 TaskCompletionSource = tcs,
                                 ConvertResult = GetConvertResult(cmd.Command),
                             };
-                        _entries[index] = state;
+                            _entries[index] = state;
+                        }
+                        context.Transaction.Commit();
                     }
-                    context.Transaction.Commit();
-                }
 
-                if (tasks.Count > 0)
-                    _newEntry.Set();
+                    if (tasks.Count > 0)
+                        _newEntry.Set();
 
-                for (int i = 0; i < tasks.Count; i++)
-                {
-                    list[i].TrySetResult(tasks[i]);
+                    for (int i = 0; i < tasks.Count; i++)
+                    {
+                        list[i].TrySetResult(tasks[i]);
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                if (_running.IsRaised() == false)
+                catch (Exception e)
                 {
-                    e = new NotLeadingException("We are no longer the leader, this leader is disposed", e);
-                }
-                foreach (var tcs in list)
-                {
-                    tcs.TrySetException(e);
+                    if (_running.IsRaised() == false)
+                    {
+                        e = new NotLeadingException("We are no longer the leader, this leader is disposed", e);
+                    }
+                    foreach (var tcs in list)
+                    {
+                        tcs.TrySetException(e);
+                    }
                 }
             }
         }
