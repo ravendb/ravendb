@@ -48,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/unused-databases?database={_database}";
+                url = $"{node.Url}/admin/databases/unused-ids?name={_database}";
 
                 return new HttpRequestMessage
                 {

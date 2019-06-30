@@ -1165,10 +1165,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/unused-databases", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]
         public async Task SetUnusedDatabaseIds()
         {
-            var database = GetStringQueryString("database");
+            var database = GetStringQueryString("name");
             ServerStore.EnsureNotPassive();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
