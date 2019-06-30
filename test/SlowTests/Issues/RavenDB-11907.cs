@@ -11,7 +11,13 @@ namespace SlowTests.Issues
         [Fact]
         public void CanProjectFromCollectionNotInJson()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>                
+                    s.Conventions.CustomizeJsonDeserializer = des =>                    
+                        des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                                    
+            }))
             {
                 using (var s = store.OpenSession())
                 {
