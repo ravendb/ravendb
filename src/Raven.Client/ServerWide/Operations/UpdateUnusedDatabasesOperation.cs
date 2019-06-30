@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Operations
     public class UpdateUnusedDatabasesOperation : IServerOperation
     {
         private readonly string _database;
-        private readonly HashSet<string> _unusedDatabaseIds;
+        private readonly Parameters _parameters;
 
         public UpdateUnusedDatabasesOperation(string database, HashSet<string> unusedDatabaseIds)
         {
@@ -23,13 +23,15 @@ namespace Raven.Client.ServerWide.Operations
                 throw new ArgumentException(database);
 
             _database = database;
-            _unusedDatabaseIds = unusedDatabaseIds;
+            _parameters = new Parameters
+            {
+                DatabaseIds = unusedDatabaseIds
+            };
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-
-            return new UpdateUnusedDatabasesCommand(_database, _unusedDatabaseIds);
+            return new UpdateUnusedDatabasesCommand(_database, _parameters);
         }
 
         private class UpdateUnusedDatabasesCommand : RavenCommand, IRaftCommand
@@ -37,13 +39,10 @@ namespace Raven.Client.ServerWide.Operations
             private readonly string _database;
             private readonly Parameters _parameters;
 
-            public UpdateUnusedDatabasesCommand(string database, HashSet<string> unusedDatabaseIds)
+            public UpdateUnusedDatabasesCommand(string database, Parameters parameters)
             {
                 _database = database;
-                _parameters = new Parameters
-                {
-                    DatabaseIds = unusedDatabaseIds
-                };
+                _parameters = parameters;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -61,8 +60,10 @@ namespace Raven.Client.ServerWide.Operations
             }
 
             public string RaftUniqueRequestId => RaftIdGenerator.NewId();
+
         }
-        public class Parameters
+
+        internal class Parameters
         {
             public HashSet<string> DatabaseIds { get; set; }
         }
