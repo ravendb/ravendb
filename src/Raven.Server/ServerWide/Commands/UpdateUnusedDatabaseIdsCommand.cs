@@ -8,13 +8,13 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class UpdateUnusedDatabaseIdsCommand : UpdateDatabaseCommand
     {
-        public List<string> UnusedDatabaseIds;
+        public HashSet<string> UnusedDatabaseIds;
 
         public UpdateUnusedDatabaseIdsCommand()
         {
             
         }
-        public UpdateUnusedDatabaseIdsCommand(string database, List<string> list, string raftId) : base(database, raftId)
+        public UpdateUnusedDatabaseIdsCommand(string database, HashSet<string> list, string raftId) : base(database, raftId)
         {
             UnusedDatabaseIds = list;
         }

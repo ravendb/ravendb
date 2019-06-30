@@ -1165,7 +1165,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/unused-databases", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/unused-databases", "POST", AuthorizationStatus.Operator)]
         public async Task SetUnusedDatabaseIds()
         {
             var database = GetStringQueryString("database");

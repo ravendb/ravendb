@@ -1136,8 +1136,8 @@ namespace Raven.Server.Documents
                     try
                     {
                         DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-                        Interlocked.Exchange(ref DocumentsStorage.UnusedDatabaseIds, record.UnusedDatabaseIds);
 
+                        SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
                         LastDatabaseRecordIndex = index;
                         IndexStore.HandleDatabaseRecordChange(record, index);
@@ -1161,6 +1161,23 @@ namespace Raven.Server.Documents
                     if (taken)
                         Monitor.Exit(_clusterLocker);
                 }
+            }
+        }
+
+        private void SetUnusedDatabaseIds(DatabaseRecord record)
+        {
+            if (record.UnusedDatabaseIds == null && DocumentsStorage.UnusedDatabaseIds == null)
+                return;
+
+            if (record.UnusedDatabaseIds == null || DocumentsStorage.UnusedDatabaseIds == null)
+            {
+                Interlocked.Exchange(ref DocumentsStorage.UnusedDatabaseIds, record.UnusedDatabaseIds);
+                return;
+            }
+
+            if (DocumentsStorage.UnusedDatabaseIds.SetEquals(record.UnusedDatabaseIds) == false)
+            {
+                Interlocked.Exchange(ref DocumentsStorage.UnusedDatabaseIds, record.UnusedDatabaseIds);
             }
         }
 

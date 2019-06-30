@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands
             record.Topology.RemoveFromTopology(NodeTag);
             record.DeletionInProgress?.Remove(NodeTag);
             if (record.UnusedDatabaseIds == null)
-                record.UnusedDatabaseIds = new List<string>();
+                record.UnusedDatabaseIds = new HashSet<string>();
 
             record.UnusedDatabaseIds.Add(DatabaseId);
 

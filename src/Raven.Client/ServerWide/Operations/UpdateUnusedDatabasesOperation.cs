@@ -15,9 +15,9 @@ namespace Raven.Client.ServerWide.Operations
     public class UpdateUnusedDatabasesOperation : IServerOperation
     {
         private readonly string _database;
-        private readonly List<string> _unusedDatabaseIds;
+        private readonly HashSet<string> _unusedDatabaseIds;
 
-        public UpdateUnusedDatabasesOperation(string database, List<string> unusedDatabaseIds)
+        public UpdateUnusedDatabasesOperation(string database, HashSet<string> unusedDatabaseIds)
         {
             if (string.IsNullOrEmpty(database))
                 throw new ArgumentException(database);
@@ -37,7 +37,7 @@ namespace Raven.Client.ServerWide.Operations
             private readonly string _database;
             private readonly Parameters _parameters;
 
-            public UpdateUnusedDatabasesCommand(string database, List<string> unusedDatabaseIds)
+            public UpdateUnusedDatabasesCommand(string database, HashSet<string> unusedDatabaseIds)
             {
                 _database = database;
                 _parameters = new Parameters
@@ -64,7 +64,7 @@ namespace Raven.Client.ServerWide.Operations
         }
         public class Parameters
         {
-            public List<string> DatabaseIds { get; set; }
+            public HashSet<string> DatabaseIds { get; set; }
         }
     }
 }
