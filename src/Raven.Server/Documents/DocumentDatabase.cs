@@ -1136,6 +1136,8 @@ namespace Raven.Server.Documents
                     try
                     {
                         DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+                        Interlocked.Exchange(ref DocumentsStorage.UnusedDatabaseIds, record.UnusedDatabaseIds);
+
                         InitializeFromDatabaseRecord(record);
                         LastDatabaseRecordIndex = index;
                         IndexStore.HandleDatabaseRecordChange(record, index);
