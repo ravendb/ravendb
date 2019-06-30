@@ -37,13 +37,20 @@ namespace SlowTests.Issues
 
                 var dbRecord = new DatabaseRecord(documentStore.Database);
                 var operation = new CreateDatabaseOperation(dbRecord);
-                await documentStore.Maintenance.Server.SendAsync(operation).ConfigureAwait(false);
-
-                Version dbVersion;
-                using (var session = documentStore.OpenAsyncSession())
+                try
                 {
-                    // should work
-                    dbVersion = await session.LoadAsync<Version>("TheVersion").ConfigureAwait(false);
+                    await documentStore.Maintenance.Server.SendAsync(operation).ConfigureAwait(false);
+
+                    Version dbVersion;
+                    using (var session = documentStore.OpenAsyncSession())
+                    {
+                        // should work
+                        dbVersion = await session.LoadAsync<Version>("TheVersion").ConfigureAwait(false);
+                    }
+                }
+                finally
+                {
+                    await documentStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(documentStore.Database, true));
                 }
             }
         }

@@ -355,8 +355,8 @@ namespace SlowTests.Server.Replication
             var sinkDB = GetDatabaseName();
             var pullReplicationName = $"{hubDB}-pull";
 
-            var hubServer = GetNewServer(hubSettings);
-            var sinkServer = GetNewServer(sinkSettings);
+            var hubServer = GetNewServer(new ServerCreationOptions{CustomSettings = hubSettings});
+            var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings});
 
             var hubAdminCert = new X509Certificate2(hubCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
             var sinkAdminCert = new X509Certificate2(sinkCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);

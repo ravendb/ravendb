@@ -220,7 +220,14 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (DrainRunningQueries())
                     DisposeIndex();
+
+                RemoveIndexFromCache();
             });
+        }
+
+        protected virtual void RemoveIndexFromCache()
+        {
+
         }
 
         protected virtual void DisposeIndex()
@@ -238,6 +245,8 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
+
+                    DocumentDatabase = null;
                 }
 
                 _indexValidationStalenessCheck = null;
@@ -262,6 +271,8 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+                RemoveIndexFromCache();
 
                 exceptionAggregator.ThrowIfNeeded();
             }

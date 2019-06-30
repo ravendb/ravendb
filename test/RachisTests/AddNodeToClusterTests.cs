@@ -583,10 +583,10 @@ namespace RachisTests
             }
 
             var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
-            cluster.Leader = GetNewServer(deletePrevious: false, runInMemory: false, partialPath: result.DataDir, customSettings: new Dictionary<string, string>
+            cluster.Leader = GetNewServer(new ServerCreationOptions {DeletePrevious = false, RunInMemory = false, PartialPath = result.DataDir, CustomSettings = new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
-            });
+            }});
 
             var topology = cluster.Leader.ServerStore.GetClusterTopology();
             Assert.Equal(3, topology.AllNodes.Count);

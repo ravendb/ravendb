@@ -12,14 +12,21 @@ namespace Sparrow.Utils
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
         private readonly TimeSpan _idleTime;
         private readonly Timer _timer;
+        private WeakReference _selfweakref;
 
 #if NETSTANDARD1_3
         private bool _disposed;
 #endif
 
-        public NativeMemoryCleaner(Func<ICollection<TStack>> getContexts, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
+        public NativeMemoryCleaner(object self, Func<object, ICollection<TStack>> getContexts, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
-            _getContexts = getContexts;
+            _selfweakref = new WeakReference(self);
+
+            _getContexts = () =>
+            {
+                object target = _selfweakref.Target;
+                return target == null ? Array.Empty<TStack>() : getContexts(target);
+            };
             _lowMemoryFlag = lowMemoryFlag;
             _idleTime = idleTime;
             _timer = new Timer(CleanNativeMemory, null, period, period);
