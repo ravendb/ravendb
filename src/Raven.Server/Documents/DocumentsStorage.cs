@@ -358,7 +358,7 @@ namespace Raven.Server.Documents
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
-        internal List<string> UnusedDatabaseIds;
+        internal HashSet<string> UnusedDatabaseIds;
 
         public bool TryRemoveUnusedIds(ref string changeVector)
         {
@@ -376,8 +376,7 @@ namespace Raven.Server.Documents
                 var entry = parsed[i];
                 if (list.Contains(entry.DbId))
                 {
-                    list.Remove(entry.DbId);
-                    parsed.Remove(entry);
+                    parsed.RemoveAt(i);
                     removed = true;
                 }
             }

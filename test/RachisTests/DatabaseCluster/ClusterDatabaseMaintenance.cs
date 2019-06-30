@@ -808,7 +808,7 @@ namespace RachisTests.DatabaseCluster
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, new List<string>
+                await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, new HashSet<string>
                 {
                     "xwmnvG1KBkSNXfl7/0yJ1A",
                     "0N64iiIdYUKcO+yq1V0cPA"
