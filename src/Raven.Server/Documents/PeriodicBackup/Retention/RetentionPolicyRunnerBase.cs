@@ -23,11 +23,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _databaseName = databaseName;
         }
 
-        public abstract Task<List<string>> GetFolders();
+        protected abstract Task<List<string>> GetFolders();
 
-        public abstract Task<List<string>> GetFiles(string folder);
+        protected virtual (string BackupTimeAsString, string DatabaseName, string NodeTag) ParseFolderName(string folder)
+        {
+            return RestoreUtils.ParseFolderName(folder);
+        }
 
-        public abstract Task DeleteFolder(string folder);
+        protected abstract Task<List<string>> GetFiles(string folder);
+
+        protected abstract Task DeleteFolders(List<FolderDetails> folderDetails);
 
         public abstract string Name { get; }
 
@@ -42,11 +47,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             {
                 var folders = await GetFolders();
 
-                var sortedBackupFolders = new SortedList<DateTime, string>();
+                var sortedBackupFolders = new SortedList<DateTime, FolderDetails>();
 
                 foreach (var folder in folders)
                 {
-                    var folderDetails = RestoreUtils.ParseFolderName(folder);
+                    var folderDetails = ParseFolderName(folder);
                     if (DateTime.TryParseExact(
                             folderDetails.BackupTimeAsString,
                             BackupTask.DateTimeFormat,
@@ -78,7 +83,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         backupTime = backupTime.AddMilliseconds(1);
                     }
 
-                    sortedBackupFolders.Add(backupTime, folder);
+                    sortedBackupFolders.Add(backupTime, new FolderDetails
+                    {
+                        Name = folder,
+                        Files = files
+                    });
                 }
 
                 // we are going to keep at least one backup
@@ -94,6 +103,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var now = DateTime.Now;
 
                 var deleted = 0L;
+                var foldersToDelete = new List<FolderDetails>();
                 if (_retentionPolicy.MinimumBackupAgeToKeep.HasValue)
                 {
                     foreach (var backupFolder in sortedBackupFolders)
@@ -104,7 +114,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                             break;
                         }
 
-                        await DeleteFolder(backupFolder.Value);
+                        foldersToDelete.Add(backupFolder.Value);
                         deleted++;
 
                         if (ReachedMinimumBackupsToKeep())
@@ -115,13 +125,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 {
                     foreach (var backupFolder in sortedBackupFolders)
                     {
-                        await DeleteFolder(backupFolder.Value);
+                        foldersToDelete.Add(backupFolder.Value);
                         deleted++;
 
                         if (ReachedMinimumBackupsToKeep())
                             break;
                     }
                 }
+
+                await DeleteFolders(foldersToDelete);
 
                 bool ReachedMinimumBackupsToKeep()
                 {

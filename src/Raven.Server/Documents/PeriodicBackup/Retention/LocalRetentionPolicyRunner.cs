@@ -19,13 +19,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _folderPath = folderPath;
         }
 
-        public override Task<List<string>> GetFolders()
+        protected override Task<List<string>> GetFolders()
         {
             var folders = Directory.GetDirectories(_folderPath);
             return Task.FromResult(folders.ToList());
         }
 
-        public override Task<List<string>> GetFiles(string folder)
+        protected override Task<List<string>> GetFiles(string folder)
         {
             try
             {
@@ -37,9 +37,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
         }
 
-        public override Task DeleteFolder(string folder)
+        protected override Task DeleteFolders(List<FolderDetails> folderDetails)
         {
-            IOExtensions.DeleteDirectory(folder);
+            foreach (var folderDetail in folderDetails)
+            {
+                IOExtensions.DeleteDirectory(folderDetail.Name);
+            }
+
             return Task.CompletedTask;
         }
     }
