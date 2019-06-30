@@ -358,33 +358,14 @@ namespace Raven.Server.Documents
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
-        private List<string> GetUnusedList()
-        {
-            using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var blittableDatabase = DocumentDatabase.ServerStore.Cluster.ReadRawDatabase(context, _name, out _))
-            {
-                if (blittableDatabase.TryGet(nameof(DatabaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray unused) == false)
-                    return null;
-
-                if (unused == null || unused.Length == 0)
-                    return null;
-                var list = new List<string>();
-                foreach (var item in unused)
-                {
-                    list.Add(item.ToString());
-                }
-
-                return list;
-            }
-        }
+        internal List<string> UnusedDatabaseIds;
 
         public bool TryRemoveUnusedIds(ref string changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
                 return false;
 
-            var list = GetUnusedList();
+            var list = UnusedDatabaseIds;
             if (list == null || list.Count == 0)
                 return false;
 
