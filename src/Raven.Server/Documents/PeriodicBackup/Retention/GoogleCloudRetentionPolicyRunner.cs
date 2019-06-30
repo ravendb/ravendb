@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,19 +18,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _client = client;
         }
 
-        public override Task<List<string>> GetFolders()
+        protected override Task<List<string>> GetFolders()
         {
-            throw new System.NotImplementedException();
+            throw new NotSupportedException();
         }
 
-        public override Task<List<string>> GetFiles(string folder)
+        protected override Task<List<string>> GetFiles(string folder)
         {
-            throw new System.NotImplementedException();
+            throw new NotSupportedException();
         }
 
-        public override async Task DeleteFolder(string folder)
+        protected override Task DeleteFolders(List<FolderDetails> folderDetails)
         {
-            throw new System.NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 }
