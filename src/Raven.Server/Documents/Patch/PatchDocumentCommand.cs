@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Patch
                                         result.ModifiedDocument,
                                         null,
                                         null,
-                                        originalDocument.Flags);
+                                        originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction));
                                 }
 
                                 result.Status = PatchStatus.Patched;
@@ -439,7 +439,15 @@ namespace Raven.Server.Documents.Patch
             using (_database.Scripts.GetScriptRunner(_patch.Run, readOnly: false, out var run))
             using (_patchIfMissing.Run != null ? _database.Scripts.GetScriptRunner(_patchIfMissing.Run, readOnly: false, out runIfMissing) : (IDisposable)null)
             {
-                PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
+                try
+                {
+                    PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, run, runIfMissing);
+                }
+                catch (Exception e)
+                {
+                    throw new PatchFailedException(_id, e);
+                }
+
                 return 1;
             }
         }
