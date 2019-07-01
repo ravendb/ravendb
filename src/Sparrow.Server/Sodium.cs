@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Server.Platform;
+using Sparrow.Server.Utils;
 
 namespace Sparrow.Server
 {
@@ -42,7 +43,17 @@ namespace Sparrow.Server
 
             try
             {
-                File.Copy(fromFilename, toFilename, overwrite: true);
+                var copy = true;
+                if (File.Exists(toFilename))
+                {
+                    var fromHash = FileHelper.CalculateHash(fromFilename);
+                    var toHash = FileHelper.CalculateHash(toFilename);
+
+                    copy = fromHash != toHash;
+                }
+
+                if (copy)
+                    File.Copy(fromFilename, toFilename, overwrite: true);
             }
             catch (IOException e)
             {

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Platform;
+using Sparrow.Server.Utils;
 
 namespace Sparrow.Server.Platform
 {
@@ -11,9 +12,9 @@ namespace Sparrow.Server.Platform
         public const int PAL_VER = 42010; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
-        {            
+        {
             var toFilename = LIBRVNPAL;
-            string fromFilename;         
+            string fromFilename;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
@@ -47,7 +48,17 @@ namespace Sparrow.Server.Platform
 
             try
             {
-                File.Copy(fromFilename, toFilename, overwrite: true);
+                var copy = true;
+                if (File.Exists(toFilename))
+                {
+                    var fromHash = FileHelper.CalculateHash(fromFilename);
+                    var toHash = FileHelper.CalculateHash(toFilename);
+
+                    copy = fromHash != toHash;
+                }
+
+                if (copy)
+                    File.Copy(fromFilename, toFilename, overwrite: true);
             }
             catch (IOException e)
             {
@@ -114,7 +125,7 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_prefetch_virtual_memory(
-            void *virtualAddress,
+            void* virtualAddress,
             Int64 length,
             out Int32 errorCode);
 
@@ -125,7 +136,7 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_memory_sync(
-            void *address,
+            void* address,
             Int64 size,
             out Int32 errorCode);
 
@@ -215,7 +226,7 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_open_journal_for_reads(
             string fileNameFullPath,
-            out SafeJournalHandle  handle,
+            out SafeJournalHandle handle,
             out Int32 errorCode
         );
 
