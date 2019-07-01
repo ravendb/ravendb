@@ -17,8 +17,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public RestoreFromS3(ServerStore serverStore, RestoreFromS3Configuration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
-            _client = new RavenAwsS3Client(restoreFromConfiguration.S3Settings);
-            _remoteFolderName = restoreFromConfiguration.S3Settings.RemoteFolderName;
+            _client = new RavenAwsS3Client(restoreFromConfiguration.Settings);
+            _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 
         protected override async Task<Stream> GetStream(string path)

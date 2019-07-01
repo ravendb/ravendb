@@ -552,17 +552,25 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var connectionType = GetBackupConnectionType();
-
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
+                RestoreType restoreType;
+                if (restoreConfiguration.TryGet("Type", out string typeAsString))
+                {
+                    if(RestoreType.TryParse(typeAsString, out restoreType) == false)
+                        throw new ArgumentException($"{typeAsString} is unknown backup type.");
+                }
+                else
+                {
+                    restoreType = RestoreType.Local;
+                }
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
                 var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                 RestoreBackupTaskBase restoreBackupTask;
                 string databaseName;
-                switch (connectionType)
+                switch (restoreType)
                 {
-                    case PeriodicBackupConnectionType.Local:
+                    case RestoreType.Local:
                         var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
                         restoreBackupTask  = new RestoreFromLocal(
                             ServerStore,
@@ -572,7 +580,7 @@ namespace Raven.Server.Web.System
                         databaseName = await ValidateFreeSpace(localConfiguration, context, restoreBackupTask);
                         break;
 
-                    case PeriodicBackupConnectionType.S3:
+                    case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
                         restoreBackupTask  = new RestoreFromS3(
                             ServerStore,
@@ -584,7 +592,7 @@ namespace Raven.Server.Web.System
                         break;
 
                     default:
-                        throw new InvalidOperationException($"No matching backup type was found for {connectionType}");
+                        throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
                 }
 
                 var t = ServerStore.Operations.AddOperation(

@@ -13,61 +13,40 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
-        private readonly RestoreBackupConfiguration _restoreConfiguration;
-        private readonly RestoreFromS3Configuration _restoreFromS3Configuration;
-        private readonly RestoreType _restoreType;
-
+  private readonly RestoreBackupConfigurationBase _restoreConfiguration;
         public string NodeTag;
 
-        public RestoreBackupOperation(RestoreBackupConfiguration restoreConfiguration, string nodeTag = null)
+        public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration)
+        {
+            _restoreConfiguration = restoreConfiguration;
+        }
+
+        public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag)
         {
             _restoreConfiguration = restoreConfiguration;
             NodeTag = nodeTag;
-            _restoreType = RestoreType.Local;
-        }
-
-        public RestoreBackupOperation(RestoreFromS3Configuration restoreConfiguration, string nodeTag = null)
-        {
-            _restoreFromS3Configuration = restoreConfiguration;
-            NodeTag = nodeTag;
-            _restoreType = RestoreType.S3;
         }
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            switch (_restoreType)
-            {
-                case RestoreType.Local:
-                    return new RestoreBackupCommand(_restoreConfiguration, _restoreType, NodeTag);
-                case RestoreType.S3:
-                    return new RestoreBackupCommand(_restoreFromS3Configuration, _restoreType, NodeTag);
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
         }
 
-        internal enum RestoreType
-        {
-            Local,
-            S3
-        }
+
 
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
-            private readonly RestoreType _restoreType;
 
-            public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, RestoreType restoreType, string nodeTag = null)
-            {
+            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)            {
                 _restoreConfiguration = restoreConfiguration;
-                _restoreType = restoreType;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/restore/database?type={_restoreType.ToString()}";
+                url = $"{node.Url}/admin/restore/database";
 
                 var request = new HttpRequestMessage
                 {
