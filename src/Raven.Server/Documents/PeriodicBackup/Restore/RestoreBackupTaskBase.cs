@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 throw new ArgumentException("Database name can't be null or empty");
 
             if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, _serverStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
+                throw new InvalidOperationException(errorMessage);
 
             _serverStore.EnsureNotPassive();
 
@@ -73,14 +73,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 var clusterTopology = _serverStore.GetClusterTopology(context);
 
-                if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false)
+                _hasEncryptionKey = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
+                if (_hasEncryptionKey)
                 {
                     var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
                     if (key.Length != 256 / 8)
                         throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
 
-                    var isEncrypted = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
-                    if (isEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
+                    if (AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
                         throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
                 }
             }
@@ -95,15 +95,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 RestoreFromConfiguration.DataDirectory = GetDataDirectory();
 
             _restoringToDefaultDataDirectory = IsDefaultDataDirectory(RestoreFromConfiguration.DataDirectory, RestoreFromConfiguration.DatabaseName);
-
-            _hasEncryptionKey = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
-            if (_hasEncryptionKey)
-            {
-                var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
-
-                if (key.Length != 256 / 8)
-                    throw new InvalidOperationException($"The size of the encryption key must be 256 bits, but was {key.Length * 8} bits.");
-            }
         }
 
         protected abstract Task<Stream> GetStream(string path);

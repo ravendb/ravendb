@@ -43,17 +43,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("AWS access key cannot be null or empty", e.InnerException.Message);
 
-                restoreConfiguration.S3Settings.AwsAccessKey = "test";
+                restoreConfiguration.Settings.AwsAccessKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("AWS secret key cannot be null or empty", e.InnerException.Message);
 
-                restoreConfiguration.S3Settings.AwsSecretKey = "test";
+                restoreConfiguration.Settings.AwsSecretKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("AWS region cannot be null or empty", e.InnerException.Message);
 
-                restoreConfiguration.S3Settings.AwsRegionName = "test";
+                restoreConfiguration.Settings.AwsRegionName = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("AWS Bucket name cannot be null or empty", e.InnerException.Message);
@@ -120,7 +120,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var restoreFromS3Configuration = new RestoreFromS3Configuration
                 {
                     DatabaseName = databaseName,
-                    S3Settings = localS3Settings
+                    Settings = localS3Settings
                 };
                 var s3Operation = new RestoreBackupOperation(restoreFromS3Configuration);
                 var restoreOperation = store.Maintenance.Server.Send(s3Operation);
@@ -218,7 +218,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
                     DatabaseName = restoredDatabaseName,
-                    S3Settings = localS3Settings
+                    Settings = localS3Settings
 
                 }))
                 {
@@ -318,7 +318,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    S3Settings = localS3Settings,
+                    Settings = localS3Settings,
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
@@ -406,7 +406,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    S3Settings = localS3Settings,
+                    Settings = localS3Settings,
                     DatabaseName = databaseName,
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
@@ -478,7 +478,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    S3Settings = localS3Settings,
+                    Settings = localS3Settings,
                     DatabaseName = databaseName,
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
