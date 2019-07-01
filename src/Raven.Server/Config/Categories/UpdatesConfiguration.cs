@@ -9,6 +9,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(ReleaseChannel.Patch)]
         [ConfigurationEntry("Updates.Channel", ConfigurationEntryScope.ServerWideOnly)]
         public ReleaseChannel Channel { get; set; }
+
+        [DefaultValue(false)]
+        [ConfigurationEntry("Updates.BackgroundChecks.Disable", ConfigurationEntryScope.ServerWideOnly)]
+        public bool BackgroundChecksDisabled { get; set; }
     }
 
     public enum ReleaseChannel

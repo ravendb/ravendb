@@ -44,6 +44,9 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         public void Initialize(UpdatesConfiguration configuration)
         {
+            if (configuration.BackgroundChecksDisabled)
+                return;
+
             if (_timer != null)
                 return;
 
