@@ -1341,6 +1341,10 @@ namespace Raven.Server.ServerWide
             bool cloneKey = false)
         {
             Debug.Assert(context.Transaction != null);
+
+            //This will prevent the insertion of an encryption key for a database that resides in a server without encryption license.
+            LicenseManager.AssertCanCreateEncryptedDatabase();
+
             if (secretKey.Length != 256 / 8)
                 throw new ArgumentException($"Key size must be 256 bits, but was {secretKey.Length * 8}", nameof(secretKey));
 
