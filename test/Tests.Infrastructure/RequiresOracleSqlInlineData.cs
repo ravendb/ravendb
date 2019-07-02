@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Raven.Server.SqlMigration;
+using Tests.Infrastructure.ConnectionString;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure
@@ -9,7 +10,7 @@ namespace Tests.Infrastructure
     {
         public RequiresOracleSqlInlineData()
         {
-            if (RequiresOracleSqlFactAttribute.IsOracleSqlAvailable == false)
+            if (OracleConnectionString.Instance.CanConnect() == false)
                 Skip = "Test requires Oracle database";
         }
 
