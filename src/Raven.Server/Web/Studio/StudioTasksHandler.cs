@@ -84,10 +84,6 @@ namespace Raven.Server.Web.Studio
             
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
-                if (connectionType != PeriodicBackupConnectionType.Local && json == null)
-                    throw new BadRequestException("No JSON was posted.");
-
                 FolderPathOptions folderPathOptions;
                 switch (connectionType)
                 {
@@ -98,6 +94,10 @@ namespace Raven.Server.Web.Studio
                         
                         break;
                     case PeriodicBackupConnectionType.S3:
+                        var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        if (connectionType != PeriodicBackupConnectionType.Local && json == null)
+                            throw new BadRequestException("No JSON was posted.");
+                        
                         var s3Settings = JsonDeserializationServer.S3Settings(json);
                         if (s3Settings == null)
                             throw new BadRequestException("No S3Settings were found.");
