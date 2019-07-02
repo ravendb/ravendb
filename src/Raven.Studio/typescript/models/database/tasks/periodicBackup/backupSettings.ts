@@ -5,7 +5,7 @@ import generalUtils = require("common/generalUtils");
 abstract class backupSettings {
     enabled = ko.observable<boolean>();
 
-    connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType;
+    connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
     
     isTestingCredentials = ko.observable<boolean>();
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -16,7 +16,7 @@ abstract class backupSettings {
     
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType) {
         this.enabled(!dto.Disabled);
         this.connectionType = connectionType;
         this.initObservables();

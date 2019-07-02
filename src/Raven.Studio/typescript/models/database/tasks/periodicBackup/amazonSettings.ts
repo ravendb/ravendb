@@ -36,7 +36,7 @@ abstract class amazonSettings extends backupSettings {
     ];
 
     constructor(dto: Raven.Client.Documents.Operations.Backups.AmazonSettings, 
-                connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType,
+                connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
                 allowedRegions: Array<string>) {
         super(dto, connectionType);
 
