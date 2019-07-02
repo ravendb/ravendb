@@ -699,8 +699,8 @@ namespace SlowTests.MailingList
                                    let dict = e.DictionaryOfIntegers.ToDictionary(x => x.Key, x => x.Value)
                                    select new Result
                                    {
-                                       Count = e.DictionaryOfIntegers.ToDictionary(x => x.Key, x => x.Value).Count,
-                                       Count2 = dict.Count,
+                                       Count = e.DictionaryOfIntegers.ToDictionary(x => x.Key, x => x.Value).Count(),
+                                       Count2 = dict.Count(),
                                        ContainsIntInt = dict.Contains(new KeyValuePair<int, int>(1, 1)),
                                        ContainsInt = e.DictionaryOfStringInteger.Contains(new KeyValuePair<string, int>("int", 322)),
                                        ContainsShort = e.DictionaryOfStringShort.ToDictionary(x => x.Key, x => x.Value).Contains(new KeyValuePair<string, short>("short", 322)),
