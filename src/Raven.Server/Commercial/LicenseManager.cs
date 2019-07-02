@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,7 +7,6 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -127,6 +125,7 @@ namespace Raven.Server.Commercial
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
                 ReloadLicense(firstRun: true);
+
                 AsyncHelpers.RunSync(() => CalculateLicenseLimits());
             }
             catch (Exception e)
@@ -362,15 +361,15 @@ namespace Raven.Server.Commercial
         public async Task CalculateLicenseLimits(
             NodeDetails newNodeDetails = null,
             bool forceFetchingNodeInfo = false,
-            bool waitToUpdate = false)
+            bool forceUpdate = false)
         {
-            if (_serverStore.IsLeader() == false)
+            if (forceUpdate == false && _serverStore.IsLeader() == false)
                 return;
 
             if (_disableCalculatingLicenseLimits)
                 return;
 
-            if (_licenseLimitsSemaphore.Wait(waitToUpdate ? 1000 : 0) == false)
+            if (_licenseLimitsSemaphore.Wait(forceFetchingNodeInfo ? 1000 : 0) == false)
                 return;
 
             try
@@ -379,7 +378,14 @@ namespace Raven.Server.Commercial
                 if (licenseLimits == null)
                     return;
 
-                _serverStore.PutLicenseLimits(licenseLimits, RaftIdGenerator.DontCareId);
+                if (forceFetchingNodeInfo)
+                {
+                    await _serverStore.PutLicenseLimitsAsync(licenseLimits, RaftIdGenerator.DontCareId);
+                }
+                else
+                {
+                    _serverStore.PutLicenseLimits(licenseLimits, RaftIdGenerator.DontCareId);
+                }
             }
             catch (Exception e)
             {
@@ -469,7 +475,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+            await CalculateLicenseLimits(forceFetchingNodeInfo: true, forceUpdate: true);
         }
 
         private void ResetLicense(string error)
@@ -693,7 +699,7 @@ namespace Raven.Server.Commercial
             {
                 await LeaseLicense(RaftIdGenerator.NewId());
 
-                await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+                await CalculateLicenseLimits(forceFetchingNodeInfo: true);
 
                 ReloadLicenseLimits(addPerformanceHint: true);
             }
@@ -867,7 +873,7 @@ namespace Raven.Server.Commercial
                     detailsPerNode.Remove(nodeToRemove);
                 }
 
-                AssignMissingNodeCores(missingNodesAssignment, detailsPerNode);
+                AssignMissingCoresForMissingNodes(missingNodesAssignment, detailsPerNode);
                 VerifyCoresPerNode(detailsPerNode, ref hasChanges);
                 ValidateLicenseStatus(detailsPerNode);
             }
@@ -899,18 +905,44 @@ namespace Raven.Server.Commercial
             var maxCores = _licenseStatus.MaxCores;
             var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
 
-            if (maxCores >= utilizedCores)
+            if (maxCores == utilizedCores)
                 return;
 
             hasChanges = true;
-            var coresPerNode = Math.Max(1, maxCores / detailsPerNode.Count);
-            foreach (var nodeDetails in detailsPerNode)
+
+            if (maxCores < utilizedCores)
             {
-                nodeDetails.Value.UtilizedCores = coresPerNode;
+                // we have less licensed cores than we currently used
+                var coresPerNode = Math.Max(1, maxCores / detailsPerNode.Count);
+                foreach (var nodeDetails in detailsPerNode)
+                {
+                    nodeDetails.Value.UtilizedCores = coresPerNode;
+                }
+            }
+            else
+            {
+                // we have spare cores to distribute
+                var freeCoresToDistribute = maxCores - utilizedCores;
+                
+                foreach (var nodeDetails in detailsPerNode)
+                {
+                    if (freeCoresToDistribute == 0)
+                        break;
+
+                    var node = nodeDetails.Value;
+                    var utilizedCoresForNode = node.UtilizedCores;
+                    var availableCoresToAssignForNode = node.NumberOfCores - utilizedCoresForNode;
+                    if (availableCoresToAssignForNode == 0)
+                        continue;
+
+                    var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCoresToDistribute);
+                    nodeDetails.Value.UtilizedCores += numberOfCoresToAdd;
+                    freeCoresToDistribute -= numberOfCoresToAdd;
+                }
             }
         }
 
-        private void AssignMissingNodeCores(
+        private void AssignMissingCoresForMissingNodes(
             List<string> missingNodesAssignment,
             Dictionary<string, DetailsPerNode> detailsPerNode)
         {
@@ -918,8 +950,8 @@ namespace Raven.Server.Commercial
                 return;
 
             var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-            var availableCores = _licenseStatus.MaxCores - utilizedCores;
-            var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
+            var freeCoresToDistribute = _licenseStatus.MaxCores - utilizedCores;
+            var coresPerNode = Math.Max(1, freeCoresToDistribute / missingNodesAssignment.Count);
 
             foreach (var nodeTag in missingNodesAssignment)
             {

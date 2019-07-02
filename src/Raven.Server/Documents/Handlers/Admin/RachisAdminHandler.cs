@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             BuildInfo = nodeInfo.BuildInfo,
                             OsInfo = nodeInfo.OsInfo
                         };
-                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true, waitToUpdate: true);
+                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true);
                     }
 
                     NoContentStatus();
@@ -571,7 +571,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                 NoContentStatus();
                 return;
             }
