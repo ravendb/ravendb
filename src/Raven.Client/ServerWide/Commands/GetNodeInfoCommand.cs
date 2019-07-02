@@ -49,6 +49,8 @@ namespace Raven.Client.ServerWide.Commands
     {
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            Timeout = TimeSpan.FromSeconds(15);
+
             url = $"{node.Url}/cluster/node-info";
 
             return new HttpRequestMessage
