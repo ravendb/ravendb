@@ -20,9 +20,9 @@ class getFolderPathOptionsCommand extends commandBase {
     private preparePayload() {
         switch (this.connectionType) {
             case "serverLocal":
-                return null;
+                return undefined;
             case "cloud":
-                return this.s3Credentials;
+                return JSON.stringify(this.s3Credentials);
                 
         }
     }
@@ -39,7 +39,7 @@ class getFolderPathOptionsCommand extends commandBase {
 
         const url = endpoints.global.studioTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args);
         
-        return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, JSON.stringify(this.preparePayload()), null)
+        return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), null)
             .fail((response: JQueryXHR) => {
                 if (response.status === 403) {
                     return;
