@@ -27,12 +27,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return folders.Select(x => x.FullPath).ToList();
         }
 
-        protected override (string BackupTimeAsString, string DatabaseName, string NodeTag) ParseFolderName(string folder)
+        protected override string GetFolderName(string folderPath)
         {
-            // there are no folders in s3
-            // the returned path ends with /
-            folder = folder.Substring(0, folder.Length - 1);
-            return base.ParseFolderName(folder);
+            return folderPath.Substring(0, folderPath.Length - 1);
         }
 
         protected override async Task<List<string>> GetFiles(string folder)

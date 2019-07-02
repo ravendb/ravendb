@@ -23,6 +23,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             throw new NotSupportedException();
         }
 
+        protected override string GetFolderName(string folderPath)
+        {
+            throw new NotSupportedException();
+        }
+
         protected override Task<List<string>> GetFiles(string folder)
         {
             throw new NotSupportedException();
