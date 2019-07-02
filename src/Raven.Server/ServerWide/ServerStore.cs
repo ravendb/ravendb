@@ -2186,18 +2186,12 @@ namespace Raven.Server.ServerWide
 
         public void PutLicenseLimits(LicenseLimits licenseLimits, string raftRequestId)
         {
-            if (IsLeader() == false)
-                throw new InvalidOperationException("Only the leader can set the license limits!");
-
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
-            _engine.PutAsync(command).IgnoreUnobservedExceptions();
+            SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string raftRequestId)
         {
-            if (IsLeader() == false)
-                throw new InvalidOperationException("Only the leader can set the license limits!");
-
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
 
             var result = await SendToLeaderAsync(command);
