@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class BackupTask
     {
-        public static string DateTimeFormat => "yyyy-MM-dd-HH-mm";
+        public static string DateTimeFormat => "yyyy-MM-dd-HH-mm-ss";
         private const string InProgressExtension = ".in-progress";
 
         private readonly ServerStore _serverStore;
