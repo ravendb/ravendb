@@ -127,7 +127,6 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicDictionary(_dictionary);
         }
 
-
         public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex)
         {
             throw new NotSupportedException();
@@ -143,7 +142,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return _dictionary.Remove(item);
         }
 
-        public int Count => _dictionary.Count();
+        public int Count()
+        {
+            return _dictionary.Count();
+        }
+
+        int ICollection<KeyValuePair<object, object>>.Count => _dictionary.Count();
         public bool IsReadOnly => throw new NotSupportedException();
 
         public void Add(object key, object value)
@@ -195,45 +199,44 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicDictionary(_dictionary.OrderByDescending(pair => keySelector(pair), comparer).ToDictionary(x => x.Key, y => y.Value));
         }
 
-        public IEnumerable<IGrouping<object, KeyValuePair<object, object>>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector)
+        public IEnumerable<IGrouping<object, object>> GroupBy(Func<object, object> keySelector)
         {
-            return _dictionary.GroupBy(keySelector);
+            return Enumerable.GroupBy(this, keySelector);
         }
 
-        public IEnumerable<IGrouping<object, KeyValuePair<object, object>>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector,
-            IEqualityComparer<object> comparer)
+        public IEnumerable<IGrouping<object, object>> GroupBy(Func<object, object> keySelector, IEqualityComparer<object> comparer)
         {
-            return _dictionary.GroupBy(keySelector, comparer);
+            return Enumerable.GroupBy(this, keySelector, comparer);
         }
 
-        public IEnumerable<IGrouping<dynamic, dynamic>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector,
-            Func<KeyValuePair<object, object>, object> elementSelector)
+        public IEnumerable<IGrouping<object, object>> GroupBy(Func<object, object> keySelector, Func<object, object> elementSelector)
         {
-            return _dictionary.GroupBy(keySelector, elementSelector);
+            return Enumerable.GroupBy(this, keySelector, elementSelector);
         }
 
-        public IEnumerable<IGrouping<object, object>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector,
-            Func<KeyValuePair<object, object>, object> elementSelector, IEqualityComparer<object> comparer)
+        public IEnumerable<IGrouping<object, object>> GroupBy(Func<object, object> keySelector, Func<object, object> elementSelector, IEqualityComparer<object> comparer)
         {
-            return _dictionary.GroupBy(keySelector, elementSelector, comparer);
+            return Enumerable.GroupBy(this, keySelector, elementSelector, comparer);
         }
 
-        public IEnumerable<IGrouping<object, object>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector,
-            Func<object, IEnumerable<KeyValuePair<object, object>>, IGrouping<object, object>> resultSelector)
+        public IEnumerable<object> GroupBy(Func<object, object> keySelector, Func<object, IEnumerable<object>, object> resultSelector)
         {
-            return _dictionary.GroupBy(keySelector, resultSelector);
+            return Enumerable.GroupBy(this, keySelector, resultSelector);
         }
 
-        public IEnumerable<IGrouping<object, object>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector,
-            Func<KeyValuePair<object, object>, object> elementSelector, Func<object, IEnumerable<object>, IGrouping<object, object>> resultSelector)
+        public IEnumerable<object> GroupBy(Func<object, object> keySelector, Func<object, object> elementSelector, Func<object, IEnumerable<object>, object> resultSelector)
         {
-            return _dictionary.GroupBy(keySelector, elementSelector, resultSelector);
+            return Enumerable.GroupBy(this, keySelector, elementSelector, resultSelector);
         }
 
-        public IEnumerable<IGrouping<object, object>> GroupBy(Func<KeyValuePair<object, object>, object> keySelector,
-            Func<object, IEnumerable<KeyValuePair<object, object>>, IGrouping<object, object>> resultSelector, IEqualityComparer<object> comparer)
+        public IEnumerable<object> GroupBy(Func<object, object> keySelector, Func<object, IEnumerable<object>, object> resultSelector, IEqualityComparer<object> comparer)
         {
-            return _dictionary.GroupBy(keySelector, resultSelector, comparer);
+            return Enumerable.GroupBy(this, keySelector, resultSelector, comparer);
+        }
+
+        public IEnumerable<object> GroupBy(Func<object, object> keySelector, Func<object, object> elementSelector, Func<object, IEnumerable<object>, object> resultSelector, IEqualityComparer<object> comparer)
+        {
+            return Enumerable.GroupBy(this, keySelector, elementSelector, resultSelector, comparer);
         }
 
         public KeyValuePair<object, object> Last()
@@ -303,12 +306,26 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<TResult> OfType<TResult>()
         {
-            throw new NotSupportedException();
+            return Enumerable.OfType<TResult>(this);
         }
 
         public DynamicDictionary Prepend(KeyValuePair<object, object> element)
         {
             return new DynamicDictionary(_dictionary.Prepend(element));
+        }
+
+        public DynamicDictionary Where(Func<object, bool> predicate)
+        {
+            var vars = Enumerable.Where(this, predicate);
+            var dict = new Dictionary<object, object>();
+            foreach (var v in vars)
+            {
+                if (v is KeyValuePair<object, object> kvp)
+                {
+                    dict[kvp.Key] = kvp.Value;
+                }
+            }
+            return new DynamicDictionary(dict);
         }
 
         public DynamicDictionary Where(Func<KeyValuePair<object, object>, bool> predicate)

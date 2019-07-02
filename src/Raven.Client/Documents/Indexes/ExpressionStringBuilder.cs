@@ -1510,7 +1510,7 @@ namespace Raven.Client.Documents.Indexes
             var isDictionary = false;
             var isDictionaryReturn = false;
 
-            if (node.Arguments[0].Type.IsGenericType)
+            if (node.Arguments.Count > 0 && node.Arguments[0].Type.IsGenericType)
             {
                 if (node.Arguments[0].Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
                     isDictionary = true;
