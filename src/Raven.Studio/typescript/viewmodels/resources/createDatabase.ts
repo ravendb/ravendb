@@ -417,8 +417,8 @@ class createDatabase extends dialogViewModelBase {
             .execute();
     }
 
-    private updateCloudFolderPath(path: string): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return getFolderPathOptionsCommand.forS3Backup(path) //TODO: pass credentials 
+    private updateCloudFolderPath(credentials: Raven.Client.Documents.Operations.Backups.S3Settings): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forS3Backup(credentials)
             .execute();
     }
     
@@ -432,11 +432,12 @@ class createDatabase extends dialogViewModelBase {
             this.updateFolderPath(path, true)
                 .done(result => this.backupDirectoryPathOptions(result.List));
         } else {
-            this.updateCloudFolderPath(path)
+            const decodedCredentials = this.decodeCredentials(this.databaseModel.restore.cloudCredentials());
+            this.updateCloudFolderPath(decodedCredentials)
                 .done(result => this.backupDirectoryPathOptions(result.List));
         }
     }
-
+    
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {
         this.updateFolderPath(path)
             .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
@@ -466,6 +467,11 @@ class createDatabase extends dialogViewModelBase {
             case "legacyMigration":
                 return _.without(sections, restoreSection);
         }
+    }
+    
+    private decodeCredentials(encoded: string): Raven.Client.Documents.Operations.Backups.S3Settings { 
+        //TODO: 
+        return JSON.parse(atob(encoded));
     }
 
     createDatabase() {
