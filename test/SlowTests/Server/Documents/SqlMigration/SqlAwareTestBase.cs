@@ -13,6 +13,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using SlowTests.Server.Documents.ETL.SQL;
 using Tests.Infrastructure;
+using Tests.Infrastructure.ConnectionString;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace SlowTests.Server.Documents.SqlMigration
@@ -140,9 +141,9 @@ namespace SlowTests.Server.Documents.SqlMigration
         private DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "SqlTest_" + Guid.NewGuid();
-            connectionString = SqlEtlTests.MasterDatabaseConnection.Value + $";Initial Catalog={databaseName}";
+            connectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={databaseName}";
 
-            using (var connection = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
+            using (var connection = new SqlConnection(MssqlConnectionString.Instance.VerifiedConnectionString.Value))
             {
                 connection.Open();
 
@@ -188,7 +189,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
             return new DisposableAction(() =>
             {
-                using (var con = new SqlConnection(SqlEtlTests.MasterDatabaseConnection.Value))
+                using (var con = new SqlConnection(MssqlConnectionString.Instance.VerifiedConnectionString.Value))
                 {
                     con.Open();
 
@@ -207,9 +208,15 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         protected DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
+            const int commandTimeout = 2 * 60;
+            
             databaseName = "sql_test_" + Guid.NewGuid();
-            var rawConnectionString = MySqlTests.MySqlDatabaseConnection.Value;
-            connectionString = rawConnectionString + $";database=\"{databaseName}\"";
+            var rawConnectionString = MySqlConnectionString.Instance.VerifiedConnectionString.Value;
+            
+            if(string.IsNullOrEmpty(rawConnectionString))
+                throw new InvalidOperationException("The connection string for MySql db is null");
+            
+            connectionString = $"{rawConnectionString};database='{databaseName}'";
 
             using (var connection = new MySqlConnection(rawConnectionString))
             {
@@ -217,8 +224,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 using (var dbCommand = connection.CreateCommand())
                 {
-                    var createDatabaseQuery = "CREATE DATABASE `{0}`";
-                    dbCommand.CommandText = string.Format(createDatabaseQuery, databaseName);
+                    dbCommand.CommandTimeout = commandTimeout;
+                    dbCommand.CommandText = $"CREATE DATABASE `{databaseName}`";
                     dbCommand.ExecuteNonQuery();
                 }
             }
@@ -226,11 +233,12 @@ namespace SlowTests.Server.Documents.SqlMigration
             using (var dbConnection = new MySqlConnection(connectionString))
             {
                 dbConnection.Open();
-
+                
                 var assembly = Assembly.GetExecutingAssembly();
 
                 using (var dbCommand = dbConnection.CreateCommand())
                 {
+                    dbCommand.CommandTimeout = commandTimeout; 
                     var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".create.sql"));
                     dbCommand.CommandText = textStreamReader.ReadToEnd();
                     dbCommand.ExecuteNonQuery();
@@ -240,6 +248,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = commandTimeout;
                         var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".insert.sql"));
                         dbCommand.CommandText = textStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
@@ -256,6 +265,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     using (var dbCommand = con.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = commandTimeout;
                         var dropDatabaseQuery = "DROP DATABASE `{0}`";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
 
@@ -268,7 +278,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         protected DisposableAction WithNpgSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "npgSql_test_" + Guid.NewGuid();
-            var rawConnectionString = NpgSqlTests.NpgSqlDatabaseConnection.Value;
+            var rawConnectionString = NpgSqlConnectionString.Instance.VerifiedConnectionString.Value;
             connectionString = rawConnectionString + $";Database=\"{databaseName}\"";
 
             using (var connection = new NpgsqlConnection(rawConnectionString))
@@ -327,7 +337,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         {
             databaseName = "C##" + Guid.NewGuid();
             var pass = "pass";
-            var adminConnectionString = OracleTests.OracleDatabaseConnection.Value;
+            var adminConnectionString = OracleConnectionString.Instance.VerifiedConnectionString.Value;
 
             using (var connection = new OracleConnection(adminConnectionString))
             {
@@ -349,8 +359,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
                 connection.Close();
             }
-            var userConnectionString = OracleTests.OracleDataSource + $"USER ID=\"{databaseName}\";password={pass};Pooling=false";
-            connectionString = userConnectionString;
+            connectionString = OracleConnectionString.Instance.GetUserConnectionString(databaseName, pass);
             using (var dbConnection = new OracleConnection(connectionString))
             {
                 // ConnectionString with DB

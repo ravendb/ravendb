@@ -20,6 +20,9 @@ namespace SlowTests.Server.Documents.SqlMigration
         [RequiresOracleSqlInlineData]
         public async Task CanLinkOnParent(MigrationProvider provider)
         {
+            const string tableName = "groups1";
+            const string collectionName = "Groups1";
+
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
@@ -31,11 +34,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection(schemaName, "groups", "Groups")
+                            new RootCollection(schemaName, tableName, collectionName)
                             {
                                 LinkedCollections = new List<LinkedCollection>
                                 {
-                                    new LinkedCollection(schemaName, "groups", RelationType.ManyToOne, new List<string> { "parent_group_id" }, "Parent")
+                                    new LinkedCollection(schemaName, tableName, RelationType.ManyToOne, new List<string> { "parent_group_id" }, "Parent")
                                 }
                             }
                         }
@@ -50,7 +53,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     using (var session = store.OpenSession())
                     {
-                        var g1111 = session.Load<JObject>("Groups/53");
+                        var g1111 = session.Load<JObject>($"{collectionName}/53");
                         Assert.Equal("G1.1.1.1", g1111["Name"]);
                         var g111 = session.Load<JObject>(g1111["Parent"].ToString());
                         Assert.Equal("G1.1.1", g111["Name"]);
@@ -71,6 +74,9 @@ namespace SlowTests.Server.Documents.SqlMigration
         [RequiresOracleSqlInlineData]
         public async Task CanLinkOnChild(MigrationProvider provider)
         {
+            var tableName = "groups1";
+            var collectionName = "Groups1";
+
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
@@ -82,11 +88,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection(schemaName, "groups", "Groups")
+                            new RootCollection(schemaName, tableName, collectionName)
                             {
                                 LinkedCollections = new List<LinkedCollection>
                                 {
-                                    new LinkedCollection(schemaName, "groups", RelationType.OneToMany, new List<string> { "parent_group_id" }, "NestedGroups")
+                                    new LinkedCollection(schemaName, tableName, RelationType.OneToMany, new List<string> { "parent_group_id" }, "NestedGroups")
                                 }
                             }
                         }
@@ -101,10 +107,10 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     using (var session = store.OpenSession())
                     {
-                        var g11 = session.Load<JObject>("Groups/51");
+                        var g11 = session.Load<JObject>($"{collectionName}/51");
                         Assert.Equal(2, g11["NestedGroups"].Count());
-                        Assert.Equal("Groups/52", g11["NestedGroups"][0]);
-                        Assert.Equal("Groups/54", g11["NestedGroups"][1]);
+                        Assert.Equal($"{collectionName}/52", g11["NestedGroups"][0]);
+                        Assert.Equal($"{collectionName}/54", g11["NestedGroups"][1]);
                     }
 
                     var collectionStatistics = store.Maintenance.Send(new GetCollectionStatisticsOperation());
@@ -120,6 +126,9 @@ namespace SlowTests.Server.Documents.SqlMigration
         [RequiresOracleSqlInlineData]
         public async Task CanEmbedOnParent(MigrationProvider provider)
         {
+            const string tableName = "groups1";
+            const string collectionName = "Groups1";
+
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
@@ -131,15 +140,15 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         Collections = new List<RootCollection>
                         {
-                            new RootCollection(schemaName, "groups", "Groups")
+                            new RootCollection(schemaName, tableName, collectionName)
                             {
                                 NestedCollections = new List<EmbeddedCollection>
                                 {
-                                    new EmbeddedCollection(schemaName, "groups", RelationType.ManyToOne, new List<string> { "parent_group_id" }, "Parent")
+                                    new EmbeddedCollection(schemaName, tableName, RelationType.ManyToOne, new List<string> { "parent_group_id" }, "Parent")
                                     {
                                         NestedCollections = new List<EmbeddedCollection>
                                         {
-                                            new EmbeddedCollection(schemaName, "groups", RelationType.ManyToOne, new List<string> { "parent_group_id" }, "Grandparent")
+                                            new EmbeddedCollection(schemaName, tableName, RelationType.ManyToOne, new List<string> { "parent_group_id" }, "Grandparent")
                                         }
                                     }
                                 }
@@ -156,7 +165,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     using (var session = store.OpenSession())
                     {
-                        var group = session.Load<JObject>("Groups/53");
+                        var group = session.Load<JObject>($"{collectionName}/53");
                         Assert.Equal("G1.1.1.1", group["Name"]);
                         var parent = group["Parent"];
                         Assert.NotNull(parent);
