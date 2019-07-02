@@ -25,6 +25,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return Task.FromResult(folders.ToList());
         }
 
+        protected override string GetFolderName(string folderPath)
+        {
+            return Path.GetFileName(folderPath);
+        }
+
         protected override Task<List<string>> GetFiles(string folder)
         {
             try

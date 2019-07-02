@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -25,10 +26,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected abstract Task<List<string>> GetFolders();
 
-        protected virtual (string BackupTimeAsString, string DatabaseName, string NodeTag) ParseFolderName(string folder)
-        {
-            return RestoreUtils.ParseFolderName(folder);
-        }
+        protected abstract string GetFolderName(string folderPath);
 
         protected abstract Task<List<string>> GetFiles(string folder);
 
@@ -49,9 +47,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 var sortedBackupFolders = new SortedList<DateTime, FolderDetails>();
 
-                foreach (var folder in folders)
+                foreach (var folder in folders.OrderBy(x => x))
                 {
-                    var folderDetails = ParseFolderName(folder);
+                    var folderName = GetFolderName(folder);
+                    var folderDetails = RestoreUtils.ParseFolderName(folderName);
                     if (DateTime.TryParseExact(
                             folderDetails.BackupTimeAsString,
                             BackupTask.DateTimeFormat,
@@ -62,6 +61,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"Failed to parse backup date time for folder: {folder}");
                         continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(folderDetails.FolderNumberAsString) == false)
+                    {
+                        var folderNumber = int.Parse(folderDetails.FolderNumberAsString);
+                        backupTime = backupTime.AddMilliseconds(folderNumber);
                     }
 
                     if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
@@ -76,11 +81,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     {
                         // no backup files
                         continue;
-                    }
-
-                    while (sortedBackupFolders.ContainsKey(backupTime))
-                    {
-                        backupTime = backupTime.AddMilliseconds(1);
                     }
 
                     sortedBackupFolders.Add(backupTime, new FolderDetails
@@ -134,6 +134,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 }
 
                 await DeleteFolders(foldersToDelete);
+
+                foreach (var toDelete in foldersToDelete)
+                {
+                    Console.WriteLine($"Deleted: {Path.GetFileName(toDelete.Name)}");
+                }
+
+                foreach (var folder in (await GetFolders()))
+                {
+                    Console.WriteLine($"Existing: {Path.GetFileName(folder)}");
+                }
 
                 bool ReachedMinimumBackupsToKeep()
                 {
