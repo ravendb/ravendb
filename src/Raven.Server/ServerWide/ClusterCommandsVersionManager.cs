@@ -106,7 +106,8 @@ namespace Raven.Server.ServerWide
             [nameof(EditDatabaseClientConfigurationCommand)] = Base42CommandsVersion,
             [nameof(PutServerWideBackupConfigurationCommand)] = 42_001,
             [nameof(DeleteServerWideBackupConfigurationCommand)] = 42_001,
-            [nameof(UpdateUnusedDatabaseIdsCommand)] = 42_002
+            [nameof(UpdateUnusedDatabaseIdsCommand)] = 42_002,
+            [nameof(UpdateLicenseLimitsCommand)] = 42_002,
         };
 
         public static bool CanPutCommand(string command)

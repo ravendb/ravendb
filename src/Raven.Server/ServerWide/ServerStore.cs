@@ -972,6 +972,7 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicense();
                     break;
                 case nameof(PutLicenseLimitsCommand):
+                case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
@@ -2146,6 +2147,26 @@ namespace Raven.Server.ServerWide
             return identityInfo;
         }
 
+        public NodeInfo GetNodeInfo()
+        {
+            var memoryInformation = MemoryInformation.GetMemoryInfo();
+            return new NodeInfo
+            {
+                NodeTag = NodeTag,
+                TopologyId = GetClusterTopology().TopologyId,
+                Certificate = Server.Certificate.CertificateForClients,
+                NumberOfCores = ProcessorInfo.ProcessorCount,
+                InstalledMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes),
+                UsableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes),
+                BuildInfo = LicenseManager.BuildInfo,
+                OsInfo = LicenseManager.OsInfo,
+                ServerId = GetServerId(),
+                CurrentState = CurrentRachisState,
+                HasFixedPort = HasFixedPort,
+                ServerSchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion
+            };
+        }
+
         public License LoadLicense()
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -2193,6 +2214,24 @@ namespace Raven.Server.ServerWide
         public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string raftRequestId)
         {
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
+
+            var result = await SendToLeaderAsync(command);
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+        }
+
+        public async Task PutMyNodeInfoAsync(int maxLicenseCores)
+        {
+            var licenseLimits = LoadLicenseLimits();
+            if (licenseLimits == null)
+                return;
+
+            if (licenseLimits.NodeLicenseDetails.TryGetValue(NodeTag, out _) == false)
+                return;
+
+            var nodeInfo = GetNodeInfo();
+            var detailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo);
+            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, NodeTag, detailsPerNode, maxLicenseCores, RaftIdGenerator.NewId());
 
             var result = await SendToLeaderAsync(command);
 

@@ -375,6 +375,9 @@ namespace Raven.Server.ServerWide
                     case nameof(PutLicenseLimitsCommand):
                         PutValue<LicenseLimits>(context, type, cmd, index);
                         break;
+                    case nameof(UpdateLicenseLimitsCommand):
+                        UpdateValue<NodeLicenseLimits>(context, type, cmd, index);
+                        break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);

@@ -126,7 +126,7 @@ namespace Raven.Server.Commercial
 
                 ReloadLicense(firstRun: true);
 
-                AsyncHelpers.RunSync(() => CalculateLicenseLimits());
+                AsyncHelpers.RunSync(() => _serverStore.PutMyNodeInfoAsync(_licenseStatus.MaxCores));
             }
             catch (Exception e)
             {
