@@ -208,7 +208,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         protected DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
-            const int commandTimeout = 2 * 60;
+            const int commandTimeout = 10 * 60; // We want to avoid timeout exception. We don't care about performance here. The query can take long time if all the outer database are working simultaneously on the same machine 
             
             databaseName = "sql_test_" + Guid.NewGuid();
             var rawConnectionString = MySqlConnectionString.Instance.VerifiedConnectionString.Value;
