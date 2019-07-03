@@ -157,7 +157,7 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to initialize license manager", e);
+                    Logger.Operations("Failed to put my node info, will try again later", e);
             }
         }
 
