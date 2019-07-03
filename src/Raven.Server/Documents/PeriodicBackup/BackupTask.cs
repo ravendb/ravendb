@@ -406,11 +406,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 folderName = _previousBackupStatus.FolderName;
                 backupDirectory = _backupToLocalFolder ? new PathSetting(_previousBackupStatus.LocalBackup.BackupDirectory) : _tempBackupPath;
             }
+        }
 
-            string GetFormattedDate()
-            {
-                return DateTime.Now.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
-            }
+        private static string GetFormattedDate()
+        {
+            return DateTime.Now.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
         }
 
         private BackupResult GenerateBackupResult()
@@ -516,16 +516,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (throwWhenFileExists)
                     throw new InvalidOperationException($"File '{backupFilePath}' already exists!");
 
-                var counter = 1;
                 while (true)
                 {
-                    fileName = $"{now}-{counter:D2}{backupExtension}";
+                    fileName = $"{GetFormattedDate()}{backupExtension}";
                     backupFilePath = Path.Combine(backupFolder, fileName);
 
                     if (File.Exists(backupFilePath) == false)
                         break;
-
-                    counter++;
                 }
             }
 
