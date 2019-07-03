@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,12 +11,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenAwsS3Client _client;
 
-        public override string Name => "S3";
+        protected override string Name => "S3";
 
         private const string Delimiter = "/";
 
-        public S3RetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAwsS3Client client)
-            : base(retentionPolicy, databaseName)
+        public S3RetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, RavenAwsS3Client client)
+            : base(retentionPolicy, databaseName, onProgress)
         {
             _client = client;
         }
@@ -53,7 +54,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             var objectsToDelete = new List<string>();
             foreach (var obj in allObjects)
             {
-                
                 if (objectsToDelete.Count == numberOfObjectsInBatch)
                 {
                     await _client.DeleteMultipleObjects(objectsToDelete);
