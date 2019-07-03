@@ -45,6 +45,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             {
                 var folders = await GetFolders();
 
+                // we are going to keep at least one backup
+                var minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
+                if (folders.Count <= minimumBackupsToKeep)
+                {
+                    // the number of backups to keep is more than we potentially have
+                    return;
+                }
+
                 var sortedBackupFolders = new SortedList<DateTime, FolderDetails>();
 
                 foreach (var folder in folders)
@@ -95,9 +103,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         Files = files
                     });
                 }
-
-                // we are going to keep at least one backup
-                var minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
 
                 if (sortedBackupFolders.Count <= minimumBackupsToKeep)
                 {
