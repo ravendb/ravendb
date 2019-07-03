@@ -76,8 +76,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, timeout: 15000);
         }
 
-        [Theory]
-        //[Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(10)]
         [InlineData(2)]
         [InlineData(1)]
@@ -102,8 +101,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, timeout: 60000);
         }
 
-        [Theory]
-        //[Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(15, null)]
         [InlineData(25, null)]
         [InlineData(30, null)]
