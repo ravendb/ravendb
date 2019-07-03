@@ -466,9 +466,8 @@ namespace FastTests
         }
 
 
-        protected T WaitForValue<T>(Func<T> act, T expectedVal)
+        protected T WaitForValue<T>(Func<T> act, T expectedVal, int timeout = 15000)
         {
-            int timeout = 15000;
             if (Debugger.IsAttached)
                 timeout *= 100;
 
