@@ -1125,7 +1125,7 @@ namespace Raven.Server.Rachis
 
             if (clusterTopology.Members.ContainsKey(Tag) == false)
             {
-                if (version < 42_000)
+                if (version >= 40_000 && version < 42_000)
                     throw new NotSupportedException($"You cannot add a new node in version {ServerVersion.FullVersion} to a pre 4.2 cluster, " +
                                                     "in order to add this node you should upgrade your cluster first.");
             }
