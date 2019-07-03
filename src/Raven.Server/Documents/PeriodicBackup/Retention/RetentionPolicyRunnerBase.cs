@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _databaseName = databaseName;
             _onProgress = onProgress;
 
-            _minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
+            _minimumBackupsToKeep = _retentionPolicy?.MinimumBackupsToKeep ?? 1;
         }
 
         protected abstract Task<List<string>> GetFolders();
