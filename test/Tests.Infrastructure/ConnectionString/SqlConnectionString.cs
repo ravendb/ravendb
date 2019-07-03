@@ -41,19 +41,25 @@ namespace Tests.Infrastructure.ConnectionString
 
         protected virtual string VerifiedConnectionStringFactor()
         {
-            
             if(string.IsNullOrEmpty(ConnectionString.Value))
                 throw new InvalidOperationException($"Environment variable {_environmentVariable} is empty");
 
             var connectionString = string.Join(";", ConnectionString.Value, $"{TimeOutParameter}=3");
-            
-            using (var con = new T())
-            {
-                con.ConnectionString = connectionString;
-                con.Open();
-            }
 
-            return ConnectionString.Value;
+            try
+            {
+                using (var dbConnection = new T())
+                {
+                    dbConnection.ConnectionString = connectionString;
+                    dbConnection.Open();
+                }
+
+                return ConnectionString.Value;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Can't connect to {nameof(T)}. Connection string is {connectionString}", e);
+            }
         }
         
         protected virtual string TimeOutParameter => "connection timeout";
