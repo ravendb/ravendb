@@ -134,16 +134,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 await DeleteFolders(foldersToDelete);
 
-                foreach (var toDelete in foldersToDelete)
-                {
-                    Console.WriteLine($"Deleted: {Path.GetFileName(toDelete.Name)}");
-                }
-
-                foreach (var folder in (await GetFolders()))
-                {
-                    Console.WriteLine($"Existing: {Path.GetFileName(folder)}");
-                }
-
                 bool ReachedMinimumBackupsToKeep()
                 {
                     return sortedBackupFolders.Count - deleted <= minimumBackupsToKeep;
