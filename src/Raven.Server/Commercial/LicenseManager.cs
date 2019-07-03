@@ -989,7 +989,7 @@ namespace Raven.Server.Commercial
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.Server.Certificate.Certificate))
             {
-                var infoCmd = new GetNodeInfoCommand();
+                var infoCmd = new GetNodeInfoCommand(TimeSpan.FromSeconds(15));
 
                 try
                 {
