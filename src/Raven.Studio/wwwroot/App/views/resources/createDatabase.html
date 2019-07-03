@@ -309,7 +309,7 @@
             </div>
         </div>
         
-        <div class="form-group row" data-bind="validationElement: backupDirectory">
+        <div class="form-group row" data-bind="validationElement: backupDirectory, visible: source() !== 'cloud'">
             <div class="col-md-4">
                 <label class="control-label">Backup directory</label>
             </div>

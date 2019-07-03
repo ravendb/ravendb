@@ -3,25 +3,16 @@ import endpoints = require("endpoints");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    private constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: restoreSource, 
+    private constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
                         private s3Credentials?: Raven.Client.Documents.Operations.Backups.S3Settings) {
         super();
     }
 
-    private mapConnectionType(): Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType {
-        switch (this.connectionType) {
-            case "serverLocal":
-                return "Local";
-            case "cloud":
-                return "S3";
-        }
-    }
-    
     private preparePayload() {
         switch (this.connectionType) {
-            case "serverLocal":
+            case "Local":
                 return undefined;
-            case "cloud":
+            case "S3":
                 return JSON.stringify(this.s3Credentials);
                 
         }
@@ -29,10 +20,10 @@ class getFolderPathOptionsCommand extends commandBase {
     
     execute(): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         const args = {
-            type: this.mapConnectionType()
+            type: this.connectionType
         } as any;
         
-        if (this.connectionType === "serverLocal") {
+        if (this.connectionType === "Local") {
             args.path = this.inputPath ? this.inputPath : "";
             args.backupFolder = this.isBackupFolder;
         }
@@ -50,11 +41,11 @@ class getFolderPathOptionsCommand extends commandBase {
     }
     
     static forServerLocal(inputPath: string, isBackupFolder: boolean) {
-        return new getFolderPathOptionsCommand(inputPath, isBackupFolder, "serverLocal");
+        return new getFolderPathOptionsCommand(inputPath, isBackupFolder, "Local");
     }
     
     static forS3Backup(credentials: Raven.Client.Documents.Operations.Backups.S3Settings) {
-        return new getFolderPathOptionsCommand(null, false, "cloud", credentials);  
+        return new getFolderPathOptionsCommand(null, false, "S3", credentials);  
     }
 }
 
