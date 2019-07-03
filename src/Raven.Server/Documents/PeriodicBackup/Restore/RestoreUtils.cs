@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             if (DateTime.TryParseExact(
                     fileName,
-                    fileName.Length == 16 ? BackupTask.LegacyDateTimeFormat : BackupTask.DateTimeFormat,
+                    BackupTask.GetDateTimeFormat(fileName),
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
                     out DateTime result) == false)

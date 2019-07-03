@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     var folderDetails = RestoreUtils.ParseFolderName(folderName);
                     if (DateTime.TryParseExact(
                             folderDetails.BackupTimeAsString,
-                            folderDetails.BackupTimeAsString.Length == 16 ? BackupTask.LegacyDateTimeFormat : BackupTask.DateTimeFormat,
+                            BackupTask.GetDateTimeFormat(folderDetails.BackupTimeAsString),
                             CultureInfo.InvariantCulture,
                             DateTimeStyles.None,
                             out var backupTime) == false)
