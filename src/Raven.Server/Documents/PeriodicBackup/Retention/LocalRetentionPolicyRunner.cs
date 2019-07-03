@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,10 +12,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly string _folderPath;
 
-        public override string Name => "Local";
+        protected override string Name => "Local";
 
-        public LocalRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, string folderPath)
-            : base(retentionPolicy, databaseName)
+        public LocalRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, string folderPath)
+            : base(retentionPolicy, databaseName, onProgress)
         {
             _folderPath = folderPath;
         }

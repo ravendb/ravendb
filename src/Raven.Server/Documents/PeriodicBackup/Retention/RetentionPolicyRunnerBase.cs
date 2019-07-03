@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -17,11 +17,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private readonly RetentionPolicy _retentionPolicy;
         private readonly string _databaseName;
+        private readonly Action<string> _onProgress;
+        private readonly long _minimumBackupsToKeep;
 
-        protected RetentionPolicyRunnerBase(RetentionPolicy retentionPolicy, string databaseName)
+        protected RetentionPolicyRunnerBase(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress)
         {
             _retentionPolicy = retentionPolicy;
             _databaseName = databaseName;
+            _onProgress = onProgress;
+
+            _minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
         }
 
         protected abstract Task<List<string>> GetFolders();
@@ -32,7 +37,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected abstract Task DeleteFolders(List<FolderDetails> folderDetails);
 
-        public abstract string Name { get; }
+        protected abstract string Name { get; }
 
         public async Task Execute()
         {
@@ -46,14 +51,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var folders = await GetFolders();
 
                 // we are going to keep at least one backup
-                var minimumBackupsToKeep = _retentionPolicy.MinimumBackupsToKeep ?? 1;
-                if (folders.Count <= minimumBackupsToKeep)
+
+                if (folders.Count <= _minimumBackupsToKeep)
                 {
                     // the number of backups to keep is more than we potentially have
                     return;
                 }
 
                 var sortedBackupFolders = new SortedList<DateTime, FolderDetails>();
+
+                var sp = Stopwatch.StartNew();
+                _onProgress.Invoke($"Got {folders.Count:#,#} potential backups");
 
                 foreach (var folder in folders)
                 {
@@ -97,59 +105,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         backupTime = backupTime.AddMilliseconds(1);
                     }
 
-                    sortedBackupFolders.Add(backupTime, new FolderDetails
-                    {
-                        Name = folder,
-                        Files = files
-                    });
+                    sortedBackupFolders.Add(backupTime, new FolderDetails {Name = folder, Files = files});
                 }
 
-                if (sortedBackupFolders.Count <= minimumBackupsToKeep)
+                if (sortedBackupFolders.Count <= _minimumBackupsToKeep)
                 {
                     // the number of backups to keep is more than we currently have
                     return;
                 }
 
-                // the time in the backup folder name is the local time
-                var now = DateTime.Now;
-
-                var deleted = 0L;
-                var foldersToDelete = new List<FolderDetails>();
-                if (_retentionPolicy.MinimumBackupAgeToKeep.HasValue)
-                {
-                    foreach (var backupFolder in sortedBackupFolders)
-                    {
-                        if (now - backupFolder.Key < _retentionPolicy.MinimumBackupAgeToKeep)
-                        {
-                            // all backups are sorted by date
-                            break;
-                        }
-
-                        foldersToDelete.Add(backupFolder.Value);
-                        deleted++;
-
-                        if (ReachedMinimumBackupsToKeep())
-                            break;
-                    }
-                }
-                else
-                {
-                    foreach (var backupFolder in sortedBackupFolders)
-                    {
-                        foldersToDelete.Add(backupFolder.Value);
-                        deleted++;
-
-                        if (ReachedMinimumBackupsToKeep())
-                            break;
-                    }
-                }
+                var foldersToDelete = GetFoldersToDelete(sortedBackupFolders);
 
                 await DeleteFolders(foldersToDelete);
 
-                bool ReachedMinimumBackupsToKeep()
-                {
-                    return sortedBackupFolders.Count - deleted <= minimumBackupsToKeep;
-                }
+                var message = $"Deleted {foldersToDelete.Count:#,#} backups, took: {sp.ElapsedMilliseconds:#,#}ms";
+                _onProgress.Invoke(message);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message);
             }
             catch (NotSupportedException)
             {
@@ -161,6 +133,50 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 // failure to delete backups shouldn't result in backup failure
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to run Retention Policy for {Name}", e);
+            }
+        }
+
+        private List<FolderDetails> GetFoldersToDelete(SortedList<DateTime, FolderDetails> sortedBackupFolders)
+        {
+            // the time in the backup folder name is the local time
+            var now = DateTime.Now;
+
+            var deleted = 0L;
+            var foldersToDelete = new List<FolderDetails>();
+            if (_retentionPolicy.MinimumBackupAgeToKeep.HasValue)
+            {
+                foreach (var backupFolder in sortedBackupFolders)
+                {
+                    if (now - backupFolder.Key < _retentionPolicy.MinimumBackupAgeToKeep)
+                    {
+                        // all backups are sorted by date
+                        break;
+                    }
+
+                    foldersToDelete.Add(backupFolder.Value);
+                    deleted++;
+
+                    if (ReachedMinimumBackupsToKeep())
+                        break;
+                }
+            }
+            else
+            {
+                foreach (var backupFolder in sortedBackupFolders)
+                {
+                    foldersToDelete.Add(backupFolder.Value);
+                    deleted++;
+
+                    if (ReachedMinimumBackupsToKeep())
+                        break;
+                }
+            }
+
+            return foldersToDelete;
+
+            bool ReachedMinimumBackupsToKeep()
+            {
+                return sortedBackupFolders.Count - deleted <= _minimumBackupsToKeep;
             }
         }
     }

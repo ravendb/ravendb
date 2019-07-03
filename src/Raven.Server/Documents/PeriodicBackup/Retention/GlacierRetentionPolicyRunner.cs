@@ -10,10 +10,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
     {
         private readonly RavenAwsGlacierClient _client;
 
-        public override string Name => "Glacier";
+        protected override string Name => "Glacier";
 
-        public GlacierRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, RavenAwsGlacierClient client)
-            : base(retentionPolicy, databaseName)
+        public GlacierRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, RavenAwsGlacierClient client)
+            : base(retentionPolicy, databaseName, onProgress)
         {
             _client = client;
         }
