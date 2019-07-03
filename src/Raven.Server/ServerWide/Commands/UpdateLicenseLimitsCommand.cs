@@ -4,7 +4,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -15,15 +14,10 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public UpdateLicenseLimitsCommand(string name, string nodeTag, DetailsPerNode detailsPerNode, int licensedCores, string uniqueRaftId) : base(uniqueRaftId)
+        public UpdateLicenseLimitsCommand(string name, NodeLicenseLimits nodeLicenseLimits, string uniqueRaftId) : base(uniqueRaftId)
         {
             Name = name;
-            Value = new NodeLicenseLimits
-            {
-                NodeTag = nodeTag,
-                DetailsPerNode = detailsPerNode,
-                LicensedCores = licensedCores
-            };
+            Value = nodeLicenseLimits;
         }
 
         public override object ValueToJson()
@@ -36,8 +30,8 @@ namespace Raven.Server.ServerWide.Commands
             if (Value == null)
                 throw new RachisApplyException($"{nameof(Value)} cannot be null");
 
-            if (Value.DetailsPerNode == null || Value.NodeTag == null)
-                throw new RachisApplyException($"{nameof(Value.DetailsPerNode)}, {nameof(Value.NodeTag)} cannot be null");
+            if (Value.DetailsPerNode == null || Value.NodeTag == null || Value.AllNodes == null)
+                throw new RachisApplyException($"{nameof(Value.DetailsPerNode)}, {nameof(Value.NodeTag)}, {nameof(Value.AllNodes)} cannot be null");
 
             if (previousValue == null)
                 throw new RachisApplyException("Cannot apply node details to a non existing license limits");
@@ -49,6 +43,10 @@ namespace Raven.Server.ServerWide.Commands
             var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
             var availableCoresToDistribute = Value.LicensedCores - utilizedCores + currentDetailsPerNode.UtilizedCores;
 
+            // nodes that aren't in yet in license limits, need to "reserve" cores for them
+            var nodesThatArentRegistered = licenseLimits.NodeLicenseDetails.Keys.Except(Value.AllNodes).Count();
+            availableCoresToDistribute -= nodesThatArentRegistered;
+
             Value.DetailsPerNode.UtilizedCores = availableCoresToDistribute > 0 
                 ? Math.Min(Value.DetailsPerNode.NumberOfCores, availableCoresToDistribute) 
                 : 1;
@@ -56,25 +54,6 @@ namespace Raven.Server.ServerWide.Commands
             licenseLimits.NodeLicenseDetails[Value.NodeTag] = Value.DetailsPerNode;
 
             return context.ReadObject(licenseLimits.ToJson(), "update-license-limits");
-        }
-    }
-
-    public class NodeLicenseLimits : IDynamicJson
-    {
-        public string NodeTag { get; set; }
-
-        public DetailsPerNode DetailsPerNode { get; set; }
-
-        public int LicensedCores { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(NodeTag)] = NodeTag,
-                [nameof(DetailsPerNode)] = DetailsPerNode.ToJson(),
-                [nameof(LicensedCores)] = LicensedCores
-            };
         }
     }
 }
