@@ -681,8 +681,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void AddInfo(string message, Action<IOperationProgress> onProgress)
         {
-            _backupResult.AddInfo(message);
-            onProgress.Invoke(_backupResult.Progress);
+            lock (this)
+            {
+                _backupResult.AddInfo(message);
+                onProgress.Invoke(_backupResult.Progress);
+            }
         }
 
         private InternalBackupResult CreateBackup(
