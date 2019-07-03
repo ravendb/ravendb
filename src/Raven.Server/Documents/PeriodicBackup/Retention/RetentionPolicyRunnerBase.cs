@@ -47,10 +47,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 var sortedBackupFolders = new SortedList<DateTime, FolderDetails>();
 
-                foreach (var folder in folders.OrderBy(x => x))
+                foreach (var folder in folders)
                 {
                     var folderName = GetFolderName(folder);
                     var folderDetails = RestoreUtils.ParseFolderName(folderName);
+                    if (folderDetails.BackupTimeAsString == null)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Failed to get backup date time for folder: {folder}");
+                        continue;
+                    }
+
                     if (DateTime.TryParseExact(
                             folderDetails.BackupTimeAsString,
                             BackupTask.GetDateTimeFormat(folderDetails.BackupTimeAsString),
