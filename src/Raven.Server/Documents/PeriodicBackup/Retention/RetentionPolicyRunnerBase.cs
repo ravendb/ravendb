@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     var folderDetails = RestoreUtils.ParseFolderName(folderName);
                     if (DateTime.TryParseExact(
                             folderDetails.BackupTimeAsString,
-                            BackupTask.DateTimeFormat,
+                            folderDetails.BackupTimeAsString.Length == 16 ? BackupTask.LegacyDateTimeFormat : BackupTask.DateTimeFormat,
                             CultureInfo.InvariantCulture,
                             DateTimeStyles.None,
                             out var backupTime) == false)
@@ -61,12 +61,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"Failed to parse backup date time for folder: {folder}");
                         continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(folderDetails.FolderNumberAsString) == false)
-                    {
-                        var folderNumber = int.Parse(folderDetails.FolderNumberAsString);
-                        backupTime = backupTime.AddMilliseconds(folderNumber);
                     }
 
                     if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
@@ -81,6 +75,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     {
                         // no backup files
                         continue;
+                    }
+
+                    while (sortedBackupFolders.ContainsKey(backupTime))
+                    {
+                        backupTime = backupTime.AddMilliseconds(1);
                     }
 
                     sortedBackupFolders.Add(backupTime, new FolderDetails

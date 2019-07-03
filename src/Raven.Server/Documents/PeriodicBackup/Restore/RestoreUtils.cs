@@ -14,8 +14,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public static class RestoreUtils
     {
-        private static readonly Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2})(?:-([0-9]{2}))?.ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
-        private static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2})", RegexOptions.Compiled);
+        private static readonly Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+        private static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
 
         public static void FetchRestorePoints(
             string directoryPath,
@@ -47,6 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var lastFolderName = Path.GetFileName(directoryPath);
             var folderDetails = ParseFolderName(lastFolderName);
+
             var filesCount = 0;
             var firstFile = true;
             var snapshotRestore = false;
@@ -139,9 +140,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 fileName = match.Value;
             }
+
             if (DateTime.TryParseExact(
                     fileName,
-                    BackupTask.DateTimeFormat,
+                    fileName.Length == 16 ? BackupTask.LegacyDateTimeFormat : BackupTask.DateTimeFormat,
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
                     out DateTime result) == false)
@@ -166,7 +168,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return new ParsedBackupFolderName
                 {
                     BackupTimeAsString = match.Groups[1].Value,
-                    FolderNumberAsString = match.Groups[2].Value,
                     DatabaseName = match.Groups[3].Value,
                     NodeTag = match.Groups[4].Value
                 };
@@ -186,8 +187,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public class ParsedBackupFolderName
         {
             public string BackupTimeAsString { get; set; }
-
-            public string FolderNumberAsString { get; set; }
 
             public string DatabaseName { get; set; }
 
