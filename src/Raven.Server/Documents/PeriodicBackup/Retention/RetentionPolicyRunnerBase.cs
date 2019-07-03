@@ -128,6 +128,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Retention Policy for {Name} isn't currently supported");
             }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception e)
             {
                 // failure to delete backups shouldn't result in backup failure
