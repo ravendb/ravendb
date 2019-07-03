@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -58,6 +59,7 @@ namespace Raven.Server.Commercial
         private readonly bool _skipLeasingErrorsLogging;
         private DateTime? _lastPerformanceHint;
         private bool _eulaAcceptedButHasPendingRestart;
+        private bool _putMyNodeInfoSuccess;
 
         private readonly object _locker = new object();
         private LicenseSupportInfo _lastKnownSupportInfo;
@@ -126,7 +128,7 @@ namespace Raven.Server.Commercial
 
                 ReloadLicense(firstRun: true);
 
-                AsyncHelpers.RunSync(() => _serverStore.PutMyNodeInfoAsync(_licenseStatus.MaxCores));
+                PutMyNodeInfoAsync().IgnoreUnobservedExceptions();
             }
             catch (Exception e)
             {
@@ -139,6 +141,23 @@ namespace Raven.Server.Commercial
                     AsyncHelpers.RunSync(ExecuteTasks), null,
                     (int)TimeSpan.FromMinutes(1).TotalMilliseconds,
                     (int)TimeSpan.FromHours(24).TotalMilliseconds);
+            }
+        }
+
+        private async Task PutMyNodeInfoAsync()
+        {
+            if (_putMyNodeInfoSuccess)
+                return;
+
+            try
+            {
+                await _serverStore.PutMyNodeInfoAsync(_licenseStatus.MaxCores);
+                _putMyNodeInfoSuccess = true;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to initialize license manager", e);
             }
         }
 
@@ -697,6 +716,8 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                await PutMyNodeInfoAsync();
+
                 await LeaseLicense(RaftIdGenerator.NewId());
 
                 await CalculateLicenseLimits(forceFetchingNodeInfo: true);
