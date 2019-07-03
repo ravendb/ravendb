@@ -47,7 +47,9 @@ namespace Raven.Client.ServerWide.Commands
 
     public class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
-        public GetNodeInfoCommand(TimeSpan? timeout = null)
+        public GetNodeInfoCommand() { }
+
+        public GetNodeInfoCommand(TimeSpan timeout)
         {
             Timeout = timeout;
         }
