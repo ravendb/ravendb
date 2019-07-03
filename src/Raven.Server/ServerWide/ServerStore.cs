@@ -2446,7 +2446,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "RAFT connection error", msg,
-                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: remoteEndpoint.ToString(), details: new ExceptionDetails(e)));
+                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: ((IPEndPoint)remoteEndpoint).Address.ToString(), details: new ExceptionDetails(e)));
             }
         }
 

@@ -1008,13 +1008,14 @@ namespace Raven.Server.Rachis
                     {
                         initialMessage = remoteConnection.InitFollower(context);
 
-                        ValidateCompatibility(initialMessage);
-                        ValidateElectionTimeout(initialMessage);
-
                         using (context.OpenReadTransaction())
                         {
                             clusterTopology = GetTopology(context);
                         }
+
+                        ValidateCompatibility(initialMessage, clusterTopology);
+                        ValidateElectionTimeout(initialMessage);
+
                         if (clusterTopology.TopologyId == initialMessage.TopologyId && initialMessage.DebugSourceIdentifier == _tag)
                         {
                             throw new TopologyMismatchException($"Connection from ({remoteEndpoint}_ with the same topology id and tag {_tag}. " +
@@ -1116,11 +1117,18 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private static void ValidateCompatibility(RachisHello initialMessage)
+        private void ValidateCompatibility(RachisHello initialMessage, ClusterTopology clusterTopology)
         {
             var version = initialMessage.ServerBuildVersion;
-            if (version == 0 || ServerVersion.IsNightlyOrDev(version))  
+            if (ServerVersion.IsNightlyOrDev(version))
                 return;
+
+            if (clusterTopology.Members.ContainsKey(Tag) == false)
+            {
+                if (version < 42_000)
+                    throw new NotSupportedException($"You cannot add a new node in version {ServerVersion.FullVersion} to a pre 4.2 cluster, " +
+                                                    "in order to add this node you should upgrade your cluster first.");
+            }
         }
 
         private void ValidateElectionTimeout(RachisHello initialMessage)
