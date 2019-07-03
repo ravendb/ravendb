@@ -2230,8 +2230,14 @@ namespace Raven.Server.ServerWide
                 return;
 
             var nodeInfo = GetNodeInfo();
-            var detailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo);
-            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, NodeTag, detailsPerNode, maxLicenseCores, RaftIdGenerator.NewId());
+            var nodeLicenseLimits = new NodeLicenseLimits
+            {
+                NodeTag = NodeTag,
+                DetailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo),
+                LicensedCores = maxLicenseCores,
+                AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
+            };
+            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, nodeLicenseLimits, RaftIdGenerator.NewId());
 
             var result = await SendToLeaderAsync(command);
 
