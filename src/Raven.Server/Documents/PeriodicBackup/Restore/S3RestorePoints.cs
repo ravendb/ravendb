@@ -20,7 +20,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override async Task FetchRestorePoints(string path)
         {
-            var files = await _client.ListObjects(path, string.Empty, false);
+            path = path.TrimEnd('/');
+            
+            var files = await _client.ListObjects(path + "/", string.Empty, false);
             var folders = files.GroupBy(x => GetFolderName(x.FullPath));
 
             foreach (var folder in folders)

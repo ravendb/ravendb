@@ -88,7 +88,8 @@ class databaseCreationModel {
         disableOngoingTasks: ko.observable<boolean>(false),
         skipIndexes: ko.observable<boolean>(false),
         requiresEncryption: undefined as KnockoutComputed<boolean>,
-        backupEncryptionKey: ko.observable<string>()
+        backupEncryptionKey: ko.observable<string>(),
+        decodedS3Credentials: ko.observable<Raven.Client.Documents.Operations.Backups.S3Settings>()
     };
     
     restoreValidationGroup = ko.validatedObservable({ 
@@ -198,8 +199,20 @@ class databaseCreationModel {
             }
         });
 
-        this.restore.backupDirectory.subscribe((backupDirectory) => {
-            this.fetchRestorePoints(backupDirectory, true);
+        this.restore.backupDirectory.subscribe(() => {
+            if (this.restore.source() === "serverLocal") {
+                this.fetchRestorePoints(true);
+            }
+        });
+        
+        this.restore.decodedS3Credentials.subscribe((credentials) => {
+            if (this.restore.source() === "cloud" && credentials) {
+                this.fetchRestorePoints(false);
+            }
+        });
+        
+        this.restore.cloudCredentials.subscribe((credentials) => {
+            this.tryDecodeS3Credentials(credentials);
         });
 
         let isFirst = true;
@@ -223,7 +236,7 @@ class databaseCreationModel {
             if (!backupDirectory)
                 return;
 
-            this.fetchRestorePoints(backupDirectory, false);
+            this.fetchRestorePoints(false);
         });
         
         this.restore.selectedRestorePoint.subscribe(restorePoint => {
@@ -307,19 +320,36 @@ class databaseCreationModel {
         this.legacyMigration.journalsPathHasFocus(true);
     }
 
-    private fetchRestorePoints(backupDirectory: string, skipReportingError: boolean) {
+    private tryDecodeS3Credentials(credentials: string) {
+        try {
+            const decoded = atob(credentials);
+            const json = JSON.parse(decoded);
+            
+            //TODO: do some duck typing to check if we have correct format
+            
+            this.restore.decodedS3Credentials(json);
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    private createRestorePointCommand(skipReportingError: boolean) {
+        switch (this.restore.source()) {
+            case "serverLocal":
+                return getRestorePointsCommand.forServerLocal(this.restore.backupDirectory(), skipReportingError);
+            case "cloud":
+                return getRestorePointsCommand.forS3Backup(this.restore.decodedS3Credentials(), skipReportingError);
+        }
+    }
+    
+    private fetchRestorePoints(skipReportingError: boolean) {
         if (!skipReportingError) {
             this.spinners.fetchingRestorePoints(true);
         }
 
-        new getRestorePointsCommand(backupDirectory, skipReportingError)
+        this.createRestorePointCommand(skipReportingError)
             .execute()
             .done((restorePoints: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints) => {
-                if (backupDirectory !== this.restore.backupDirectory()) {
-                    // the backup directory changed
-                    return;
-                }
-
                 const groups: Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }> = [];
                 restorePoints.List.forEach(rp => {
                     const databaseName = rp.DatabaseName = rp.DatabaseName ? rp.DatabaseName : databaseCreationModel.unknownDatabaseName;
@@ -340,11 +370,6 @@ class databaseCreationModel {
                 this.restore.restorePointsCount(restorePoints.List.length);
             })
             .fail((response: JQueryXHR) => {
-                if (backupDirectory !== this.restore.backupDirectory()) {
-                    // the backup directory changed
-                    return;
-                }
-
                 const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
                 this.restore.backupDirectoryError(generalUtils.trimMessage(messageAndOptionalException.message));
                 this.restore.lastFailedBackupDirectory = this.restore.backupDirectory();
@@ -481,7 +506,9 @@ class databaseCreationModel {
         
         this.restore.backupDirectory.extend({
             required: {
-                onlyIf: () => this.creationMode === "restore" && this.restore.restorePoints().length === 0
+                onlyIf: () => this.creationMode === "restore" 
+                    && this.restore.restorePoints().length === 0
+                    && this.restore.source() !== "cloud"
             },
             validation: [
                 {
@@ -627,7 +654,7 @@ class databaseCreationModel {
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
-    toRestoreDocumentDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration {
+    toRestoreDocumentDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
 
         const restorePoint = this.restore.selectedRestorePoint();
@@ -661,16 +688,30 @@ class databaseCreationModel {
             }
         }
         
-        return {
+        const baseConfiguration = {
             DatabaseName: this.name(),
-            BackupLocation: restorePoint.location,
             DisableOngoingTasks: this.restore.disableOngoingTasks(),
             SkipIndexes: this.restore.skipIndexes(),
-            LastFileNameToRestore:restorePoint.fileName,
+            LastFileNameToRestore: restorePoint.fileName,
             DataDirectory: dataDirectory,
             EncryptionKey: databaseEncryptionKey,
             BackupEncryptionSettings: encryptionSettings
-        } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
+        } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
+
+        switch (this.restore.source()) {
+            case "serverLocal" :
+                const localConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
+                localConfiguration.BackupLocation = restorePoint.location;
+                (localConfiguration as any as restoreTypeAware).Type = "Local" as Raven.Client.Documents.Operations.Backups.RestoreType; 
+                return localConfiguration;
+            case "cloud":
+                const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
+                s3Configuration.Settings = this.restore.decodedS3Credentials();
+                (s3Configuration as any as restoreTypeAware).Type = "S3" as Raven.Client.Documents.Operations.Backups.RestoreType;
+                return s3Configuration;
+            default:
+                throw new Error("Unhandled source: " + this.restore.source());
+        }
     }
     
     toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {

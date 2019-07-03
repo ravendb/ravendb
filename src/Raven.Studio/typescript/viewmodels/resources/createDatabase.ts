@@ -417,11 +417,6 @@ class createDatabase extends dialogViewModelBase {
             .execute();
     }
 
-    private updateCloudFolderPath(credentials: Raven.Client.Documents.Operations.Backups.S3Settings): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return getFolderPathOptionsCommand.forS3Backup(credentials)
-            .execute();
-    }
-    
     updateFolderPathOptions(path: string) {
         this.updateFolderPath(path)
             .done(result => this.folderPathOptions(result.List));
@@ -430,10 +425,6 @@ class createDatabase extends dialogViewModelBase {
     updateBackupDirectoryPathOptions(path: string) {
         if (this.databaseModel.restore.source() === "serverLocal") {
             this.updateFolderPath(path, true)
-                .done(result => this.backupDirectoryPathOptions(result.List));
-        } else {
-            const decodedCredentials = this.decodeCredentials(this.databaseModel.restore.cloudCredentials());
-            this.updateCloudFolderPath(decodedCredentials)
                 .done(result => this.backupDirectoryPathOptions(result.List));
         }
     }
@@ -469,13 +460,7 @@ class createDatabase extends dialogViewModelBase {
         }
     }
     
-    private decodeCredentials(encoded: string): Raven.Client.Documents.Operations.Backups.S3Settings { 
-        //TODO: 
-        return JSON.parse(atob(encoded));
-    }
-
     createDatabase() {
-
         viewHelpers.asyncValidationCompleted(this.databaseModel.globalValidationGroup, () => {
 
             eventsCollector.default.reportEvent("database", this.databaseModel.creationMode);
