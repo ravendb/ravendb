@@ -810,20 +810,21 @@ namespace Raven.Server.Documents.Queries.Results
             return result;
         }
 
-        private DateTime GetDateValue(ValueExpression ve)
+        private unsafe DateTime GetDateValue(ValueExpression ve)
         {
             var val = ve.GetValue(_query.QueryParameters);
             if (val == null)
                 throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
 
-            var s = val.ToString();
+            var str = val.ToString();
+            fixed (char* c = str)
+            {
+                var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out _);
+                if (result != LazyStringParser.Result.DateTime)
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + str);
+                return dt.ToUniversalTime();
+            }
 
-            if (DateTime.TryParseExact(s, "o", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date))
-                return date.ToUniversalTime();
-            if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out date))
-                return date.ToUniversalTime();
-
-            throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + s);
         }
 
         private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
