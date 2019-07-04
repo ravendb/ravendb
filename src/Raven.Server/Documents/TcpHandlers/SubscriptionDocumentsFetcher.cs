@@ -129,6 +129,11 @@ namespace Raven.Server.Documents.TcpHandlers
                                         LowerId = doc.LowerId,
                                         ChangeVector = doc.ChangeVector,
                                         LastModified = doc.LastModified,
+                                        Flags = doc.Flags,
+                                        StorageId = doc.StorageId,
+                                        NonPersistentFlags = doc.NonPersistentFlags,
+                                        TransactionMarker = doc.TransactionMarker
+                                        
                                     };
 
                                     yield return (projection, null);
@@ -146,6 +151,21 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
+
+        private IEnumerable<(Document previous, Document current)> GetRevisionsEnumerator(IEnumerable<(Document previous, Document current)> enumerable) {
+            foreach (var item in enumerable)
+            {
+                if (item.current.Flags.HasFlag(DocumentFlags.DeleteRevision))
+                {
+                    yield return (item.current, null);
+                }
+                else
+                {
+                    yield return item;
+                }
+            }
+        }
+
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
             DocumentsOperationContext docsContext,
             IncludeDocumentsCommand includesCmd,
@@ -157,7 +177,7 @@ namespace Raven.Server.Documents.TcpHandlers
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, int.MaxValue))
+                foreach (var revisionTuple in GetRevisionsEnumerator(_db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, int.MaxValue)))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
@@ -179,7 +199,11 @@ namespace Raven.Server.Documents.TcpHandlers
                                 Data = null,
                                 ChangeVector = item.ChangeVector,
                                 Etag = item.Etag,
-                                LastModified = item.LastModified,
+                                LastModified = item.LastModified,                                
+                                Flags = item.Flags,
+                                StorageId = item.StorageId,
+                                NonPersistentFlags = item.NonPersistentFlags,
+                                TransactionMarker = item.TransactionMarker
                             }, null);
                         }
                     }
@@ -201,6 +225,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                     LowerId = item.LowerId,
                                     ChangeVector = item.ChangeVector,
                                     LastModified = item.LastModified,
+                                    Flags = item.Flags,
+                                    StorageId = item.StorageId,
+                                    NonPersistentFlags = item.NonPersistentFlags,
+                                    TransactionMarker = item.TransactionMarker
                                 };
 
                                 yield return (projection, null);

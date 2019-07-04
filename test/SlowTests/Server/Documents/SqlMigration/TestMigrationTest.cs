@@ -100,6 +100,9 @@ namespace SlowTests.Server.Documents.SqlMigration
         [RequiresOracleSqlInlineData]
         public async Task CanTestWithPrimaryKeyValues(MigrationProvider provider)
         {
+            const string tableName = "groups1";
+            const string collectionName = "Groups1";
+
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
@@ -109,7 +112,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     var settings = new MigrationTestSettings
                     {
-                        Collection = new RootCollection(schemaName, "groups", "Groups"),
+                        Collection = new RootCollection(schemaName, tableName, collectionName),
                         Mode = MigrationTestMode.ByPrimaryKey,
                         PrimaryKeyValues = new [] { "52" }
                     };
@@ -120,7 +123,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         ApplyDefaultColumnNamesMapping(schema, settings.Collection, settings.BinaryToAttachment);
                         var (document, id) = driver.Test(settings, schema, context);
                         
-                        Assert.Equal("Groups/52", id);
+                        Assert.Equal($"{collectionName}/52", id);
                         Assert.True(document.TryGet("Name", out string name));
                         Assert.Equal("G1.1.1", name);
                     }
