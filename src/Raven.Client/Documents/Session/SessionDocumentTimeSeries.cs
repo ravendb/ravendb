@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries(session, entity);
         }
 
-        public void Append(string timeseries, DateTime timestamp, string tag, double[] values)
+        public void Append(string timeseries, DateTime timestamp, string tag, IEnumerable<double> values)
         {
             _asyncSessionTimeSeries.Append(timeseries, timestamp, tag, values);
         }

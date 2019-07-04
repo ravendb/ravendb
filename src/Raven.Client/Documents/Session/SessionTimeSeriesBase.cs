@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
 
@@ -41,7 +42,7 @@ namespace Raven.Client.Documents.Session
             Session = session;
         }
 
-        public void Append(string timeseries, DateTime timestamp, string tag, double[] values)
+        public void Append(string timeseries, DateTime timestamp, string tag, IEnumerable<double> values)
         {
             if (string.IsNullOrWhiteSpace(timeseries))
                 throw new ArgumentNullException(nameof(timeseries));
@@ -55,7 +56,9 @@ namespace Raven.Client.Documents.Session
                 Name = timeseries,
                 Timestamp = timestamp,
                 Tag = tag,
-                Values = values
+                Values = values is double[] arr
+                    ? arr 
+                    : values.ToArray()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, null), out var command))
