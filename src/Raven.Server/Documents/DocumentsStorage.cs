@@ -1345,6 +1345,7 @@ namespace Raven.Server.Documents
 
 
                 CountersStorage.DeleteCountersForDocument(context, id, collectionName);
+                TimeSeriesStorage.DeleteTimeSeriesForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

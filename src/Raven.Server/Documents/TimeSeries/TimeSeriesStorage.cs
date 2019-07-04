@@ -277,6 +277,19 @@ namespace Raven.Server.Documents.TimeSeries
 
         }
 
+        public void DeleteTimeSeriesForDocument(DocumentsOperationContext context, string documentId, CollectionName collection)
+        {
+            // this will be called as part of document's delete
+
+            var table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collection);
+
+            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
+            {
+                table.DeleteByPrimaryKeyPrefix(documentKeyPrefix);
+            }
+        }
+
+
         public Reader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
         {
             return new Reader(context, documentId, name, from, to);
