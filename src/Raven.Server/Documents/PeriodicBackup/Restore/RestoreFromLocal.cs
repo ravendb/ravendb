@@ -36,6 +36,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult(ZipFile.Open(path, ZipArchiveMode.Read, System.Text.Encoding.UTF8));
         }
 
+        protected override Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path)
+        {
+            return Task.FromResult(ZipFile.OpenRead(path));
+
+        }
+
         protected override Task<List<string>> GetFilesForRestore()
         {
             return Task.FromResult(Directory.GetFiles(_backupLocation).ToList());
@@ -44,6 +50,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override string GetBackupPath(string fileName)
         {
             return new VoronPathSetting(fileName).FullPath;
+        }
+
+        protected override string GetSmugglerBackupPath(string smugglerFile)
+        {
+            return Path.Combine(_backupLocation, smugglerFile);
         }
 
         protected override string GetBackupLocation()

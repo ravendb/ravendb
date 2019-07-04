@@ -33,15 +33,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return new ZipArchive(blob.Data, ZipArchiveMode.Read);
         }
 
+        protected override Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path)
+        {
+            return GetZipArchiveForSnapshot(path);
+        }
+
         protected override async Task<List<string>> GetFilesForRestore()
         {
-            var files = await _client.ListObjects(string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName + "/", string.Empty, false);
+            var files = await _client.ListObjects(string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName + "/", "/", false);
             return files.Select(x => x.FullPath).ToList();
         }
 
         protected override string GetBackupPath(string fileName)
         {
             return fileName;
+        }
+
+        protected override string GetSmugglerBackupPath(string smugglerFile)
+        {
+            return smugglerFile;
         }
 
         protected override string GetBackupLocation()
