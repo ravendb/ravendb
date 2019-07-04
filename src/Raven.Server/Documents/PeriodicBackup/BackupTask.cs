@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public readonly OperationCancelToken TaskCancelToken;
         private readonly BackupResult _backupResult;
         private readonly bool _isServerWide;
+        private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
         private Action<IOperationProgress> _onProgress;
 
         public BackupTask(
@@ -89,6 +90,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             TaskCancelToken = new OperationCancelToken(_databaseShutdownCancellationToken);
             _backupResult = GenerateBackupResult();
+
+            _retentionPolicyParameters = new RetentionPolicyBaseParameters
+            {
+                RetentionPolicy = _configuration.RetentionPolicy,
+                DatabaseName = _database.Name,
+                IsFullBackup = _isFullBackup,
+                OnProgress = AddInfo
+            };
         }
 
         public async Task<IOperationResult> RunPeriodicBackup(Action<IOperationProgress> onProgress)
@@ -629,7 +638,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (_backupToLocalFolder)
             {
-                var localRetentionPolicy = new LocalRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, AddInfo, _configuration.LocalSettings.FolderPath);
+                var localRetentionPolicy = new LocalRetentionPolicyRunner(_retentionPolicyParameters, _configuration.LocalSettings.FolderPath);
                 await localRetentionPolicy.Execute();
             }
 
@@ -950,7 +959,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                                $"to S3 bucket named: {settings.BucketName}, " +
                                                $"with key: {key}"));
 
-                var runner = new S3RetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, AddInfo, client);
+                var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
                 await runner.Execute();
             }
         }
@@ -969,7 +978,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' to Glacier, archive ID: {archiveId}");
 
-                var runner = new GlacierRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, AddInfo, client);
+                var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
                 await runner.Execute();
             }
         }
@@ -988,7 +997,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup file '{fileName}' to an ftp server");
 
-                var runner = new FtpRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, AddInfo, client);
+                var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
                 await runner.Execute();
             }
         }
@@ -1013,7 +1022,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Successfully uploaded backup file '{fileName}' " +
                                  $"to Azure container: {settings.StorageContainer}, with key: {key}");
 
-                var runner = new AzureRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, AddInfo, client);
+                var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
                 await runner.Execute();
             }
         }
@@ -1038,7 +1047,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Successfully uploaded backup file '{fileName}' " +
                                  $"to Google cloud storage bucket: {settings.BucketName}");
 
-                var runner = new GoogleCloudRetentionPolicyRunner(_configuration.RetentionPolicy, _database.Name, AddInfo, client);
+                var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
                 await runner.Execute();
             }
         }

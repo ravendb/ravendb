@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -14,8 +12,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Local";
 
-        public LocalRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, string folderPath)
-            : base(retentionPolicy, databaseName, onProgress)
+        public LocalRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, string folderPath)
+            : base(parameters)
         {
             _folderPath = folderPath;
         }

@@ -19,12 +19,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         private readonly string _databaseName;
         private readonly Action<string> _onProgress;
         private readonly long _minimumBackupsToKeep;
+        private readonly bool _isFullBackup;
 
-        protected RetentionPolicyRunnerBase(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress)
+        protected RetentionPolicyRunnerBase(RetentionPolicyBaseParameters parameters)
         {
-            _retentionPolicy = retentionPolicy;
-            _databaseName = databaseName;
-            _onProgress = onProgress;
+            _retentionPolicy = parameters.RetentionPolicy;
+            _databaseName = parameters.DatabaseName;
+            _onProgress = parameters.OnProgress;
+            _isFullBackup = parameters.IsFullBackup;
 
             _minimumBackupsToKeep = _retentionPolicy?.MinimumBackupsToKeep ?? 1;
         }
@@ -41,6 +43,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         public async Task Execute()
         {
+            if (_isFullBackup == false)
+                return; // run this only for full backups
+
             if (_retentionPolicy == null ||
                 _retentionPolicy.Disabled ||
                 (_retentionPolicy.MinimumBackupsToKeep == null && _retentionPolicy.MinimumBackupAgeToKeep == null))

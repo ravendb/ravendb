@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -12,8 +11,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Azure";
 
-        public AzureRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, RavenAzureClient client)
-            : base(retentionPolicy, databaseName, onProgress)
+        public AzureRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAzureClient client)
+            : base(parameters)
         {
             _client = client;
         }

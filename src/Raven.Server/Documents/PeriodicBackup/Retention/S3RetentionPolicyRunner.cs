@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private const string Delimiter = "/";
 
-        public S3RetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, RavenAwsS3Client client)
-            : base(retentionPolicy, databaseName, onProgress)
+        public S3RetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAwsS3Client client)
+            : base(parameters)
         {
             _client = client;
         }

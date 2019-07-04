@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -12,8 +11,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Google Cloud";
 
-        public GoogleCloudRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, RavenGoogleCloudClient client)
-            : base(retentionPolicy, databaseName, onProgress)
+        public GoogleCloudRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenGoogleCloudClient client)
+            : base(parameters)
         {
             _client = client;
         }
