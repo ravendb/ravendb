@@ -284,6 +284,7 @@ namespace Raven.Server.Rachis
         private static readonly Slice LastTruncatedSlice;
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
+        private static readonly Slice PreviousTagSlice;
         private static readonly Slice SnapshotRequestSlice;
 
         internal static readonly Slice EntriesSlice;
@@ -295,6 +296,7 @@ namespace Raven.Server.Rachis
             {
                 Slice.From(ctx, "GlobalState", out GlobalStateSlice);
                 Slice.From(ctx, "Tag", out TagSlice);
+                Slice.From(ctx, "PreviousTag", out PreviousTagSlice);
                 Slice.From(ctx, "CurrentTerm", out CurrentTermSlice);
                 Slice.From(ctx, "VotedFor", out VotedForSlice);
                 Slice.From(ctx, "LastCommit", out LastCommitSlice);
@@ -460,6 +462,14 @@ namespace Raven.Server.Rachis
 
             var readResult = state.Read(TagSlice);
             return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
+        }
+
+        public string ReadPreviousNodeTag(TransactionOperationContext context)
+        {
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+
+            var readResult = state.Read(PreviousTagSlice);
+            return readResult?.Reader.ToStringValue();
         }
 
         private void SwitchToSingleLeader(TransactionOperationContext context)
@@ -1723,8 +1733,6 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                var lastNode =  _tag;
-
                 var topologyId = Guid.NewGuid().ToString();
                 var topology = new ClusterTopology(
                     topologyId,
@@ -1734,8 +1742,10 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    lastNode
+                    _tag
                 );
+
+                UpdateNodeTag(ctx, nodeTag);
 
                 SetTopology(this, ctx, topology);
 
@@ -1934,9 +1944,13 @@ namespace Raven.Server.Rachis
             ValidateNodeTag(newTag);
 
             using (Slice.From(context.Transaction.InnerTransaction.Allocator, newTag, out Slice str))
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, _tag, out Slice oldTag))
             {
                 var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
                 state.Add(TagSlice, str);
+
+                if (_tag != InitialTag)
+                    state.Add(PreviousTagSlice, oldTag);
             }
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
