@@ -100,10 +100,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected abstract Task<Stream> GetStream(string path);
 
         protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
+        protected abstract Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path);
 
         protected abstract Task<List<string>> GetFilesForRestore();
 
         protected abstract string GetBackupPath(string smugglerFile);
+        protected abstract string GetSmugglerBackupPath(string smugglerFile);
 
         protected abstract string GetBackupLocation();
 
@@ -634,7 +636,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 SkipRevisionCreation = true
             };
 
-            var lastPath = GetBackupPath(smugglerFile);
+            var lastPath = GetSmugglerBackupPath(smugglerFile);
 
             using (var zip = await GetZipArchiveForSnapshot(lastPath))
             {
@@ -695,7 +697,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<long> CalculateBackupSizeInBytes()
         {
             var zipPath = GetBackupLocation();
-            using (var zip = await GetZipArchiveForSnapshot(zipPath))
+             zipPath = Path.Combine(zipPath, RestoreFromConfiguration.LastFileNameToRestore);
+            using (var zip = await GetZipArchiveForSnapshotCalc(zipPath))
                 return zip.Entries.Sum(entry => entry.Length);
         }
     }
