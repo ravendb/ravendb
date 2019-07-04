@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,49 +16,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
     public class Retention : RavenTestBase
     {
         [Theory]
-        [InlineData(10)]
-        [InlineData(2)]
-        [InlineData(1)]
-        [InlineData(13)]
-        [InlineData(5)]
         [InlineData(20)]
-        public async Task can_delete_backups_in_correct_order(int minimumBackupsToKeep)
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);
-
-            await CanDeleteBackupsInCorrectOrder(minimumBackupsToKeep,
-                (configuration, _) =>
-                {
-                    configuration.LocalSettings = new LocalSettings {FolderPath = backupPath};
-                },
-                _ =>
-                {
-                    var directories = Directory.GetDirectories(backupPath)
-                        .Where(x => Directory.GetFiles(x).Any(BackupUtils.IsFullBackupOrSnapshot))
-                        .Select(x => new DirectoryDetails
-                        {
-                            Path = x,
-                            LastWriteTime = Directory.GetLastWriteTime(x)
-                        })
-                        .ToList();
-
-                    return Task.FromResult(directories);
-                }, timeout: 15000);
-        }
-
-        [Theory]
-        [InlineData(15, null)]
-        [InlineData(25, null)]
-        [InlineData(30, null)]
-        [InlineData(40, null)]
-        [InlineData(15, 10)]
-        [InlineData(25, 2)]
-        [InlineData(30, 13)]
-        [InlineData(40, 5)]
-        public async Task can_delete_backups_by_date(int seconds, int? minimumBackupsToKeep)
+        [InlineData(25)]
+        [InlineData(30)]
+        [InlineData(40)]
+        [InlineData(45)]
+        [InlineData(50)]
+        public async Task can_delete_backups_by_date(int seconds)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            await CanDeleteBackupsByDate(seconds, minimumBackupsToKeep,
+            await CanDeleteBackupsByDate(seconds,
                 (configuration, _) =>
                 {
                     configuration.LocalSettings = new LocalSettings
@@ -76,43 +42,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, timeout: 15000);
         }
 
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(10)]
-        [InlineData(2)]
-        [InlineData(1)]
-        [InlineData(13)]
-        [InlineData(5)]
+        [Theory]
+        //[Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(20)]
-        public async Task can_delete_backups_in_correct_order_s3(int minimumBackupsToKeep)
+        [InlineData(25)]
+        [InlineData(30)]
+        [InlineData(40)]
+        [InlineData(45)]
+        [InlineData(50)]
+        public async Task can_delete_backups_by_date_s3(int seconds)
         {
-            await CanDeleteBackupsInCorrectOrder(minimumBackupsToKeep, (configuration, databaseName) =>
-                {
-                    configuration.S3Settings = GetS3Settings(databaseName);
-                },
-                async databaseName =>
-                {
-                    using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
-                    {
-                        var folders = await client.ListObjects($"{client.RemoteFolderName}/", "/", listFolders: true);
-                        return folders
-                            .Select(x => new DirectoryDetails {Path = x.FullPath, LastWriteTime = x.LastModified})
-                            .ToList();
-                    }
-                }, timeout: 60000);
-        }
-
-        [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(15, null)]
-        [InlineData(25, null)]
-        [InlineData(30, null)]
-        [InlineData(40, null)]
-        [InlineData(15, 10)]
-        [InlineData(25, 2)]
-        [InlineData(30, 13)]
-        [InlineData(40, 5)]
-        public async Task can_delete_backups_by_date_s3(int seconds, int? minimumBackupsToKeep)
-        {
-            await CanDeleteBackupsByDate(seconds, minimumBackupsToKeep,
+            await CanDeleteBackupsByDate(seconds,
                 (configuration, databaseName) =>
                 {
                     configuration.S3Settings = GetS3Settings(databaseName);
@@ -127,92 +67,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, timeout: 60000);
         }
 
-        private async Task CanDeleteBackupsInCorrectOrder(int minimumBackupsToKeep, 
-            Action<PeriodicBackupConfiguration, string> modifyConfiguration, Func<string, Task<List<DirectoryDetails>>> getDirectories, int timeout)
-        {
-            using (var store = GetDocumentStore())
-            {
-                var config = new PeriodicBackupConfiguration
-                {
-                    IncrementalBackupFrequency = "30 3 L * ?",
-                    RetentionPolicy = new RetentionPolicy
-                    {
-                        MinimumBackupsToKeep = minimumBackupsToKeep
-                    },
-                };
-
-                modifyConfiguration(config, store.Database);
-
-                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-                var lastEtag = 0L;
-                for (var i = 0; i < minimumBackupsToKeep + 3; i++)
-                {
-                    string userId;
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var user = new User { Name = "Grisha" };
-                        await session.StoreAsync(user);
-                        userId = user.Id;
-                        await session.SaveChangesAsync();
-                    }
-
-                    var directoryToBeDeleted = await GetDirectoryToBeDeleted();
-
-                    // create full backup
-                    lastEtag = await CreateBackup(store, true, backupTaskId, lastEtag, timeout);
-
-                    await AssertDirectoriesCount();
-                    await AssertDirectoryDeleted(directoryToBeDeleted);
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var user = await session.LoadAsync<User>(userId);
-                        user.Age = 33;
-                        await session.SaveChangesAsync();
-                    }
-
-                    // create incremental backup
-                    lastEtag = await CreateBackup(store, false, backupTaskId, lastEtag, timeout);
-
-                    await AssertDirectoriesCount();
-                }
-
-                await AssertDirectoriesCount();
-
-                async Task AssertDirectoriesCount()
-                {
-                    var directories = await getDirectories(store.Database);
-                    if (directories.Count <= minimumBackupsToKeep)
-                        return;
-
-                    Assert.Equal(minimumBackupsToKeep, directories.Count);
-                }
-
-                async Task<string> GetDirectoryToBeDeleted()
-                {
-                    var directories = await getDirectories(store.Database);
-                    if (directories.Count == 1 ||
-                        directories.Count < minimumBackupsToKeep)
-                        return null;
-
-                    return directories.OrderBy(x => x.Path).ThenBy(x => x.LastWriteTime).Select(x => x.Path).First();
-                }
-
-                async Task AssertDirectoryDeleted(string directoryToBeDeleted)
-                {
-                    if (directoryToBeDeleted == null)
-                        return;
-
-                    var directories = (await getDirectories(store.Database)).Select(x => x.Path);
-                    Assert.True(directories.All(x => x.Equals(directoryToBeDeleted) == false));
-                }
-            }
-        }
-
-        private async Task CanDeleteBackupsByDate(int seconds, int? minimumBackupsToKeep, 
-            Action<PeriodicBackupConfiguration, string> modifyConfiguration, Func<string, Task<int>> getDirectoriesCount, int timeout)
+        private async Task CanDeleteBackupsByDate(
+            int seconds, 
+            Action<PeriodicBackupConfiguration, string> modifyConfiguration, 
+            Func<string, Task<int>> getDirectoriesCount, 
+            int timeout)
         {
             var minimumBackupAgeToKeep = TimeSpan.FromSeconds(seconds);
 
@@ -223,7 +82,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "30 3 L * ?",
                     RetentionPolicy = new RetentionPolicy
                     {
-                        MinimumBackupsToKeep = minimumBackupsToKeep,
                         MinimumBackupAgeToKeep = minimumBackupAgeToKeep
                     }
                 };
@@ -233,8 +91,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
                 var lastEtag = 0L;
-                var runs = minimumBackupsToKeep + 10 ?? 10;
-                for (var i = 0; i < runs; i++)
+                for (var i = 0; i < 10; i++)
                 {
                     string userId;
 
@@ -270,7 +127,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await CreateBackup(store, true, backupTaskId, lastEtag, timeout);
 
                 var directoriesCount = await getDirectoriesCount(store.Database);
-                var expectedNumberOfDirectories = minimumBackupsToKeep ?? 1;
+                var expectedNumberOfDirectories = 1;
                 Assert.Equal(expectedNumberOfDirectories, directoriesCount);
             }
         }
@@ -306,13 +163,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 BucketName = "ravendb-test",
                 RemoteFolderName = $"{remoteFolderName}/{databaseName}"
             };
-        }
-
-        private class DirectoryDetails
-        {
-            public string Path { get; set; }
-
-            public DateTime LastWriteTime { get; set; }
         }
     }
 }

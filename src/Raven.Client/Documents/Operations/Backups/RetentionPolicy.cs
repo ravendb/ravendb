@@ -7,8 +7,6 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public bool Disabled { get; set; }
 
-        public long? MinimumBackupsToKeep { get; set; }
-
         public TimeSpan? MinimumBackupAgeToKeep { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -16,7 +14,6 @@ namespace Raven.Client.Documents.Operations.Backups
             return new DynamicJsonValue
             {
                 [nameof(Disabled)] = Disabled,
-                [nameof(MinimumBackupsToKeep)] = MinimumBackupsToKeep,
                 [nameof(MinimumBackupAgeToKeep)] = MinimumBackupAgeToKeep
             };
         }
