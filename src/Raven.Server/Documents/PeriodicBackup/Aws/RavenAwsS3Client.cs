@@ -511,12 +511,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (delimiter != null)
                 url += $"&delimiter={delimiter}";
 
-            //url += $"&max-keys={10}";
-
             if (continuationToken != null)
                 url += $"&continuation-token={Uri.EscapeDataString(continuationToken)}";
-
-            //var k = $"?list-type=2&prefix={prefix}";
 
             var now = SystemTime.UtcNow;
 
@@ -574,7 +570,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 foreach (var content in contents)
                 {
                     var fullPath = content.Element(ns + "Key").Value;
-                    var key = GetFileName(fullPath);
                     if (fullPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
                         continue; // folder
 
@@ -713,11 +708,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var baseUrl = base.GetUrl();
             return $"{baseUrl}/{_bucketName}";
-        }
-
-        private string GetFileName(string fullPath)
-        {
-            return fullPath.Split('/').Last();
         }
 
         public override string GetHost()
