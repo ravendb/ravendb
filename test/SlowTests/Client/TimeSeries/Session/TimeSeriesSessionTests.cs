@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -511,6 +513,137 @@ namespace SlowTests.Client.TimeSeries.Session
                     // should be sorted
                     Assert.Equal("Heartrate", tsNames[0]);
                     Assert.Equal("Nasdaq", tsNames[1]);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldGetTimeSeriesValueFromCache()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .Single();
+
+                    Assert.Equal(new[] { 59d }, val.Values);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should load from cache
+                    val = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .Single();
+
+                    Assert.Equal(new[] { 59d }, val.Values);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public void DocumentsChangeVectorShouldBeUpdatedAfterAddingNewTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 5; i++)
+                    {
+                        var id = $"users/{i}";
+                        session.Store(new User
+                        {
+                            Name = "Oren"
+                        }, id);
+
+                        session.TimeSeriesFor(id)
+                            .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var cvs = new List<string>();
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 2; i < 5; i++)
+                    {
+                        var id = $"users/{i}";
+                        var u = session.Load<User>(id);
+                        var cv = session.Advanced.GetChangeVectorFor(u);
+                        cvs.Add(cv);
+
+                        session.TimeSeriesFor(id)
+                            .Append("Nasdaq", baseline.AddMinutes(1), "web", new[] { 4012.5d });
+
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 2; i < 5; i++)
+                    {
+                        var u = session.Load<User>($"users/{i}");
+                        var cv = session.Advanced.GetChangeVectorFor(u);
+                        var oldCv = cvs[i - 2];
+                        var conflictStatus = ChangeVectorUtils.GetConflictStatus(cv, oldCv);
+
+                        Assert.Equal(ConflictStatus.Update, conflictStatus);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseIEnumerableValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                IEnumerable<double> values = new List<double>
+                {
+                    59d
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", values);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .Single();
+                    Assert.Equal(new[] { 59d }, val.Values);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
                 }
             }
         }
