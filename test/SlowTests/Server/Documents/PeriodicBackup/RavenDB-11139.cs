@@ -1024,7 +1024,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -1129,7 +1129,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).ToList().OrderBackups().Last()//if we don't sort the backups, we may get incorrect 'last' item to restore
+                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).OrderBackups().Last()//if we don't sort the backups, we may get incorrect 'last' item to restore
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -1293,7 +1293,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
