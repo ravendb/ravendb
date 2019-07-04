@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -12,8 +11,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Glacier";
 
-        public GlacierRetentionPolicyRunner(RetentionPolicy retentionPolicy, string databaseName, Action<string> onProgress, RavenAwsGlacierClient client)
-            : base(retentionPolicy, databaseName, onProgress)
+        public GlacierRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAwsGlacierClient client)
+            : base(parameters)
         {
             _client = client;
         }
