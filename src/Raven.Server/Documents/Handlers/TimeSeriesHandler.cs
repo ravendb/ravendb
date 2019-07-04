@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
 using Raven.Server.Routing;
@@ -34,11 +35,11 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     {
 
-                        writer.WritePropertyName("Id");
+                        writer.WritePropertyName(nameof(TimeSeriesDetails.Id));
                         writer.WriteString(documentId);
                         writer.WriteComma();
 
-                        writer.WritePropertyName("Values");
+                        writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
                         writer.WriteStartObject();
                         {
 
@@ -47,24 +48,24 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteStartObject();
                             {
 
-                                writer.WritePropertyName("Name");
+                                writer.WritePropertyName(nameof(TimeSeriesRange.Name));
                                 writer.WriteString(name);
                                 writer.WriteComma();
 
-                                writer.WritePropertyName("From");
+                                writer.WritePropertyName(nameof(TimeSeriesRange.From));
                                 writer.WriteDateTime(from, true);
                                 writer.WriteComma();
 
 
-                                writer.WritePropertyName("To");
+                                writer.WritePropertyName(nameof(TimeSeriesRange.To));
                                 writer.WriteDateTime(to, true);
                                 writer.WriteComma();
 
-                                writer.WritePropertyName("FullRange");
+                                writer.WritePropertyName(nameof(TimeSeriesRange.FullRange));
                                 writer.WriteBool(false); // TODO: Need to figure this out
                                 writer.WriteComma();
 
-                                writer.WritePropertyName("Values");
+                                writer.WritePropertyName(nameof(TimeSeriesRange.Values));
                                 writer.WriteStartArray();
                                 {
                                     var first = true;
@@ -80,13 +81,13 @@ namespace Raven.Server.Documents.Handlers
                                         }
                                         writer.WriteStartObject();
 
-                                        writer.WritePropertyName("Timestamp");
+                                        writer.WritePropertyName(nameof(TimeSeriesValue.Timestamp));
                                         writer.WriteDateTime(item.TimeStamp, true);
                                         writer.WriteComma();
-                                        writer.WritePropertyName("Tag");
+                                        writer.WritePropertyName(nameof(TimeSeriesValue.Tag));
                                         writer.WriteString(item.Tag);
                                         writer.WriteComma();
-                                        writer.WriteArray("Values", item.Values);
+                                        writer.WriteArray(nameof(TimeSeriesValue.Values), item.Values);
 
                                         writer.WriteEndObject();
                                     }

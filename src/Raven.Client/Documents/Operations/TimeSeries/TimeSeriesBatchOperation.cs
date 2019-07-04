@@ -8,12 +8,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesBatchOperation : IOperation<TimeSeriesBatchOperation.Result>
+    public class TimeSeriesBatchOperation : IOperation
     {
-        public class Result
-        {
-            
-        }
+
         private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
 
         public TimeSeriesBatchOperation(DocumentTimeSeriesOperation timeSeriesBatch)
@@ -21,12 +18,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _timeSeriesBatch = timeSeriesBatch;
         }
 
-        public RavenCommand<Result> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new TimeSeriesBatchCommand(_timeSeriesBatch, conventions);
         }
 
-        public class TimeSeriesBatchCommand : RavenCommand<Result>
+        public class TimeSeriesBatchCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly DocumentTimeSeriesOperation _timeSeriesBatch;
@@ -51,14 +48,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                         ctx.Write(stream, config);
                     })
                 };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    return;
-
-                Result = new Result();
             }
 
             public override bool IsReadRequest => false;

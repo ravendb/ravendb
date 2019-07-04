@@ -142,11 +142,14 @@ namespace Sparrow.Json
             _used += size;
             TotalUsed += size;
 
-            Return: return allocation;
+        Return:
+            return allocation;
 #endif
 
-            ErrorDisposed: ThrowAlreadyDisposedException();
-            ErrorResetted: ThrowInvalidAllocateFromResetWithoutRenew();
+        ErrorDisposed:
+            ThrowAlreadyDisposedException();
+        ErrorResetted:
+            ThrowInvalidAllocateFromResetWithoutRenew();
             return null; // Will never happen.
         }
 
@@ -176,7 +179,7 @@ namespace Sparrow.Json
             {
                 newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
             }
-            catch (OutOfMemoryException oom ) 
+            catch (OutOfMemoryException oom)
                 when (oom.Data?.Contains("Recoverable") != true) // this can be raised if the commit charge is low
             {
                 // we were too eager with memory allocations?
@@ -202,7 +205,7 @@ namespace Sparrow.Json
         {
             if (AvoidOverAllocation || PlatformDetails.Is32Bits)
                 return ApplyLimit(Bits.PowerOf2(requestedSize));
-            
+
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
@@ -216,8 +219,8 @@ namespace Sparrow.Json
                 if (size > SingleAllocationSizeLimit.Value)
                 {
                     var sizeInMb = requestedSize / Constants.Size.Megabyte + (requestedSize % Constants.Size.Megabyte == 0 ? 0 : 1);
-					return sizeInMb * Constants.Size.Megabyte;
-        		}
+                    return sizeInMb * Constants.Size.Megabyte;
+                }
 
                 return size;
             }
@@ -340,7 +343,7 @@ namespace Sparrow.Json
             {
                 if (disposing)
                     Monitor.Exit(this);
-            }            
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -354,7 +357,7 @@ namespace Sparrow.Json
 
 #if DEBUG
             Debug.Assert(address != _ptrCurrent);
-            Debug.Assert(allocation.IsReturned==false);
+            Debug.Assert(allocation.IsReturned == false);
             allocation.IsReturned = true;
 
 #endif
@@ -453,7 +456,7 @@ namespace Sparrow.Json
 
         private void ThrowObjectDisposedException()
         {
-           throw new ObjectDisposedException(nameof(AllocatedMemoryData));
+            throw new ObjectDisposedException(nameof(AllocatedMemoryData));
         }
 #endif
 
