@@ -269,6 +269,11 @@ namespace Raven.Server.Web.System
                     throw licenseLimit;
                 }
 
+                if (databaseRecord.Encrypted && databaseRecord.Topology?.DynamicNodesDistribution == true)
+                {
+                    throw new InvalidOperationException($"Cannot enable 'DynamicNodesDistribution' for encrypted database");
+                }
+
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
                 {
                     using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
@@ -782,6 +787,11 @@ namespace Raven.Server.Web.System
                 long index;
                 using (context.OpenReadTransaction())
                     databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out index);
+
+                if (databaseRecord.Encrypted)
+                {
+					throw new InvalidOperationException($"Cannot toggle 'DynamicNodesDistribution' for encrypted database");
+                }
 
                 if (enable == databaseRecord.Topology.DynamicNodesDistribution)
                     return;

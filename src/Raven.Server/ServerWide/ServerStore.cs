@@ -1429,7 +1429,12 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-
+            var record = Cluster.ReadDatabase(context, name, out _);
+            if (record != null && record.Encrypted && record.Topology.RelevantFor(NodeTag))
+            {
+                throw new InvalidOperationException(
+                    $"Can't delete secret key for a database ({name})that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
+            }
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
             tree.Delete(name);
