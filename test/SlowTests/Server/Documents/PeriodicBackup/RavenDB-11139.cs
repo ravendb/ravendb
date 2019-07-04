@@ -1147,7 +1147,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         TransactionMode = TransactionMode.ClusterWide
                     }))
                     {
-                        WaitForUserToContinueTheTest(store2);
                         await session.StoreAsync(new User
                         {
                             Name = "Egor3"
