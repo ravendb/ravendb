@@ -647,5 +647,43 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
+
+        [Fact]
+        public void ShouldDeleteTimeSeriesUponDocumentDeletion()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                var id = "users/ayende";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, id);
+
+                    var timeSeriesFor = session.TimeSeriesFor(id);
+
+                    timeSeriesFor.Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new []{ 59d });
+                    timeSeriesFor.Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 59d });
+                    timeSeriesFor.Append("Heartrate2", baseline.AddMinutes(1), "watches/apple", new[] { 59d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor(id).Get("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                    Assert.Equal(0, vals.Count());
+
+                    vals = session.TimeSeriesFor(id).Get("Heartrate2", DateTime.MinValue, DateTime.MaxValue);
+                    Assert.Equal(0, vals.Count());
+                }
+            }
+        }
     }
 }
