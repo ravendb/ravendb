@@ -44,19 +44,19 @@ INSERT INTO [actor_movie] ([m_id], [a_id]) VALUES (24, 32)
 INSERT INTO [actor_movie] ([m_id], [a_id]) VALUES (24, 33)
 
 
-SET IDENTITY_INSERT [groups] ON
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (50, 'G1', null);
+SET IDENTITY_INSERT [groups1] ON
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (50, 'G1', null);
 
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (51, 'G1.1', 50);
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (52, 'G1.1.1', 51);
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (53, 'G1.1.1.1', 52);
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (51, 'G1.1', 50);
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (52, 'G1.1.1', 51);
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (53, 'G1.1.1.1', 52);
 
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (54, 'G1.1.2', 51);
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (54, 'G1.1.2', 51);
 
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (55, 'G2', null);
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (55, 'G2', null);
 
-INSERT INTO [groups] ([g_id], [name], [parent_group_id]) VALUES (56, 'G2.1', 55);
-SET IDENTITY_INSERT [groups] OFF
+INSERT INTO [groups1] ([g_id], [name], [parent_group_id]) VALUES (56, 'G2.1', 55);
+SET IDENTITY_INSERT [groups1] OFF
 
 
 SET IDENTITY_INSERT [customers2] ON
