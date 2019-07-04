@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override string GetBackupPath(string fileName)
         {
-            return new VoronPathSetting(fileName).FullPath;
+            return fileName;
         }
 
         protected override string GetSmugglerBackupPath(string smugglerFile)
