@@ -16,16 +16,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
     public class Retention : RavenTestBase
     {
         [Theory]
-        [InlineData(20)]
-        [InlineData(25)]
-        [InlineData(30)]
-        [InlineData(40)]
-        [InlineData(45)]
-        [InlineData(50)]
-        public async Task can_delete_backups_by_date(int seconds)
+        [InlineData(20, 5)]
+        [InlineData(20, 20)]
+        [InlineData(25, 10)]
+        [InlineData(30, 3)]
+        [InlineData(40, 20)]
+        [InlineData(45, 1)]
+        [InlineData(50, 50)]
+        [InlineData(70, 13)]
+        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            await CanDeleteBackupsByDate(seconds,
+            await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                 (configuration, _) =>
                 {
                     configuration.LocalSettings = new LocalSettings
@@ -44,15 +46,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         [Theory]
         //[Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(20)]
-        [InlineData(25)]
-        [InlineData(30)]
-        [InlineData(40)]
-        [InlineData(45)]
-        [InlineData(50)]
-        public async Task can_delete_backups_by_date_s3(int seconds)
+        [InlineData(20, 5)]
+        [InlineData(20, 20)]
+        [InlineData(25, 10)]
+        [InlineData(30, 3)]
+        [InlineData(40, 20)]
+        [InlineData(45, 1)]
+        [InlineData(50, 50)]
+        [InlineData(70, 13)]
+        public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate)
         {
-            await CanDeleteBackupsByDate(seconds,
+            await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                 (configuration, databaseName) =>
                 {
                     configuration.S3Settings = GetS3Settings(databaseName);
@@ -62,18 +66,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
                     {
                         var folders = await client.ListObjects($"{client.RemoteFolderName}/", "/", listFolders: true);
-                        return folders.Count();
+                        return folders.FileInfoDetails.Count;
                     }
-                }, timeout: 60000);
+                }, timeout: 120000);
         }
 
         private async Task CanDeleteBackupsByDate(
-            int seconds, 
+            int backupAgeInSeconds,
+            int numberOfBackupsToCreate,
             Action<PeriodicBackupConfiguration, string> modifyConfiguration, 
             Func<string, Task<int>> getDirectoriesCount, 
             int timeout)
         {
-            var minimumBackupAgeToKeep = TimeSpan.FromSeconds(seconds);
+            var minimumBackupAgeToKeep = TimeSpan.FromSeconds(backupAgeInSeconds);
 
             using (var store = GetDocumentStore())
             {
@@ -91,7 +96,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
 
                 var lastEtag = 0L;
-                for (var i = 0; i < 10; i++)
+                for (var i = 0; i < numberOfBackupsToCreate; i++)
                 {
                     string userId;
 
