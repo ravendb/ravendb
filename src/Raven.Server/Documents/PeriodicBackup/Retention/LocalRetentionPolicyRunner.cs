@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Utils;
-using Raven.Client.Documents.Smuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
