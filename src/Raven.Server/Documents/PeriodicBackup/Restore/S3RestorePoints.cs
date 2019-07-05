@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public override async Task FetchRestorePoints(string path)
         {
             path = path.TrimEnd('/');
-            
+
             var files = await _client.ListObjects(path + "/", string.Empty, false);
             var folders = files.GroupBy(x => GetFolderName(x.FullPath));
 
@@ -33,7 +33,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)
         {
-            var files = await _client.ListObjects(path, string.Empty, false);
+            path = path.TrimEnd('/');
+
+            var files = await _client.ListObjects(path + "/", string.Empty, false);
             return files.ToList();
         }
 
@@ -44,8 +46,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // [Backup Type] - backup/snapshot
             // example: //2018-02-03-15-34.ravendb-Northwind-A-backup
 
-            var arr =  path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var lastFolderName = arr.Length > 0 ? arr[arr.Length-1] : string.Empty;
+            var arr = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var lastFolderName = arr.Length > 0 ? arr[arr.Length - 1] : string.Empty;
 
             var match = BackupFolderRegex.Match(lastFolderName);
             return match.Success
