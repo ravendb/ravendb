@@ -502,7 +502,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public async Task<IEnumerable<FileInfoDetails>> ListObjects(string prefix, string delimiter, bool listFolders, string continuationToken = null)
+        public async Task<ListObjectsResult> ListObjects(string prefix, string delimiter, bool listFolders, int? take = null, string continuationToken = null)
         {
             var url = $"{GetUrl()}/?list-type=2";
             if (prefix != null)
@@ -510,6 +510,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             if (delimiter != null)
                 url += $"&delimiter={delimiter}";
+
+            if (take != null)
+                url += $"&max-keys={take}";
 
             if (continuationToken != null)
                 url += $"&continuation-token={Uri.EscapeDataString(continuationToken)}";
@@ -526,7 +529,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var response = await client.SendAsync(requestMessage, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
-                return new List<FileInfoDetails>();
+                return new ListObjectsResult();
 
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
@@ -537,14 +540,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var result = GetResult();
 
             var isTruncated = listBucketResult.Root.Element(ns + "IsTruncated").Value;
-            if (isTruncated == "true")
-            {
-                var nextContinuationToken = listBucketResult.Root.Element(ns + "NextContinuationToken").Value;
-                var continuationResult = await ListObjects(prefix, delimiter, listFolders, nextContinuationToken);
-                result = result.Concat(continuationResult);
-            }
 
-            return result;
+            return new ListObjectsResult
+            {
+                FileInfoDetails = result.ToList(),
+                ContinuationToken = isTruncated == "true" ? listBucketResult.Root.Element(ns + "NextContinuationToken").Value : null
+            };
 
             IEnumerable<FileInfoDetails> GetResult()
             {
