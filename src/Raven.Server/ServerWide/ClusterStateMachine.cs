@@ -1915,15 +1915,12 @@ namespace Raven.Server.ServerWide
         {
             // when switching to a single node cluster we need to clear all of the irrelevant databases
             var clusterTopology = _parent.GetTopology(context);
-            var oldTag = clusterTopology.LastNodeId;
             var newTag = clusterTopology.Members.First().Key;
+            var oldTag = _parent.ReadPreviousNodeTag(context) ?? newTag;
 
             SqueezeDatabasesToSingleNodeCluster(context, oldTag, newTag);
 
-            if (newTag != oldTag)
-            {
-                UpdateClusterTopology(context, clusterTopology, newTag, _parent.GetLastEntryIndex(context));
-            }
+            ShrinkClusterTopology(context, clusterTopology, newTag, _parent.GetLastEntryIndex(context));
 
             UpdateLicenseOnSwitchingToSingleLeader(context);
         }
@@ -1955,7 +1952,7 @@ namespace Raven.Server.ServerWide
             PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
         }
 
-        private void UpdateClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
+        private void ShrinkClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
         {
             _parent.UpdateNodeTag(context, newTag);
 
@@ -2002,6 +1999,17 @@ namespace Raven.Server.ServerWide
 
                     if (toShrink.Count == 0 && toDelete.Count == 0)
                         return;
+
+            if (_parent.Log.IsOperationsEnabled)
+            {
+                _parent.Log.Operations($"Squeezing databases, new tag is {newTag}, old tag is {oldTag}.");
+
+                if (toShrink.Count > 0)
+                    _parent.Log.Operations($"Databases to shrink: {string.Join(',', toShrink.Select(r => r.DatabaseName))}");
+
+                if (toDelete.Count > 0)
+                    _parent.Log.Operations($"Databases to delete: {string.Join(',', toDelete)}");
+            }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var cmd = new DynamicJsonValue
