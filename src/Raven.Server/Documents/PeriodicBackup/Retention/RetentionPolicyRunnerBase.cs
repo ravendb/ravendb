@@ -28,13 +28,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _isFullBackup = parameters.IsFullBackup;
         }
 
-        protected abstract Task<List<string>> GetFolders();
+        protected abstract Task<GetFoldersResult> GetSortedFolders();
 
         protected abstract string GetFolderName(string folderPath);
 
-        protected abstract Task<List<string>> GetFiles(string folder);
+        protected abstract Task<string> GetFirstFileInFolder(string folder);
 
-        protected abstract Task DeleteFolders(List<FolderDetails> folderDetails);
+        protected abstract Task DeleteFolders(List<string> folders);
 
         protected abstract string Name { get; }
 
@@ -50,65 +50,36 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
             try
             {
-                var folders = await GetFolders();
-                var sortedBackupFolders = new SortedList<DateTime, FolderDetails>();
-
                 var sp = Stopwatch.StartNew();
-                _onProgress.Invoke($"Got {folders.Count:#,#} potential backups");
+                var foldersToDelete = new List<string>();
+                var now = DateTime.Now; // the time in the backup folder name is the local time
 
-                foreach (var folder in folders)
+                do
                 {
-                    var folderName = GetFolderName(folder);
-                    var folderDetails = RestoreUtils.ParseFolderName(folderName);
-                    if (folderDetails.BackupTimeAsString == null)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to get backup date time for folder: {folder}");
-                        continue;
-                    }
+                    var folders = await GetSortedFolders();
+                    _onProgress.Invoke($"Got {folders.List.Count:#,#} potential backups, has more: {folders.HasMore}");
 
-                    if (DateTime.TryParseExact(
-                            folderDetails.BackupTimeAsString,
-                            BackupTask.GetDateTimeFormat(folderDetails.BackupTimeAsString),
-                            CultureInfo.InvariantCulture,
-                            DateTimeStyles.None,
-                            out var backupTime) == false)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Failed to parse backup date time for folder: {folder}");
-                        continue;
-                    }
+                    var canContinue = await UpdateFoldersToDelete(folders, now, foldersToDelete);
+                    if (canContinue == false)
+                        break;
 
-                    if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
-                    {
-                        // a backup for a different database
-                        continue;
-                    }
+                    if (folders.HasMore == false)
+                        break;
 
-                    var files = await GetFiles(folder);
-                    var hasFullBackupOrSnapshot = files.Any(BackupUtils.IsFullBackupOrSnapshot);
-                    if (hasFullBackupOrSnapshot == false)
-                    {
-                        // no backup files
-                        continue;
-                    }
+                } while (true);
 
-                    while (sortedBackupFolders.ContainsKey(backupTime))
-                    {
-                        backupTime = backupTime.AddMilliseconds(1);
-                    }
+                if (foldersToDelete.Count == 0)
+                    return;
 
-                    sortedBackupFolders.Add(backupTime, new FolderDetails
-                    {
-                        Name = folder,
-                        Files = files
-                    });
-                }
+                var message = $"Found {foldersToDelete.Count:#,#} backups to delete, took: {sp.ElapsedMilliseconds:#,#}ms";
+                _onProgress.Invoke(message);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message);
 
-                var foldersToDelete = GetFoldersToDelete(sortedBackupFolders);
+                sp.Restart();
                 await DeleteFolders(foldersToDelete);
 
-                var message = $"Deleted {foldersToDelete.Count:#,#} backups, took: {sp.ElapsedMilliseconds:#,#}ms";
+                message = $"Deleted {foldersToDelete.Count:#,#} backups, took: {sp.ElapsedMilliseconds:#,#}ms";
                 _onProgress.Invoke(message);
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message);
@@ -129,25 +100,52 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
         }
 
-        private List<FolderDetails> GetFoldersToDelete(SortedList<DateTime, FolderDetails> sortedBackupFolders)
+        private async Task<bool> UpdateFoldersToDelete(GetFoldersResult folders, DateTime now, List<string> foldersToDelete)
         {
-            // the time in the backup folder name is the local time
-            var now = DateTime.Now;
-
-            var foldersToDelete = new List<FolderDetails>();
-
-            foreach (var backupFolder in sortedBackupFolders)
+            foreach (var folder in folders.List)
             {
-                if (now - backupFolder.Key < _retentionPolicy.MinimumBackupAgeToKeep)
+                var folderName = GetFolderName(folder);
+                var folderDetails = RestoreUtils.ParseFolderName(folderName);
+                if (folderDetails.BackupTimeAsString == null)
                 {
-                    // all backups are sorted by date
-                    break;
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to get backup date time for folder: {folder}");
+                    continue;
                 }
 
-                foldersToDelete.Add(backupFolder.Value);
+                if (DateTime.TryParseExact(
+                        folderDetails.BackupTimeAsString,
+                        BackupTask.GetDateTimeFormat(folderDetails.BackupTimeAsString),
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None,
+                        out var backupTime) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to parse backup date time for folder: {folder}");
+                    continue;
+                }
+
+                if (now - backupTime < _retentionPolicy.MinimumBackupAgeToKeep)
+                {
+                    // all backups are sorted by date
+                    return false;
+                }
+
+                if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                    continue; // a backup for a different database
+
+                var firstFile = await GetFirstFileInFolder(folder);
+                if (firstFile == null)
+                    continue; // folder is empty
+
+                var hasFullBackupOrSnapshot = BackupUtils.IsFullBackupOrSnapshot(firstFile);
+                if (hasFullBackupOrSnapshot == false)
+                    continue; // no snapshot or full backup
+
+                foldersToDelete.Add(folder);
             }
 
-            return foldersToDelete;
+            return true;
         }
     }
 }

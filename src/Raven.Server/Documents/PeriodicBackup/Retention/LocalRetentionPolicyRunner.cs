@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Utils;
+using Raven.Client.Documents.Smuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -18,10 +19,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _folderPath = folderPath;
         }
 
-        protected override Task<List<string>> GetFolders()
+        protected override Task<GetFoldersResult> GetSortedFolders()
         {
-            var folders = Directory.GetDirectories(_folderPath);
-            return Task.FromResult(folders.ToList());
+            var folders = Directory.GetDirectories(_folderPath).OrderBy(x => x).ToList();
+
+            return Task.FromResult(new GetFoldersResult
+            {
+                List = folders,
+                HasMore = false
+            });
         }
 
         protected override string GetFolderName(string folderPath)
@@ -29,23 +35,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return Path.GetFileName(folderPath);
         }
 
-        protected override Task<List<string>> GetFiles(string folder)
+        protected override Task<string> GetFirstFileInFolder(string folder)
         {
             try
             {
-                return Task.FromResult(Directory.GetFiles(folder).ToList());
+                var firstFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().FirstOrDefault();
+                return Task.FromResult(firstFile);
             }
             catch (DirectoryNotFoundException)
             {
-                return Task.FromResult(new List<string>());
+                return Task.FromResult((string)null);
             }
         }
 
-        protected override Task DeleteFolders(List<FolderDetails> folderDetails)
+        protected override Task DeleteFolders(List<string> folders)
         {
-            foreach (var folderDetail in folderDetails)
+            foreach (var folder in folders)
             {
-                IOExtensions.DeleteDirectory(folderDetail.Name);
+                IOExtensions.DeleteDirectory(folder);
             }
 
             return Task.CompletedTask;
