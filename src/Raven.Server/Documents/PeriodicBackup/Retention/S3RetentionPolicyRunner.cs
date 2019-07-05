@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         {
             // backups are ordered in lexicographical order
             var files = await _client.ListObjects(folder, null, false, 1);
-            return files.FileInfoDetails.Select(x => x.FullPath).FirstOrDefault();
+            return files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
         }
 
         protected override async Task DeleteFolders(List<string> folders)
