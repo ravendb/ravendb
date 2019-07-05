@@ -53,6 +53,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             foreach (var folder in folders)
             {
                 IOExtensions.DeleteDirectory(folder);
+
+                CancellationToken.ThrowIfCancellationRequested();
             }
 
             return Task.CompletedTask;

@@ -96,7 +96,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 RetentionPolicy = _configuration.RetentionPolicy,
                 DatabaseName = _database.Name,
                 IsFullBackup = _isFullBackup,
-                OnProgress = AddInfo
+                OnProgress = AddInfo,
+                CancellationToken = TaskCancelToken.Token
             };
         }
 

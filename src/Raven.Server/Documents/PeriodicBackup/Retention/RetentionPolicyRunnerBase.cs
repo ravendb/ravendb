@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -16,15 +17,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private readonly RetentionPolicy _retentionPolicy;
         private readonly string _databaseName;
-        private readonly Action<string> _onProgress;
         private readonly bool _isFullBackup;
+        private readonly Action<string> _onProgress;
+        protected CancellationToken CancellationToken;
 
         protected RetentionPolicyRunnerBase(RetentionPolicyBaseParameters parameters)
         {
             _retentionPolicy = parameters.RetentionPolicy;
             _databaseName = parameters.DatabaseName;
-            _onProgress = parameters.OnProgress;
             _isFullBackup = parameters.IsFullBackup;
+            _onProgress = parameters.OnProgress;
+            CancellationToken = parameters.CancellationToken;
         }
 
         protected abstract Task<GetFoldersResult> GetSortedFolders();
@@ -112,6 +115,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         {
             foreach (var folder in folders.List)
             {
+                CancellationToken.ThrowIfCancellationRequested();
+
                 var folderName = GetFolderName(folder);
                 var folderDetails = RestoreUtils.ParseFolderName(folderName);
                 if (folderDetails.BackupTimeAsString == null)
