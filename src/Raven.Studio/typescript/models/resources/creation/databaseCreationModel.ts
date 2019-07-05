@@ -334,14 +334,11 @@ class databaseCreationModel {
         this.legacyMigration.journalsPathHasFocus(true);
     }
 
-    private tryDecodeS3Credentials(credentials: string) {
+    private tryDecodeS3Credentials(credentials: any) {
         try {
-            const decoded = atob(credentials);
-            const json = JSON.parse(decoded);
-            
             //TODO: do some duck typing to check if we have correct format
             
-            this.restore.decodedS3Credentials(json);
+            this.restore.decodedS3Credentials(credentials);
         } catch (e) {
             console.warn(e);
         }
