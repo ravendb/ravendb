@@ -17,10 +17,10 @@ namespace Raven.Server.Rachis
         protected TransactionContextPool ContextPoolForReadOnlyOperations;
         protected RachisConsensus _parent;
         public RachisVersionValidation Validator;
-        
+
         public virtual void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
-            _parent = parent;            
+            _parent = parent;
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
             Validator = InitializeValidator();
         }
@@ -38,7 +38,7 @@ namespace Raven.Server.Rachis
                     throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
 
                 lastAppliedIndex = index;
-               
+
                 if (flags != RachisEntryFlags.StateMachineCommand)
                 {
                     _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, null);
@@ -46,12 +46,12 @@ namespace Raven.Server.Rachis
                 }
 
                 Apply(context, cmd, index, leader, serverStore);
-                
+
                 if (duration.ElapsedMilliseconds >= maxTimeAllowedToWaitForApply)
                     // we don't want to spend so much time applying commands that we will time out the leader
                     // so we time this from the follower perspective and abort after applying a single command
                     // or 25% of the time has already passed
-                    break; 
+                    break;
             }
             var term = _parent.GetTermForKnownExisting(context, lastAppliedIndex);
 
@@ -64,12 +64,12 @@ namespace Raven.Server.Rachis
 
         public virtual void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
-            
+
         }
 
         public void Dispose()
         {
-            
+
         }
 
         protected abstract RachisVersionValidation InitializeValidator();
