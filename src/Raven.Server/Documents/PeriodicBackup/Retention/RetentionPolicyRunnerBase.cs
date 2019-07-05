@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -53,6 +52,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var sp = Stopwatch.StartNew();
                 var foldersToDelete = new List<string>();
                 var now = DateTime.Now; // the time in the backup folder name is the local time
+                var deletingAllFolders = true;
 
                 do
                 {
@@ -61,7 +61,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                     var canContinue = await UpdateFoldersToDelete(folders, now, foldersToDelete);
                     if (canContinue == false)
+                    {
+                        deletingAllFolders = false;
                         break;
+                    }
 
                     if (folders.HasMore == false)
                         break;
@@ -70,6 +73,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 if (foldersToDelete.Count == 0)
                     return;
+
+                if (deletingAllFolders)
+                {
+                    throw new InvalidOperationException("Trying to delete all backup folders, did you modify the backup folders while the backup was running?");
+                }
 
                 var message = $"Found {foldersToDelete.Count:#,#} backups to delete, took: {sp.ElapsedMilliseconds:#,#}ms";
                 _onProgress.Invoke(message);
