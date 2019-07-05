@@ -11,7 +11,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public class PatchTest : SqlAwareTestBase
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -54,7 +54,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task PatchCanAccessNestedObjects()
         {
             using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, "basic"))
@@ -96,8 +96,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-        
-        [Theory]
+
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -128,7 +128,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         ApplyDefaultColumnNamesMapping(schema, settings);
                         var result = new MigrationResult(settings);
                         await driver.Migrate(settings, schema, db, context, result);
-                        
+
                         Assert.Equal(2, result.PerCollectionCount["OrderItems"].ReadCount);
                         Assert.Equal(0, result.PerCollectionCount["OrderItems"].ErroredCount);
                         Assert.Equal(1, result.PerCollectionCount["OrderItems"].SkippedCount);
