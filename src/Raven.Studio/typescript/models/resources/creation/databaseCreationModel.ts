@@ -10,6 +10,7 @@ import validateOfflineMigration = require("commands/resources/validateOfflineMig
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
+import getCloudCredentialsFromLinkCommand = require("commands/resources/getCloudCredentialsFromLinkCommand");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -68,6 +69,7 @@ class databaseCreationModel {
 
     restore = {
         source: ko.observable<restoreSource>("serverLocal"),
+        backupLink: ko.observable<string>(),
         cloudCredentials: ko.observable<string>(),
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
         backupDirectoryError: ko.observable<string>(null),
@@ -211,6 +213,10 @@ class databaseCreationModel {
             }
         });
         
+        this.restore.backupLink.subscribe(link => {
+            this.downloadCloudCredentials(link);
+        });
+        
         this.restore.cloudCredentials.subscribe((credentials) => {
             this.tryDecodeS3Credentials(credentials);
         });
@@ -283,6 +289,14 @@ class databaseCreationModel {
         
         _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupPathHasChanged", 
             "legacyMigrationDataDirectoryHasChanged", "dataExporterPathHasChanged", "journalsPathHasChanged");
+    }
+
+    downloadCloudCredentials(link: string) {
+        new getCloudCredentialsFromLinkCommand(link)
+            .execute()
+            .then(credentials => {
+                this.restore.cloudCredentials(credentials);
+            });
     }
     
     dataPathHasChanged(value: string) {
@@ -498,7 +512,7 @@ class databaseCreationModel {
             required: true
         });
         
-        this.restore.cloudCredentials.extend({
+        this.restore.backupLink.extend({
             required: {
                 onlyIf: () => this.restore.source() === "cloud"
             }
