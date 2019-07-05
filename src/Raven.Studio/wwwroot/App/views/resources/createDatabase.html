@@ -300,12 +300,12 @@
             </div>
         </div>
 
-        <div class="form-group row" data-bind="validationElement: cloudCredentials, visible: source() === 'cloud'">
+        <div class="form-group row" data-bind="validationElement: backupLink, visible: source() === 'cloud'">
             <div class="col-md-4">
-                <label class="control-label">Credentials</label>
+                <label class="control-label">Backup Link</label>
             </div>
             <div class="col-md-8">
-                 <textarea rows="3" class="form-control" data-bind="textInput: cloudCredentials"></textarea>
+                 <input class="form-control" data-bind="textInput: backupLink" />
             </div>
         </div>
         
