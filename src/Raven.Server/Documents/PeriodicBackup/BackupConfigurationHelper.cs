@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public static class BackupConfigurationHelper
     {
+        internal static bool SkipMinimumBackupAgeToKeepValidation = false;
+
         public static void UpdateLocalPathIfNeeded(PeriodicBackupConfiguration configuration, ServerStore serverStore)
         {
             if (configuration.LocalSettings == null || configuration.LocalSettings.Disabled)
@@ -92,10 +94,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             var retentionPolicy = configuration.RetentionPolicy;
             if (retentionPolicy != null && retentionPolicy.Disabled == false)
             {
-                if (retentionPolicy.MinimumBackupAgeToKeep != null &&
-                    retentionPolicy.MinimumBackupAgeToKeep.Value.Ticks <= 0)
+                if (retentionPolicy.MinimumBackupAgeToKeep != null)
                 {
-                    throw new ArgumentException($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive");
+                    if (retentionPolicy.MinimumBackupAgeToKeep.Value.Ticks <= 0)
+                        throw new ArgumentException($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive");
+
+                    if (SkipMinimumBackupAgeToKeepValidation == false && retentionPolicy.MinimumBackupAgeToKeep.Value < TimeSpan.FromDays(1))
+                        throw new ArgumentException($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be bigger than one day");
                 }
             }
 
