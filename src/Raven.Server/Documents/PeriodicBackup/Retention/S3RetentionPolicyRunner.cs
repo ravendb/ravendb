@@ -73,6 +73,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                     filesContinuationToken = objects.ContinuationToken;
 
+                    CancellationToken.ThrowIfCancellationRequested();
+
                 } while (filesContinuationToken != null);
             }
 

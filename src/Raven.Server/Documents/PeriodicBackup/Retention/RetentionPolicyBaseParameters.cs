@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -12,5 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         public bool IsFullBackup { get; set; }
 
         public Action<string> OnProgress { get; set; }
+
+        public CancellationToken CancellationToken { get; set; }
     }
 }
