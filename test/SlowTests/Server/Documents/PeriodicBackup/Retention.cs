@@ -7,6 +7,8 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -26,6 +28,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(70, 13)]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate)
         {
+            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+
             var backupPath = NewDataPath(suffix: "BackupFolder");
             await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                 (configuration, _) =>
@@ -44,8 +48,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, timeout: 15000);
         }
 
-        [Theory]
-        //[Theory(Skip = "Requires Amazon AWS Credentials")]
+        [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(20, 5)]
         [InlineData(20, 20)]
         [InlineData(25, 10)]
@@ -56,6 +59,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(70, 13)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate)
         {
+            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+
             await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                 (configuration, databaseName) =>
                 {
@@ -69,6 +74,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         return folders.FileInfoDetails.Count;
                     }
                 }, timeout: 120000);
+        }
+
+        [Fact]
+        public async Task configuration_validation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = new PeriodicBackupConfiguration
+                {
+                    IncrementalBackupFrequency = "30 3 L * ?",
+                    RetentionPolicy = new RetentionPolicy
+                    {
+                        MinimumBackupAgeToKeep = TimeSpan.FromDays(-5)
+                    }
+                };
+
+                var error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
+                Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive"));
+
+                config.RetentionPolicy.MinimumBackupAgeToKeep = TimeSpan.FromHours(12);
+                error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
+                Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be bigger than one day"));
+            }
         }
 
         private async Task CanDeleteBackupsByDate(
