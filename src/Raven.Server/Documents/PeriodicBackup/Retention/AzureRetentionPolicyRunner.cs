@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _client = client;
         }
 
-        protected override Task<List<string>> GetFolders()
+        protected override Task<GetFoldersResult> GetSortedFolders()
         {
             throw new NotSupportedException();
         }
@@ -27,12 +27,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             throw new NotSupportedException();
         }
 
-        protected override Task<List<string>> GetFiles(string folder)
+        protected override Task<string> GetFirstFileInFolder(string folder)
         {
             throw new NotSupportedException();
         }
 
-        protected override Task DeleteFolders(List<FolderDetails> folderDetails)
+        protected override Task DeleteFolders(List<string> folders)
         {
             throw new NotSupportedException();
         }
