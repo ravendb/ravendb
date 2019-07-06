@@ -65,7 +65,7 @@ ALTER TABLE actor_movie
         REFERENCES `movie` (m_id) ;
 
 
-CREATE TABLE groups (
+CREATE TABLE groups1 (
     g_id INT (11) NOT NULL AUTO_INCREMENT,
     name VARCHAR (20) NOT NULL,
     parent_group_id INT NULL,
@@ -73,9 +73,9 @@ CREATE TABLE groups (
 ) ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8;
 
-ALTER TABLE groups
-    ADD CONSTRAINT FK_GROUPS FOREIGN KEY (parent_group_id)
-        REFERENCES `groups` (g_id);
+ALTER TABLE groups1
+    ADD CONSTRAINT FK_GROUPS1 FOREIGN KEY (parent_group_id)
+        REFERENCES `groups1` (g_id);
 
 
 CREATE TABLE orders2 (

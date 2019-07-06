@@ -30,20 +30,19 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const int DefaultBufferSize = 81920;
         private const int DefaultFtpPort = 21;
 
-        public RavenFtpClient(string url, int? port, string userName, string password, string certificateAsBase64,
-            string certificateFileName, Progress progress = null, CancellationToken? cancellationToken = null)
+        public RavenFtpClient(FtpSettings ftpSettings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
-            _url = url;
-            _port = port;
-            _userName = userName;
-            _password = password;
-            _certificateAsBase64 = certificateAsBase64;
-            _certificateFileName = certificateFileName;
+            _url = ftpSettings.Url;
+            _port = ftpSettings.Port;
+            _userName = ftpSettings.UserName;
+            _password = ftpSettings.Password;
+            _certificateAsBase64 = ftpSettings.CertificateAsBase64;
+            _certificateFileName = ftpSettings.CertificateFileName;
 
             if (_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) == false &&
                 _url.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase) == false)
-                _url = "ftp://" + url;
+                _url = "ftp://" + _url;
 
             if (_url.StartsWith("ftps", StringComparison.OrdinalIgnoreCase))
             {

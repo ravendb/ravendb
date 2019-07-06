@@ -19,6 +19,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
@@ -972,6 +974,7 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicense();
                     break;
                 case nameof(PutLicenseLimitsCommand):
+                case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
@@ -1341,6 +1344,10 @@ namespace Raven.Server.ServerWide
             bool cloneKey = false)
         {
             Debug.Assert(context.Transaction != null);
+
+            //This will prevent the insertion of an encryption key for a database that resides in a server without encryption license.
+            LicenseManager.AssertCanCreateEncryptedDatabase();
+
             if (secretKey.Length != 256 / 8)
                 throw new ArgumentException($"Key size must be 256 bits, but was {secretKey.Length * 8}", nameof(secretKey));
 
@@ -2142,6 +2149,26 @@ namespace Raven.Server.ServerWide
             return identityInfo;
         }
 
+        public NodeInfo GetNodeInfo()
+        {
+            var memoryInformation = MemoryInformation.GetMemoryInfo();
+            return new NodeInfo
+            {
+                NodeTag = NodeTag,
+                TopologyId = GetClusterTopology().TopologyId,
+                Certificate = Server.Certificate.CertificateForClients,
+                NumberOfCores = ProcessorInfo.ProcessorCount,
+                InstalledMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes),
+                UsableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes),
+                BuildInfo = LicenseManager.BuildInfo,
+                OsInfo = LicenseManager.OsInfo,
+                ServerId = GetServerId(),
+                CurrentState = CurrentRachisState,
+                HasFixedPort = HasFixedPort,
+                ServerSchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion
+            };
+        }
+
         public License LoadLicense()
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -2182,19 +2209,37 @@ namespace Raven.Server.ServerWide
 
         public void PutLicenseLimits(LicenseLimits licenseLimits, string raftRequestId)
         {
-            if (IsLeader() == false)
-                throw new InvalidOperationException("Only the leader can set the license limits!");
-
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
-            _engine.PutAsync(command).IgnoreUnobservedExceptions();
+            SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string raftRequestId)
         {
-            if (IsLeader() == false)
-                throw new InvalidOperationException("Only the leader can set the license limits!");
-
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
+
+            var result = await SendToLeaderAsync(command);
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+        }
+
+        public async Task PutMyNodeInfoAsync(int maxLicenseCores)
+        {
+            var licenseLimits = LoadLicenseLimits();
+            if (licenseLimits == null)
+                return;
+
+            if (licenseLimits.NodeLicenseDetails.TryGetValue(NodeTag, out _) == false)
+                return;
+
+            var nodeInfo = GetNodeInfo();
+            var nodeLicenseLimits = new NodeLicenseLimits
+            {
+                NodeTag = NodeTag,
+                DetailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo),
+                LicensedCores = maxLicenseCores,
+                AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
+            };
+            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, nodeLicenseLimits, RaftIdGenerator.NewId());
 
             var result = await SendToLeaderAsync(command);
 
@@ -2231,7 +2276,7 @@ namespace Raven.Server.ServerWide
                     {
                         return await _engine.PutAsync(cmd);
                     }
-                    catch (NotLeadingException)
+                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
                     {
                         // if the leader was changed during the PutAsync, we will retry.
                         continue;
@@ -2442,7 +2487,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "RAFT connection error", msg,
-                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: remoteEndpoint.ToString(), details: new ExceptionDetails(e)));
+                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: ((IPEndPoint)remoteEndpoint).Address.ToString(), details: new ExceptionDetails(e)));
             }
         }
 

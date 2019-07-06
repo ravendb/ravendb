@@ -4,10 +4,11 @@ using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class NodeInfo
+    public class NodeInfo : IDynamicJson
     {
         public string NodeTag;
         public string TopologyId;
@@ -22,10 +23,37 @@ namespace Raven.Client.ServerWide.Commands
         public RachisState CurrentState;
         public bool HasFixedPort;
         public int ServerSchemaVersion;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(TopologyId)] = TopologyId,
+                [nameof(Certificate)] = Certificate,
+                [nameof(ClusterStatus)] = ClusterStatus,
+                [nameof(NumberOfCores)] = NumberOfCores,
+                [nameof(InstalledMemoryInGb)] = InstalledMemoryInGb,
+                [nameof(UsableMemoryInGb)] = UsableMemoryInGb,
+                [nameof(BuildInfo)] = BuildInfo,
+                [nameof(OsInfo)] = OsInfo,
+                [nameof(ServerId)] = ServerId.ToString(),
+                [nameof(CurrentState)] = CurrentState,
+                [nameof(HasFixedPort)] = HasFixedPort,
+                [nameof(ServerSchemaVersion)] = ServerSchemaVersion,
+            };
+        }
     }
 
     public class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
+        public GetNodeInfoCommand() { }
+
+        public GetNodeInfoCommand(TimeSpan timeout)
+        {
+            Timeout = timeout;
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/cluster/node-info";

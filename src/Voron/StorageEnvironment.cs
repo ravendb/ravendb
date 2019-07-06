@@ -217,7 +217,7 @@ namespace Voron
 
             Options.AddToInitLog?.Invoke("Starting Recovery");
             hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
-            var successString = hadIntegrityIssues ? "(successfully)" : "(with integrity issues)";
+            var successString = hadIntegrityIssues ? "(with integrity issues)" : "(successfully)";
             Options.AddToInitLog?.Invoke($"Recovery Ended {successString}");
 
             if (hadIntegrityIssues)

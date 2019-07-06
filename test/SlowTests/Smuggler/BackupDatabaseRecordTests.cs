@@ -114,12 +114,13 @@ namespace SlowTests.Smuggler
                         DelayReplicationFor = new TimeSpan(3),
                     }));
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    var result1 = store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                     {
                         Name = "ConnectionName",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
                     var sqlConnectionString = new SqlConnectionString
                     {
@@ -128,7 +129,9 @@ namespace SlowTests.Smuggler
                         FactoryName = "System.Data.SqlClient"
                     };
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    Assert.NotNull(result2.RaftCommandIndex);
+
                     store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         AllowEtlOnNonEncryptedChannel = true,
@@ -294,12 +297,13 @@ namespace SlowTests.Smuggler
                         DelayReplicationFor = new TimeSpan(3),
                     }));
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    var result1 = store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                     {
                         Name = "ConnectionName",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
                     var sqlConnectionString = new SqlConnectionString
                     {
@@ -308,7 +312,9 @@ namespace SlowTests.Smuggler
                         FactoryName = "System.Data.SqlClient"
                     };
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    Assert.NotNull(result2.RaftCommandIndex);
+
                     store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         AllowEtlOnNonEncryptedChannel = true,
@@ -616,10 +622,14 @@ namespace SlowTests.Smuggler
                         Name = "con4",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8084" }
                     };
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con1));
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con2));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con3));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con4));
+                    var result1 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con1));
+                    var result2 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con2));
+                    var result3 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con3));
+                    var result4 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con4));
+                    Assert.NotNull(result1.RaftCommandIndex);
+                    Assert.NotNull(result2.RaftCommandIndex);
+                    Assert.NotNull(result3.RaftCommandIndex);
+                    Assert.NotNull(result4.RaftCommandIndex);
 
                     var sink1 = new PullReplicationAsSink()
                     {
@@ -753,10 +763,14 @@ namespace SlowTests.Smuggler
                         ConnectionString = "http://127.0.0.1:8084",
                         FactoryName = "System.Data.SqlClient"
                     };
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon1));
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon2));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon3));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon4));
+                    var putResult1 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon1));
+                    var putResult2 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon2));
+                    var putResult3 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon3));
+                    var putResult4 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon4));
+                    Assert.NotNull(putResult1.RaftCommandIndex);
+                    Assert.NotNull(putResult2.RaftCommandIndex);
+                    Assert.NotNull(putResult3.RaftCommandIndex);
+                    Assert.NotNull(putResult4.RaftCommandIndex);
 
                     var sqlEtl =new SqlEtlConfiguration
                     {
@@ -1056,12 +1070,13 @@ namespace SlowTests.Smuggler
                         DelayReplicationFor = new TimeSpan(3),
                     }));
 
-                    store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                     {
                         Name = "ConnectionName",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
                     var sqlConnectionString = new SqlConnectionString
                     {
@@ -1070,7 +1085,8 @@ namespace SlowTests.Smuggler
                         FactoryName = "System.Data.SqlClient"
                     };
 
-                    store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    Assert.NotNull(result2.RaftCommandIndex);
                     store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         AllowEtlOnNonEncryptedChannel = true,

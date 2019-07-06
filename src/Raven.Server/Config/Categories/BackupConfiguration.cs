@@ -92,8 +92,10 @@ namespace Raven.Server.Config.Categories
         {
             if (AllowedAwsRegions == null)
                 return;
+
             if (AllowedAwsRegions.Contains(region))
                 return;
+
             throw new ArgumentException($"The selected AWS region '{region}' is not allowed for backup in this RavenDB server. Contact the administrator for more information. Allowed regions: {string.Join(", ", AllowedAwsRegions)}");
         }
 
@@ -101,12 +103,14 @@ namespace Raven.Server.Config.Categories
         {
             if (AllowedDestinations == null)
                 return;
+
             if (AllowedDestinations.Contains("None"))
                 throw new ArgumentException("Backups are not allowed in this RavenDB server. Contact the administrator for more information.");
+
             if (AllowedDestinations.Contains(dest))
                 return;
-            throw new ArgumentException($"The selected backup destination '{dest}' is not allowed in this RavenDB server. Contact the administrator for more information. Allowed backup destinations: {string.Join(", ", AllowedDestinations)}");
 
+            throw new ArgumentException($"The selected backup destination '{dest}' is not allowed in this RavenDB server. Contact the administrator for more information. Allowed backup destinations: {string.Join(", ", AllowedDestinations)}");
         }
     }
 }

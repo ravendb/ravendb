@@ -9,6 +9,7 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import retentionPolicy = require("models/database/tasks/periodicBackup//retentionPolicy");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
 import googleCloudSettings = require("models/database/tasks/periodicBackup/googleCloudSettings");
 import generalUtils = require("common/generalUtils");
@@ -35,6 +36,7 @@ class periodicBackupConfiguration {
     azureSettings = ko.observable<azureSettings>();
     googleCloudSettings = ko.observable<googleCloudSettings>();
     ftpSettings = ko.observable<ftpSettings>();
+    retentionPolicy = ko.observable<retentionPolicy>();
     encryptionSettings = ko.observable<encryptionSettings>();
     
     manualChooseMentor = ko.observable<boolean>(false);
@@ -78,6 +80,7 @@ class periodicBackupConfiguration {
 
         this.updateFolderPathOptions(folderPath);
 
+        this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
         this.encryptionSettings(new encryptionSettings(encryptedDatabase, this.backupType, dto.BackupEncryptionSettings));
 
         this.initValidation();
@@ -91,11 +94,15 @@ class periodicBackupConfiguration {
                     anyDirty = true;
                 }
             });
-            
+
+            if (this.retentionPolicy().dirtyFlag().isDirty()) {
+                anyDirty = true;
+            }
+
             if (this.encryptionSettings().dirtyFlag().isDirty()) {
                 anyDirty = true;
             }
-            
+
             return anyDirty;
         });
         
@@ -220,7 +227,8 @@ class periodicBackupConfiguration {
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
-            BackupEncryptionSettings: this.encryptionSettings().toDto()
+            BackupEncryptionSettings: this.encryptionSettings().toDto(),
+            RetentionPolicy: this.retentionPolicy().toDto()
         };
     }
 
@@ -242,7 +250,8 @@ class periodicBackupConfiguration {
             BackupEncryptionSettings: {
                 Key: "",
                 EncryptionMode: null
-            }
+            },
+            RetentionPolicy: null
         }, serverLimits, encryptedDatabase);
     }
 }

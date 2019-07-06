@@ -39,13 +39,14 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import database = require("models/resources/database");
 import aceDiff = require("common/helpers/text/aceDiff");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
+import getDocumentRevisionsCountCommand = require("commands/database/documents/getDocumentRevisionsCountCommand");
 import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
+import forceRevisionCreationCommand = require("commands/database/documents/forceRevisionCreationCommand");
 
 interface revisionToCompare {
     date: string;
     changeVector: string;
 }
-
 
 class editDocument extends viewModelBase {
 
@@ -112,7 +113,7 @@ class editDocument extends viewModelBase {
     private changeNotification: changeSubscription;
 
     private normalActionProvider = new normalCrudActions(this.document, this.activeDatabase, 
-            docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any) => this.onDocumentSaved(saveResult, localDoc));
+            docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => this.onDocumentSaved(saveResult, localDoc, forceRevisionCreation));
     
     // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
     private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider); 
@@ -120,7 +121,7 @@ class editDocument extends viewModelBase {
     connectedDocuments = new connectedDocuments(this.document, 
         this.activeDatabase, 
         (docId) => this.loadDocument(docId), 
-            changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector), 
+        changeVector => this.enterCompareModeAndCompareByChangeVector(changeVector), 
         this.isCreatingNewDocument, 
         this.crudActionsProvider, 
         this.inReadOnlyMode);
@@ -138,6 +139,7 @@ class editDocument extends viewModelBase {
 
     canViewAttachments: KnockoutComputed<boolean>;
     canViewCounters: KnockoutComputed<boolean>;
+    canViewRevisions:  KnockoutComputed<boolean>;
     canViewRelated: KnockoutComputed<boolean>;
     
     constructor() {
@@ -147,7 +149,7 @@ class editDocument extends viewModelBase {
         this.initializeObservables();
         this.initValidation();
         
-        this.bindToCurrentInstance("compareRevisions");
+        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision");
     }
 
     canActivate(args: any) {
@@ -309,7 +311,7 @@ class editDocument extends viewModelBase {
             }
 
             return true;
-        });         
+        });
 
         this.rawJsonUrl = ko.pureComputed(() => {
             const newDocMode = this.isCreatingNewDocument();
@@ -464,6 +466,10 @@ class editDocument extends viewModelBase {
             return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
         });
 
+        this.canViewRevisions = ko.pureComputed(() => {
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument();
+        });
+        
         this.canViewRelated = ko.pureComputed(() => {
             return !this.isDeleteRevision();
         });
@@ -633,7 +639,6 @@ class editDocument extends viewModelBase {
 
         // Clear data..
         this.document().__metadata.clearFlags();
-        this.connectedDocuments.revisionsCount(0);
 
         this.connectedDocuments.gridController().reset(true);
         this.metadata().changeVector(undefined);
@@ -671,7 +676,7 @@ class editDocument extends viewModelBase {
         return true;
     }
     
-    private saveInternal(documentId: string) {
+    private saveInternal(documentId: string, forceRevisionCreation: boolean = false) {
         let message = "";
         let updatedDto: any;
 
@@ -725,7 +730,11 @@ class editDocument extends viewModelBase {
         // we split save of cloned document into 2 calls, as default id convention creates ids like: users/
         // as result we don't know exact destination document id.
         const newDoc = new document(updatedDto);
-        const saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase(), true);
+        
+        const saveCommand = forceRevisionCreation ?
+                            new forceRevisionCreationCommand(documentId, this.activeDatabase()) :
+                            new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
+        
         this.isSaving(true);
         saveCommand
             .execute()
@@ -733,17 +742,25 @@ class editDocument extends viewModelBase {
                 return this.crudActionsProvider().saveRelatedItems(saveResult.Results[0]["@id"])
                     .then(() => saveResult);
             })
-            .then((saveResult: saveDocumentResponseDto) => this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto))
+            .then((saveResult: saveDocumentResponseDto) => this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto, forceRevisionCreation))
             .fail(() => {
                 this.isSaving(false);
             });
     }
     
-    private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+    private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) {
+        
+        if (forceRevisionCreation && !saveResult.Results[0].RevisionCreated) {            
+            // No new revision was created since the server detected that a revision with latest document content already exists... so do nothing.
+            this.isSaving(false);
+            return;
+        }
+        
         this.isClone(false);
         this.crudActionsProvider(this.normalActionProvider);
         
         const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
+        
         const currentSelection = this.docEditor.getSelectionRange();
 
         const metadata = localDoc['@metadata'];
@@ -786,6 +803,10 @@ class editDocument extends viewModelBase {
 
         this.initTooltips();
         this.getDocumentPhysicalSize(metadata['@id']);
+           
+        if (!this.connectedDocuments.isRevisionsActive()) {
+            this.crudActionsProvider().fetchRevisionsCount(savedDocumentDto["@id"], this.activeDatabase());
+        }
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
@@ -818,6 +839,8 @@ class editDocument extends viewModelBase {
                 }
                 
                 this.getDocumentPhysicalSize(id);
+                
+                this.crudActionsProvider().fetchRevisionsCount(id, this.activeDatabase());
                 
                 loadTask.resolve(doc);
             })
@@ -946,11 +969,11 @@ class editDocument extends viewModelBase {
             .done(() => {
                 const docId = this.editedDocId();
                 this.userSpecifiedId("");
-                    this.loadDocument(docId)
-                        .done(() => {
-                            this.connectedDocuments.gridController().reset(true);
-                            this.initTooltips();
-                        });
+                this.loadDocument(docId)
+                    .done(() => {
+                        this.connectedDocuments.gridController().reset(true);
+                        this.initTooltips();
+                    });
 
                 this.displayDocumentChange(false);
             });
@@ -1049,6 +1072,12 @@ class editDocument extends viewModelBase {
         this.inDiffMode(false);
     }
 
+    forceCreateRevision() {
+        if (this.isValid(this.globalValidationGroup)) {
+            eventsCollector.default.reportEvent("document", "forceRevisionCreation");
+            this.saveInternal(this.document().getId(), true);
+        }
+    }
 }
 
 class normalCrudActions implements editDocumentCrudActions {
@@ -1056,13 +1085,14 @@ class normalCrudActions implements editDocumentCrudActions {
     private readonly document: KnockoutObservable<document>;
     private readonly db: KnockoutObservable<database>;
     private readonly loadDocument: (id: string) => JQueryPromise<document>;
-    private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any) => void | JQueryPromise<void>;
+    private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) => void | JQueryPromise<void>;
 
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
+    revisionsCount = ko.observable<number>();
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (id: string) => JQueryPromise<document>,
-                onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any) => void | JQueryPromise<void>) {
+                onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean) => void | JQueryPromise<void>) {
         this.document = document;
         this.db = db;
         this.loadDocument = loadDocument;
@@ -1246,14 +1276,22 @@ class normalCrudActions implements editDocumentCrudActions {
             counterValuesPerNode: valuesPerNode
         };
     }
+
+    fetchRevisionsCount(docId: string, db: database): void {
+        new getDocumentRevisionsCountCommand(docId, db)
+            .execute()
+            .done((result: Raven.Server.Documents.Handlers.DocumentRevisionsCount) => {
+                this.revisionsCount(result.RevisionsCount);
+            });
+    }
     
     saveRelatedItems(targetDocumentId: string) {
         // no action required
         return $.when<void>(null);
     }
     
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void | JQueryPromise<void> {
-        this.onDocumentSavedAction(saveResult, localDoc);
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean): void | JQueryPromise<void> {
+        this.onDocumentSavedAction(saveResult, localDoc, forceRevisionCreation);
     }
 }
 
@@ -1263,6 +1301,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
+    revisionsCount = ko.observable<number>(0);
     
     private readonly parentView: editDocument;
     private readonly sourceDocumentId: string;
@@ -1361,6 +1400,10 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
             items: counters,
             totalResultCount: counters.length
         });
+    }
+
+    fetchRevisionsCount(docId: string, db: database): void {
+        // Not needed for clone view.
     }
     
     saveRelatedItems(targetDocumentId: string): JQueryPromise<void> {

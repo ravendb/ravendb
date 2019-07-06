@@ -197,6 +197,8 @@ namespace Raven.Client.Documents.Session
             new Dictionary<(string, CommandType, string), ICommandData>();
 
         public readonly bool NoTracking;
+       
+        internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 
@@ -795,7 +797,7 @@ more responsive application.
 
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
-
+            PrepareForCreatingRevisionsFromIds(result);
             PrepareCompareExchangeEntities(result);
 
             if (DeferredCommands.Count > deferredCommandsCount)
@@ -836,7 +838,6 @@ more responsive application.
                         break;
                     default:
                         throw new NotSupportedException($"The command '{command.Type}' is not supported in a cluster session.");
-
                 }
             }
         }
@@ -900,6 +901,17 @@ more responsive application.
 
             return true;
         }
+        
+        private void PrepareForCreatingRevisionsFromIds(SaveChangesData result)
+        {
+            // Note: here there is no point checking 'Before' or 'After' because if there were changes then forced revision is done from the PUT command....
+            foreach (var idEntry in IdsForCreatingForcedRevisions)
+            {
+                result.SessionCommands.Add(new ForceRevisionCommandData(idEntry.Key));   
+            }
+            
+            IdsForCreatingForcedRevisions.Clear();
+        }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
@@ -952,7 +964,7 @@ more responsive application.
 
             if (changes == null)
                 result.OnSuccess.ClearDeletedEntities();
-            }
+        }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
@@ -967,12 +979,12 @@ more responsive application.
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
 
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-                if (EntityChanged(document, entity.Value, null) == false)
+               
+                if (EntityChanged(document, entity.Value,null) == false)
                 {
                     document.Dispose();
                     continue;
                 }
-                    
 
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientModifyDocumentCommand, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
@@ -1001,7 +1013,6 @@ more responsive application.
 
                 result.OnSuccess.UpdateEntityDocumentInfo(entity.Value, document);
                 
-
                 if (metadataUpdated)
                 {
                     // we need to preserve the metadata after the changes, otherwise we'll consume the changes
@@ -1028,7 +1039,19 @@ more responsive application.
                 else
                     changeVector = null;
 
-                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document));
+                var forceRevisionCreationStrategy = ForceRevisionStrategy.None;
+                
+                if (entity.Value.Id != null)
+                {
+                    // Check if user wants to Force a Revision
+                    if (IdsForCreatingForcedRevisions.TryGetValue(entity.Value.Id, out var creationStrategy))
+                    {
+                        IdsForCreatingForcedRevisions.Remove(entity.Value.Id);
+                        forceRevisionCreationStrategy = creationStrategy;
+                    }
+                } 
+                
+                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
             }
         }
 
@@ -1741,7 +1764,7 @@ more responsive application.
                 public ActionsToRunOnSuccess(InMemoryDocumentSessionOperations _session)
                 {
                     this._session = _session;
-        }
+                }
 
                 public void RemoveDocumentById(string id)
                 {

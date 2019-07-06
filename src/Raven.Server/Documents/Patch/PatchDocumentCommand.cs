@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Patch
                                         result.ModifiedDocument,
                                         null,
                                         null,
-                                        originalDocument.Flags);
+                                        originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction));
                                 }
 
                                 result.Status = PatchStatus.Patched;

@@ -326,6 +326,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):
+                    case nameof(UpdateUnusedDatabaseIdsCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
@@ -373,6 +374,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutLicenseLimitsCommand):
                         PutValue<LicenseLimits>(context, type, cmd, index);
+                        break;
+                    case nameof(UpdateLicenseLimitsCommand):
+                        UpdateValue<NodeLicenseLimits>(context, type, cmd, index);
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
@@ -485,7 +489,7 @@ namespace Raven.Server.ServerWide
 
                     if (actionsByDatabase.ContainsKey(database) == false)
                     {
-                        actionsByDatabase[database] = () => 
+                        actionsByDatabase[database] = () =>
                             DatabaseChanged?.Invoke(this, (database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
                     }
                 }
@@ -522,7 +526,7 @@ namespace Raven.Server.ServerWide
                 if (databaseRecordJson == null)
                     return;
 
-                databaseRecordJson.Modifications = new DynamicJsonValue {[nameof(DatabaseRecord.EtagForBackup)] = index};
+                databaseRecordJson.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.EtagForBackup)] = index };
 
                 using (var old = databaseRecordJson)
                 {
@@ -1329,7 +1333,7 @@ namespace Raven.Server.ServerWide
                             PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(backupConfiguration, addDatabaseCommand.Name, addDatabaseCommand.Encrypted);
                             addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
                         }
-                        
+
                         return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
                     }
                 }
@@ -1911,21 +1915,18 @@ namespace Raven.Server.ServerWide
         {
             // when switching to a single node cluster we need to clear all of the irrelevant databases
             var clusterTopology = _parent.GetTopology(context);
-            var oldTag = clusterTopology.LastNodeId;
             var newTag = clusterTopology.Members.First().Key;
+            var oldTag = _parent.ReadPreviousNodeTag(context) ?? newTag;
 
             SqueezeDatabasesToSingleNodeCluster(context, oldTag, newTag);
 
-            if (newTag != oldTag)
-            {
-                UpdateClusterTopology(context, clusterTopology, newTag, _parent.GetLastEntryIndex(context));
-            }
+            ShrinkClusterTopology(context, clusterTopology, newTag, _parent.GetLastEntryIndex(context));
 
             UpdateLicenseOnSwitchingToSingleLeader(context);
         }
 
         private void UpdateLicenseOnSwitchingToSingleLeader(TransactionOperationContext context)
-                {
+        {
             var licenseLimitsBlittable = Read(context, ServerStore.LicenseLimitsStorageKey, out long index);
             if (licenseLimitsBlittable == null)
                 return;
@@ -1951,7 +1952,7 @@ namespace Raven.Server.ServerWide
             PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
         }
 
-        private void UpdateClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
+        private void ShrinkClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
         {
             _parent.UpdateNodeTag(context, newTag);
 
@@ -1972,49 +1973,60 @@ namespace Raven.Server.ServerWide
 
         private void SqueezeDatabasesToSingleNodeCluster(TransactionOperationContext context, string oldTag, string newTag)
         {
-                    var toDelete = new List<string>();
-                    var toShrink = new List<DatabaseRecord>();
+            var toDelete = new List<string>();
+            var toShrink = new List<DatabaseRecord>();
 
             foreach (var name in GetDatabaseNames(context))
-                    {
+            {
                 var blittableRecord = ReadRawDatabase(context, name, out _);
                 var topology = ReadDatabaseTopology(blittableRecord);
 
                 if (topology.RelevantFor(oldTag) == false)
-                        {
+                {
                     toDelete.Add(name);
-                            }
-                            else
-                            {
+                }
+                else
+                {
                     if (topology.RelevantFor(newTag) && topology.Count == 1)
                         continue;
 
                     var record = JsonDeserializationCluster.DatabaseRecord(blittableRecord);
-                                record.Topology = new DatabaseTopology();
+                    record.Topology = new DatabaseTopology();
                     record.Topology.Members.Add(newTag);
-                                toShrink.Add(record);
-                            }
-                        }
+                    toShrink.Add(record);
+                }
+            }
 
-                    if (toShrink.Count == 0 && toDelete.Count == 0)
-                        return;
+            if (toShrink.Count == 0 && toDelete.Count == 0)
+                return;
+
+            if (_parent.Log.IsOperationsEnabled)
+            {
+                _parent.Log.Operations($"Squeezing databases, new tag is {newTag}, old tag is {oldTag}.");
+
+                if (toShrink.Count > 0)
+                    _parent.Log.Operations($"Databases to shrink: {string.Join(',', toShrink.Select(r => r.DatabaseName))}");
+
+                if (toDelete.Count > 0)
+                    _parent.Log.Operations($"Databases to delete: {string.Join(',', toDelete)}");
+            }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             var cmd = new DynamicJsonValue
-                    {
+            {
                 ["Type"] = "Switch to single leader"
             };
 
             var index = _parent.InsertToLeaderLog(context, _parent.CurrentTerm, context.ReadObject(cmd, "single-leader"), RachisEntryFlags.Noop);
 
-                        foreach (var databaseName in toDelete)
-                        {
-                            var dbKey = "db/" + databaseName;
-                            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
-                            {
-                                DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
-                            }
-                        }
+            foreach (var databaseName in toDelete)
+            {
+                var dbKey = "db/" + databaseName;
+                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
+                }
+            }
 
             if (toShrink.Count == 0)
                 return;
@@ -2022,8 +2034,8 @@ namespace Raven.Server.ServerWide
             var actions = new List<Action>();
             var type = "ClusterTopologyChanged";
 
-                        foreach (var record in toShrink)
-                        {
+            foreach (var record in toShrink)
+            {
                 record.Topology.Stamp = new LeaderStamp
                 {
                     Index = index,
@@ -2031,20 +2043,20 @@ namespace Raven.Server.ServerWide
                     Term = _parent.CurrentTerm
                 };
 
-                            var dbKey = "db/" + record.DatabaseName;
-                            using (Slice.From(context.Allocator, dbKey, out Slice valueName))
-                            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
-                            {
-                                var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
-                                UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
-                            }
+                var dbKey = "db/" + record.DatabaseName;
+                using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+                {
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
+                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                }
 
                 actions.Add(() => DatabaseChanged?.Invoke(this,
                     (record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
-                        }
+            }
 
             ExecuteManyOnDispose(context, index, type, actions);
-                    }
+        }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
         {
@@ -2942,7 +2954,7 @@ namespace Raven.Server.ServerWide
 
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)
         {
-            var actions = new List<Action> {() => ValueChanged?.Invoke(this, (index, type))};
+            var actions = new List<Action> { () => ValueChanged?.Invoke(this, (index, type)) };
 
             foreach (var update in toUpdate)
             {

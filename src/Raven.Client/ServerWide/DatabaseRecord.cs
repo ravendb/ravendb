@@ -88,6 +88,8 @@ namespace Raven.Client.ServerWide
 
         public long TruncatedClusterTransactionCommandsCount;
 
+        public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
+
         public void AddSorter(SorterDefinition definition)
         {
             if (Sorters == null)

@@ -201,12 +201,13 @@ namespace FastTests.Server.Replication
             T watcher,
             string[] urls = null) where T : ExternalReplicationBase
         {
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            var result = await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Name = watcher.ConnectionStringName,
                 Database = watcher.Database,
                 TopologyDiscoveryUrls = urls ?? store.Urls
             }));
+            Assert.NotNull(result.RaftCommandIndex);
 
             IMaintenanceOperation<ModifyOngoingTaskResult> op;
             if (watcher is PullReplicationAsSink pull)

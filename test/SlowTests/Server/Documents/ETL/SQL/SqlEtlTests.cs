@@ -28,52 +28,13 @@ using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class SqlEtlTests : EtlTestBase
     {
-        public static readonly Lazy<string> MasterDatabaseConnection = new Lazy<string>(() =>
-        {
-            var cString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
-
-            if (TryConnect(cString))
-                return cString;
-
-            cString = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=15";
-
-            if (TryConnect(cString))
-                return cString;
-
-            cString = Environment.GetEnvironmentVariable("RAVEN_MSSQL_CONNECTION_STRING");
-
-            if (TryConnect(cString))
-                return cString;
-
-            throw new InvalidOperationException("Use a valid connection");
-
-            bool TryConnect(string connectionString)
-            {
-                if (string.IsNullOrWhiteSpace(connectionString))
-                    return false;
-
-                try
-                {
-                    using (var connection = new SqlConnection(connectionString))
-                    {
-                        connection.Open();
-                    }
-
-                    return true;
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }
-        });
-
         private readonly List<string> _dbNames = new List<string>();
 
         protected const string defaultScript = @"
@@ -171,7 +132,7 @@ CREATE TABLE [dbo].[Orders]
 
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MasterDatabaseConnection.Value;
+                con.ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value;
                 con.Open();
 
                 foreach (var dbName in _dbNames)
@@ -191,7 +152,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MasterDatabaseConnection.Value;
+                con.ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -618,12 +579,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
                     FactoryName = "System.Data.SqlClient",
                 }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var database = GetDatabase(store.Database).Result;
 
@@ -696,12 +658,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
                     FactoryName = "System.Data.SqlClient",
                 }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var database = GetDatabase(store.Database).Result;
 
@@ -1287,7 +1250,7 @@ loadToOrders(orderData);
 
         public static string GetConnectionString(DocumentStore store)
         {
-            return MasterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.Database};";
+            return MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog=SqlReplication-{store.Database};";
         }
 
         private class Order

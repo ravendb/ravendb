@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 var tables = schema.Tables;
 
-                var noPkTable = tables.First(x => x.TableName == "nopktable");
+                var noPkTable = tables.First(x => x.TableName == "NoPkTable");
                 Assert.NotNull(noPkTable);
 
                 Assert.Equal(new[] {"id"}, noPkTable.Columns.Select(x => x.Name).ToList());

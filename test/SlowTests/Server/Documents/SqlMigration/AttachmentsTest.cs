@@ -12,7 +12,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public class AttachmentsTest : SqlAwareTestBase
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -74,7 +74,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
         
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]

@@ -34,11 +34,14 @@ namespace Raven.Server.Documents.Queries.Results
         private Dictionary<string, Document> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
 
+        protected readonly DocumentFields DocumentFields;
+
         protected readonly DocumentsStorage DocumentsStorage;
 
         protected readonly FieldsToFetch FieldsToFetch;
 
         protected readonly QueryTimingsScope RetrieverScope;
+
         private QueryTimingsScope _projectionScope;
         private QueryTimingsScope _projectionStorageScope;
         private QueryTimingsScope _functionScope;
@@ -54,6 +57,8 @@ namespace Raven.Server.Documents.Queries.Results
             RetrieverScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Retriever), start: false);
             FieldsToFetch = fieldsToFetch;
 
+            DocumentFields = query?.DocumentFields ?? DocumentFields.All;
+
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
@@ -61,7 +66,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
-        protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state);
+        protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state);
 
         protected abstract Document LoadDocument(string id);
 
@@ -77,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (FieldsToFetch.AnyExtractableFromIndex == false)
                 {
                     using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                        doc = DirectGet(input, lowerId, state);
+                        doc = DirectGet(input, lowerId, DocumentFields.All, state);
 
                     if (doc == null)
                         return null;
@@ -122,7 +127,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (documentLoaded == false)
                     {
                         using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                            doc = DirectGet(input, lowerId, state);
+                            doc = DirectGet(input, lowerId, DocumentFields.All, state);
 
                         documentLoaded = true;
                     }

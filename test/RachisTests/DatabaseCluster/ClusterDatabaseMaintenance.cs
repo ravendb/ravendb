@@ -13,7 +13,9 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -751,6 +753,83 @@ namespace RachisTests.DatabaseCluster
                 cluster.Nodes[0].CpuCreditsBalance.BackgroundTasksAlertRaised.Lower();
                 var members = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
                 Assert.Equal(3, members);
+            }
+        }
+
+        [Fact]
+        public async Task ReduceChangeVectorWhenRemovingNode()
+        {
+            var cluster = await CreateRaftCluster(3);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "foo.bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await WaitForDocumentInClusterAsync<User>(store.GetRequestExecutor().TopologyNodes, "foo.bar", null, TimeSpan.FromSeconds(10));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo.bar.2");
+                    await session.SaveChangesAsync();
+                    Assert.Equal(3, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
+                }
+
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, "A"));
+                Assert.False(await WaitForValueAsync(async () =>
+                {
+                    var command = new GetDatabaseRecordOperation(store.Database);
+                    var result = await store.Maintenance.Server.SendAsync(command);
+                    return result.DeletionInProgress?.Count > 0;
+                }, false));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo.bar.3");
+                    await session.SaveChangesAsync();
+                    Assert.Equal(2, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanRemoveChangeVector()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+                await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, new HashSet<string>
+                {
+                    "xwmnvG1KBkSNXfl7/0yJ1A",
+                    "0N64iiIdYUKcO+yq1V0cPA"
+                }));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                    Assert.Equal(1, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
+                }
+
+                await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, null));
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User();
+                    await session.StoreAsync(user, "foo/bar/2");
+                    await session.SaveChangesAsync();
+                    Assert.Equal(1, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
+                }
             }
         }
 
