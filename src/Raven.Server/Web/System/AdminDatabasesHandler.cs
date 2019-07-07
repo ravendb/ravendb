@@ -271,7 +271,7 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord.Encrypted && databaseRecord.Topology?.DynamicNodesDistribution == true)
                 {
-                    throw new InvalidOperationException($"Cannot enable 'DynamicNodesDistribution' for encrypted database");
+                    throw new InvalidOperationException($"Cannot enable '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
                 }
 
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
@@ -585,7 +585,7 @@ namespace Raven.Server.Web.System
 
                     var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
 
-                    var destinationPath = string.IsNullOrEmpty(restoreConfigurationJson.DataDirectory) == false 
+                    var destinationPath = string.IsNullOrEmpty(restoreConfigurationJson.DataDirectory) == false
                         ? new PathSetting(restoreConfigurationJson.DataDirectory, baseDataDirectory).FullPath
                         : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, databaseName, ResourceType.Database);
 
@@ -790,7 +790,7 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord.Encrypted)
                 {
-					throw new InvalidOperationException($"Cannot toggle 'DynamicNodesDistribution' for encrypted database");
+                    throw new InvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
                 }
 
                 if (enable == databaseRecord.Topology.DynamicNodesDistribution)
@@ -1427,7 +1427,7 @@ namespace Raven.Server.Web.System
                                 IOExtensions.DeleteFile(tmpFile);
                             else if (process.HasExited == false && string.IsNullOrEmpty(tmpFile) == false)
                             {
-                                if(ProcessExtensions.TryKill(process))
+                                if (ProcessExtensions.TryKill(process))
                                     IOExtensions.DeleteFile(tmpFile);
                                 else
                                 {

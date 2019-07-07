@@ -1433,7 +1433,7 @@ namespace Raven.Server.ServerWide
             if (record != null && record.Encrypted && record.Topology.RelevantFor(NodeTag))
             {
                 throw new InvalidOperationException(
-                    $"Can't delete secret key for a database ({name})that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
+                    $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
             }
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
