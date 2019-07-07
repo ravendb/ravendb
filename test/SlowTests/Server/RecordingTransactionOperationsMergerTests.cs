@@ -789,12 +789,14 @@ namespace SlowTests.Server
             {
                 var databaseWatcher = new ExternalReplication(slave.Database, $"ConnectionString-{slave.Identifier}");
 
-                await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = databaseWatcher.ConnectionStringName,
                     Database = databaseWatcher.Database,
                     TopologyDiscoveryUrls = master.Urls
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
 
                 //Recording
@@ -863,12 +865,13 @@ namespace SlowTests.Server
             {
                 var databaseWatcher = new ExternalReplication(slave.Database, $"ConnectionString-{slave.Identifier}");
 
-                await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = databaseWatcher.ConnectionStringName,
                     Database = databaseWatcher.Database,
                     TopologyDiscoveryUrls = master.Urls
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
                 await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
 
                 //Recording
@@ -993,12 +996,13 @@ namespace SlowTests.Server
 
                 var databaseWatcher = new ExternalReplication(slave.Database, $"ConnectionString-{slave.Identifier}");
 
-                await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = databaseWatcher.ConnectionStringName,
                     Database = databaseWatcher.Database,
                     TopologyDiscoveryUrls = master.Urls
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
 
                 //Recording
                 slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));

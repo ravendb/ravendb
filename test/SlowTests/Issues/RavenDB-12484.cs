@@ -12,7 +12,13 @@ namespace SlowTests.Issues
         {
             const string documentId = "document-id";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>                
+                    s.Conventions.CustomizeJsonDeserializer = cjd =>                    
+                        cjd.NullValueHandling = NullValueHandling.Ignore
+                                    
+            }))
             {
                 using (var s = store.OpenSession())
                 {

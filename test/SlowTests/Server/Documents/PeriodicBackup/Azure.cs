@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,7 +23,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
 
-            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
+            using (var client = new RavenAzureClient(GenerateAzureSettings(containerName), isTest: true))
             {
                 try
                 {
@@ -59,7 +60,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
 
-            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
+            using (var client = new RavenAzureClient(GenerateAzureSettings(containerName), isTest: true))
             {
                 try
                 {
@@ -89,6 +90,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await client.DeleteContainer();
                 }
             }
+        }
+
+        public static AzureSettings GenerateAzureSettings(string containerName)
+        {
+            return new AzureSettings
+            {
+                AccountName = AzureAccountName,
+                AccountKey = AzureAccountKey,
+                StorageContainer = containerName
+            };
         }
     }
 }

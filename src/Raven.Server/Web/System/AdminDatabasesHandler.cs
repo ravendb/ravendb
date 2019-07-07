@@ -18,6 +18,7 @@ using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -45,6 +46,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
@@ -1111,36 +1113,16 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
+                var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
+
+                var configuration = JsonDeserializationCluster.ServerWideBackupConfiguration(configurationBlittable);
+
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+                BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
+                BackupConfigurationHelper.AssertBackupConfiguration(configuration);
+                BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
 
-                var configurationJson = JsonDeserializationCluster.ServerWideBackupConfiguration(configuration);
-
-                if (VerifyBackupFrequency(configurationJson.FullBackupFrequency) == null &&
-                    VerifyBackupFrequency(configurationJson.IncrementalBackupFrequency) == null)
-                {
-                    throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
-                                                $"full backup cron expression: {configurationJson.FullBackupFrequency}, " +
-                                                $"incremental backup cron expression: {configurationJson.IncrementalBackupFrequency}");
-                }
-
-                var localSettings = configurationJson.LocalSettings;
-                if (localSettings != null)
-                {
-                    if (localSettings.HasSettings() == false)
-                    {
-                        throw new ArgumentException(
-                            $"{nameof(localSettings.FolderPath)} and {nameof(localSettings.GetBackupConfigurationScript)} cannot be both null or empty");
-                    }
-
-                    if (localSettings.Disabled == false && string.IsNullOrEmpty(localSettings.FolderPath) == false)
-                    {
-                        if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
-                            throw new ArgumentException(error);
-                    }
-                }
-
-                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configurationJson, GetRaftRequestIdFromQuery());
+                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -1164,6 +1146,24 @@ namespace Raven.Server.Web.System
                 return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
             }
         }
+
+        [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]
+        public async Task SetUnusedDatabaseIds()
+        {
+            var database = GetStringQueryString("name");
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var json = context.ReadForDisk(RequestBodyStream(), "unused-databases-ids"))
+            {
+                var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
+                var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
+                await ServerStore.SendToLeaderAsync(command);
+            }
+
+            NoContentStatus();
+        }
+
 
         [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteServerWideBackupConfigurationCommand()

@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
@@ -740,12 +740,7 @@ namespace InterversionTests
 
                 using (var session = nonLeader.OpenAsyncSession(dbName))
                 {
-                    var command = new SeedIdentityForCommand("users", 1990);
-
-                    await session.Advanced.RequestExecutor.ExecuteAsync(command, session.Advanced.Context);
-
-                    var result = command.Result;
-
+                    var result = nonLeader.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
                     Assert.Equal(1990, result);
                     var user = new User
                     {

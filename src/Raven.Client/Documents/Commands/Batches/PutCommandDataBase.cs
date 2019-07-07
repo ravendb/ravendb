@@ -12,6 +12,11 @@ namespace Raven.Client.Documents.Commands.Batches
             : base(id, changeVector, document)
         {
         }
+        
+        public PutCommandDataWithBlittableJson(string id, string changeVector, BlittableJsonReaderObject document, ForceRevisionStrategy strategy)
+            : base(id, changeVector, document, strategy)
+        {
+        }
 
         public override void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
         {
@@ -24,6 +29,11 @@ namespace Raven.Client.Documents.Commands.Batches
             : base(id, changeVector, document)
         {
         }
+        
+        public PutCommandData(string id, string changeVector, DynamicJsonValue document, ForceRevisionStrategy strategy)
+            : base(id, changeVector, document, strategy)
+        {
+        }
 
         public override void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
         {
@@ -32,7 +42,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public abstract class PutCommandDataBase<T> : ICommandData
     {
-        protected PutCommandDataBase(string id, string changeVector, T document)
+        protected PutCommandDataBase(string id, string changeVector, T document, ForceRevisionStrategy strategy = ForceRevisionStrategy.None)
         {
             if (document == null)
                 throw new ArgumentNullException(nameof(document));
@@ -40,6 +50,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Id = id;
             ChangeVector = changeVector;
             Document = document;
+            ForceRevisionCreationStrategy = strategy;
         }
 
         public string Id { get; }
@@ -47,16 +58,24 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public T Document { get; }
         public CommandType Type { get; } = CommandType.PUT;
+        public ForceRevisionStrategy ForceRevisionCreationStrategy { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Document)] = Document,
                 [nameof(Type)] = Type.ToString()
             };
+            
+            if (ForceRevisionCreationStrategy != ForceRevisionStrategy.None)
+            {
+                json[nameof(ForceRevisionCreationStrategy)] = ForceRevisionCreationStrategy;
+            }
+
+            return json;
         }
 
         public abstract void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session);

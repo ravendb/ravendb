@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public class BasicMigrationTests : SqlAwareTestBase
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -126,7 +126,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -187,7 +187,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -237,7 +237,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -300,7 +300,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
@@ -371,7 +371,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -451,7 +451,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -525,9 +525,9 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-        
-        
-        [Theory]
+
+
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -540,7 +540,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var query = provider.Equals(MigrationProvider.Oracle) == false ? "update order_item set order_id = null" : "update \"order_item\" set \"order_id\" = null";
 
                 ExecuteSqlQuery(provider, connectionString, query);
-                
+
                 using (var store = GetDocumentStore())
                 {
                     var collection = new RootCollection(schemaName, "order_item", "OrderItems")
@@ -580,7 +580,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             }
         }
 
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -593,8 +593,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var query = provider.Equals(MigrationProvider.Oracle) == false ? "update order_item set order_id = null" : "update \"order_item\" set \"order_id\" = null";
 
                 ExecuteSqlQuery(provider, connectionString, query);
-                
-                
+
+
                 using (var store = GetDocumentStore())
                 {
                     var orderItemCollection = new RootCollection(schemaName, "order_item", "OrderItems")
@@ -636,8 +636,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-        
-        [Theory]
+
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -647,7 +647,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                
+
                 using (var store = GetDocumentStore())
                 {
                     var db = await GetDocumentDatabaseInstanceFor(store);
@@ -675,9 +675,9 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-        
-        
-        [Theory]
+
+
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -687,7 +687,7 @@ namespace SlowTests.Server.Documents.SqlMigration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                
+
                 using (var store = GetDocumentStore())
                 {
                     var db = await GetDocumentDatabaseInstanceFor(store);
@@ -707,7 +707,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                         // vat id -> should not be reference! 
                         Assert.Equal(0, customersSchema.References.Count);
                         Assert.True(customersSchema.Columns.Any(x => x.Name == "vatid"));
-                        
+
                         ApplyDefaultColumnNamesMapping(schema, settings);
                         await driver.Migrate(settings, schema, db, context);
                     }

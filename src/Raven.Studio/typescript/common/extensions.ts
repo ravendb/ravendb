@@ -54,11 +54,11 @@ class extensions {
         
         const addressInfo = genUtils.getAddressInfo(address);
         if (addressInfo.Type === "invalid" || !_.includes(allowedTypes, addressInfo.Type)) {
-            return "Please enter valid " + typesText;
+            return "Please enter a valid " + typesText;
         }
         
         if (addressInfo.HasPort && !allowPort) {
-            return "Please enter " + typesText + " without a port number";
+            return "Please enter an " + typesText + " without a port number";
         }
         
         return null;

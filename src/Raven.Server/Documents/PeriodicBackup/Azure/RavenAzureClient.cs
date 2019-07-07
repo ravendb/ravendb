@@ -37,24 +37,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private const int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
 
-        public RavenAzureClient(string accountName, string accountKey, string containerName,
-            Progress progress = null, CancellationToken? cancellationToken = null, bool isTest = false)
+        public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, CancellationToken? cancellationToken = null, bool isTest = false)
             : base(progress, cancellationToken)
         {
-            _accountName = accountName;
+            _accountName = azureSettings.AccountName;
 
             try
             {
-                _accountKey = Convert.FromBase64String(accountKey);
+                _accountKey = Convert.FromBase64String(azureSettings.AccountKey);
             }
             catch (Exception e)
             {
                 throw new ArgumentException("Wrong format for account key", e);
             }
 
-            _containerName = containerName;
+            _containerName = azureSettings.StorageContainer;
 
-            _serverUrlForContainer = GetUrlForContainer(containerName.ToLower(), isTest);
+            _serverUrlForContainer = GetUrlForContainer(azureSettings.StorageContainer.ToLower(), isTest);
             _isTest = isTest;
         }
 

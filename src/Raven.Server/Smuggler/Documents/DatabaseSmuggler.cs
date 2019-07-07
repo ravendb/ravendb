@@ -647,7 +647,7 @@ namespace Raven.Server.Smuggler.Documents
             item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
             if (_options.SkipRevisionCreation)
-                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler;
 
             switch (buildType)
             {

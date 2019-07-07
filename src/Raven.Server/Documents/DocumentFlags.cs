@@ -39,9 +39,9 @@ namespace Raven.Server.Documents
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,
         ResolveAttachmentsConflict = 0x20,
-        FromRevision = 0x40,
+        SkipRevisionCreation = 0x40,
         Resolved = 0x80,
-        SkipRevisionCreation = 0x100,
+        SkipRevisionCreationForSmuggler = 0x100,
         ResolveCountersConflict = 0x200,
         ByCountersUpdate = 0x400,
         FromResolver = 0x800
@@ -49,6 +49,12 @@ namespace Raven.Server.Documents
 
     public static class EnumExtensions
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contain(this DocumentFields current, DocumentFields flag)
+        {
+            return (current & flag) == flag;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Contain(this DocumentFlags current, DocumentFlags flag)
         {

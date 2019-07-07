@@ -97,11 +97,10 @@ namespace Raven.Server.Documents.Replication
             return id;
         }
 
-
-        public static ChangeVectorEntry[] ToChangeVector(this string changeVector)
+        public static List<ChangeVectorEntry> ToChangeVectorList(this string changeVector)
         {
             if (string.IsNullOrEmpty(changeVector))
-                return Array.Empty<ChangeVectorEntry>();
+                return null;
 
             var list = new List<ChangeVectorEntry>();
             var start = 0;
@@ -162,10 +161,18 @@ namespace Raven.Server.Documents.Replication
             }
 
             if (state == State.Whitespace)
-                return list.ToArray();
+                return list;
 
             ThrowInvalidEndOfString(state.ToString(), changeVector);
-            return default(ChangeVectorEntry[]); // never hit
+            return null; // never hit
+        }
+
+        public static ChangeVectorEntry[] ToChangeVector(this string changeVector)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return Array.Empty<ChangeVectorEntry>();
+
+            return changeVector.ToChangeVectorList().ToArray();
         }
 
         public static void MergeChangeVector(string changeVector, List<ChangeVectorEntry> entries)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -15,6 +16,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -90,55 +92,44 @@ namespace SlowTests.Cluster
             }))
             {
                 var count = 0;
-                var tasks = new List<Task>();
-                for (int i = 0; i < 100; i++)
+                var parallelism = Environment.ProcessorCount * 5;
+                
+                for (var i = 0; i < 10; i++)
                 {
-                    var t = Task.Run(async () =>
+                    var tasks = new List<Task>();
+                    for (var j = 0; j < parallelism; j++)
                     {
-                        /*
-                        for (int j = 0; j < 10; j++)
-                        {
-                            leaderStore.Operations.SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0));
-                        }
-*/
+                        tasks.Add(Task.Run(async () =>
+                        {                        
+                            using (var session = leaderStore.OpenSession(new SessionOptions
+                            {
+                                TransactionMode = TransactionMode.ClusterWide
+                            }))
+                            {
+                                session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
+                                session.SaveChanges();
+                            }
 
-                        using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                        {
-                            TransactionMode = TransactionMode.ClusterWide
-                        }))
-                        {
-                            session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
-                            await session.SaveChangesAsync();
-                        }
-
-                        await ActionWithLeader((l) =>
-                        {
-                            l.ServerStore.Engine.CurrentLeader?.StepDown();
-                            return Task.CompletedTask;
-                        });
-                    });
-                    tasks.Add(t);
-                }
-
-                var hasExecption = false;
-
-                foreach (var task in tasks)
-                {
-                    try
-                    {
-                        await task;
+                            await ActionWithLeader((l) =>
+                              {
+                                  l.ServerStore.Engine.CurrentLeader?.StepDown();
+                                  return Task.CompletedTask;
+                              });
+                        }));
                     }
-                    catch (Exception)
-                    {
-                        hasExecption = true;
-                        Console.WriteLine(task.Exception.InnerExceptions[0].Message);
-                    }
-                }
 
-                if (hasExecption)
-                {
-                    throw new InvalidOperationException();
-                }
+                    await Task.WhenAll(tasks.ToArray());
+                    using (var session = leaderStore.OpenSession(new SessionOptions
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    }))
+                    {                        
+                        var results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<User>(
+                            Enumerable.Range(i * parallelism, parallelism).Select(x =>
+                                $"usernames/{Interlocked.Increment(ref count)}").ToArray<string>());                        
+                        Assert.Equal(parallelism, results.Count);                        
+                    }
+                }            
             }
 
         }

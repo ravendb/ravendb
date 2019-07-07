@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
-            if(LastModified != DateTime.MinValue)
+            if (LastModified != DateTime.MinValue)
                 mutatedMetadata[Constants.Documents.Metadata.LastModified] = LastModified;
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
@@ -98,5 +98,22 @@ namespace Raven.Server.Documents
 
             _disposed = true;
         }
+    }
+
+    [Flags]
+    public enum DocumentFields
+    {
+        None = 0,
+        Id = 1 << 0,
+        LowerId = 1 << 1,
+        Etag = 1 << 2,
+        StorageId = 1 << 3,
+        Data = 1 << 4,
+        ChangeVector = 1 << 5,
+        LastModified = 1 << 6,
+        Flags = 1 << 7,
+        TransactionMarker = 1 << 8,
+
+        All = Id | LowerId | Etag | StorageId | Data | ChangeVector | LastModified | Flags | TransactionMarker
     }
 }

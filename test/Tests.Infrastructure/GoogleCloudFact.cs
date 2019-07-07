@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Operations.Backups;
 using Xunit;
 
 namespace Tests.Infrastructure
@@ -9,25 +10,26 @@ namespace Tests.Infrastructure
         private const string BucketNameEnvironmentVariable = "GOOGLE_CLOUD_BUCKET_NAME";
         private const string GoogleCloudCredentialEnvironmentVariable = "GOOGLE_CLOUD_CREDENTIAL";
 
-        public static string BucketName { get;  private set; }
-
-        public static string CredentialsJson { get; private set; }
+        public static GoogleCloudSettings GoogleCloudSettings { get; }
 
         static GoogleCloudFact()
         {
-            BucketName = Environment.GetEnvironmentVariable(BucketNameEnvironmentVariable, EnvironmentVariableTarget.User);
-            CredentialsJson = Environment.GetEnvironmentVariable(GoogleCloudCredentialEnvironmentVariable, EnvironmentVariableTarget.User);
+            GoogleCloudSettings = new GoogleCloudSettings
+            {
+                BucketName = Environment.GetEnvironmentVariable(BucketNameEnvironmentVariable, EnvironmentVariableTarget.User),
+                GoogleCredentialsJson = Environment.GetEnvironmentVariable(GoogleCloudCredentialEnvironmentVariable, EnvironmentVariableTarget.User)
+            };
         }
 
         public GoogleCloudFact([CallerMemberName] string memberName = "")
         {
-            if (string.IsNullOrWhiteSpace(BucketName))
+            if (string.IsNullOrWhiteSpace(GoogleCloudSettings.BucketName))
             {
                 Skip = $"Google cloud {memberName} tests missing BucketNameEnvironmentVariable.";
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(CredentialsJson))
+            if (string.IsNullOrWhiteSpace(GoogleCloudSettings.GoogleCredentialsJson))
             {
                 Skip = $"Google cloud {memberName} tests missing BucketNameEnvironmentVariable.";
                 return;

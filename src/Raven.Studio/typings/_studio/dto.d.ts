@@ -167,7 +167,8 @@ interface chagesApiConfigureRequestDto {
 }
 
 interface changedOnlyMetadataFieldsDto extends documentMetadataDto {
-    Method: string;
+    Type: string;
+    RevisionCreated: boolean;
 }
 
 interface saveDocumentResponseDto {
@@ -425,7 +426,6 @@ type dashboardChartTooltipProviderArgs = {
     values: dictionary<number>;
 }
 
-
 interface documentBase extends dictionary<any> {
     getId(): string;
     getUrl(): string;
@@ -436,7 +436,6 @@ interface domainAvailabilityResult {
     Available: boolean;
     IsOwnedByMe: boolean;
 }
-
 
 interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>, any> {
 }
@@ -452,7 +451,6 @@ interface clientBuildVersionDto {
     Version: string;
 }
 
-
 interface resourceStyleMap {
     resourceName: string;
     styleMap: any;
@@ -461,7 +459,6 @@ interface resourceStyleMap {
 type checkbox = "unchecked" | "some_checked" | "checked";
 
 type sqlMigrationAction = "skip" | "embed" | "link";
-
 
 interface sqlMigrationAdvancedSettingsDto {
     UsePascalCase: boolean,
@@ -558,17 +555,21 @@ interface attachmentItem {
 }
 
 interface editDocumentCrudActions {
-    setCounter(counter: counterItem): void;
-    deleteAttachment(file: attachmentItem): void;
-    deleteCounter(counter: counterItem): void;
-    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>>;
-    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>>;
-    saveRelatedItems(targetDocumentId: string): JQueryPromise<void>;
-    attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
-    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void;
-}
+    setCounter(counter: counterItem): void;
+    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>>;
+    deleteCounter(counter: counterItem): void;
 
+    attachmentsCount: KnockoutComputed<number>;
+    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>>;
+    deleteAttachment(file: attachmentItem): void;
+    
+    revisionsCount: KnockoutObservable<number>;
+    fetchRevisionsCount(docId: string, db: database): void;
+    
+    saveRelatedItems(targetDocumentId: string): JQueryPromise<void>;
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean): void;
+}
 
 interface confirmationDialogOptions {
     buttons?: string[];
@@ -576,7 +577,6 @@ interface confirmationDialogOptions {
     defaultOption?: string;
     html?: boolean;
 }
-
 
 interface getIndexEntriesFieldsCommandResult {
     Static: string[];

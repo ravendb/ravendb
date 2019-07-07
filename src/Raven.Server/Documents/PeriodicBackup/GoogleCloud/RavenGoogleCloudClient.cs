@@ -26,25 +26,25 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         private const string ProjectIdPropertyName = "project_id";
 
-        public RavenGoogleCloudClient(string jsonCredential, string bucketName, CancellationToken? cancellationToken = null, Progress progress = null)
+        public RavenGoogleCloudClient(GoogleCloudSettings settings, CancellationToken? cancellationToken = null, Progress progress = null)
         {
             try
             {
-                _client = StorageClient.Create(GoogleCredential.FromJson(jsonCredential));
+                _client = StorageClient.Create(GoogleCredential.FromJson(settings.GoogleCredentialsJson));
             }
             catch (Exception e)
             {
                 throw new ArgumentException("Wrong format for account key.", e);
             }
 
-            var credentialJsonType = JObject.Parse(jsonCredential);
+            var credentialJsonType = JObject.Parse(settings.GoogleCredentialsJson);
 
             if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var value))
             {
                 _projectId = value.Value<string>();
             }
 
-            _bucketName = bucketName;
+            _bucketName = settings.BucketName;
             CancellationToken = cancellationToken ?? CancellationToken.None;
 
             _progress = progress;
@@ -53,13 +53,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
         public Task<Object> UploadObjectAsync(string fileName, Stream stream, Dictionary<string, string> metadata = null)
         {
             return _client.UploadObjectAsync(
-                new Object
-                {
-                    Bucket = _bucketName,
-                    Name = fileName,
-                    ContentType = "application/octet-stream",
-                    Metadata = metadata
-                }, stream,
+                new Object {Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata}, stream,
                 cancellationToken: CancellationToken,
                 progress: new Progress<IUploadProgress>(p =>
                 {
@@ -87,7 +81,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         public ConfiguredTaskAwaitable DownloadObjectAsync(string fileName, Stream stream)
         {
-          return _client.DownloadObjectAsync(
+            return _client.DownloadObjectAsync(
                 _bucketName,
                 fileName,
                 cancellationToken: CancellationToken,
@@ -106,7 +100,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         public ConfiguredTaskAwaitable DeleteObjectAsync(string fileName)
         {
-           return _client.DeleteObjectAsync(
+            return _client.DeleteObjectAsync(
                 _bucketName,
                 fileName,
                 null,
@@ -123,7 +117,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             return _client.ListBuckets(_projectId);
         }
 
-        public  Task<List<Object>> ListObjectsAsync()
+        public Task<List<Object>> ListObjectsAsync()
         {
             return _client.ListObjectsAsync(_bucketName).ToList(CancellationToken);
         }

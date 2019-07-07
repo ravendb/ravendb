@@ -12,7 +12,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public class TestMigrationTest : SqlAwareTestBase
     {
-        [Theory]
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -42,11 +42,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings.Collection, settings.BinaryToAttachment);
                         var (document, id) = driver.Test(settings, schema, context);
-                        
+
                         Assert.Equal("Orders/1", id);
                         Assert.True(document.TryGet("Total", out double total));
                         Assert.Equal(440, total);
-                        
+
                         var items = document["Items"] as BlittableJsonReaderArray;
                         Assert.NotNull(items);
                         Assert.Equal(2, items.Length);
@@ -54,8 +54,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
             }
         }
-        
-        [Theory]
+
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
@@ -81,25 +81,28 @@ namespace SlowTests.Server.Documents.SqlMigration
                     {
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings.Collection, settings.BinaryToAttachment);
-                        
+
                         var exception = Assert.Throws<InvalidOperationException>(() =>
                         {
                             driver.Test(settings, schema, context);
                         });
-                        
+
                         Assert.True(exception.Message.StartsWith("Document was skipped"));
                     }
                 }
             }
         }
-        
-        [Theory]
+
+        [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         public async Task CanTestWithPrimaryKeyValues(MigrationProvider provider)
         {
+            const string tableName = "groups1";
+            const string collectionName = "Groups1";
+
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
@@ -109,9 +112,9 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     var settings = new MigrationTestSettings
                     {
-                        Collection = new RootCollection(schemaName, "groups", "Groups"),
+                        Collection = new RootCollection(schemaName, tableName, collectionName),
                         Mode = MigrationTestMode.ByPrimaryKey,
-                        PrimaryKeyValues = new [] { "52" }
+                        PrimaryKeyValues = new[] { "52" }
                     };
 
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -119,8 +122,8 @@ namespace SlowTests.Server.Documents.SqlMigration
                         var schema = driver.FindSchema();
                         ApplyDefaultColumnNamesMapping(schema, settings.Collection, settings.BinaryToAttachment);
                         var (document, id) = driver.Test(settings, schema, context);
-                        
-                        Assert.Equal("Groups/52", id);
+
+                        Assert.Equal($"{collectionName}/52", id);
                         Assert.True(document.TryGet("Name", out string name));
                         Assert.Equal("G1.1.1", name);
                     }

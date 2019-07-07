@@ -353,9 +353,7 @@ namespace Raven.Server.Documents
                     }
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
-                    var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-                    var changeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase, databaseChangeVector, groupEtag).ChangeVector;
-                    context.LastDatabaseChangeVector = changeVector;
+                    var changeVector = _documentsStorage.GetNewChangeVector(context, groupEtag);
 
                     using (countersGroupKeyScope)
                     {
@@ -1364,11 +1362,8 @@ namespace Raven.Server.Documents
                 }
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
-
-                var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
-                var newChangeVector = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase, databaseChangeVector, newEtag).ChangeVector;
-                context.LastDatabaseChangeVector = newChangeVector;
-
+                var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                
                 using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))

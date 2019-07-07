@@ -85,12 +85,13 @@ loadToOrders(orderData);
 
                 updateBackupResult = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
 
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = "Northwind",
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
 
                 etlConfiguration = new RavenEtlConfiguration()
                 {
@@ -115,8 +116,8 @@ loadToOrders(orderData);
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
                     FactoryName = "System.Data.SqlClient"
                 };
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
-
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result2.RaftCommandIndex);
 
                 sqlConfiguration = new SqlEtlConfiguration()
                 {
@@ -252,12 +253,13 @@ loadToOrders(orderData);
 
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
 
-                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                var result = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = "Northwind",
                 }));
+                Assert.NotNull(result.RaftCommandIndex);
 
                 etlConfiguration = new RavenEtlConfiguration()
                 {
@@ -282,8 +284,8 @@ loadToOrders(orderData);
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};",
                     FactoryName = "System.Data.SqlClient"
                 };
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
-
+                var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                Assert.NotNull(result2.RaftCommandIndex);
 
                 sqlConfiguration = new SqlEtlConfiguration()
                 {

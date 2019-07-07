@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         protected string AwsRegion { get; set; }
 
+        public string RemoteFolderName { get; }
+
         protected RavenAwsClient(AmazonSettings amazonSettings, Progress progress, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
@@ -42,6 +44,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + amazonSettings.AwsSecretKey);
             _sessionToken = amazonSettings.AwsSessionToken;
             AwsRegion = amazonSettings.AwsRegionName.ToLower();
+            RemoteFolderName = amazonSettings.RemoteFolderName;
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
@@ -98,7 +101,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var canonicalQueryString = query
                 .OrderBy(parameter => parameter.Key)
                 .Select(parameter => parameter.Value.Aggregate(string.Empty, (current, value) =>
-                    current + $"{parameter.Key}={value.Trim()}&"))
+                    current + $"{parameter.Key}={Uri.EscapeDataString(value.Trim())}&"))
                 .Aggregate(string.Empty, (current, parameter) => current + parameter);
 
             if (canonicalQueryString.EndsWith("&"))
