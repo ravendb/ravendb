@@ -104,9 +104,10 @@ namespace Raven.Server.Web.Studio
 
                         using (var client = new RavenAwsS3Client(s3Settings))
                         {
-                            var folders = await client.ListObjects(s3Settings.RemoteFolderName , "/", true);
+                            // fetching only the first 64 results for the auto complete
+                            var folders = await client.ListObjects(s3Settings.RemoteFolderName , "/", true, 64);
                             folderPathOptions = new FolderPathOptions();
-                            foreach (var folder in folders)
+                            foreach (var folder in folders.FileInfoDetails)
                             {
                                 var fullPath = folder.FullPath;
                                 if (string.IsNullOrWhiteSpace(fullPath))

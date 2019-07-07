@@ -22,12 +22,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             path = path.TrimEnd('/');
 
-            var files = await _client.ListObjects(path + "/", string.Empty, false);
-            var folders = files.GroupBy(x => GetFolderName(x.FullPath));
+            var files = await _client.ListAllObjects(path + "/", string.Empty, true);
+            var folders = files.Select(x => GetFolderName(x.FullPath));
 
             foreach (var folder in folders)
             {
-                await FetchRestorePointsForPath(folder.Key, assertLegacyBackups: true);
+                await FetchRestorePointsForPath(folder, assertLegacyBackups: true);
             }
         }
 
@@ -35,24 +35,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             path = path.TrimEnd('/');
 
-            var files = await _client.ListObjects(path + "/", string.Empty, false);
-            return files.ToList();
+            var allObjects = await _client.ListAllObjects(path + "/", string.Empty, false);
+
+            foreach (var obj in allObjects)
+            {
+                if (TryExtractDateFromFileName(obj.FullPath, out var lastModified))
+                    obj.LastModified = lastModified;
+            }
+
+            return allObjects;
         }
 
-        protected override (string DatabaseName, string NodeTag) ParseFolderName(string path)
+        protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
         {
-            // [Date].ravendb-[Database Name]-[Node Tag]-[Backup Type]
-            // [DATE] - format: "yyyy-MM-dd-HH-mm"
-            // [Backup Type] - backup/snapshot
-            // example: //2018-02-03-15-34.ravendb-Northwind-A-backup
-
             var arr = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
             var lastFolderName = arr.Length > 0 ? arr[arr.Length - 1] : string.Empty;
 
-            var match = BackupFolderRegex.Match(lastFolderName);
-            return match.Success
-                ? (match.Groups[1].Value, match.Groups[2].Value)
-                : (null, null);
+            return ParseFolderName(lastFolderName);
         }
 
         protected override async Task<ZipArchive> GetZipArchive(string filePath)

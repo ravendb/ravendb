@@ -39,27 +39,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             foreach (var filePath in Directory.GetFiles(directoryPath))
             {
+                if (TryExtractDateFromFileName(filePath, out var lastModified) == false)
+                    lastModified = File.GetLastWriteTimeUtc(filePath).ToLocalTime();
+
                 fileInfos.Add(new FileInfoDetails
                 {
                     FullPath = filePath,
-                    LastModified = ExtractDateFromFileName(filePath)
+                    LastModified = lastModified
                 });
             }
 
             return Task.FromResult(fileInfos);
         }
 
-        protected override (string DatabaseName, string NodeTag) ParseFolderName(string lastFolderName)
+        protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
         {
-            // [Date].ravendb-[Database Name]-[Node Tag]-[Backup Type]
-            // [DATE] - format: "yyyy-MM-dd-HH-mm"
-            // [Backup Type] - backup/snapshot
-            // example: //2018-02-03-15-34.ravendb-Northwind-A-backup
-
-            var match = BackupFolderRegex.Match(lastFolderName);
-            return match.Success
-                ? (match.Groups[1].Value, match.Groups[2].Value)
-                : (null, null);
+            var lastFolderName = Path.GetFileName(path);
+            return ParseFolderName(lastFolderName);
         }
 
         protected override Task<ZipArchive> GetZipArchive(string filePath)
@@ -74,31 +70,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override void Dispose()
         {            
-        }
-
-        private static DateTime ExtractDateFromFileName(string filePath)
-        {
-            // file name format: 2017-06-01-00-00-00
-            // legacy incremental backup format: 2017-06-01-00-00-00-0
-
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
-            var match = FileNameRegex.Match(fileNameWithoutExtension);
-            if (match.Success)
-            {
-                fileNameWithoutExtension = match.Value;
-            }
-
-            if (DateTime.TryParseExact(
-                    fileNameWithoutExtension,
-                    BackupTask.DateTimeFormat,
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out DateTime result) == false)
-            {
-                result = File.GetLastWriteTimeUtc(filePath).ToLocalTime();
-            }
-
-            return result;
         }
     }
 }

@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 CancellationToken.ThrowIfCancellationRequested();
 
                 var folderName = GetFolderName(folder);
-                var folderDetails = RestoreUtils.ParseFolderName(folderName);
+                var folderDetails = RestorePointsBase.ParseFolderName(folderName);
                 if (folderDetails.BackupTimeAsString == null)
                 {
                     if (Logger.IsInfoEnabled)

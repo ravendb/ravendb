@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -14,8 +15,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public abstract class RestorePointsBase : IDisposable
     {
-        protected static readonly Regex BackupFolderRegex = new Regex(@".ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
-        protected static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2})", RegexOptions.Compiled);
+        protected static readonly Regex BackupFolderRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?).ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
+        protected static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}(-[0-9]{2})?)", RegexOptions.Compiled);
 
         private readonly SortedList<DateTime, RestorePoint> _sortedList;
         private readonly TransactionOperationContext _context;
@@ -30,13 +31,69 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected abstract Task<List<FileInfoDetails>> GetFiles(string path);
 
-        protected abstract (string DatabaseName, string NodeTag) ParseFolderName(string path);
+        protected abstract ParsedBackupFolderName ParseFolderNameFrom(string path);
 
         protected abstract Task<ZipArchive> GetZipArchive(string filePath);
 
         protected abstract string GetFileName(string fullPath);
 
         public abstract void Dispose();
+
+        public static ParsedBackupFolderName ParseFolderName(string folderName)
+        {
+            // [Date].ravendb-[Database Name]-[Node Tag]-[Backup Type]
+            // [DATE] - format: "yyyy-MM-dd-HH-mm"
+            // [Backup Type] - backup/snapshot
+            // example 1: //2018-02-03-15-34.ravendb-Northwind-A-backup
+            // example 2: //2018-02-03-15-34-02.ravendb-Northwind-A-backup
+
+            var match = BackupFolderRegex.Match(folderName);
+            if (match.Success)
+            {
+                return new ParsedBackupFolderName
+                {
+                    BackupTimeAsString = match.Groups[1].Value,
+                    DatabaseName = match.Groups[3].Value,
+                    NodeTag = match.Groups[4].Value
+                };
+            }
+
+            return new ParsedBackupFolderName();
+        }
+
+        protected bool TryExtractDateFromFileName(string filePath, out DateTime lastModified)
+        {
+            // file name format: 2017-06-01-00-00-00
+            // legacy incremental backup format: 2017-06-01-00-00-00-0
+
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+            var match = FileNameRegex.Match(fileNameWithoutExtension);
+            if (match.Success)
+            {
+                fileNameWithoutExtension = match.Value;
+            }
+
+            if (DateTime.TryParseExact(
+                    fileNameWithoutExtension,
+                    BackupTask.GetDateTimeFormat(fileNameWithoutExtension),
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out lastModified) == false)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public class ParsedBackupFolderName
+        {
+            public string BackupTimeAsString { get; set; }
+
+            public string DatabaseName { get; set; }
+
+            public string NodeTag { get; set; }
+        }
 
         protected async Task FetchRestorePointsForPath(string path, bool assertLegacyBackups)
         {
@@ -64,7 +121,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 .ThenBy(x => Path.GetExtension(x.FullPath), PeriodicBackupFileExtensionComparer.Instance)
                 .ThenBy(x => x.LastModified);
 
-            var folderDetails = ParseFolderName(path);
+            var folderDetails = ParseFolderNameFrom(path);
             var filesCount = 0;
             var firstFile = true;
             var snapshotRestore = false;
