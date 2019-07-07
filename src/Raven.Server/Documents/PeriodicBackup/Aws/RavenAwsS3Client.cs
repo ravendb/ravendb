@@ -563,7 +563,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                             isFirst = false;
                         }
 
-                        yield return new FileInfoDetails { FullPath = commonPrefix.Value };
+                        yield return new FileInfoDetails
+                        {
+                            FullPath = commonPrefix.Value
+                        };
                     }
                 }
 
@@ -577,7 +580,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     if (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
                         continue; // backup not in current folder or in sub folder
 
-                    yield return new FileInfoDetails { FullPath = fullPath, LastModified = Convert.ToDateTime(content.Element(ns + "LastModified").Value) };
+                    yield return new FileInfoDetails
+                    {
+                        FullPath = fullPath,
+                        LastModified = Convert.ToDateTime(content.Element(ns + "LastModified").Value)
+                    };
                 }
             }
 
@@ -593,6 +600,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 return count;
             }
+        }
+
+        public async Task<List<FileInfoDetails>> ListAllObjects(string prefix, string delimiter, bool listFolders, int? take = null)
+        {
+            var allObjects = new List<FileInfoDetails>();
+
+            string continuationToken = null;
+
+            while (true)
+            {
+                var objects = await ListObjects(prefix, delimiter, listFolders, continuationToken: continuationToken);
+                allObjects.AddRange(objects.FileInfoDetails);
+
+                continuationToken = objects.ContinuationToken;
+                if (continuationToken == null)
+                    break;
+            }
+
+            return allObjects;
         }
 
         public async Task<Blob> GetObject(string key)
