@@ -109,79 +109,71 @@ namespace SlowTests.Cluster
         [InlineData(5)]
         public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
         {
-            NoTimeouts();
-            try
+            var numOfSessions = 10;
+            var docsPerSession = 2;
+            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            using (var store = GetDocumentStore(new Options
             {
-                var numOfSessions = 10;
-                var docsPerSession = 2;
-                var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
-                using (var store = GetDocumentStore(new Options
+                Server = leader,
+                ReplicationFactor = numberOfNodes
+            }))
+            {
+                for (int j = 0; j < numOfSessions; j++)
                 {
-                    Server = leader,
-                    ReplicationFactor = numberOfNodes
-                }))
-                {
-                    for (int j = 0; j < numOfSessions; j++)
+                    var trys = 5;
+                    do
                     {
-                        var trys = 5;
-                        do
+                        try
                         {
-                            try
+                            using (var session = store.OpenAsyncSession(new SessionOptions
                             {
-                                using (var session = store.OpenAsyncSession(new SessionOptions
+                                TransactionMode = TransactionMode.ClusterWide
+                            }))
+                            {
+                                for (int i = 0; i < docsPerSession; i++)
                                 {
-                                    TransactionMode = TransactionMode.ClusterWide
-                                }))
-                                {
-                                    for (int i = 0; i < docsPerSession; i++)
+                                    var user = new User
                                     {
-                                        var user = new User
-                                        {
-                                            LastName = RandomString(2048),
-                                            Age = i
-                                        };
-                                        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
-                                        {
-                                            await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1), cts.Token);
-                                        }
-                                    }
-
-                                    if (numberOfNodes > 1)
-                                        await ActionWithLeader(l =>
-                                        {
-                                            l.ServerStore.Engine.CurrentLeader?.StepDown();
-                                            return Task.CompletedTask;
-                                        });
+                                        LastName = RandomString(2048),
+                                        Age = i
+                                    };
                                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
                                     {
-                                        await session.SaveChangesAsync(cts.Token);
+                                        await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1), cts.Token);
                                     }
-
-                                    trys = 5;
                                 }
-                            }
-                            catch (Exception e) when (e is ConcurrencyException)
-                            {
-                                trys--;
-                            }
-                        } while (trys < 5 && trys > 0);
 
-                        Assert.True(trys > 0, $"Couldn't save a document after 5 retries.");
-                    }
+                                if (numberOfNodes > 1)
+                                    await ActionWithLeader(l =>
+                                    {
+                                        l.ServerStore.Engine.CurrentLeader?.StepDown();
+                                        return Task.CompletedTask;
+                                    });
+                                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                                {
+                                    await session.SaveChangesAsync(cts.Token);
+                                }
 
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
-                        {
-                            var res = await session.Query<User>().Customize(q => q.WaitForNonStaleResults()).ToListAsync(cts.Token);
-                            Assert.Equal(numOfSessions * docsPerSession, res.Count);
+                                trys = 5;
+                            }
                         }
+                        catch (Exception e) when (e is ConcurrencyException)
+                        {
+                            trys--;
+                        }
+                    } while (trys < 5 && trys > 0);
+
+                    Assert.True(trys > 0, $"Couldn't save a document after 5 retries.");
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                    {
+                        var res = await session.Query<User>().Customize(q => q.WaitForNonStaleResults()).ToListAsync(cts.Token);
+                        Assert.Equal(numOfSessions * docsPerSession, res.Count);
                     }
                 }
-            }
-            finally
-            {
-                SetTimeouts();
             }
         }
 
