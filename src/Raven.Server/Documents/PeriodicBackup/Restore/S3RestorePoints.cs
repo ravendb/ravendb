@@ -22,13 +22,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             path = path.TrimEnd('/');
 
-            var files = await _client.ListAllObjects(path + "/", string.Empty, true);
-            var folders = files.Select(x => GetFolderName(x.FullPath));
+            var objects = await _client.ListAllObjects(path + "/", "/", true);
+            var folders = objects.Select(x => x.FullPath).ToList();
 
-            foreach (var folder in folders)
+            if (folders.Count == 0)
             {
-                await FetchRestorePointsForPath(folder, assertLegacyBackups: true);
+                await FetchRestorePointsForPath(path, assertLegacyBackups: true);
             }
+            else
+            {
+                foreach (var folder in folders)
+                {
+                    await FetchRestorePointsForPath(folder, assertLegacyBackups: true);
+                }
+            }
+            
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)

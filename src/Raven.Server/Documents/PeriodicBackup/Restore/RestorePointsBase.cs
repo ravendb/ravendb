@@ -131,6 +131,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 var extension = Path.GetExtension(fileInfo.FullPath);
                 var isSnapshot = Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                                  Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
+
                 if (firstFile)
                 {
                     snapshotRestore = isSnapshot;
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         DateTime = fileInfo.LastModified,
                         Location = path,
-                        FileName = GetFileName(fileInfo.FullPath),
+                        FileName = fileInfo.FullPath,
                         IsSnapshotRestore = snapshotRestore,
                         IsIncremental = BackupUtils.IsIncrementalBackupFile(extension),
                         IsEncrypted = isEncrypted,
