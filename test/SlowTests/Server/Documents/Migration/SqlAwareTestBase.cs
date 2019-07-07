@@ -11,12 +11,10 @@ using Oracle.ManagedDataAccess.Client;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
-using SlowTests.Server.Documents.ETL.SQL;
-using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
-namespace SlowTests.Server.Documents.SqlMigration
+namespace SlowTests.Server.Documents.Migration
 {
     public abstract class SqlAwareTestBase : RavenTestBase
     {
