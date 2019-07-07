@@ -1469,7 +1469,11 @@ namespace Raven.Server.Rachis
 
                 if (timeoutTask == await Task.WhenAny(task, timeoutTask))
                     ThrowTimeoutException();
+
+                await task; // propagate cancellation/exception 
             }
+
+            ThrowTimeoutException();
         }
 
         private static void ThrowTimeoutException()
