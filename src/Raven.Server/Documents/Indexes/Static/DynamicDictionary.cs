@@ -157,7 +157,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool ContainsKey(object key)
         {
-            return _dictionary.ContainsKey(key);
+            var newKey = TypeConverter.KeyAsString(TypeConverter.ToBlittableSupportedType(key));
+            return _dictionary.ContainsKey(newKey);
         }
 
         public bool Remove(object key)
@@ -281,27 +282,31 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public DynamicDictionary TakeLast(int count)
         {
-            return new DynamicDictionary(_dictionary.Take(count));
+            return new DynamicDictionary(_dictionary.TakeLast(count));
         }
 
-        public DynamicDictionary Union(DynamicDictionary second)
+        public DynamicDictionary Union(IEnumerable<object> second)
         {
-            return new DynamicDictionary(_dictionary.Union(second));
+            var dict = EnumerableToDictionary(second);
+            return new DynamicDictionary(_dictionary.Union(dict));
         }
 
-        public DynamicDictionary Union(DynamicDictionary second, IEqualityComparer<KeyValuePair<object, object>> comparer)
+        public DynamicDictionary Union(IEnumerable<object> second, IEqualityComparer<KeyValuePair<object, object>> comparer)
         {
-            return new DynamicDictionary(_dictionary.Union(second, comparer));
+            var dict = EnumerableToDictionary(second);
+            return new DynamicDictionary(_dictionary.Union(dict, comparer));
         }
 
-        public DynamicDictionary Intersect(DynamicDictionary second)
+        public DynamicDictionary Intersect(IEnumerable<object> second)
         {
-            return new DynamicDictionary(_dictionary.Intersect(second));
+            var dict = EnumerableToDictionary(second);
+            return new DynamicDictionary(_dictionary.Intersect(dict));
         }
 
-        public DynamicDictionary Intersect(DynamicDictionary second, IEqualityComparer<KeyValuePair<object, object>> comparer)
+        public DynamicDictionary Intersect(IEnumerable<object> second, IEqualityComparer<KeyValuePair<object, object>> comparer)
         {
-            return new DynamicDictionary(_dictionary.Intersect(second, comparer));
+            var dict = EnumerableToDictionary(second);
+            return new DynamicDictionary(_dictionary.Intersect(dict, comparer));
         }
 
         public IEnumerable<TResult> OfType<TResult>()
@@ -309,22 +314,20 @@ namespace Raven.Server.Documents.Indexes.Static
             return Enumerable.OfType<TResult>(this);
         }
 
-        public DynamicDictionary Prepend(KeyValuePair<object, object> element)
+        public DynamicDictionary Prepend<TKey, TValue>(KeyValuePair<TKey, TValue> element)
         {
-            return new DynamicDictionary(_dictionary.Prepend(element));
+            var key = TypeConverter.KeyAsString(TypeConverter.ToBlittableSupportedType(element.Key));
+            var vType = ToDynamicDictionarySupportedType(element.Value);
+            var newItem = new KeyValuePair<object, object>(key, vType);
+
+            return new DynamicDictionary(_dictionary.Prepend(newItem));
         }
 
         public DynamicDictionary Where(Func<object, bool> predicate)
         {
             var vars = Enumerable.Where(this, predicate);
-            var dict = new Dictionary<object, object>();
-            foreach (var v in vars)
-            {
-                if (v is KeyValuePair<object, object> kvp)
-                {
-                    dict[kvp.Key] = kvp.Value;
-                }
-            }
+            var dict = EnumerableToDictionary(vars);
+
             return new DynamicDictionary(dict);
         }
 
@@ -348,14 +351,16 @@ namespace Raven.Server.Documents.Indexes.Static
             return _dictionary.ElementAtOrDefault(index);
         }
 
-        public DynamicDictionary Except(IEnumerable<KeyValuePair<object, object>> second)
+        public DynamicDictionary Except(IEnumerable<object> second)
         {
-            return new DynamicDictionary(_dictionary.Except(second));
+            var dict = EnumerableToDictionary(second);
+            return new DynamicDictionary(_dictionary.Except(dict));
         }
 
-        public DynamicDictionary Except(IEnumerable<KeyValuePair<object, object>> second, IEqualityComparer<KeyValuePair<object, object>> comparer)
+        public DynamicDictionary Except(IEnumerable<object> second, IEqualityComparer<KeyValuePair<object, object>> comparer)
         {
-            return new DynamicDictionary(_dictionary.Except(second, comparer));
+            var dict = EnumerableToDictionary(second);
+            return new DynamicDictionary(_dictionary.Except(dict, comparer));
         }
 
         public DynamicDictionary Reverse()
@@ -378,9 +383,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return _dictionary.Any();
         }
 
-        public DynamicDictionary Append(KeyValuePair<object, object> element)
+        public DynamicDictionary Append<TKey, TValue>(KeyValuePair<TKey, TValue> element)
         {
-            return new DynamicDictionary(_dictionary.Append(element));
+            var key = TypeConverter.KeyAsString(TypeConverter.ToBlittableSupportedType(element.Key));
+            var vType = ToDynamicDictionarySupportedType(element.Value);
+            var newItem = new KeyValuePair<object, object>(key, vType);
+            return new DynamicDictionary(_dictionary.Append(newItem));
         }
 
         public double Average(Func<dynamic, int> selector)
@@ -691,6 +699,22 @@ namespace Raven.Server.Documents.Indexes.Static
                 return guid.ToString("D");
 
             return value;
+        }
+
+        private static Dictionary<object, object> EnumerableToDictionary(IEnumerable<object> second)
+        {
+            var dict = new Dictionary<object, object>();
+            foreach (var v in second)
+            {
+                if (v is KeyValuePair<object, object> kvp)
+                {
+                    var key = TypeConverter.KeyAsString(TypeConverter.ToBlittableSupportedType(kvp.Key));
+                    var vType = ToDynamicDictionarySupportedType(kvp.Value);
+                    dict[key] = vType;
+                }
+            }
+
+            return dict;
         }
     }
 }
