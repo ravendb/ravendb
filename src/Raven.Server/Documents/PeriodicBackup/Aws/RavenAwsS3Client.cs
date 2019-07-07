@@ -568,6 +568,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                             FullPath = commonPrefix.Value
                         };
                     }
+
+                    yield break;
                 }
 
                 var contents = listBucketResult.Root.Descendants(ns + "Contents");

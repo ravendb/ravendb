@@ -337,8 +337,10 @@ class databaseCreationModel {
     private tryDecodeS3Credentials(credentials: any) {
         try {
             //TODO: do some duck typing to check if we have correct format
-            
-            this.restore.decodedS3Credentials(credentials);
+
+            const decoded = atob(credentials);
+            const json = JSON.parse(decoded);
+            this.restore.decodedS3Credentials(json);
         } catch (e) {
             console.warn(e);
         }
