@@ -1508,8 +1508,17 @@ namespace Raven.Client.Documents.Indexes
             var expression = node.Object;
 
             var isDictionaryArgument = false;
+            var isDictionaryObject = false;
             var isDictionaryReturn = false;
             var isConvertToDictionary = false;
+
+            if (node.Object != null)
+            {
+                if (node.Object.Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                {
+                    isDictionaryObject = true;
+                }
+            }
 
             if (node.Arguments.Count > 0 && node.Arguments[0].Type.IsGenericType)
             {
@@ -1596,6 +1605,11 @@ namespace Raven.Client.Documents.Indexes
                         // this is a method that
                         // exists on both the server side and the client side
                         Out("this");
+                    }
+                    else if (isDictionaryObject)
+                    {
+                        Visit(expression);
+                        Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
                     }
                     else
                     {
