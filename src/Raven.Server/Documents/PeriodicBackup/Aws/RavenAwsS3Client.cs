@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 ContinuationToken = isTruncated == "true" ? listBucketResult.Root.Element(ns + "NextContinuationToken").Value : null
             };
 
-            IEnumerable<FileInfoDetails> GetResult()
+            IEnumerable<S3FileInfoDetails> GetResult()
             {
                 if (listFolders)
                 {
@@ -563,7 +563,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                             isFirst = false;
                         }
 
-                        yield return new FileInfoDetails
+                        yield return new S3FileInfoDetails
                         {
                             FullPath = commonPrefix.Value
                         };
@@ -580,10 +580,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     if (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
                         continue; // backup not in current folder or in sub folder
 
-                    yield return new FileInfoDetails
+                    yield return new S3FileInfoDetails
                     {
                         FullPath = fullPath,
-                        LastModified = Convert.ToDateTime(content.Element(ns + "LastModified").Value)
+                        LastModifiedAsString = content.Element(ns + "LastModified").Value
                     };
                 }
             }
@@ -602,9 +602,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public async Task<List<FileInfoDetails>> ListAllObjects(string prefix, string delimiter, bool listFolders, int? take = null)
+        public async Task<List<S3FileInfoDetails>> ListAllObjects(string prefix, string delimiter, bool listFolders, int? take = null)
         {
-            var allObjects = new List<FileInfoDetails>();
+            var allObjects = new List<S3FileInfoDetails>();
 
             string continuationToken = null;
 

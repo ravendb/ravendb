@@ -37,13 +37,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var allObjects = await _client.ListAllObjects(path + "/", string.Empty, false);
 
+            var filesInfo = new List<FileInfoDetails>();
+
             foreach (var obj in allObjects)
             {
-                if (TryExtractDateFromFileName(obj.FullPath, out var lastModified))
-                    obj.LastModified = lastModified;
+                if (TryExtractDateFromFileName(obj.FullPath, out var lastModified) == false)
+                    lastModified = Convert.ToDateTime(obj.LastModifiedAsString);
+
+                filesInfo.Add(new FileInfoDetails
+                {
+                    FullPath = obj.FullPath,
+                    LastModified = lastModified
+                });
             }
 
-            return allObjects;
+            return filesInfo;
         }
 
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
