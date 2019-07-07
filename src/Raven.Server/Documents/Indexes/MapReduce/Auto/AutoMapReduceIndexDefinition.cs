@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 var field = new AutoIndexField
                 {
                     Name = name,
-                    Storage = FieldStorage.Yes,
+                    Storage = FieldStorage.No,
                     Indexing = AutoFieldIndexing.Default,
                     Aggregation = (AggregationOperation)aggregationAsInt
                 };
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 var field = new AutoIndexField
                 {
                     Name = name,
-                    Storage = FieldStorage.Yes,
+                    Storage = FieldStorage.No,
                     Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
                     GroupByArrayBehavior = (GroupByArrayBehavior)Enum.Parse(typeof(GroupByArrayBehavior), groupByArray),
                 };
