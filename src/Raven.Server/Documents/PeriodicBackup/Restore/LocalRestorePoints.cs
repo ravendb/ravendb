@@ -35,21 +35,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override Task<List<FileInfoDetails>> GetFiles(string directoryPath)
         {
-            var fileInfos = new List<FileInfoDetails>();
+            var filesInfo = new List<FileInfoDetails>();
 
             foreach (var filePath in Directory.GetFiles(directoryPath))
             {
                 if (TryExtractDateFromFileName(filePath, out var lastModified) == false)
                     lastModified = File.GetLastWriteTimeUtc(filePath).ToLocalTime();
 
-                fileInfos.Add(new FileInfoDetails
+                filesInfo.Add(new FileInfoDetails
                 {
                     FullPath = filePath,
                     LastModified = lastModified
                 });
             }
 
-            return Task.FromResult(fileInfos);
+            return Task.FromResult(filesInfo);
         }
 
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
