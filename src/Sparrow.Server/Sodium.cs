@@ -58,7 +58,8 @@ namespace Sparrow.Server
             catch (IOException e)
             {
                 throw new IOException(
-                    $"Cannot copy {fromFilename} to {toFilename}, make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder",
+                    $"Cannot copy {fromFilename} to {toFilename}, " +
+                    $"make sure appropriate {toFilename} to your platform architecture exists in Raven.Server executable folder",
                     e);
             }
 
@@ -67,32 +68,19 @@ namespace Sparrow.Server
                 var rc = sodium_init();
                 if (rc != 0)
                     throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
-            }
-            catch (DllNotFoundException dllNotFoundEx)
-            {
-                // make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
-                if (File.Exists(LIBSODIUM))
-                {
-                    throw new IncorrectDllException(
-                        $"{LIBSODIUM} probably contains the wrong version or not usable on the current platform. Try installing {LIBSODIUM} and re-run server.",
-                        dllNotFoundEx);
-
-                }
-            }
-
-            // test for existence of libsodium:
-            try
-            {
-                crypto_sign_publickeybytes();
-            }
-            catch (IncorrectDllException)
-            {
-                throw;
+                crypto_sign_publickeybytes(); // test libsodium functionality
             }
             catch (Exception ex)
             {
-                throw new IncorrectDllException($"Make sure {LIBSODIUM} is installed on your OS (original selected lib was: {fromFilename})",
-                    ex);
+                var platformStr = $"Arch:{RuntimeInformation.OSArchitecture}, OSDesc:{RuntimeInformation.OSDescription}";
+
+                var errString = $"{LIBSODIUM} version might be invalid, missing or not usable on current platform '${platformStr}";
+
+                if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). " + 
+                                 "It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+                
+                throw new IncorrectDllException(errString, ex);
             }
         }
 

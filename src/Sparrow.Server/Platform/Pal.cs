@@ -80,17 +80,17 @@ namespace Sparrow.Server.Platform
 
                 rc = rvn_get_system_information(out SysInfo, out errorCode);
             }
-            catch (IncorrectDllException)
-            {
-                throw;
-            }
             catch (Exception ex)
             {
-                var ErrString =
-                    "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
-                throw new IncorrectDllException(
-                    $"{LIBRVNPAL} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
-                    ex);
+                var platformStr = $"Arch:{RuntimeInformation.OSArchitecture}, OSDesc:{RuntimeInformation.OSDescription}";
+
+                var errString = $"{LIBRVNPAL} version might be invalid, missing or not usable on current platform '${platformStr}";
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). " +
+                                 "It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+
+                throw new IncorrectDllException(errString, ex);
             }
 
             if (rc != PalFlags.FailCodes.Success)
