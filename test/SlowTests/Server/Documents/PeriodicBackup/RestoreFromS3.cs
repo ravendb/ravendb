@@ -17,7 +17,10 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
@@ -339,6 +342,97 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [S3Fact, Trait("Category", "Smuggler")]
+        public async Task incremental_and_full_check_last_file_for_backup()
+        {
+            var localS3Settings = CopyLocalS3Settings();
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "user-1"}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    S3Settings = localS3Settings,
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "user-2"}, "users/2");
+
+                    await session.SaveChangesAsync();
+                }
+
+        
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                string lastFileToRestore;
+                var backupStatus = store.Maintenance.Send(operation);
+                using (var client = new RavenAwsS3Client(S3Fact.S3Settings))
+                {
+                    lastFileToRestore = (await client.ListObjects( backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "user-3"}, "users/3");
+
+                    await session.SaveChangesAsync();
+                }
+
+                lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                backupStatus = store.Maintenance.Send(operation);
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+
+
+
+                using (RestoreDatabaseFromCloud(store,
+                    new RestoreFromS3Configuration
+                    {
+                        Settings = localS3Settings,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = lastFileToRestore
+                    }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                        users = session.Load<User>("users/2");
+                        Assert.NotNull(users);                 
+                        users = session.Load<User>("users/3");
+                        Assert.Null(users);
+                    }
+                }
+            }
+        }
+
+
+        [S3Fact, Trait("Category", "Smuggler")]
         public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key()
         {
             var localS3Settings = CopyLocalS3Settings();
@@ -494,6 +588,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }
             }
+        }
+
+        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+        {
+            var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+            var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+            var value = WaitForValue(() =>
+            {
+                var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
+                return status;
+            }, OperationStatus.Completed);
+
+            Assert.Equal(OperationStatus.Completed, value);
         }
 
         private string EncryptedServer(out X509Certificate2 adminCert, out string name)
