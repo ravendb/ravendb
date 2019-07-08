@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Expiration
                                     var document = _database.DocumentsStorage.Get(context, clonedId);
                                     if (document == null ||
                                         document.TryGetMetadata(out var metadata) == false || 
-                                        HasExpired(metadata, metadataPropertyToCheck, currentTime) == false)
+                                        HasPassed(metadata, metadataPropertyToCheck, currentTime) == false)
                                     {
                                         expiredDocs.Add((clonedId, null));
                                         continue;
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Expiration
                 {
                     id = conflict.Id;
 
-                    if (HasExpired(conflict.Doc, currentTime))
+                    if (HasPassed(conflict.Doc, currentTime))
                         continue;
 
                     allExpired = false;
@@ -197,17 +197,17 @@ namespace Raven.Server.Documents.Expiration
             return (allExpired, id);
         }
 
-        public static bool HasExpired(BlittableJsonReaderObject data, DateTime currentTime)
+        public static bool HasPassed(BlittableJsonReaderObject data, DateTime currentTime)
         {
             // Validate that the expiration value in metadata is still the same.
             // We have to check this as the user can update this value.
             if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 return false;
 
-            return HasExpired(metadata, Constants.Documents.Metadata.Expires, currentTime);
+            return HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime);
         }
 
-        private static bool HasExpired(BlittableJsonReaderObject metadata, string metadataPropertyName, DateTime currentTime)
+        private static bool HasPassed(BlittableJsonReaderObject metadata, string metadataPropertyName, DateTime currentTime)
         {
             if (metadata.TryGet(metadataPropertyName, out string expirationDate))
             {
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Expiration
                             var doc = _database.DocumentsStorage.Get(context, ids.LowerId, throwOnConflict: true);
                             if (doc != null && doc.TryGetMetadata(out var metadata))
                             {
-                                if (HasExpired(metadata, Constants.Documents.Metadata.Expires, currentTime))
+                                if (HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime))
                                 {
                                     _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
                                 }
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Expiration
                         var doc = _database.DocumentsStorage.Get(context, ids.LowerId, throwOnConflict: false);
                         if (doc != null && doc.TryGetMetadata(out var metadata))
                         {
-                            if (HasExpired(metadata, Constants.Documents.Metadata.Refresh, currentTime))
+                            if (HasPassed(metadata, Constants.Documents.Metadata.Refresh, currentTime))
                             {
                                 // remove the @refresh tag
                                 metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
