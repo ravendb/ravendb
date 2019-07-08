@@ -1,4 +1,3 @@
-using System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Refresh
@@ -17,9 +16,12 @@ namespace Raven.Client.Documents.Operations.Refresh
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != this.GetType())
+                return false;
             return Equals((RefreshConfiguration)obj);
         }
 
