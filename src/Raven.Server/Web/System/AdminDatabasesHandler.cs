@@ -492,10 +492,19 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var connectionType = GetBackupConnectionType();
+                PeriodicBackupConnectionType connectionType;
+                var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+                if (type == null)
+                {
+                    //Backward compatibility
+                    connectionType = PeriodicBackupConnectionType.Local;
+                }
+                else if (Enum.TryParse(type, out connectionType) == false)
+                {
+                    throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
+                }
 
                 var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "restore-info");
-
                 var restorePoints = new RestorePoints();
                 var sortedList = new SortedList<DateTime, RestorePoint>(new RestorePointsBase.DescendedDateComparer());
 
