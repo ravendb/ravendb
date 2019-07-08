@@ -932,6 +932,87 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
+
+        [Fact]
+        public async Task incremental_and_full_check_last_file_for_backup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "users/1"}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings {FolderPath = backupPath},
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "users/2"}, "users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
+                var lastBackupToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "users/3"}, "users/3");
+                    await session.SaveChangesAsync();
+                }
+
+                lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                var databaseName = GetDatabaseName() + "restore";
+                var restoreConfig = new RestoreBackupConfiguration()
+                {
+                    BackupLocation = backupFolder,
+                    DatabaseName = databaseName,
+                    LastFileNameToRestore = lastBackupToRestore.Last()
+                };
+
+                var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                store.Maintenance.Server.Send(restoreOperation)
+                    .WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                using (var session = store.OpenAsyncSession(databaseName))
+                {
+
+                    var bestUser = await session.LoadAsync<User>("users/1");
+                    var mediocreUser1 = await session.LoadAsync<User>("users/2");
+                    var mediocreUser2 = await session.LoadAsync<User>("users/3");
+                    Assert.NotNull(bestUser);
+                    Assert.NotNull(mediocreUser1);
+                    Assert.Null(mediocreUser2);
+                }
+            }
+        }
+
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
