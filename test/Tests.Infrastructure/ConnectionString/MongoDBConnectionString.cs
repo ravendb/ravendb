@@ -4,24 +4,24 @@ using MongoDB.Driver;
 
 namespace Tests.Infrastructure.ConnectionString
 {
-    public class MongodbConnectionString
+    public class MongoDBConnectionString
     {
-        private static MongodbConnectionString _instance;
-        public static MongodbConnectionString Instance => _instance ?? (_instance = new MongodbConnectionString());
+        private static MongoDBConnectionString _instance;
+        public static MongoDBConnectionString Instance => _instance ?? (_instance = new MongoDBConnectionString());
 
-        private Lazy<string> ConnectionString { get;}
-        
-        private MongodbConnectionString()
+        private Lazy<string> ConnectionString { get; }
+
+        private MongoDBConnectionString()
         {
             ConnectionString = new Lazy<string>(() =>
             {
                 var connectionString = Environment.GetEnvironmentVariable("RAVEN_MONGODB_CONNECTION_STRING");
-                return string.IsNullOrEmpty(connectionString) 
+                return string.IsNullOrEmpty(connectionString)
                     ? string.Empty
                     : connectionString;
             });
         }
-        
+
         public bool CanConnect()
         {
             try

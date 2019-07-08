@@ -14,16 +14,16 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.Migration
 {
-    public class MongodbMigrationTest : RavenTestBase
+    public class MongoDBMigrationTest : RavenTestBase
     {
         private class Book
         {
             public class Comparer : IEqualityComparer<Book>
             {
-                public bool Equals(Book x, Book y) =>  x.Title == y.Title;
+                public bool Equals(Book x, Book y) => x.Title == y.Title;
                 public int GetHashCode(Book obj) => throw new NotImplementedException();
             }
-            
+
             public string Title { get; set; }
         }
 
@@ -33,30 +33,30 @@ namespace SlowTests.Server.Documents.Migration
 
             public class Comparer : IEqualityComparer<Movie>
             {
-                public bool Equals(Movie x, Movie y) =>  x.Title == y.Title;
+                public bool Equals(Movie x, Movie y) => x.Title == y.Title;
                 public int GetHashCode(Movie obj) => throw new NotImplementedException();
             }
         }
 
-        [RequiresMongodbFact]
+        [RequiresMongoDBFact]
         public async Task MigrateMongodb_WhenHasTwoCollectionAndImportAll_ShouldImportTheTwoCollectionWithAllThereDocuments()
         {
-            var expectedBooks = new[] {new Book {Title = "Great Book1!!!"}};
-            var expectedMovies = new[] {new Movie{Title = "Great Movie1!!!"}};
+            var expectedBooks = new[] { new Book { Title = "Great Book1!!!" } };
+            var expectedMovies = new[] { new Movie { Title = "Great Movie1!!!" } };
 
             var databaseName = $"Test{Guid.NewGuid().ToString()}";
 
             var connectionString = Environment.GetEnvironmentVariable("RAVEN_MONGODB_CONNECTION_STRING");
             var client = new MongoClient(connectionString);
             var db = client.GetDatabase(databaseName);
-            
+
             var booksCollection = db.GetCollection<Book>("Books");
             await booksCollection.InsertManyAsync(expectedBooks);
 
             var moviesCollection = db.GetCollection<Movie>("Movies");
             await moviesCollection.InsertManyAsync(expectedMovies);
 
-            
+
             var path = NewDataPath();
             if (Directory.Exists(path))
             {
@@ -74,8 +74,8 @@ namespace SlowTests.Server.Documents.Migration
                     ["ConnectionString"] = connectionString
                 };
                 var inputConfigurationStr = context.ReadObject(inputConfiguration, "InputConfiguration").ToString();
-                
-                Raven.Migrator.Program.Main(new[] {"mongodb", "-j", inputConfigurationStr});
+
+                Raven.Migrator.Program.Main(new[] { "mongodb", "-j", inputConfigurationStr });
             }
 
             using (var store = GetDocumentStore())
@@ -87,21 +87,21 @@ namespace SlowTests.Server.Documents.Migration
                 {
                     var actualBooks = await session.Query<Book>().ToListAsync();
                     var actualMovies = await session.Query<Movie>().ToListAsync();
-                    
+
                     AssertEquivalent(expectedBooks, actualBooks, new Book.Comparer());
                     AssertEquivalent(expectedMovies, actualMovies, new Movie.Comparer());
                 }
             }
         }
-        
+
         private static void AssertEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual, IEqualityComparer<T> comparer)
         {
             Assert.Equal(expected.Count(), actual.Count());
-            
+
             void Action(T b1) => Assert.Contains(b1, expected, comparer);
 
             var actions = expected.Select(b => (Action<T>)Action).ToArray();
-                    
+
             Assert.Collection(actual, actions);
         }
     }
