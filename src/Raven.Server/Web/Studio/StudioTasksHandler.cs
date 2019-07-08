@@ -80,8 +80,18 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/admin/studio-tasks/folder-path-options", "POST", AuthorizationStatus.Operator)]
         public async Task GetFolderPathOptions()
         {
-            var connectionType = GetBackupConnectionType();
-            
+            PeriodicBackupConnectionType connectionType;
+            var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+            if (type == null)
+            {
+                //Backward compatibility
+                connectionType = PeriodicBackupConnectionType.Local;
+            }
+            else if (Enum.TryParse(type, out connectionType) == false)
+            {
+                throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
+            }
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 FolderPathOptions folderPathOptions;

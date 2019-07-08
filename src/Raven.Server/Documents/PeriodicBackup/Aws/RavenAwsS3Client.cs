@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{GetUrl()}/?list-type=2";
             if (prefix != null)
-                url += $"&prefix={prefix}";
+                url += $"&prefix={Uri.EscapeDataString(prefix)}";
 
             if (delimiter != null)
                 url += $"&delimiter={delimiter}";

@@ -695,21 +695,6 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Add("Location", leaderLocation);
         }
 
-        protected PeriodicBackupConnectionType GetBackupConnectionType()
-        {
-            PeriodicBackupConnectionType connectionType;
-            var type = GetStringValuesQueryString("type", false).FirstOrDefault();
-            if (type == null)
-            {
-                //Backward compatibility
-                connectionType = PeriodicBackupConnectionType.Local;
-            }
-            else if (Enum.TryParse(type, out connectionType) == false)
-            {
-                throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
-            }
-
-            return connectionType;
-        }
+   
     }
 }
