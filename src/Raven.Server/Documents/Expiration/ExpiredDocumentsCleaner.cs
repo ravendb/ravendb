@@ -76,24 +76,33 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        private DateTime _lastRefresh, _lastExpiration;
+        private DateTime _nextRefresh, _nextExpiration;
 
-        protected override async Task DoWork()
+        protected override Task DoWork()
         {
-            var remainingRefresh = DateTime.UtcNow - _lastRefresh;
-            var remainingExpiration = DateTime.UtcNow - _lastExpiration;
+            var expr = DoExpirationWork();
+            var refresh = DoRefreshWork();
 
-            if (remainingExpiration > remainingRefresh && ExpirationConfiguration.Disabled == false)
+            return Task.WhenAll(expr, refresh);
+        }
+
+        private async Task DoRefreshWork()
+        {
+            while (RefreshConfiguration?.Disabled == false)
             {
-                await WaitOrThrowOperationCanceled(remainingExpiration);
-                _lastExpiration = DateTime.UtcNow;
-                await CleanupExpiredDocs();
-            }
-            else if(RefreshConfiguration.Disabled == false)
-            {
-                await WaitOrThrowOperationCanceled(remainingRefresh);
-                _lastRefresh = DateTime.UtcNow;
+                await WaitOrThrowOperationCanceled(_nextRefresh - DateTime.UtcNow);
+                _nextRefresh = DateTime.UtcNow.AddSeconds(RefreshConfiguration?.RefreshFrequencyInSec ?? 60);
                 await RefreshDocs();
+            }
+        }
+
+        private async Task DoExpirationWork()
+        {
+            while (ExpirationConfiguration?.Disabled == false)
+            {
+                await WaitOrThrowOperationCanceled(_nextExpiration - DateTime.UtcNow);
+                _nextExpiration = DateTime.UtcNow.AddSeconds(ExpirationConfiguration?.DeleteFrequencyInSec ?? 60);
+                await CleanupExpiredDocs();
             }
         }
 
@@ -130,7 +139,7 @@ namespace Raven.Server.Documents.Expiration
                     using (context.OpenReadTransaction())
                     {
                         var expired =
-                            forExpiration ? 
+                            forExpiration ?
                                 _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, out var duration, CancellationToken) :
                                 _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, out duration, CancellationToken);
                         if (expired == null || expired.Count == 0)
