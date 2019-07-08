@@ -24,11 +24,18 @@ namespace Tests.Infrastructure.ConnectionString
         
         public bool CanConnect()
         {
-            var client = new MongoClient(ConnectionString.Value);
-            var aaa = client.GetDatabase("admin");
-            var isMongoLive = aaa.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
+            try
+            {
+                var client = new MongoClient(ConnectionString.Value);
+                var adminDb = client.GetDatabase("admin");
+                var isMongoLive = adminDb.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(1000);
 
-            return isMongoLive;
+                return isMongoLive;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }
