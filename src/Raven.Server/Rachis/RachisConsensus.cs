@@ -1498,15 +1498,25 @@ namespace Raven.Server.Rachis
                                 return;
                             break;
                         case CommitIndexModification.AnyChange:
-                            break;
+                            await WaitForCommitChangeOrThrowTimeoutException(timeoutTask, task);
+                            return;
                         default:
                             throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                     }
                 }
 
-                if (timeoutTask == await Task.WhenAny(task, timeoutTask))
-                    ThrowTimeoutException();
+                await WaitForCommitChangeOrThrowTimeoutException(timeoutTask, task);
             }
+
+            ThrowTimeoutException();
+        }
+
+        private static async Task WaitForCommitChangeOrThrowTimeoutException(Task timeoutTask, Task task)
+        {
+            if (timeoutTask == await Task.WhenAny(task, timeoutTask))
+                ThrowTimeoutException();
+
+            await task; // propagate cancellation/exception 
         }
 
         private static void ThrowTimeoutException()

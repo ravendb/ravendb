@@ -3,7 +3,7 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
 using Xunit;
 
-namespace SlowTests.Server.Documents.SqlMigration
+namespace SlowTests.Server.Documents.Migration
 {
     public class MsSQLSchemaTest : SqlAwareTestBase
     {

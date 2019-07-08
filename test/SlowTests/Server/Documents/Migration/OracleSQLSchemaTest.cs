@@ -4,7 +4,7 @@ using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Server.Documents.SqlMigration
+namespace SlowTests.Server.Documents.Migration
 {
     public class OracleSchemaTest : SqlAwareTestBase
     {
