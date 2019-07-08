@@ -756,6 +756,14 @@ namespace Raven.Server.Smuggler.Documents
                     progress.ExpirationConfigurationUpdated = true;
                 }
 
+                if (databaseRecord?.Refresh != null)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring refresh from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRefreshCommand(databaseRecord.Refresh, _database.Name, RaftIdGenerator.DontCareId)));
+                    progress.RefreshConfigurationUpdated = true;
+                }
+
                 if (databaseRecord?.RavenConnectionStrings.Count > 0)
                 {
                     if (_log.IsInfoEnabled)

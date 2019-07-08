@@ -308,6 +308,7 @@ namespace Raven.Server.ServerWide
                     case nameof(EditRevisionsConfigurationCommand):
                     case nameof(UpdatePeriodicBackupCommand):
                     case nameof(EditExpirationCommand):
+                    case nameof(EditRefreshCommand):
                     case nameof(ModifyConflictSolverCommand):
                     case nameof(UpdateTopologyCommand):
                     case nameof(DeleteDatabaseCommand):
@@ -1846,6 +1847,7 @@ namespace Raven.Server.ServerWide
                 case nameof(SetIndexStateCommand):
                 case nameof(EditRevisionsConfigurationCommand):
                 case nameof(EditExpirationCommand):
+                case nameof(EditRefreshCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
