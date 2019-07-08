@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(s3Settings, progress, cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(s3Settings.BucketName))
+                throw new ArgumentException("AWS Bucket name cannot be null or empty");  
             _bucketName = s3Settings.BucketName;
         }
 
