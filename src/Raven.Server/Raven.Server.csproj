@@ -89,7 +89,7 @@
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="2.7.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="2.3.0" />
-    <PackageReference Include="JetBrains.Annotations" Version="2019.1.1">
+    <PackageReference Include="JetBrains.Annotations" Version="2019.1.3">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.20-ravendb" />

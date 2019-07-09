@@ -13,13 +13,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Basic.Entities;
-using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Session;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
@@ -350,7 +344,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "user-1"}, "users/1");
+                    await session.StoreAsync(new User { Name = "user-1" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -374,12 +368,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "user-2"}, "users/2");
+                    await session.StoreAsync(new User { Name = "user-2" }, "users/2");
 
                     await session.SaveChangesAsync();
                 }
 
-        
+
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
@@ -389,12 +383,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupStatus = store.Maintenance.Send(operation);
                 using (var client = new RavenAwsS3Client(S3Fact.S3Settings))
                 {
-                    lastFileToRestore = (await client.ListObjects( backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
+                    lastFileToRestore = (await client.ListObjects(backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "user-3"}, "users/3");
+                    await session.StoreAsync(new User { Name = "user-3" }, "users/3");
 
                     await session.SaveChangesAsync();
                 }
@@ -423,7 +417,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
                         users = session.Load<User>("users/2");
-                        Assert.NotNull(users);                 
+                        Assert.NotNull(users);
                         users = session.Load<User>("users/3");
                         Assert.Null(users);
                     }
@@ -601,36 +595,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }, OperationStatus.Completed);
 
             Assert.Equal(OperationStatus.Completed, value);
-        }
-
-        private string EncryptedServer(out X509Certificate2 adminCert, out string name)
-        {
-            var serverCertPath = SetupServerAuthentication();
-            var dbName = GetDatabaseName();
-            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            var buffer = new byte[32];
-            using (var rand = RandomNumberGenerator.Create())
-            {
-                rand.GetBytes(buffer);
-            }
-
-            var base64Key = Convert.ToBase64String(buffer);
-
-            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-            try
-            {
-                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // so we fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-            }
-
-            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-            name = dbName;
-            return Convert.ToBase64String(buffer);
         }
 
         private static S3Settings CopyLocalS3Settings()
