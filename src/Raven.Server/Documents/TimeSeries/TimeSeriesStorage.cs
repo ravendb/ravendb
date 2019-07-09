@@ -679,8 +679,8 @@ namespace Raven.Server.Documents.TimeSeries
                     var splitSegment = new TimeSeriesValuesSegment(buffer.Ptr, MaxSegmentSize);
                     splitSegment.Initialize(valuesCopy.Length);
 
-                    using (context.Allocator.Allocate(readOnlySegment.NumberOfValues + updatedValuesNewSize, out var valuesBuffer))
-                    using (context.Allocator.Allocate(readOnlySegment.NumberOfValues, out var stateBuffer))
+                    using (context.Allocator.Allocate((readOnlySegment.NumberOfValues + updatedValuesNewSize) * sizeof(double), out var valuesBuffer))
+                    using (context.Allocator.Allocate(readOnlySegment.NumberOfValues * sizeof(TimeStampState), out var stateBuffer))
                     {
                         Memory.Set(valuesBuffer.Ptr, 0, valuesBuffer.Length);
                         Memory.Set(stateBuffer.Ptr, 0, stateBuffer.Length);
