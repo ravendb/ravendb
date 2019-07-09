@@ -679,20 +679,25 @@ namespace Raven.Server
                 if (ServerStore.IsLeader() == false)
                     return;
 
-                byte[] newCertBytes = null;
+                byte[] newCertBytes;
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
                     newCertBytes = await RefreshViaLetsEncrypt(currentCertificate, forceRenew);
-
-                    // One of the prerequisites for the refresh has failed and it has been logged. Nothing to do anymore.
-                    if (newCertBytes == null)
-                        return;
                 }
                 else if (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) == false)
                 {
                     newCertBytes = RefreshViaExecutable();
                 }
+                else
+                {
+                    // The case of the periodic check, if the certificate changed on disk.
+                    return;
+                }
+
+                // One of the prerequisites for the refresh has failed and it has been logged. Nothing to do anymore.
+                if (newCertBytes == null)
+                    return;
 
                 await StartCertificateReplicationAsync(newCertBytes, false, raftRequestId);
             }
