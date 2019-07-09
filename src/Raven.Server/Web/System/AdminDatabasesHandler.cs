@@ -1178,11 +1178,6 @@ namespace Raven.Server.Web.System
                     writer.WriteEndObject();
                 }
             }
-
-            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
-            {
-                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
-            }
         }
 
         [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]
