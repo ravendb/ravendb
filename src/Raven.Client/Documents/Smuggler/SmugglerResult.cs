@@ -222,6 +222,8 @@ namespace Raven.Client.Documents.Smuggler
 
             public bool ExpirationConfigurationUpdated { get; set; }
 
+            public bool RefreshConfigurationUpdated { get; set; }
+
             public bool RavenConnectionStringsUpdated { get; set; }
 
             public bool SqlConnectionStringsUpdated { get; set; }
@@ -237,6 +239,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ExpirationConfigurationUpdated)
                     json[nameof(ExpirationConfigurationUpdated)] = ExpirationConfigurationUpdated;
+
+                if (RefreshConfigurationUpdated)
+                    json[nameof(RefreshConfigurationUpdated)] = RefreshConfigurationUpdated;
 
                 if (RavenConnectionStringsUpdated)
                     json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
@@ -282,6 +287,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ExpirationConfigurationUpdated)
                     sb.AppendLine("- Expiration");
+
+                if (RefreshConfigurationUpdated)
+                    sb.AppendLine("- Refresh");
 
                 if (RavenConnectionStringsUpdated)
                     sb.AppendLine("- RavenDB Connection Strings");

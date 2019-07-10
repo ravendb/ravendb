@@ -1,6 +1,6 @@
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public enum PeriodicBackupTestConnectionType
+    public enum PeriodicBackupConnectionType
     {
         None,
         

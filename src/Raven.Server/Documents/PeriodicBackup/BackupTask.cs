@@ -469,7 +469,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static bool IsAnyBackupFile(string filePath)
         {
-            if (RestoreUtils.IsBackupOrSnapshot(filePath))
+            if (RestorePointsBase.IsBackupOrSnapshot(filePath))
                 return true;
 
             var extension = Path.GetExtension(filePath);

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -149,6 +150,8 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureRefreshOperationResult> ConfigureRefreshOperationResult = GenerateJsonDeserializationRoutine<ConfigureRefreshOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpdatePeriodicBackupOperationResult> ConfigurePeriodicBackupOperationResult = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupOperationResult>();
 

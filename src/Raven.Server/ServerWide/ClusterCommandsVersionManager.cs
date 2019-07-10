@@ -108,6 +108,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteServerWideBackupConfigurationCommand)] = 42_001,
             [nameof(UpdateUnusedDatabaseIdsCommand)] = 42_002,
             [nameof(UpdateLicenseLimitsCommand)] = 42_002,
+            [nameof(EditRefreshCommand)] = 42_003,
         };
 
         public static bool CanPutCommand(string command)

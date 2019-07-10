@@ -437,6 +437,19 @@ namespace Tests.Infrastructure
             return leader;
         }
 
+        protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftClusterWithSsl(
+            int numberOfNodes,
+            bool shouldRunInMemory = true,
+            int? leaderIndex = null,
+            bool createNewCert = false,
+            string serverCertPath = null,
+            IDictionary<string, string> customSettings = null,
+            List<IDictionary<string, string>> customSettingsList = null,
+            bool watcherCluster = false)
+        {
+            return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, createNewCert, serverCertPath, customSettings, customSettingsList,
+                watcherCluster);
+        }
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
             int numberOfNodes,

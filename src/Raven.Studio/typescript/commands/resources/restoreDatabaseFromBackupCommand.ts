@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class restoreDatabaseFromBackupCommand extends commandBase {
 
-    constructor(private restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration) {
+    constructor(private restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase) {
         super();
     }
 

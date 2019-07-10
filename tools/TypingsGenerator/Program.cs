@@ -332,8 +332,10 @@ namespace TypingsGenerator
             // ongoing tasks - backup
             scripter.AddType(typeof(OngoingTaskBackup));
             scripter.AddType(typeof(PeriodicBackupConfiguration));
-            scripter.AddType(typeof(PeriodicBackupTestConnectionType));
+            scripter.AddType(typeof(PeriodicBackupConnectionType));
             scripter.AddType(typeof(RestoreBackupConfiguration));
+            scripter.AddType(typeof(RestoreFromS3Configuration));
+            scripter.AddType(typeof(RestoreType));
             scripter.AddType(typeof(RestorePoints));
             scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(StudioTasksHandler.NextCronExpressionOccurrence));

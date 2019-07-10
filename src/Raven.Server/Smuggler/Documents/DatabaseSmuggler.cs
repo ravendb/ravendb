@@ -598,7 +598,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     if (_options.IncludeExpired == false &&
-                        ExpirationStorage.HasExpired(item.Document.Data, _time.GetUtcNow()))
+                        ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
                     {
                         SkipDocument(item, result);
                         continue;

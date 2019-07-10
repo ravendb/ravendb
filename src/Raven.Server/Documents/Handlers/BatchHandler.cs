@@ -538,7 +538,7 @@ namespace Raven.Server.Documents.Handlers
                                         using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
                                         {
                                             Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
-                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler);
+                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
                                         }
 
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,

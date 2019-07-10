@@ -1429,7 +1429,12 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-
+            var record = Cluster.ReadDatabase(context, name, out _);
+            if (record != null && record.Encrypted && record.Topology.RelevantFor(NodeTag))
+            {
+                throw new InvalidOperationException(
+                    $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
+            }
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
             tree.Delete(name);
@@ -1551,6 +1556,18 @@ namespace Raven.Server.ServerWide
                     $"Expiration delete frequency for database '{databaseName}' must be greater than 0.");
             }
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
+            return SendToLeaderAsync(editExpiration);
+        }
+
+        public Task<(long Index, object Result)> ModifyDatabaseRefresh(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var refresh = JsonDeserializationCluster.RefreshConfiguration(configurationJson);
+            if (refresh.RefreshFrequencyInSec <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Refresh frequency for database '{databaseName}' must be greater than 0.");
+            }
+            var editExpiration = new EditRefreshCommand(refresh, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
 

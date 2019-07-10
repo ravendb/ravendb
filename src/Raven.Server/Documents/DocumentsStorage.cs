@@ -1334,7 +1334,7 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, documentFlags);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, nonPersistentFlags, documentFlags);
                     }
                 }
 

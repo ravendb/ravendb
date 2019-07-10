@@ -444,7 +444,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = files.Last()
+                    LastFileNameToRestore = files.OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -624,7 +624,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = files.Last()
+                    LastFileNameToRestore = files.OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);

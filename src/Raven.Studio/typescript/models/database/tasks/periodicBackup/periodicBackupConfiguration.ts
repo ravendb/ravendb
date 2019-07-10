@@ -146,7 +146,7 @@ class periodicBackupConfiguration {
     }
 
     private updateFolderPathOptions(path: string) {
-        new getFolderPathOptionsCommand(path, true)
+        getFolderPathOptionsCommand.forServerLocal(path, true)
             .execute()
             .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
                 if (this.localSettings().folderPath() !== path) {

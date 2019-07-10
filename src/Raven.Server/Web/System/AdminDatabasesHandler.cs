@@ -47,6 +47,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
@@ -271,6 +272,11 @@ namespace Raven.Server.Web.System
                     throw licenseLimit;
                 }
 
+                if (databaseRecord.Encrypted && databaseRecord.Topology?.DynamicNodesDistribution == true)
+                {
+                    throw new InvalidOperationException($"Cannot enable '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
+                }
+
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
                 {
                     using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
@@ -486,37 +492,55 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore-path");
-                var restorePathJson = JsonDeserializationServer.DatabaseRestorePath(restorePathBlittable);
+                PeriodicBackupConnectionType connectionType;
+                var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+                if (type == null)
+                {
+                    //Backward compatibility
+                    connectionType = PeriodicBackupConnectionType.Local;
+                }
+                else if (Enum.TryParse(type, out connectionType) == false)
+                {
+                    throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
+                }
 
+                var restorePathBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "restore-info");
                 var restorePoints = new RestorePoints();
+                var sortedList = new SortedList<DateTime, RestorePoint>(new RestorePointsBase.DescendedDateComparer());
 
-                try
+                switch (connectionType)
                 {
-                    Directory.GetLastAccessTime(restorePathJson.Path);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    throw new InvalidOperationException($"Unauthorized access to path: {restorePathJson.Path}");
-                }
+                    case PeriodicBackupConnectionType.Local:
+                        var localSettings = JsonDeserializationServer.LocalSettings(restorePathBlittable);
+                        var directoryPath = localSettings.FolderPath;
 
-                if (Directory.Exists(restorePathJson.Path) == false)
-                    throw new InvalidOperationException($"Path '{restorePathJson.Path}' doesn't exist");
+                        try
+                        {
+                            Directory.GetLastAccessTime(directoryPath);
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            throw new InvalidOperationException($"Unauthorized access to path: {directoryPath}");
+                        }
 
-                var sortedList = new SortedList<DateTime, RestorePoint>(new RestoreUtils.DescendedDateComparer());
-                var directories = Directory.GetDirectories(restorePathJson.Path).OrderBy(x => x).ToList();
-                if (directories.Count == 0)
-                {
-                    // no folders in directory
-                    // will scan the directory for backup files
-                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, context, assertLegacyBackups: true);
-                }
-                else
-                {
-                    foreach (var directory in directories)
-                    {
-                        RestoreUtils.FetchRestorePoints(directory, sortedList, context);
-                    }
+                        if (Directory.Exists(directoryPath) == false)
+                            throw new InvalidOperationException($"Path '{directoryPath}' doesn't exist");
+
+                        var localRestoreUtils = new LocalRestorePoints(sortedList, context);
+                        await localRestoreUtils.FetchRestorePoints(directoryPath);
+
+                        break;
+
+                    case PeriodicBackupConnectionType.S3:
+                        var s3Settings = JsonDeserializationServer.S3Settings(restorePathBlittable);
+                        using (var s3RestoreUtils = new S3RestorePoints(sortedList, context, s3Settings))
+                        {
+                            await s3RestoreUtils.FetchRestorePoints(s3Settings.RemoteFolderName);
+                        }
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 restorePoints.List = sortedList.Values.ToList();
@@ -538,96 +562,47 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
-                var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
-
-                var databaseName = restoreConfigurationJson.DatabaseName;
-                if (string.IsNullOrWhiteSpace(databaseName))
-                    throw new ArgumentException("Database name can't be null or empty");
-
-                if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                    throw new BadRequestException(errorMessage);
-
-                var extension = Path.GetExtension(restoreConfigurationJson.LastFileNameToRestore);
-                if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension || extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
+                RestoreType restoreType;
+                if (restoreConfiguration.TryGet("Type", out string typeAsString))
                 {
-                    long backupSizeInBytes;
-                    var zipPath = Path.Combine(restoreConfigurationJson.BackupLocation, restoreConfigurationJson.LastFileNameToRestore);
-
-                    try
-                    {
-                        using (var zip = ZipFile.OpenRead(zipPath))
-                            backupSizeInBytes = zip.Entries.Sum(entry => entry.Length);
-                    }
-                    catch (Exception e)
-                    {
-                        if (e is InvalidDataException)
-                        {
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Restore database from snapshot operation failed. Invalid snapshot file {restoreConfigurationJson.LastFileNameToRestore}", e);
-                            throw new InvalidDataException($"Invalid snapshot file {restoreConfigurationJson.LastFileNameToRestore} at {zipPath}", e);
-                        }
-
-                        if (e is FileNotFoundException)
-                        {
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Restore database from snapshot operation failed. Could not find file {restoreConfigurationJson.LastFileNameToRestore}", e);
-                            throw new FileNotFoundException($"Could not find file {restoreConfigurationJson.LastFileNameToRestore} at {zipPath}", e);
-                        }
-
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Restore database from snapshot operation failed. Error reading snapshot file {restoreConfigurationJson.LastFileNameToRestore}", e);
-
-                        throw new IOException($"Error reading snapshot file {restoreConfigurationJson.LastFileNameToRestore}, at {zipPath}. Please provide a valid snapshot file.", e);
-                    }
-
-                    var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
-
-                    var destinationPath = string.IsNullOrEmpty(restoreConfigurationJson.DataDirectory) == false 
-                        ? new PathSetting(restoreConfigurationJson.DataDirectory, baseDataDirectory).FullPath
-                        : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, databaseName, ResourceType.Database);
-
-                    var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-                    var destinationDirInfo = DiskSpaceChecker.GetDriveInfo(destinationPath, drivesInfo, out _);
-                    var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(destinationDirInfo.DriveName);
-
-                    if (destinationDriveInfo == null)
-                        throw new ArgumentException($"Provided path starts with an invalid drive name. Please use a proper path. Drive name provided: {destinationDirInfo.DriveName}.");
-
-                    var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(backupSizeInBytes, SizeUnit.Bytes);
-
-                    if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
-                        throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
+                    if(RestoreType.TryParse(typeAsString, out restoreType) == false)
+                        throw new ArgumentException($"{typeAsString} is unknown backup type.");
                 }
-
-                ServerStore.EnsureNotPassive();
-                HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
-
-                using (context.OpenReadTransaction())
+                else
                 {
-                    if (ServerStore.Cluster.ReadDatabase(context, databaseName) != null)
-                        throw new ArgumentException($"Cannot restore data to an existing database named {databaseName}");
-
-                    var clusterTopology = ServerStore.GetClusterTopology(context);
-
-                    if (string.IsNullOrWhiteSpace(restoreConfigurationJson.EncryptionKey) == false)
-                    {
-                        var key = Convert.FromBase64String(restoreConfigurationJson.EncryptionKey);
-                        if (key.Length != 256 / 8)
-                            throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
-
-                        var isEncrypted = string.IsNullOrWhiteSpace(restoreConfigurationJson.EncryptionKey) == false;
-                        if (isEncrypted && NotUsingHttps(clusterTopology.GetUrlFromTag(ServerStore.NodeTag)))
-                            throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
-                    }
+                    restoreType = RestoreType.Local;
                 }
 
                 var operationId = ServerStore.Operations.GetNextOperationId();
                 var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
-                var restoreBackupTask = new RestoreBackupTask(
-                    ServerStore,
-                    restoreConfigurationJson,
-                    ServerStore.NodeTag,
-                    cancelToken);
+                RestoreBackupTaskBase restoreBackupTask;
+                string databaseName;
+                switch (restoreType)
+                {
+                    case RestoreType.Local:
+                        var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
+                        restoreBackupTask  = new RestoreFromLocal(
+                            ServerStore,
+                            localConfiguration,
+                            ServerStore.NodeTag,
+                            cancelToken);
+                        databaseName = await ValidateFreeSpace(localConfiguration, context, restoreBackupTask);
+                        break;
+
+                    case RestoreType.S3:
+                        var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
+                        restoreBackupTask  = new RestoreFromS3(
+                            ServerStore,
+                            s3Configuration,
+                            ServerStore.NodeTag,
+                            cancelToken);
+                        databaseName = await ValidateFreeSpace(s3Configuration,  context, restoreBackupTask);
+
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"No matching backup type was found for {restoreType}");
+                }
 
                 var t = ServerStore.Operations.AddOperation(
                     null,
@@ -641,6 +616,64 @@ namespace Raven.Server.Web.System
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
             }
+        }
+
+        private async Task<string> ValidateFreeSpace(RestoreBackupConfigurationBase restoreBackup, TransactionOperationContext context,
+            RestoreBackupTaskBase restoreBackupTask)
+        {
+            var extension = Path.GetExtension(restoreBackup.LastFileNameToRestore);
+            if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension || 
+                extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
+            {
+                long backupSizeInBytes;
+
+                try
+                {
+                    backupSizeInBytes = await restoreBackupTask.CalculateBackupSizeInBytes();
+                }
+                catch (Exception e)
+                {
+                    if (e is InvalidDataException)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Restore database from snapshot operation failed. Invalid snapshot file {restoreBackup.LastFileNameToRestore}", e);
+                        throw new InvalidDataException($"Invalid snapshot file {restoreBackup.LastFileNameToRestore} ", e);
+                    }
+
+                    if (e is FileNotFoundException)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Restore database from snapshot operation failed. Could not find file {restoreBackup.LastFileNameToRestore}", e);
+                        throw new FileNotFoundException($"Could not find file {restoreBackup.LastFileNameToRestore} ", e);
+                    }
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Restore database from snapshot operation failed. Error reading snapshot file {restoreBackup.LastFileNameToRestore}", e);
+
+                    throw new IOException($"Error reading snapshot file {restoreBackup.LastFileNameToRestore}. Please provide a valid snapshot file.", e);
+                }
+
+                var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
+
+                var destinationPath = string.IsNullOrEmpty(restoreBackup.DataDirectory) == false
+                    ? new PathSetting(restoreBackup.DataDirectory, baseDataDirectory).FullPath
+                    : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, restoreBackup.DatabaseName, ResourceType.Database);
+
+                var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+                var destinationDirInfo = DiskSpaceChecker.GetDriveInfo(destinationPath, drivesInfo, out _);
+                var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(destinationDirInfo.DriveName);
+
+                if (destinationDriveInfo == null)
+                    throw new ArgumentException($"Provided path starts with an invalid drive name. Please use a proper path. Drive name provided: {destinationDirInfo.DriveName}.");
+
+                var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(backupSizeInBytes, SizeUnit.Bytes);
+
+                if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
+                    throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
+            }
+            
+            HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
+            return restoreBackup.DatabaseName;
         }
 
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
@@ -784,6 +817,11 @@ namespace Raven.Server.Web.System
                 long index;
                 using (context.OpenReadTransaction())
                     databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out index);
+
+                if (databaseRecord.Encrypted)
+                {
+                    throw new InvalidOperationException($"Cannot toggle '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
+                }
 
                 if (enable == databaseRecord.Topology.DynamicNodesDistribution)
                     return;
@@ -1139,11 +1177,6 @@ namespace Raven.Server.Web.System
 
                     writer.WriteEndObject();
                 }
-            }
-
-            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
-            {
-                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
             }
         }
 

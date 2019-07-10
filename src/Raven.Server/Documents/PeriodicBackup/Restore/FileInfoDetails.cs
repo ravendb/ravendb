@@ -5,7 +5,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
     public class ListObjectsResult
     {
-        public List<FileInfoDetails> FileInfoDetails { get; set; }
+        public List<S3FileInfoDetails> FileInfoDetails { get; set; }
 
         public string ContinuationToken { get; set; }
     }
@@ -15,5 +15,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public string FullPath { get; set; }
 
         public DateTime LastModified { get; set; }
+    }
+
+    public class S3FileInfoDetails
+    {
+        public string FullPath { get; set; }
+
+        public string LastModifiedAsString { get; set; }
     }
 }
