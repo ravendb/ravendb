@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -772,6 +773,114 @@ namespace SlowTests.Cluster
                     user.Name = "karmel";
                     var e = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.Equal(typeof(NotSupportedException), e.InnerException.GetType());
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ModifyDocumentWithRevision()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User {Name = "Aviv1"}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                { 
+                    await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(2, list.Count);
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(3, list.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(4, list.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PutDocumentInDifferentCollectionWithRevision()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PutDocumentInDifferentCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(2, list.Count);
                 }
             }
         }
