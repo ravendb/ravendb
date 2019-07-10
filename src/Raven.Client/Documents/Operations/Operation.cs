@@ -304,7 +304,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 await _additionalTask.ConfigureAwait(false);
-                return (TResult)_result.Task.Result; // already done waiting
+                return (TResult)await _result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
             }
         }
 
