@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Operations
         private readonly RequestExecutor _requestExecutor;
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
+        private readonly Task _additionalTask;
         private readonly long _id;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
@@ -35,10 +36,16 @@ namespace Raven.Client.Documents.Operations
         private bool _isProcessing;
 
         public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag = null)
+            : this(requestExecutor, changes, conventions, id, additionalTask: null)
+        {
+        }
+
+        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, Task additionalTask)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
             _conventions = conventions;
+            _additionalTask = additionalTask ?? Task.CompletedTask;
             _id = id;
             NodeTag = nodeTag;
 
@@ -298,7 +305,8 @@ namespace Raven.Client.Documents.Operations
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
                 }
 
-                return (TResult)await _result.Task.ConfigureAwait(false);
+                await _additionalTask.ConfigureAwait(false);
+                return (TResult)await _result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
             }
         }
 
