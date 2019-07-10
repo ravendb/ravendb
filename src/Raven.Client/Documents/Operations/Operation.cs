@@ -36,11 +36,11 @@ namespace Raven.Client.Documents.Operations
         private bool _isProcessing;
 
         public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag = null)
-            : this(requestExecutor, changes, conventions, id, additionalTask: null)
+            : this(requestExecutor, changes, conventions, id, nodeTag: nodeTag, additionalTask: null)
         {
         }
 
-        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, Task additionalTask)
+        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, string nodeTag, Task additionalTask)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
