@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Operations
         private readonly RequestExecutor _requestExecutor;
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
+        private readonly Task _additionalTask;
         private readonly long _id;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
@@ -33,11 +34,12 @@ namespace Raven.Client.Documents.Operations
 
         private bool _isProcessing;
 
-        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
+        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, Task additionalTask = null)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
             _conventions = conventions;
+            _additionalTask = additionalTask ?? Task.CompletedTask;
             _id = id;
 
             StatusFetchMode = _conventions.OperationStatusFetchMode;
@@ -296,7 +298,8 @@ namespace Raven.Client.Documents.Operations
                     throw new TimeoutException($"After {timeout}, did not get a reply for operation " + _id);
                 }
 
-                return (TResult)await _result.Task.ConfigureAwait(false);
+                await _additionalTask.ConfigureAwait(false);
+                return (TResult)_result.Task.Result; // already done waiting
             }
         }
 
