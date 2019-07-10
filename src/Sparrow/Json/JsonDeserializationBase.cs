@@ -194,7 +194,7 @@ namespace Sparrow.Json
                             converterExpression = Expression.Constant(null, typeof(Func<BlittableJsonReaderObject, BlittableJsonReaderObject>));
                         else
                             converterExpression = Expression.Constant(GetConverterFromCache(valueType));
-                        
+
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType.GenericTypeArguments[0], valueType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                     }
@@ -595,11 +595,8 @@ namespace Sparrow.Json
         {
             var list = new List<T>();
 
-            BlittableJsonReaderArray array;
-            if (json.TryGet(name, out array) == false || array == null)
+            if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return list.ToArray();
-
-            LazyNumberValue lnv;
 
             foreach (object item in array.Items)
             {
@@ -616,7 +613,7 @@ namespace Sparrow.Json
 
                 object copy = item;
 
-                if (item is LazyStringValue lsv && IsNumeric<T>())
+                if (item is LazyStringValue lsv && IsNumeric())
                 {
                     copy = new LazyNumberValue(lsv);
                 }
@@ -626,7 +623,7 @@ namespace Sparrow.Json
 
             return list.ToArray();
 
-            bool IsNumeric<T>()
+            bool IsNumeric()
             {
                 return typeof(T) == typeof(double) ||
                     typeof(T) == typeof(decimal) ||

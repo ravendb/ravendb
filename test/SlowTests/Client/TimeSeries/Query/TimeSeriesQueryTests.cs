@@ -8,9 +8,11 @@ namespace SlowTests.Client.TimeSeries.Query
     {
         private class TimeSeriesRangeAggregation
         {
+#pragma warning disable 649
             public long Count;
             public double? Max, Min, Last, First;
             public DateTime To, From;
+#pragma warning restore 649
         }
 
         private class TimeSeriesAggregation
