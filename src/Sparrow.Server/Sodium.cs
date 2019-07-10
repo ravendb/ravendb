@@ -72,14 +72,13 @@ namespace Sparrow.Server
             }
             catch (Exception ex)
             {
-                var platformStr = $"Arch:{RuntimeInformation.OSArchitecture}, OSDesc:{RuntimeInformation.OSDescription}";
+                var errString = $"{LIBSODIUM} version might be invalid, missing or not usable on current platform.";
 
-                var errString = $"{LIBSODIUM} version might be invalid, missing or not usable on current platform '${platformStr}";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.";
 
-                if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). " + 
-                                 "It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
-                
+                errString += $" Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}";
+
                 throw new IncorrectDllException(errString, ex);
             }
         }
