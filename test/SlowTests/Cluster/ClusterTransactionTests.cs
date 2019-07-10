@@ -94,14 +94,14 @@ namespace SlowTests.Cluster
             {
                 var count = 0;
                 var parallelism = Environment.ProcessorCount * 5;
-                
+
                 for (var i = 0; i < 10; i++)
                 {
                     var tasks = new List<Task>();
                     for (var j = 0; j < parallelism; j++)
                     {
                         tasks.Add(Task.Run(async () =>
-                        {                        
+                        {
                             using (var session = leaderStore.OpenSession(new SessionOptions
                             {
                                 TransactionMode = TransactionMode.ClusterWide
@@ -124,13 +124,13 @@ namespace SlowTests.Cluster
                     {
                         TransactionMode = TransactionMode.ClusterWide
                     }))
-                    {                        
+                    {
                         var results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<User>(
                             Enumerable.Range(i * parallelism, parallelism).Select(x =>
-                                $"usernames/{Interlocked.Increment(ref count)}").ToArray<string>());                        
-                        Assert.Equal(parallelism, results.Count);                        
+                                $"usernames/{Interlocked.Increment(ref count)}").ToArray<string>());
+                        Assert.Equal(parallelism, results.Count);
                     }
-                }            
+                }
             }
 
         }
@@ -861,7 +861,7 @@ namespace SlowTests.Cluster
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    await session.StoreAsync(new User {Name = "Aviv1"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -869,7 +869,7 @@ namespace SlowTests.Cluster
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
-                { 
+                {
                     await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
                     await session.SaveChangesAsync();
 
@@ -1211,7 +1211,7 @@ namespace SlowTests.Cluster
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var value = new List<string> {"1", null, "2"};
+                    var value = new List<string> { "1", null, "2" };
                     const string id = "test/user";
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, value);
                     await session.SaveChangesAsync();
