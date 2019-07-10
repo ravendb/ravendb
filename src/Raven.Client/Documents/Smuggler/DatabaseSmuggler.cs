@@ -48,14 +48,26 @@ namespace Raven.Client.Documents.Smuggler
 
         public Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, string toFile, CancellationToken token = default)
         {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             return ExportAsync(options, async stream =>
             {
-                using (var file = File.OpenWrite(toFile))
-                    await stream.CopyToAsync(file, 8192, token).ConfigureAwait(false);
-            }, token);
+                try
+                {
+                    using (var file = File.OpenWrite(toFile))
+                    {
+                        await stream.CopyToAsync(file, 8192, token).ConfigureAwait(false);
+                    }
+                    tcs.TrySetResult(null);
+                }
+                catch (Exception exception)
+                {
+                    tcs.TrySetException(exception);
+                    throw;
+                }
+            }, tcs.Task, token);
         }
 
-        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
+        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, Task additionalTask, CancellationToken token = default)
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
@@ -94,8 +106,18 @@ namespace Raven.Client.Documents.Smuggler
                     await tcs.Task.ConfigureAwait(false);
                 }
 
-                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
+                return new Operation(
+                    _requestExecutor, 
+                    () => _store.Changes(_databaseName), 
+                    _requestExecutor.Conventions, 
+                    operationId, 
+                    additionalTask);
             }
+        }
+
+        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
+        {
+            return await ExportAsync(options, handleStreamResponse, null, token).ConfigureAwait(false);
         }
 
         public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default)
