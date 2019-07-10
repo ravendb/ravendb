@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -107,17 +106,17 @@ namespace Raven.Client.Documents.Smuggler
                 }
 
                 return new Operation(
-                    _requestExecutor, 
-                    () => _store.Changes(_databaseName), 
-                    _requestExecutor.Conventions, 
-                    operationId, 
+                    _requestExecutor,
+                    () => _store.Changes(_databaseName),
+                    _requestExecutor.Conventions,
+                    operationId,
                     additionalTask);
             }
         }
 
-        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
+        private Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
         {
-            return await ExportAsync(options, handleStreamResponse, null, token).ConfigureAwait(false);
+            return ExportAsync(options, handleStreamResponse, null, token);
         }
 
         public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default)
@@ -129,7 +128,7 @@ namespace Raven.Client.Documents.Smuggler
 
             Operation operation = null;
             var importOptions = new DatabaseSmugglerImportOptions(options);
-            
+
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             await ExportAsync(options, async stream =>
@@ -196,7 +195,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             return ImportInternalAsync(options, stream, leaveOpen: true, token);
         }
-        
+
         private async Task<Operation> ImportInternalAsync(DatabaseSmugglerImportOptions options, Stream stream, bool leaveOpen, CancellationToken token = default)
         {
             var disposeStream = leaveOpen ? null : new DisposeStreamOnce(stream);
