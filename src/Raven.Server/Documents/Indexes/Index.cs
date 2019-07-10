@@ -2833,7 +2833,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {
-            DocumentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+            DocumentDatabase?.DatabaseShutdown.ThrowIfCancellationRequested();
 
             if (assertState && _isCompactionInProgress)
                 ThrowCompactionInProgress();
