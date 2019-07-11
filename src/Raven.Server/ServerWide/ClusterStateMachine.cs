@@ -541,6 +541,9 @@ namespace Raven.Server.ServerWide
         [Conditional("DEBUG")]
         private static void ValidateGuid(BlittableJsonReaderObject cmd, string type)
         {
+            if (InterVersionTestUtil.InProgress)
+                return;
+
             if (cmd.TryGet(nameof(CommandBase.UniqueRequestId), out string guid) == false)
             {
                 throw new ArgumentNullException($"Guid is not provided in the command {type}.");

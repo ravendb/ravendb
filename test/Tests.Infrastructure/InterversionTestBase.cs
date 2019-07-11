@@ -17,11 +17,21 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Tests.Infrastructure.InterversionTest;
+using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public abstract class InterversionTestBase : RavenTestBase
+    public abstract class InterversionTestBase : ClusterTestBase
     {
+        public class ProcessNode
+        {
+            public string Version;
+            public Process Process;
+            public string Url;
+            public string ServerPath;
+            public string DataDir;
+        }
+
         private static readonly ConcurrentBag<Process> _allLaunchedServerProcesses = new ConcurrentBag<Process>();
 
         private readonly HashSet<Process> _testInstanceServerProcesses = new HashSet<Process>();
@@ -42,7 +52,7 @@ namespace Tests.Infrastructure
             [CallerMemberName] string database = null,
             CancellationToken token = default)
         {
-            var (serverUrl, serverProcess) = await GetServerAsync(serverVersion, options, database, token);
+            var processNode = await GetServerAsync(serverVersion, options, database, token);
 
             options = options ?? InterversionTestOptions.Default;
             var name = GetDatabaseName(database);
@@ -66,7 +76,7 @@ namespace Tests.Infrastructure
 
             var store = new DocumentStore
             {
-                Urls = new[] { serverUrl },
+                Urls = new[] { processNode.Url },
                 Database = name
             };
 
@@ -79,14 +89,14 @@ namespace Tests.Infrastructure
 
             store.AfterDispose += (sender, e) =>
             {
-                KillSlavedServerProcess(serverProcess);
+                KillSlavedServerProcess(processNode.Process);
             };
 
             return store;
         }
 
 
-        protected async Task<(string ServerUrl, Process ServerProcess)> GetServerAsync(
+        protected async Task<ProcessNode> GetServerAsync(
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
@@ -97,8 +107,58 @@ namespace Tests.Infrastructure
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
-            var locator = new ConfigurableRavenServerLocator(testServerPath);
-            return await RunServer(locator);
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion);
+
+            var result = await RunServer(locator);
+            return new ProcessNode
+            {
+                Process = result.ServerProcess,
+                Url = result.ServerUrl,
+                Version = serverVersion,
+                ServerPath = testServerPath,
+                DataDir = locator.DataDir
+            };
+        }
+
+        protected async Task UpgradeServerAsync(
+            string toVersion,
+            ProcessNode node,
+            CancellationToken token = default)
+        {
+            KillSlavedServerProcess(node.Process);
+
+            if (toVersion == "current")
+            {
+                RunLocalServer(node);
+                return;
+            }
+
+            var serverBuildInfo = ServerBuildDownloadInfo.Create(toVersion);
+            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
+            CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(node.ServerPath));
+
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(node.ServerPath, "Server"), toVersion, node.DataDir, node.Url);
+
+            var result = await RunServer(locator);
+            Assert.Equal(node.Url, result.ServerUrl);
+
+            node.Process = result.ServerProcess;
+            node.Version = toVersion;
+        }
+
+        private void RunLocalServer(ProcessNode node)
+        {
+            var server = GetNewServer(customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.Url,
+                [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = node.DataDir,
+            }, runInMemory: false, deletePrevious: false);
+
+            Servers.Add(server);
+
+            node.Process = null;
+            node.ServerPath = null;
+            node.Version = "current";
         }
 
         public static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
@@ -106,7 +166,7 @@ namespace Tests.Infrastructure
             foreach (var dir in source.GetDirectories())
                 CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
             foreach (var file in source.GetFiles())
-                file.CopyTo(Path.Combine(target.FullName, file.Name));
+                file.CopyTo(Path.Combine(target.FullName, file.Name), overwrite: true);
         }
 
         private async Task<(string ServerUrl, Process ServerProcess)> RunServer(ConfigurableRavenServerLocator locator)
@@ -177,6 +237,10 @@ namespace Tests.Infrastructure
             try
             {
                 process.Kill();
+                if (process.WaitForExit((int)TimeSpan.FromMinutes(1).TotalMilliseconds) == false)
+                {
+                    throw new TimeoutException("Failed to wait for the process to exit.");
+                }
             }
             catch (Exception e)
             {
@@ -251,9 +315,11 @@ namespace Tests.Infrastructure
                         serverProcess.Kill();
                 });
             }
+
+            base.Dispose(exceptionAggregator);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores, string database = null)
+        public async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores, string database = null)
         {
             var tasks = new List<Task<bool>>();
 

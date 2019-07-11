@@ -473,9 +473,15 @@ namespace FastTests
                     configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
                 }
                 configuration.Server.Name = ServerName;
+
                 configuration.Core.RunInMemory = options.RunInMemory;
-                configuration.Core.DataDirectory =
-                    configuration.Core.DataDirectory.Combine(options.PartialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
+              
+                if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory)) == false)
+                {
+                    configuration.Core.DataDirectory =
+                        configuration.Core.DataDirectory.Combine(options.PartialPath ?? $"Tests{Interlocked.Increment(ref _serverCounter)}");
+                }
+
                 configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(60, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
                 if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)) == false)
