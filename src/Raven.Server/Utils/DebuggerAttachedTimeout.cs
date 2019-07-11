@@ -37,4 +37,9 @@ namespace Raven.Server.Utils
             timespan = TimeSpan.FromMinutes(1);
         }
     }
+
+    public static class InterVersionTestUtil
+    {
+        public static bool InProgress;
+    }
 }
