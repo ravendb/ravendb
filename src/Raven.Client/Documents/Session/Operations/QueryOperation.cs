@@ -273,6 +273,21 @@ namespace Raven.Client.Documents.Session.Operations
 
             EnsureIsAcceptable(result, _indexQuery.WaitForNonStaleResults, _sp, _session);
 
+            SaveQueryResult(result);
+        }
+
+        public void EnsureIsAcceptableAndSaveResult(QueryResult result, TimeSpan responseElapsed)
+        {
+            if (result == null)
+                throw new IndexDoesNotExistException("Could not find index " + _indexName);
+
+            EnsureIsAcceptable(result, _indexQuery.WaitForNonStaleResults, responseElapsed, _session);
+
+            SaveQueryResult(result);
+        }
+
+        private void SaveQueryResult(QueryResult result)
+        {
             _currentQueryResults = result;
 
             if (Logger.IsInfoEnabled)
@@ -327,6 +342,16 @@ namespace Raven.Client.Documents.Session.Operations
 
                 Console.ReadLine();
 #endif
+                throw new TimeoutException(msg);
+            }
+        }
+
+        public static void EnsureIsAcceptable(QueryResult result, bool waitForNonStaleResults, TimeSpan? elapsed, InMemoryDocumentSessionOperations session)
+        {
+            if (waitForNonStaleResults && result.IsStale)
+            {
+                var msg = $"Waited for {elapsed?.Milliseconds:#,#;;0} ms for the query to return non stale result.";
+
                 throw new TimeoutException(msg);
             }
         }
