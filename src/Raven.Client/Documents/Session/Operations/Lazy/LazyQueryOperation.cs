@@ -59,9 +59,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             HandleResponse(queryResult, response.Elapsed);
         }
 
-        private void HandleResponse(QueryResult queryResult, TimeSpan responseElapsed)
+        private void HandleResponse(QueryResult queryResult, TimeSpan duration)
         {
-            _queryOperation.EnsureIsAcceptableAndSaveResult(queryResult, responseElapsed);
+            _queryOperation.EnsureIsAcceptableAndSaveResult(queryResult, duration);
 
             _afterQueryExecuted?.Invoke(queryResult);
             Result = _queryOperation.Complete<T>();
