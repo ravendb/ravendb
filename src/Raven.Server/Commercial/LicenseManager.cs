@@ -128,7 +128,7 @@ namespace Raven.Server.Commercial
 
                 ReloadLicense(firstRun: true);
 
-                PutMyNodeInfoAsync().IgnoreUnobservedExceptions();
+                Task.Run(PutMyNodeInfoAsync);
             }
             catch (Exception e)
             {
