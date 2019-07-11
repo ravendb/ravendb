@@ -186,6 +186,12 @@ interface databaseCreatedEventArgs {
 
 type availableConfigurationSectionId =  "restore" | "legacyMigration" | "encryption" | "replication" | "path";
 
+type restoreSource = "serverLocal" | "cloud";
+
+interface restoreTypeAware {
+    Type: Raven.Client.Documents.Operations.Backups.RestoreType;
+}
+
 interface availableConfigurationSection {
     name: string;
     id: availableConfigurationSectionId;

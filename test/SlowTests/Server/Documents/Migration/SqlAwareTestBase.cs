@@ -11,15 +11,15 @@ using Oracle.ManagedDataAccess.Client;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
-using SlowTests.Server.Documents.ETL.SQL;
-using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
-namespace SlowTests.Server.Documents.SqlMigration
+namespace SlowTests.Server.Documents.Migration
 {
     public abstract class SqlAwareTestBase : RavenTestBase
     {
+        private const int CommandTimeout = 10 * 60; // We want to avoid timeout exception. We don't care about performance here. The query can take long time if all the outer database are working simultaneously on the same machine 
+
         protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, MigrationSettings settings, bool binaryToAttachment = false)
         {
             foreach (var collection in settings.Collections)
@@ -149,6 +149,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 using (var dbCommand = connection.CreateCommand())
                 {
+                    dbCommand.CommandTimeout = CommandTimeout;
                     var createDatabaseQuery = "USE master IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE[{0}] CREATE DATABASE[{0}]";
                     dbCommand.CommandText = string.Format(createDatabaseQuery, databaseName);
                     dbCommand.ExecuteNonQuery();
@@ -168,6 +169,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         dbCommand.CommandText = command;
                         dbCommand.ExecuteNonQuery();
                     }
@@ -178,6 +180,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".insert.sql"));
                         dbCommand.CommandText = dataStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
@@ -195,6 +198,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     using (var dbCommand = con.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         var dropDatabaseQuery = "IF EXISTS(select * from sys.databases where name= '{0}') " +
                                                 "ALTER DATABASE [{0}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
                                                 "IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE [{0}]";
@@ -208,8 +212,6 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         protected DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
-            const int commandTimeout = 10 * 60; // We want to avoid timeout exception. We don't care about performance here. The query can take long time if all the outer database are working simultaneously on the same machine 
-            
             databaseName = "sql_test_" + Guid.NewGuid();
             var rawConnectionString = MySqlConnectionString.Instance.VerifiedConnectionString.Value;
             
@@ -224,7 +226,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 using (var dbCommand = connection.CreateCommand())
                 {
-                    dbCommand.CommandTimeout = commandTimeout;
+                    dbCommand.CommandTimeout = CommandTimeout;
                     dbCommand.CommandText = $"CREATE DATABASE `{databaseName}`";
                     dbCommand.ExecuteNonQuery();
                 }
@@ -238,7 +240,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 using (var dbCommand = dbConnection.CreateCommand())
                 {
-                    dbCommand.CommandTimeout = commandTimeout; 
+                    dbCommand.CommandTimeout = CommandTimeout;
                     var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".create.sql"));
                     dbCommand.CommandText = textStreamReader.ReadToEnd();
                     dbCommand.ExecuteNonQuery();
@@ -248,7 +250,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
-                        dbCommand.CommandTimeout = commandTimeout;
+                        dbCommand.CommandTimeout = CommandTimeout;
                         var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mysql." + dataSet + ".insert.sql"));
                         dbCommand.CommandText = textStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
@@ -265,7 +267,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                     using (var dbCommand = con.CreateCommand())
                     {
-                        dbCommand.CommandTimeout = commandTimeout;
+                        dbCommand.CommandTimeout = CommandTimeout;
                         var dropDatabaseQuery = "DROP DATABASE `{0}`";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
 
@@ -286,6 +288,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 connection.Open();
                 using (var dbCommand = connection.CreateCommand())
                 {
+                    dbCommand.CommandTimeout = CommandTimeout;
                     const string createDatabaseQuery = "CREATE DATABASE \"{0}\"";
                     dbCommand.CommandText = string.Format(createDatabaseQuery, databaseName);
                     dbCommand.ExecuteNonQuery();
@@ -301,6 +304,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
                 using (var dbCommand = dbConnection.CreateCommand())
                 {
+                    dbCommand.CommandTimeout = CommandTimeout;
                     var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".create.sql"));
                     dbCommand.CommandText = textStreamReader.ReadToEnd();
                     dbCommand.ExecuteNonQuery();
@@ -310,6 +314,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".insert.sql"));
                         dbCommand.CommandText = dataStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
@@ -325,6 +330,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     con.Open();
                     using (var dbCommand = con.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();
@@ -344,6 +350,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 connection.Open();
                 using (var dbCommand = connection.CreateCommand())
                 {
+                    dbCommand.CommandTimeout = CommandTimeout;
                     List<string> cmdList = new List<string>();
                     cmdList.Add($"CREATE USER \"{databaseName}\" IDENTIFIED BY {pass}");
                     cmdList.Add($"GRANT CONNECT, RESOURCE, DBA TO \"{databaseName}\"");
@@ -367,6 +374,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 var assembly = Assembly.GetExecutingAssembly();
                 using (var dbCommand = dbConnection.CreateCommand())
                 {
+                    dbCommand.CommandTimeout = CommandTimeout;
                     using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".create.sql")))
                     {
                         while (reader.Peek() >= 0)
@@ -380,6 +388,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 {
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".insert.sql")))
                         {
                             while (reader.Peek() >= 0)
@@ -401,6 +410,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     con.Open();
                     using (var dbCommand = con.CreateCommand())
                     {
+                        dbCommand.CommandTimeout = CommandTimeout;
                         var dropDatabaseQuery = $"DROP USER \"{dbName}\" CASCADE";
                         dbCommand.CommandText = dropDatabaseQuery;
                         dbCommand.ExecuteNonQuery();

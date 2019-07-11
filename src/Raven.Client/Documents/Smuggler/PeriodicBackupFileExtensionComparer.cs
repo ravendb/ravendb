@@ -17,10 +17,12 @@ namespace Raven.Client.Documents.Smuggler
             if (string.Equals(x, y))
                 return 0;
 
-            if (string.Equals(x, Constants.Documents.PeriodicBackup.SnapshotExtension, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(x, Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x, Constants.Documents.PeriodicBackup.FullBackupExtension, StringComparison.OrdinalIgnoreCase))
                 return -1;
 
-            if (string.Equals(x, Constants.Documents.PeriodicBackup.FullBackupExtension, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(x, Constants.Documents.PeriodicBackup.SnapshotExtension, StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(x, Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension, StringComparison.OrdinalIgnoreCase))
                 return -1;
 
             return 1;

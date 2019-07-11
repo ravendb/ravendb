@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -17,93 +18,112 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class Retention : RavenTestBase
     {
+        private static readonly SemaphoreSlim Locker = new SemaphoreSlim(1, 1);
+
         [Theory]
-        [InlineData(20, 5)]
-        [InlineData(20, 20)]
-        [InlineData(25, 10)]
-        [InlineData(30, 3)]
-        [InlineData(40, 20)]
-        [InlineData(45, 1)]
-        [InlineData(50, 50)]
-        [InlineData(70, 13)]
+        [InlineData(7, 3)]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate)
         {
-            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+            await Locker.WaitAsync();
 
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
-                (configuration, _) =>
-                {
-                    configuration.LocalSettings = new LocalSettings
+            try
+            {
+                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
+                    (configuration, _) =>
                     {
-                        FolderPath = backupPath
-                    };
-                },
-                _ =>
-                {
-                    var directories = Directory.GetDirectories(backupPath)
-                        .Where(x => Directory.GetFiles(x).Any(BackupUtils.IsFullBackupOrSnapshot));
+                        configuration.LocalSettings = new LocalSettings
+                        {
+                            FolderPath = backupPath
+                        };
+                    },
+                    _ =>
+                    {
+                        var directories = Directory.GetDirectories(backupPath)
+                            .Where(x => Directory.GetFiles(x).Any(BackupUtils.IsFullBackupOrSnapshot));
 
-                    return Task.FromResult(directories.Count());
-                }, timeout: 15000);
+                        return Task.FromResult(directories.Count());
+                    }, timeout: 15000);
+            }
+            finally
+            {
+                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
+                Locker.Release();
+            }
         }
 
         [Theory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(20, 5)]
-        [InlineData(20, 20)]
-        [InlineData(25, 10)]
-        [InlineData(30, 3)]
-        [InlineData(40, 20)]
-        [InlineData(45, 1)]
-        [InlineData(50, 50)]
-        [InlineData(70, 13)]
+        [InlineData(7, 3)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate)
         {
-            BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+            await Locker.WaitAsync();
 
-            await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
-                (configuration, databaseName) =>
-                {
-                    configuration.S3Settings = GetS3Settings(databaseName);
-                },
-                async databaseName =>
-                {
-                    using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
+            try
+            {
+                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
+
+                await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
+                    (configuration, databaseName) =>
                     {
-                        var folders = await client.ListObjects($"{client.RemoteFolderName}/", "/", listFolders: true);
-                        return folders.FileInfoDetails.Count;
-                    }
-                }, timeout: 120000);
+                        configuration.S3Settings = GetS3Settings(databaseName);
+                    },
+                    async databaseName =>
+                    {
+                        using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
+                        {
+                            var folders = await client.ListObjects($"{client.RemoteFolderName}/", "/", listFolders: true);
+                            return folders.FileInfoDetails.Count;
+                        }
+                    }, timeout: 120000);
+            }
+            finally
+            {
+                BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = false;
+                Locker.Release();
+            }
         }
 
         [Fact]
         public async Task configuration_validation()
         {
-            using (var store = GetDocumentStore())
+            await Locker.WaitAsync();
+
+            try
             {
-                var config = new PeriodicBackupConfiguration
+                Assert.False(BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation);
+
+                using (var store = GetDocumentStore())
                 {
-                    IncrementalBackupFrequency = "30 3 L * ?",
-                    RetentionPolicy = new RetentionPolicy
+                    var config = new PeriodicBackupConfiguration
                     {
-                        MinimumBackupAgeToKeep = TimeSpan.FromDays(-5)
-                    }
-                };
+                        IncrementalBackupFrequency = "30 3 L * ?",
+                        RetentionPolicy = new RetentionPolicy
+                        {
+                            MinimumBackupAgeToKeep = TimeSpan.FromDays(-5)
+                        }
+                    };
 
-                var error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
-                Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive"));
+                    var error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
+                    Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be positive"));
 
-                config.RetentionPolicy.MinimumBackupAgeToKeep = TimeSpan.FromHours(12);
-                error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
-                Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be bigger than one day"));
+                    config.RetentionPolicy.MinimumBackupAgeToKeep = TimeSpan.FromHours(12);
+                    error = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
+                    Assert.True(error.Message.Contains($"{nameof(RetentionPolicy.MinimumBackupAgeToKeep)} must be bigger than one day"));
+                }
+            }
+            finally
+            {
+                Locker.Release();
             }
         }
 
         private async Task CanDeleteBackupsByDate(
             int backupAgeInSeconds,
             int numberOfBackupsToCreate,
-            Action<PeriodicBackupConfiguration, string> modifyConfiguration, 
-            Func<string, Task<int>> getDirectoriesCount, 
+            Action<PeriodicBackupConfiguration, string> modifyConfiguration,
+            Func<string, Task<int>> getDirectoriesCount,
             int timeout)
         {
             var minimumBackupAgeToKeep = TimeSpan.FromSeconds(backupAgeInSeconds);

@@ -1024,7 +1024,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -1129,7 +1129,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).OrderBackups().Last()//if we don't sort the backups, we may get incorrect 'last' item to restore
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -1152,7 +1152,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             Name = "Egor3"
                         }, "users|");
                         await session.SaveChangesAsync();
-
+                        
                         var bestUser = await session.LoadAsync<User>("users/1");
                         var mediocreUser1 = await session.LoadAsync<User>("users/2");
                         var mediocreUser2 = await session.LoadAsync<User>("users/3");
@@ -1293,7 +1293,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).Last()
+                    LastFileNameToRestore = Directory.GetFiles(backupDirectory).OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);

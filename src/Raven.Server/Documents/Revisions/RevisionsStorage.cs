@@ -753,6 +753,9 @@ namespace Raven.Server.Documents.Revisions
             BlittableJsonReaderObject deleteRevisionDocument, string changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
+                return;
+
             Debug.Assert(changeVector != null, "Change vector must be set");
 
             flags.Strip(DocumentFlags.HasAttachments);

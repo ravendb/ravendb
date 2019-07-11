@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -12,15 +13,15 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
-        private readonly RestoreBackupConfiguration _restoreConfiguration;
+  private readonly RestoreBackupConfigurationBase _restoreConfiguration;
         public string NodeTag;
 
-        public RestoreBackupOperation(RestoreBackupConfiguration restoreConfiguration)
+        public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration)
         {
             _restoreConfiguration = restoreConfiguration;
         }
 
-        public RestoreBackupOperation(RestoreBackupConfiguration restoreConfiguration, string nodeTag)
+        public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag)
         {
             _restoreConfiguration = restoreConfiguration;
             NodeTag = nodeTag;
@@ -31,15 +32,14 @@ namespace Raven.Client.ServerWide.Operations
             return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
         }
 
+
+
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
-            private readonly DocumentConventions _conventions;
-            private readonly RestoreBackupConfiguration _restoreConfiguration;
+            private readonly RestoreBackupConfigurationBase _restoreConfiguration;
 
-            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfiguration restoreConfiguration, string nodeTag = null)
-            {
-                _conventions = conventions;
+            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)            {
                 _restoreConfiguration = restoreConfiguration;
                 SelectedNodeTag = nodeTag;
             }
@@ -47,6 +47,7 @@ namespace Raven.Client.ServerWide.Operations
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/restore/database";
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,

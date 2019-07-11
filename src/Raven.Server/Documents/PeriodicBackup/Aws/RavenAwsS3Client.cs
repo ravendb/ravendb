@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(s3Settings, progress, cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(s3Settings.BucketName))
+                throw new ArgumentException("AWS Bucket name cannot be null or empty");  
             _bucketName = s3Settings.BucketName;
         }
 
@@ -506,7 +508,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var url = $"{GetUrl()}/?list-type=2";
             if (prefix != null)
-                url += $"&prefix={prefix}";
+                url += $"&prefix={Uri.EscapeDataString(prefix)}";
 
             if (delimiter != null)
                 url += $"&delimiter={delimiter}";
@@ -547,7 +549,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 ContinuationToken = isTruncated == "true" ? listBucketResult.Root.Element(ns + "NextContinuationToken").Value : null
             };
 
-            IEnumerable<FileInfoDetails> GetResult()
+            IEnumerable<S3FileInfoDetails> GetResult()
             {
                 if (listFolders)
                 {
@@ -563,8 +565,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                             isFirst = false;
                         }
 
-                        yield return new FileInfoDetails { FullPath = commonPrefix.Value };
+                        yield return new S3FileInfoDetails
+                        {
+                            FullPath = commonPrefix.Value
+                        };
                     }
+
+                    yield break;
                 }
 
                 var contents = listBucketResult.Root.Descendants(ns + "Contents");
@@ -577,7 +584,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     if (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
                         continue; // backup not in current folder or in sub folder
 
-                    yield return new FileInfoDetails { FullPath = fullPath, LastModified = Convert.ToDateTime(content.Element(ns + "LastModified").Value) };
+                    yield return new S3FileInfoDetails
+                    {
+                        FullPath = fullPath,
+                        LastModifiedAsString = content.Element(ns + "LastModified").Value
+                    };
                 }
             }
 
@@ -593,6 +604,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 return count;
             }
+        }
+
+        public async Task<List<S3FileInfoDetails>> ListAllObjects(string prefix, string delimiter, bool listFolders, int? take = null)
+        {
+            var allObjects = new List<S3FileInfoDetails>();
+
+            string continuationToken = null;
+
+            while (true)
+            {
+                var objects = await ListObjects(prefix, delimiter, listFolders, continuationToken: continuationToken);
+                allObjects.AddRange(objects.FileInfoDetails);
+
+                continuationToken = objects.ContinuationToken;
+                if (continuationToken == null)
+                    break;
+            }
+
+            return allObjects;
         }
 
         public async Task<Blob> GetObject(string key)

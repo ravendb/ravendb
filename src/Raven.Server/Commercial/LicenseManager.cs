@@ -1641,7 +1641,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (e is HttpRequestException == false && e is TaskCanceledException == false)
+                if (e is HttpRequestException == false && e is OperationCanceledException == false)
                     throw;
 
                 // couldn't reach api.ravendb.net
