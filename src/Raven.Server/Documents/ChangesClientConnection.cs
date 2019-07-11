@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<ChangeValue> _sendQueue = new AsyncQueue<ChangeValue>();
 
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cts;
         private readonly CancellationToken _disposeToken;
 
         private readonly DateTime _startedAt;
@@ -67,6 +67,7 @@ namespace Raven.Server.Documents
             _webSocket = webSocket;
             _documentDatabase = documentDatabase;
             _startedAt = SystemTime.UtcNow;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(documentDatabase.DatabaseShutdown);
             _disposeToken = _cts.Token;
         }
 
