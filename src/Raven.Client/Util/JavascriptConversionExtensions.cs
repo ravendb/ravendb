@@ -18,7 +18,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Util
 {
-    internal class JavascriptConversionExtensions
+    public class JavascriptConversionExtensions
     {
         internal const string TransparentIdentifier = "<>h__TransparentIdentifier";
         private const string DefaultAliasPrefix = "__rvn";
