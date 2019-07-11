@@ -344,7 +344,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (waitForNonStaleResults && result.IsStale)
             {
                 var elapsed = duration == null ? "" : $" {duration.Value.Milliseconds:#,#;;0} ms";
-                var msg = $"Waited for{elapsed} for the query to return non stale result.";
+                var msg = $"Waited{elapsed} for the query to return non stale result.";
 
                 throw new TimeoutException(msg);
             }
