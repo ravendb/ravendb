@@ -369,6 +369,8 @@ namespace Sparrow.Json
             try
             {
                 threadHeader = GetCurrentContextStack();
+                if (threadHeader == null) // the parent was already disposed
+                    return;
             }
             catch (ObjectDisposedException)
             {
