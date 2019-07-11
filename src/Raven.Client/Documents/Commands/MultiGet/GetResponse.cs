@@ -12,6 +12,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
+        internal TimeSpan Elapsed { get; set; }
+
         /// <summary>
         /// Response result as JSON.
         /// </summary>

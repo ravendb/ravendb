@@ -179,7 +179,7 @@ namespace Raven.Client.Documents.Session
 
                 var responseTimeDuration = new ResponseTimeInformation();
 
-                while (ExecuteLazyOperationsSingleStep(responseTimeDuration, requests))
+                while (ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, sw))
                 {
                     Thread.Sleep(100);
                 }
@@ -202,8 +202,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation,
-            List<GetRequest> requests)
+        private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests, Stopwatch sw)
         {
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
@@ -217,6 +216,7 @@ namespace Raven.Client.Documents.Session
                 var response = responses[i];
 
                 response.Headers.TryGetValue(Constants.Headers.RequestTime, out tempReqTime);
+                response.Elapsed = sw.Elapsed;
 
                 long.TryParse(tempReqTime, out totalTime);
 
