@@ -192,6 +192,8 @@ namespace Raven.Server.Smuggler.Migration
 
             // Legacy support
             if (string.IsNullOrEmpty(oauthSource) == false &&
+                // ravenhq
+                oauthSource.EndsWith("/oauth/accesstoken", StringComparison.CurrentCultureIgnoreCase) == false &&
                 oauthSource.EndsWith("/OAuth/API-Key", StringComparison.CurrentCultureIgnoreCase) == false)
             {
                 if (isLegacyOAuthToken != null)
