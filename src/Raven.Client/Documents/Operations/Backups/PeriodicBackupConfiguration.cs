@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Operations.Backups
             if (AzureSettings != null && AzureSettings.Disabled == false)
                 backupDestinations.Add("Azure");
             if (S3Settings != null && S3Settings.Disabled == false)
-                backupDestinations.Add("S3");
+                backupDestinations.Add("AmazonS3");
             if (GlacierSettings != null && GlacierSettings.Disabled == false)
                 backupDestinations.Add("Glacier");
             if (GoogleCloudSettings != null && GoogleCloudSettings.Disabled == false)
