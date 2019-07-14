@@ -487,7 +487,7 @@ namespace Raven.Server.Documents
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
-                    await TxMerger.Enqueue(mergedCommand).WithCancellation(DatabaseShutdown);
+                    await TxMerger.Enqueue(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
 
                     _clusterTransactionDelayOnFailure = 1000;
