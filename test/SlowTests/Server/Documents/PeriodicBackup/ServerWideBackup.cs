@@ -2,10 +2,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
-using Orders;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.ServerWide.Commands;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Xunit;
 
@@ -142,6 +143,32 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task ToggleDisableServerWideBackupFails()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = true,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1"
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var currentBackupConfiguration = databaseRecord.PeriodicBackups.First();
+                var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
+
+                var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, false)));
+                Assert.Contains("Can't enable task name 'Server Wide Backup, Backup w/o destinations', because it is a server wide backup task", e.Message);
+
+                e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, true)));
+                Assert.Contains("Can't disable task name 'Server Wide Backup, Backup w/o destinations', because it is a server wide backup task", e.Message);
+            }
+        }
+
+        [Fact]
         public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
         {
             using (var store = GetDocumentStore())
@@ -183,7 +210,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task CanCreateBackupUsingConfigurationFromBackupScript()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -349,7 +376,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(1, record2.PeriodicBackups.Count);
                 Assert.Equal($"{ServerWideBackupConfiguration.NamePrefix}, {putConfiguration.GetDefaultTaskName()} #2", record2.PeriodicBackups.First().Name);
-                
+
                 await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation(result2.Name));
                 serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result2.Name));
                 Assert.Null(serverWideBackupConfiguration);
@@ -417,7 +444,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = files.Last()
+                    LastFileNameToRestore = files.OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
@@ -438,6 +465,106 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var record2 = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     Assert.Equal(0, record2.PeriodicBackups.Count);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(EncryptionMode.None)]
+        [InlineData(EncryptionMode.UseProvidedKey)]
+        [InlineData(EncryptionMode.UseDatabaseKey)]
+        public async Task ServerWideBackupShouldBeEncryptedForEncryptedDatabase(EncryptionMode encryptionMode)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                var serverWideBackupConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *"
+                };
+
+                switch (encryptionMode)
+                {
+                    case EncryptionMode.None:
+                        serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.None,
+                        };
+                        break;
+                    case EncryptionMode.UseDatabaseKey:
+                        serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseDatabaseKey
+                        };
+                        break;
+                    case EncryptionMode.UseProvidedKey:
+                        serverWideBackupConfiguration.BackupEncryptionSettings = new BackupEncryptionSettings
+                        {
+                            EncryptionMode = EncryptionMode.UseProvidedKey,
+                            Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                        };
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(encryptionMode), encryptionMode, null);
+                }
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "grisha"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backup = record.PeriodicBackups.First();
+                var backupTaskId = backup.TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId)).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                var backupDirectory = $"{backupPath}/{store.Database}";
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupDirectory).First(),
+                    DatabaseName = databaseName,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>("users/1");
+                        Assert.NotNull(users);
+                    }
                 }
             }
         }
@@ -497,7 +624,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     BackupLocation = backupDirectory,
                     DatabaseName = databaseName,
-                    LastFileNameToRestore = files.Last()
+                    LastFileNameToRestore = files.OrderBackups().Last()
                 };
 
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);

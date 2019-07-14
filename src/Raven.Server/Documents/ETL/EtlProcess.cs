@@ -36,6 +36,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Impl;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
@@ -305,7 +306,7 @@ namespace Raven.Server.Documents.ETL
                                 break;
                             }
 
-                            transformer.Transform(item);
+                            transformer.Transform(item, stats);
 
                             Statistics.TransformationSuccess();
 
@@ -360,7 +361,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public void Load(IEnumerable<TTransformed> items, JsonOperationContext context, EtlStatsScope stats)
+        public void Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
             using (stats.For(EtlOperations.Load))
             {
@@ -401,9 +402,9 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract int LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, DocumentsOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
+        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {
             if (currentItem.Type == EtlItemType.CounterGroup)
             {
@@ -420,6 +421,18 @@ namespace Raven.Server.Documents.ETL
 
                 // we had no documents in current batch we can send all counters that we have
                 // although need to respect below criteria
+            }
+
+            if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
+            {
+                var reason = $"Stopping the batch after {stats.Duration} because the CPU credits balance is almost completely used";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchCompleteReason(reason);
+
+                return false;
             }
 
             if (currentItem.Type == EtlItemType.Document &&
@@ -459,19 +472,18 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            var totalAllocated = _threadAllocations.TotalAllocated;
-            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
-            var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
+            var totalAllocated = new Size(_threadAllocations.TotalAllocated + ctx.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes), SizeUnit.Bytes);
+            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated.GetValue(SizeUnit.Bytes);
 
-            stats.RecordCurrentlyAllocated(totalAllocated + GC.GetAllocatedBytesForCurrentThread());
+            stats.RecordCurrentlyAllocated(totalAllocated.GetValue(SizeUnit.Bytes) + GC.GetAllocatedBytesForCurrentThread());
 
-            if (currentlyInUse > _currentMaximumAllowedMemory)
+            if (totalAllocated > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        currentlyInUse,
+                        totalAllocated,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out var memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
                     if (memoryUsage != null)
                     {
                         reason += " Current memory usage: " +
@@ -488,6 +500,20 @@ namespace Raven.Server.Documents.ETL
 
                     return false;
                 }
+            }
+
+            var maxBatchSize = Database.Configuration.Etl.MaxBatchSize;
+
+            if (maxBatchSize != null && stats.BatchSize >= maxBatchSize)
+            {
+                var reason = $"Stopping the batch because maximum batch size limit was reached ({stats.BatchSize})";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchCompleteReason(reason);
+
+                return false;
             }
 
             return true;
@@ -698,6 +724,8 @@ namespace Raven.Server.Documents.ETL
 
                     try
                     {
+                        PauseIfCpuCreditsBalanceIsTooLow();
+
                         if (FallbackTime == null)
                         {
                             _waitForChanges.Wait(CancellationToken);
@@ -741,6 +769,33 @@ namespace Raven.Server.Documents.ETL
                     _threadAllocations.CurrentlyAllocatedForProcessing = 0;
                     _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
                 }
+            }
+        }
+
+        private void PauseIfCpuCreditsBalanceIsTooLow()
+        {
+            AlertRaised alert = null;
+            int numberOfTimesSlept = 0;
+            while (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() &&
+                Database.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                // give us a bit more than a measuring cycle to gain more CPU credits
+                Thread.Sleep(1250);
+                if (alert == null && numberOfTimesSlept++ > 5)
+                {
+                    alert = AlertRaised.Create(
+                       Database.Name,
+                       Tag,
+                       "Etl process paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
+                       AlertType.Throttling_CpuCreditsBalance,
+                       NotificationSeverity.Warning,
+                       key: Name);
+                    Database.NotificationCenter.Add(alert);
+                }
+            }
+            if (alert != null)
+            {
+                Database.NotificationCenter.Dismiss(alert.Id);
             }
         }
 
@@ -941,7 +996,7 @@ namespace Raven.Server.Documents.ETL
                 switch (testScript.Configuration.EtlType)
                 {
                     case EtlType.Sql:
-                        using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, null))
+                        using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, database.ServerStore))
                         using (sqlEtl.EnterTestMode(out debugOutput))
                         {
                             sqlEtl.EnsureThreadAllocationStats();
@@ -959,7 +1014,7 @@ namespace Raven.Server.Documents.ETL
                             return result;
                         }
                     case EtlType.Raven:
-                        using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, null))
+                        using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, database.ServerStore))
                         using (ravenEtl.EnterTestMode(out debugOutput))
                         {
                             ravenEtl.EnsureThreadAllocationStats();

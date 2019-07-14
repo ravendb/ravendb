@@ -151,6 +151,11 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        protected override void RemoveIndexFromCache()
+        {
+            _compiled.RemoveIndexFromCache();
+        }
+
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;

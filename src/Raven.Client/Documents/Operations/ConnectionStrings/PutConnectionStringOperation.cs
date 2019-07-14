@@ -68,6 +68,9 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
     public class PutConnectionStringResult
     {
+        [Obsolete("PutConnectionStringResult.ETag is not supported anymore. Will be removed in next major version of the product. Please use PutConnectionStringResult.RaftCommandIndex instead.")]
         public long? ETag { get; set; }
+
+        public long RaftCommandIndex { get; set; }
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -12,7 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -49,6 +47,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, string toFile, CancellationToken token = default)
         {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             return ExportAsync(options, async stream =>
             {
                 try
@@ -60,21 +59,25 @@ namespace Raven.Client.Documents.Smuggler
 
                     using (var fileStream = fileInfo.OpenWrite())
                         await stream.CopyToAsync(fileStream, 8192, token).ConfigureAwait(false);
+
+                    tcs.TrySetResult(null);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations("Could not save export file.", e);
 
+                    tcs.TrySetException(e);
+
                     if (e is UnauthorizedAccessException || e is DirectoryNotFoundException || e is IOException)
                         throw new InvalidOperationException($"Cannot export to selected path {toFile}, please ensure you selected proper filename.", e);
 
                     throw new InvalidOperationException($"Could not save export file {toFile}.", e);
                 }
-            }, token);
+            }, tcs.Task, token);
         }
 
-        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
+        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, Task additionalTask, CancellationToken token = default)
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
@@ -113,8 +116,19 @@ namespace Raven.Client.Documents.Smuggler
                     await tcs.Task.ConfigureAwait(false);
                 }
 
-                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
+                return new Operation(
+                    _requestExecutor,
+                    () => _store.Changes(_databaseName),
+                    _requestExecutor.Conventions,
+                    operationId,
+                    null,
+                    additionalTask);
             }
+        }
+
+        private Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
+        {
+            return ExportAsync(options, handleStreamResponse, null, token);
         }
 
         public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default)

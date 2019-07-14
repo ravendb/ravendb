@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1036,6 +1037,28 @@ namespace Sparrow.Json
 
                 _pooledArrays = null;
             }
+            
+            ClearUnreturnedPathCache();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ClearUnreturnedPathCache()
+        {
+            for (var i = _numberOfAllocatedPathCaches + 1; i < _allocatePathCaches.Length - 1; i++)
+            {
+                var cache = _allocatePathCaches[i];
+
+                //never allocated, no reason to continue seeking
+                if (cache.Path == null)
+                    break;
+
+                //idly there shouldn't be unreleased path cache but we do have placed where we don't dispose of blittable object readers
+                //and rely on the context.Reset to clear unwanted memory, but it didn't take care of the path cache.
+
+                //Clear references for allocated cache paths so the GC can collect them.
+                cache.ByIndex.Clear();
+                cache.Path.Clear();
+            }
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)
@@ -1203,14 +1226,29 @@ namespace Sparrow.Json
                 return new MemoryStream();
             }
 
-            return _cachedMemoryStreams.Pop();
+            var stream = _cachedMemoryStreams.Pop();
+            _sizeOfMemoryStreamCache -= stream.Capacity;
+
+            return stream;
         }
 
+        private const long MemoryStreamCacheThreshold = Constants.Size.Megabyte;
+        private const int MemoryStreamCacheMaxCapacityInBytes = 64 * Constants.Size.Megabyte;
+
+        private long _sizeOfMemoryStreamCache;
         public void ReturnMemoryStream(MemoryStream stream)
         {
+            //We don't want to hold big streams in the cache or have too big of a cache
+            if (stream.Capacity > MemoryStreamCacheThreshold || _sizeOfMemoryStreamCache >= MemoryStreamCacheMaxCapacityInBytes)
+            {
+                return;
+            }
+
             EnsureNotDisposed();
+            
             stream.SetLength(0);
             _cachedMemoryStreams.Push(stream);
+            _sizeOfMemoryStreamCache += stream.Capacity;
         }
 
         public void ReturnMemory(AllocatedMemoryData allocation)

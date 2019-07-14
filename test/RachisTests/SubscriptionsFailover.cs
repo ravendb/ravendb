@@ -805,14 +805,17 @@ namespace RachisTests
                     Assert.True(await subscriptionRetryBegins.WaitAsync(TimeSpan.FromSeconds(30)));
 
                     leader = Servers[0] = 
-                        GetNewServer(new Dictionary<string, string>
+                        GetNewServer(new ServerCreationOptions
+                        {
+                            CustomSettings = new Dictionary<string, string>
                             {
                                 {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), leaderUrl},
                                 {RavenConfiguration.GetKey(x => x.Core.ServerUrls), leaderUrl}
                             },
-                            runInMemory: false,
-                            deletePrevious: false,
-                            partialPath: leaderDataDir);
+                            RunInMemory = false,
+                            DeletePrevious = false,
+                            PartialPath = leaderDataDir
+                        });
                     
                     Assert.True(await batchProccessed.WaitAsync(TimeSpan.FromSeconds(60)));
                     Assert.True(await batchedAcked.WaitAsync(TimeSpan.FromSeconds(60)));

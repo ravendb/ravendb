@@ -335,6 +335,10 @@ namespace Sparrow.LowMemory
                     commitedMemoryInBytes = cgroupMemoryUsage.Value;
                     fromProcMemInfo.Commited.Set(commitedMemoryInBytes, SizeUnit.Bytes);
                     fromProcMemInfo.MemAvailable.Set(maxMemoryUsage - cgroupMemoryUsage.Value, SizeUnit.Bytes);
+                    var realAvailable = maxMemoryUsage - cgroupMemoryUsage.Value + fromProcMemInfo.SharedCleanMemory.GetValue(SizeUnit.Bytes);
+                    if (realAvailable < 0)
+                        realAvailable = 0;
+                    fromProcMemInfo.AvailableWithoutTotalCleanMemory.Set(realAvailable, SizeUnit.Bytes);
                 }
 
                 fromProcMemInfo.TotalMemory.Set(maxMemoryUsage, SizeUnit.Bytes);

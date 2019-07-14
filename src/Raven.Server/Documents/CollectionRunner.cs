@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
                     ids.Clear();
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, internalQueryOperationStart, OperationBatchSize, isAllDocs, DocumentFields.Id | DocumentFields.Etag))
                         {
                             internalQueryOperationStart++;
 
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int start, int batchSize, bool isAllDocs)
+        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int start, int batchSize, bool isAllDocs, DocumentFields fields)
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
@@ -164,9 +164,9 @@ namespace Raven.Server.Documents
             }
 
             if (isAllDocs)
-                return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
+                return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize, fields);
 
-            return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize);
+            return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize, fields);
         }
 
         protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName, bool isAllDocs)

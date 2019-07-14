@@ -817,7 +817,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     case ClusterNodeStatusReport.ReportStatus.Timeout:
                         reason = $"Node in rehabilitation due to timeout reached trying to get stats from node.{Environment.NewLine}";
                         break;
-
+                    case ClusterNodeStatusReport.ReportStatus.OutOfCredits:
+                        reason = $"Node in rehabilitation because it run out of CPU credits.{Environment.NewLine}";
+                        break;
                     default:
                         reason = $"Node in rehabilitation due to last report status being '{nodeStats.Status}'.{Environment.NewLine}";
                         break;
@@ -848,7 +850,8 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = DatabasePromotionStatus.NotResponding;
+            topology.PromotablesStatus[member] = nodeStats?.ServerReport.OutOfCpuCredits == true ? 
+                DatabasePromotionStatus.OutOfCpuCredits : DatabasePromotionStatus.NotResponding;
 
             LogMessage($"Node {member} of database '{dbName}': {reason}", info: false, database: dbName);
 
@@ -899,6 +902,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 promotableClusterStats.Report.TryGetValue(dbName, out var promotableDbStats) == false)
             {
                 LogMessage($"Can't find current stats for node {promotable}", database: dbName);
+                return (false, null);
+            }
+
+            if (promotableClusterStats.ServerReport.OutOfCpuCredits == true)
+            {
+                LogMessage($"Can't promote node {promotable}, it doesn't have enough CPU credits", database: dbName);
                 return (false, null);
             }
 

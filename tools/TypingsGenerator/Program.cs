@@ -73,6 +73,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
+using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Meters;
@@ -255,6 +256,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(RevisionsConfiguration));
             scripter.AddType(typeof(RevertRevisionsRequest));
             scripter.AddType(typeof(RevertResult));
+            scripter.AddType(typeof(DocumentRevisionsCount));
             
             // server dashboard
             scripter.AddType(typeof(DashboardNotificationType));
@@ -281,7 +283,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LicenseLimitWarning));
             scripter.AddType(typeof(LicenseSupportInfo));
             scripter.AddType(typeof(LicenseRenewalResult));
-
+            scripter.AddType(typeof(LicenseConfiguration));
+            
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
 
@@ -329,8 +332,10 @@ namespace TypingsGenerator
             // ongoing tasks - backup
             scripter.AddType(typeof(OngoingTaskBackup));
             scripter.AddType(typeof(PeriodicBackupConfiguration));
-            scripter.AddType(typeof(PeriodicBackupTestConnectionType));
+            scripter.AddType(typeof(PeriodicBackupConnectionType));
             scripter.AddType(typeof(RestoreBackupConfiguration));
+            scripter.AddType(typeof(RestoreFromS3Configuration));
+            scripter.AddType(typeof(RestoreType));
             scripter.AddType(typeof(RestorePoints));
             scripter.AddType(typeof(RestoreProgress));
             scripter.AddType(typeof(StudioTasksHandler.NextCronExpressionOccurrence));

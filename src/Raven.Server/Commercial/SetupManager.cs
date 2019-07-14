@@ -1264,6 +1264,9 @@ namespace Raven.Server.Commercial
                 if (setupMode == SetupMode.LetsEncrypt && license != null)
                     await serverStore.LicenseManager.Activate(license, skipLeaseLicense: false, RaftIdGenerator.DontCareId);
 
+                // We already verified that leader's port is not 0, no need for it here.
+                serverStore.HasFixedPort = true;
+
                 foreach (var url in otherNodesUrls)
                 {
                     progress.AddInfo($"Adding node '{url.Key}' to the cluster.");
@@ -1441,6 +1444,8 @@ namespace Raven.Server.Commercial
 
                             serverStore.Server.Certificate =
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password, serverStore);
+
+                            serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
 
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {

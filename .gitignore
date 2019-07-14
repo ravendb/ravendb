@@ -121,3 +121,4 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Server/*.DotSettings
 /src/Raven.Pal/osxcross
 /src/Raven.Pal/*.nativecodeanalysis.xml
+/src/Raven.Pal/src/posix/*.o

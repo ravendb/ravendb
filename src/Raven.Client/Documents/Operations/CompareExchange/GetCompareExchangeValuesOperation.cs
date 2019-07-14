@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {   
-                Result = CompareExchangeValueResultParser<T>.GetValues(response, _conventions);
+                Result = CompareExchangeValueResultParser<T>.GetValues(context, response, _conventions);
             }
         }
     }

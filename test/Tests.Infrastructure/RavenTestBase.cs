@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Graph;
@@ -64,6 +65,36 @@ namespace FastTests
 
         private readonly object _getDocumentStoreSync = new object();
 
+        protected string EncryptedServer(out X509Certificate2 adminCert, out string name)
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var buffer = new byte[32];
+            using (var rand = RandomNumberGenerator.Create())
+            {
+                rand.GetBytes(buffer);
+            }
+
+            var base64Key = Convert.ToBase64String(buffer);
+
+            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+            try
+            {
+                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // so we fall back to a file
+                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
+            }
+
+            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+            name = dbName;
+            return Convert.ToBase64String(buffer);
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)
         {
             if (Servers.Count == 0)
@@ -103,7 +134,7 @@ namespace FastTests
                 {
                     options = options ?? Options.Default;
                     var serverToUse = options.Server ?? Server;
-
+                    
                     var name = GetDatabaseName(caller);
 
                     if (options.ModifyDatabaseName != null)
@@ -133,6 +164,11 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
                         }
                     };
+
+                    if (options.Encrypted)
+                    {                        
+                        SetupForEncryptedDatabase(options, name, serverToUse, doc);
+                    }
 
                     options.ModifyDatabaseRecord?.Invoke(doc);
 
@@ -263,6 +299,77 @@ namespace FastTests
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
             }
+        }
+
+        private void SetupForEncryptedDatabase(Options options, string dbName, RavenServer mainServer, DatabaseRecord doc)
+        {
+            foreach (var server in Servers)
+            {
+                if (server.Certificate.Certificate == null)
+                {
+                    throw new InvalidOperationException("Can't generate encrypted database on not secured servers please create server with 'UseSsl = true'");
+                }
+            }
+
+            var count = Servers.Count;
+
+            Debug.Assert(count >= options.ReplicationFactor);
+            Debug.Assert(options.ReplicationFactor > 0);
+
+            var topology = GenerateStaticTopology(options, mainServer);
+
+            var ravenServers = Servers.Where(s => topology.Members.Contains(s.ServerStore.NodeTag)).ToList();
+
+            foreach (var server in ravenServers)
+            {
+                PutSecrectKeyForDatabaseInServersStore(dbName, server);
+            }
+
+            //This is so things will just work, you must provide a client certificate for GetDocumentStore for encrypted database
+            EnsureClientCertificateIsProvidedForEncryptedDatabase(options, mainServer);
+
+            doc.Topology = topology;
+            doc.Encrypted = true;
+        }
+
+        private void EnsureClientCertificateIsProvidedForEncryptedDatabase(Options options, RavenServer mainServer)
+        {
+            if (options.ClientCertificate == null)
+            {
+                if (options.AdminCertificate != null)
+                {
+                    options.ClientCertificate = options.AdminCertificate;
+                }
+                else
+                {
+                    options.ClientCertificate = options.AdminCertificate = AskServerForClientCertificate(mainServer.Configuration.Security.CertificatePath, new Dictionary<string, DatabaseAccess>(),
+                        SecurityClearance.ClusterAdmin, server: mainServer);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generating a static topology of the requested size.
+        /// </summary>
+        /// <param name="options">Contains replication factor.</param>
+        /// <param name="mainServer">The main server for which we generate the database, must be contained in the topology.</param>
+        /// <returns></returns>
+        private DatabaseTopology GenerateStaticTopology(Options options, RavenServer mainServer)
+        {
+            DatabaseTopology topology = new DatabaseTopology();
+            var mainTag = mainServer.ServerStore.NodeTag;
+            topology.Members.Add(mainTag);
+            var rand = new Random();
+            var serverTags = Servers.Where(s=> s != mainServer).Select(s => s.ServerStore.NodeTag).ToList();
+
+            for (var i = 0; i < options.ReplicationFactor - 1; i++)
+            {
+                var position = rand.Next(0, serverTags.Count);
+                topology.Members.Add(serverTags[position]);
+                serverTags.RemoveAt(position);
+            }
+
+            return topology;
         }
 
         protected string GetLastStatesFromAllServersOrderedByTime()
@@ -435,9 +542,8 @@ namespace FastTests
         }
 
 
-        protected T WaitForValue<T>(Func<T> act, T expectedVal)
+        protected T WaitForValue<T>(Func<T> act, T expectedVal, int timeout = 15000)
         {
-            int timeout = 15000;
             if (Debugger.IsAttached)
                 timeout *= 100;
 
@@ -679,6 +785,16 @@ namespace FastTests
             return EnsureDatabaseDeletion(config.DatabaseName, store);
         }
 
+        protected IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreFromS3Configuration config, TimeSpan? timeout = null)
+        {
+            var restoreOperation = new RestoreBackupOperation(config);
+
+            var operation = store.Maintenance.Server.Send(restoreOperation);
+            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+
+            return EnsureDatabaseDeletion(config.DatabaseName, store);
+        }
+
         protected IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
         {
             return new DisposableAction(() =>
@@ -718,6 +834,73 @@ namespace FastTests
             return serverCertPath;
         }
 
+        private Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
+
+        protected string GetMasterKeyForDatabase(RavenServer server, string databaseName)
+        {
+            if(_serverDatabaseToMasterKey.TryGetValue((server,databaseName),out var key))
+            {
+                return key;
+            }
+
+            return null;
+        }
+
+        protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer ravenServer)
+        {            
+            var base64key = CreateMasterKey(out _);
+            var base64KeyClone = string.Copy(base64key);
+            EnsureServerMasterKeyIsSetup(ravenServer);
+            ravenServer.ServerStore.PutSecretKey(base64key, dbName, true);
+            _serverDatabaseToMasterKey.Add((ravenServer, dbName), base64KeyClone);                        
+        }
+
+        protected string SetupEncryptedDatabase(out X509Certificate2 adminCert,out byte[] masterKey, [CallerMemberName] string caller = null)
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName(caller);
+            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            string base64Key = CreateMasterKey(out masterKey);
+
+            EnsureServerMasterKeyIsSetup(Server);
+
+            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+            return dbName;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureServerMasterKeyIsSetup(RavenServer ravenServer)
+        {
+            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+            try
+            {
+                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // so we fall back to a file
+                if (File.Exists(ravenServer.ServerStore.Configuration.Security.MasterKeyPath) == false)
+                {
+                    ravenServer.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
+                }
+            }
+        }
+
+        protected static string CreateMasterKey(out byte[] masterKey)
+        {
+            var buffer = new byte[32];
+            using (var rand = RandomNumberGenerator.Create())
+            {
+                rand.GetBytes(buffer);
+            }
+
+            masterKey = buffer;
+
+            var base64Key = Convert.ToBase64String(buffer);
+            return base64Key;
+        }
+
         public class Options
         {
             private readonly bool _frozen;
@@ -734,6 +917,7 @@ namespace FastTests
             private Func<string, string> _modifyDatabaseName;
             private string _path;
             private bool _runInMemory = true;
+            private bool _encrypted;
 
             public static readonly Options Default = new Options(true);
 
@@ -870,6 +1054,16 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _clientCertificate = value;
+                }
+            }
+
+            public bool Encrypted
+            {
+                get => _encrypted;
+                set
+                {
+                    AssertNotFrozen();
+                    _encrypted = value;
                 }
             }
 

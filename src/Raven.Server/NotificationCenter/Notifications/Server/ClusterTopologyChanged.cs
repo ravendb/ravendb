@@ -24,7 +24,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         
         public long CurrentTerm { get; private set; }
 
-        public RachisState CurrentState { get; private set; }
+        public RachisState CurrentState { get; set; }
 
         public Dictionary<string, DetailsPerNode> NodeLicenseDetails { get; private set; }
 

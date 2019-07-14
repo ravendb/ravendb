@@ -771,7 +771,17 @@ namespace Raven.Server.Documents.Queries
         {
             if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
             {
-                return new OrderByField(new QueryFieldName("id()", false), OrderByFieldType.String, asc, MethodType.Id);
+                if (orderingType == OrderByFieldType.Implicit)
+                    orderingType = OrderByFieldType.String;
+
+                switch (orderingType)
+                {
+                    case OrderByFieldType.AlphaNumeric:
+                    case OrderByFieldType.String:
+                        return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id);
+                    default:
+                        throw new InvalidQueryException("Invalid ORDER BY 'id()' call, this field can only be sorted as a string or alphanumeric value, but got " + orderingType, QueryText, parameters);
+                }
             }
 
             if (me.Name.Equals("custom", StringComparison.OrdinalIgnoreCase))

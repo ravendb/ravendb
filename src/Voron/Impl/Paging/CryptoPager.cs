@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
@@ -12,9 +14,55 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Paging
 {
-    public class CryptoTransactionState
+    public class CryptoTransactionState: IEnumerable<KeyValuePair<long, EncryptionBuffer>>
     {
-        public Dictionary<long, EncryptionBuffer> LoadedBuffers = new Dictionary<long, EncryptionBuffer>();
+        private Dictionary<long, EncryptionBuffer> _loadedBuffers = new Dictionary<long, EncryptionBuffer>();
+        private long _totalCryptoBufferSize;
+
+        /// <summary>
+        /// Used for computing the total memory used by the transaction crypto buffers
+        /// </summary>
+        public long TotalCryptoBufferSize => _totalCryptoBufferSize;
+
+        public void SetBuffers(Dictionary<long, EncryptionBuffer> loadedBuffers)
+        {
+            var total = 0L;
+            foreach (var buffer in loadedBuffers.Values)
+            {
+                total += buffer.Size;
+            }
+
+            _loadedBuffers = loadedBuffers;
+            _totalCryptoBufferSize = total;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetValue(long i, out EncryptionBuffer value)
+        {
+            return _loadedBuffers.TryGetValue(i, out value);
+        }
+
+        public EncryptionBuffer this[long index]
+        {
+            get => _loadedBuffers[index];
+            //This assumes that we don't replace buffers just set them.
+            set
+            {
+                _loadedBuffers[index] = value;
+                _totalCryptoBufferSize += value.Size;
+            }
+        }
+
+        public IEnumerator<KeyValuePair<long, EncryptionBuffer>> GetEnumerator()
+        {
+            return _loadedBuffers.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
     }
 
     public unsafe class EncryptionBuffer
@@ -121,7 +169,7 @@ namespace Voron.Impl.Paging
             var state = GetTransactionState(tx);
             var size = numberOfPages * Constants.Storage.PageSize;
 
-            if (state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
+            if (state.TryGetValue(pageNumber, out var buffer))
             {
                 if (size == buffer.Size)
                 {
@@ -145,7 +193,7 @@ namespace Voron.Impl.Paging
         {
             var state = GetTransactionState(tx);
 
-            if (state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
+            if (state.TryGetValue(pageNumber, out var buffer))
                 return buffer.Pointer;
 
             var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, pagerState);
@@ -174,7 +222,7 @@ namespace Voron.Impl.Paging
 
             var state = GetTransactionState(tx);
 
-            if (state.LoadedBuffers.TryGetValue(pageNumber, out var encBuffer) == false)
+            if (state.TryGetValue(pageNumber, out var encBuffer) == false)
                 throw new InvalidOperationException("Tried to break buffer that wasn't allocated in this tx");
 
             for (int i = 1; i < encBuffer.Size / Constants.Storage.PageSize; i++)
@@ -193,7 +241,7 @@ namespace Voron.Impl.Paging
                 // the tx, the pager will realize that we need to write this page
                 Memory.Copy(buffer.Hash, encBuffer.Hash, EncryptionBuffer.HashSizeInt);
 
-                state.LoadedBuffers[pageNumber + i] = buffer;
+                state[pageNumber + i] = buffer;
             }
 
             encBuffer.OriginalSize = encBuffer.Size;
@@ -216,7 +264,7 @@ namespace Voron.Impl.Paging
                 Hash = hash,
                 AllocatingThread = thread
             };
-            state.LoadedBuffers[pageNumber] = buffer;
+            state[pageNumber] = buffer;
             return buffer;
         }
 
@@ -261,7 +309,7 @@ namespace Voron.Impl.Paging
                 return;
 
             var pageHash = stackalloc byte[EncryptionBuffer.HashSizeInt];
-            foreach (var buffer in state.LoadedBuffers)
+            foreach (var buffer in state)
             {
                 if (buffer.Value.SkipOnTxCommit)
                     continue;
@@ -302,7 +350,7 @@ namespace Voron.Impl.Paging
 
             tx.CryptoPagerTransactionState.Remove(this);
             
-            foreach (var buffer in state.LoadedBuffers)
+            foreach (var buffer in state)
             {
                 if (buffer.Value.OriginalSize != null && buffer.Value.OriginalSize == 0)
                 {

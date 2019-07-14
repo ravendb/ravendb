@@ -19,6 +19,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
@@ -67,6 +69,7 @@ using Sparrow.Server;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -156,6 +159,10 @@ namespace Raven.Server.ServerWide
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
             _server.ServerCertificateChanged += OnServerCertificateChanged;
+
+            HasFixedPort = Configuration.Core.ServerUrls == null ||
+                           Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
+                           uri.Port != 0;
 
             var maxConcurrentBackupsTasks = Configuration.Backup.MaxNumberOfConcurrentBackups ?? int.MaxValue;
             ConcurrentBackupsSemaphore = new SemaphoreSlim(maxConcurrentBackupsTasks);
@@ -278,6 +285,7 @@ namespace Raven.Server.ServerWide
 
                                             delay = 500; // on successful read, reset the delay
                                             topologyNotification.NodeTag = _engine.Tag;
+                                            topologyNotification.CurrentState = _engine.CurrentState;
                                             NotificationCenter.Add(topologyNotification);
                                         }
                                     }
@@ -431,10 +439,8 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-        public bool HasFixedPort =>
-            Configuration.Core.ServerUrls == null ||
-            Uri.TryCreate(Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri) == false ||
-            uri.Port != 0;
+
+        public bool HasFixedPort { get; internal set; }
 
         public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
@@ -741,7 +747,7 @@ namespace Raven.Server.ServerWide
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.ValueChanged += OnValueChanged;
 
-            _engine.TopologyChanged += OnTopologyChanged;
+            _engine.TopologyChanged += (_, __) => NotifyAboutClusterTopologyAndConnectivityChanges();
             _engine.StateChanged += OnStateChanged;
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -775,10 +781,7 @@ namespace Raven.Server.ServerWide
             }
             Engine.InMemoryDebug.StateChangeTracking.LimitedSizeEnqueue(msg, 10);
 
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                OnTopologyChanged(null, GetClusterTopology(context));
+            NotifyAboutClusterTopologyAndConnectivityChanges();
 
                 // if we are in passive/candidate state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisState.Passive || state.To == RachisState.Passive ||
@@ -790,7 +793,6 @@ namespace Raven.Server.ServerWide
                     }, null);
                 }
             }
-        }
 
         private async Task RefreshOutgoingTasksAsync()
         {
@@ -848,10 +850,21 @@ namespace Raven.Server.ServerWide
             return nodesStatuses ?? new Dictionary<string, NodeStatus>();
         }
 
-        public void NotifyAboutRecentClusterTopologyConnectivity()
+        private readonly MultipleUseFlag _notify = new MultipleUseFlag();
+        public void NotifyAboutClusterTopologyAndConnectivityChanges()
         {
-            TaskExecutor.Execute(_ =>
+            if (_notify.Raise() == false)
+                return;
+
+            Task.Run(async () =>
             {
+                while (_notify.Lower())
+                {
+                    try
+                    {
+                        if (ServerShutdown.IsCancellationRequested)
+                            return;
+
                 var clusterTopology = GetClusterTopology();
 
                 if (_engine.CurrentState != RachisState.Follower)
@@ -873,20 +886,25 @@ namespace Raven.Server.ServerWide
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetClusterTopologyCommand(NodeTag);
-                    clusterRequestExecutor.Execute(command, context);
+                            await clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
                     var response = command.Result;
 
                     OnTopologyChangeInternal(response.Topology, response.Status);
                 }
-            },null);
         }
-
-        public void OnTopologyChanged(object sender, ClusterTopology topologyJson)
+                    catch (TaskCanceledException)
         {
-            if (_engine.CurrentState == RachisState.Follower)
-                return;
-
-            OnTopologyChangeInternal(topologyJson);
+                        // shutdown
+        }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            await Logger.InfoAsync("Unable to notify about cluster topology change", e);
+                        }
+                    }
+                }
+            }, ServerShutdown);
         }
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
@@ -896,10 +914,21 @@ namespace Raven.Server.ServerWide
 
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
-                db.Value.Result.Changes.RaiseNotifications(new TopologyChange
+                DocumentDatabase dbActual;
+                try
+                {
+                    if (db.Value.IsCompletedSuccessfully == false)
+                        continue;
+                    dbActual = db.Value.Result;
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+                dbActual.Changes.RaiseNotifications(new TopologyChange
                 {
                     Url = topology.GetUrlFromTag(NodeTag),
-                    Database = db.Value.Result.Name
+                    Database = dbActual.Name
                 });
             }
         }
@@ -945,12 +974,9 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicense();
                     break;
                 case nameof(PutLicenseLimitsCommand):
+                case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        OnTopologyChanged(null, GetClusterTopology(context));
-                    }
+                    NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
             }
         }
@@ -1318,6 +1344,10 @@ namespace Raven.Server.ServerWide
             bool cloneKey = false)
         {
             Debug.Assert(context.Transaction != null);
+
+            //This will prevent the insertion of an encryption key for a database that resides in a server without encryption license.
+            LicenseManager.AssertCanCreateEncryptedDatabase();
+
             if (secretKey.Length != 256 / 8)
                 throw new ArgumentException($"Key size must be 256 bits, but was {secretKey.Length * 8}", nameof(secretKey));
 
@@ -1399,7 +1429,12 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-
+            var record = Cluster.ReadDatabase(context, name, out _);
+            if (record != null && record.Encrypted && record.Topology.RelevantFor(NodeTag))
+            {
+                throw new InvalidOperationException(
+                    $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
+            }
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
             tree.Delete(name);
@@ -1521,6 +1556,18 @@ namespace Raven.Server.ServerWide
                     $"Expiration delete frequency for database '{databaseName}' must be greater than 0.");
             }
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
+            return SendToLeaderAsync(editExpiration);
+        }
+
+        public Task<(long Index, object Result)> ModifyDatabaseRefresh(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var refresh = JsonDeserializationCluster.RefreshConfiguration(configurationJson);
+            if (refresh.RefreshFrequencyInSec <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Refresh frequency for database '{databaseName}' must be greater than 0.");
+            }
+            var editExpiration = new EditRefreshCommand(refresh, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
 
@@ -2119,6 +2166,26 @@ namespace Raven.Server.ServerWide
             return identityInfo;
         }
 
+        public NodeInfo GetNodeInfo()
+        {
+            var memoryInformation = MemoryInformation.GetMemoryInfo();
+            return new NodeInfo
+            {
+                NodeTag = NodeTag,
+                TopologyId = GetClusterTopology().TopologyId,
+                Certificate = Server.Certificate.CertificateForClients,
+                NumberOfCores = ProcessorInfo.ProcessorCount,
+                InstalledMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes),
+                UsableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes),
+                BuildInfo = LicenseManager.BuildInfo,
+                OsInfo = LicenseManager.OsInfo,
+                ServerId = GetServerId(),
+                CurrentState = CurrentRachisState,
+                HasFixedPort = HasFixedPort,
+                ServerSchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion
+            };
+        }
+
         public License LoadLicense()
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -2159,19 +2226,37 @@ namespace Raven.Server.ServerWide
 
         public void PutLicenseLimits(LicenseLimits licenseLimits, string raftRequestId)
         {
-            if (IsLeader() == false)
-                throw new InvalidOperationException("Only the leader can set the license limits!");
-
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
-            _engine.PutAsync(command).IgnoreUnobservedExceptions();
+            SendToLeaderAsync(command).IgnoreUnobservedExceptions();
         }
 
         public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string raftRequestId)
         {
-            if (IsLeader() == false)
-                throw new InvalidOperationException("Only the leader can set the license limits!");
-
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
+
+            var result = await SendToLeaderAsync(command);
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+        }
+
+        public async Task PutMyNodeInfoAsync(int maxLicenseCores)
+        {
+            var licenseLimits = LoadLicenseLimits();
+            if (licenseLimits == null)
+                return;
+
+            if (licenseLimits.NodeLicenseDetails.TryGetValue(NodeTag, out _) == false)
+                return;
+
+            var nodeInfo = GetNodeInfo();
+            var nodeLicenseLimits = new NodeLicenseLimits
+            {
+                NodeTag = NodeTag,
+                DetailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo),
+                LicensedCores = maxLicenseCores,
+                AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
+            };
+            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, nodeLicenseLimits, RaftIdGenerator.NewId());
 
             var result = await SendToLeaderAsync(command);
 
@@ -2208,7 +2293,7 @@ namespace Raven.Server.ServerWide
                     {
                         return await _engine.PutAsync(cmd);
                     }
-                    catch (NotLeadingException)
+                    catch (Exception e) when (e is ConcurrencyException || e is NotLeadingException)
                     {
                         // if the leader was changed during the PutAsync, we will retry.
                         continue;
@@ -2419,7 +2504,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "RAFT connection error", msg,
-                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: remoteEndpoint.ToString(), details: new ExceptionDetails(e)));
+                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: ((IPEndPoint)remoteEndpoint).Address.ToString(), details: new ExceptionDetails(e)));
             }
         }
 

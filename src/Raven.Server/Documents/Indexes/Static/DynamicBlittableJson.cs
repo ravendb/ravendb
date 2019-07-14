@@ -12,7 +12,6 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
     {
-
         private const int DocumentIdFieldNameIndex = 0;
         private const int MetadataIdPropertyIndex = 1;
         private const int MetadataHasValueIndex = 2;
@@ -193,6 +192,26 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType(propertyName), TypeConverter.ToDynamicType(BlittableJson[propertyName]));
             }
+        }
+
+        public IDictionary<object, object> ToDictionary(Func<object, object> keySelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector));
+        }
+
+        public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, IEqualityComparer<object> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, comparer));
+        }
+
+        public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, Func<object, object> elementSelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, elementSelector));
+        }
+
+        public IDictionary<object, object> ToDictionary(Func<object, object> keySelector, Func<object, object> elementSelector, IEqualityComparer<object> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, elementSelector, comparer));
         }
 
         public IEnumerable<object> SelectMany(Func<object, IEnumerable<object>> func)

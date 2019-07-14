@@ -21,58 +21,20 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions;
+using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class SqlEtlTests : EtlTestBase
     {
-        public static readonly Lazy<string> MasterDatabaseConnection = new Lazy<string>(() =>
-        {
-            var cString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
-
-            if (TryConnect(cString))
-                return cString;
-
-            cString = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=15";
-
-            if (TryConnect(cString))
-                return cString;
-
-            cString = Environment.GetEnvironmentVariable("RAVEN_MSSQL_CONNECTION_STRING");
-
-            if (TryConnect(cString))
-                return cString;
-
-            throw new InvalidOperationException("Use a valid connection");
-
-            bool TryConnect(string connectionString)
-            {
-                if (string.IsNullOrWhiteSpace(connectionString))
-                    return false;
-
-                try
-                {
-                    using (var connection = new SqlConnection(connectionString))
-                    {
-                        connection.Open();
-                    }
-
-                    return true;
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            }
-        });
-
         private readonly List<string> _dbNames = new List<string>();
 
         protected const string defaultScript = @"
@@ -170,7 +132,7 @@ CREATE TABLE [dbo].[Orders]
 
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MasterDatabaseConnection.Value;
+                con.ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value;
                 con.Open();
 
                 foreach (var dbName in _dbNames)
@@ -190,7 +152,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         {
             using (var con = new SqlConnection())
             {
-                con.ConnectionString = MasterDatabaseConnection.Value;
+                con.ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value;
                 con.Open();
 
                 using (var dbCommand = con.CreateCommand())
@@ -617,12 +579,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
                     FactoryName = "System.Data.SqlClient",
                 }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var database = GetDatabase(store.Database).Result;
 
@@ -695,12 +658,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
                     FactoryName = "System.Data.SqlClient",
                 }));
+                Assert.NotNull(result1.RaftCommandIndex);
 
                 var database = GetDatabase(store.Database).Result;
 
@@ -1154,6 +1118,65 @@ loadToUsers(
             }
         }
 
+        [Fact]
+        public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5"
+            }))
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Orders]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [Pic] [varbinary](max) NULL
+)
+");
+                using (var session = store.OpenSession())
+                {
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var order = new Orders.Order();
+                        session.Store(order);
+
+                        var r = new Random(i);
+
+                        var bytes = new byte[1024 * 1024 * 1];
+
+                        r.NextBytes(bytes);
+
+                        session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                SetupSqlEtl(store, @"
+
+var orderData = {
+    Id: id(this),
+    Pic: loadAttachment('my-attachment') 
+};
+
+loadToOrders(orderData);
+");
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                var database = GetDatabase(store.Database).Result;
+
+                var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
+
+                var stats = etlProcess.GetPerformanceStats();
+
+                Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchCompleteReason).ToList());
+            }
+        }
+
         private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
         {
             using (var ms = new MemoryStream())
@@ -1227,7 +1250,7 @@ loadToUsers(
 
         public static string GetConnectionString(DocumentStore store)
         {
-            return MasterDatabaseConnection.Value + $";Initial Catalog=SqlReplication-{store.Database};";
+            return MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog=SqlReplication-{store.Database};";
         }
 
         private class Order

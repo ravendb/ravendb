@@ -66,7 +66,13 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress = onProgress ?? (progress => { });
         }
 
-        public SmugglerResult Execute(bool ensureStepsProcessed = true, bool isLastFile = false)
+        /// <summary>
+        /// isLastFile param true by default to correctly restore identities and compare exchange from V41 ravendbdump file.
+        /// </summary>
+        /// <param name="ensureStepsProcessed"></param>
+        /// <param name="isLastFile"></param>
+        /// <returns></returns>
+        public SmugglerResult Execute(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             var result = _result ?? new SmugglerResult();
 
@@ -109,6 +115,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 else
                 {
+                    _options.OperateOnTypes &= ~DatabaseItemType.Identities;
                     _options.OperateOnTypes &= ~DatabaseItemType.CompareExchange;
                     _options.OperateOnTypes &= ~DatabaseItemType.CompareExchangeTombstones;
                 }
@@ -591,7 +598,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     if (_options.IncludeExpired == false &&
-                        ExpirationStorage.HasExpired(item.Document.Data, _time.GetUtcNow()))
+                        ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
                     {
                         SkipDocument(item, result);
                         continue;
@@ -640,7 +647,7 @@ namespace Raven.Server.Smuggler.Documents
             item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
             if (_options.SkipRevisionCreation)
-                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler;
 
             if (buildType == BuildVersionType.V4)
             {

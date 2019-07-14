@@ -88,6 +88,18 @@ namespace Raven.Server.Documents.Handlers
                 });
         }
 
+        [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetRevisionsCountFor()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                GetRevisionsCount(context);
+
+                return Task.CompletedTask;
+            }
+        }
+        
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsFor()
         {
@@ -106,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/revisions/revert", "POST", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
         public async Task Revert()
         {
             RevertRevisionsRequest configuration;
@@ -218,6 +230,23 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private void GetRevisionsCount(DocumentsOperationContext documentContext)
+        {
+            var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+
+            var documentRevisionsDetails = new DocumentRevisionsCount()
+            {
+                RevisionsCount = 0
+            };
+
+            documentRevisionsDetails.RevisionsCount = Database.DocumentsStorage.RevisionsStorage.GetRevisionsCount(documentContext, docId);
+
+            using (var writer = new BlittableJsonTextWriter(documentContext, ResponseBodyStream()))
+            {
+                documentContext.Write(writer, documentRevisionsDetails.ToJson());
+            }
+        }
+        
         private void GetRevisions(DocumentsOperationContext context, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
@@ -242,7 +271,6 @@ namespace Raven.Server.Documents.Handlers
             {
                 (revisions, count) = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
             }
-            
 
             var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
 
@@ -332,6 +360,19 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+    }
+
+    public class DocumentRevisionsCount : IDynamicJson
+    {
+        public long RevisionsCount { get; set; }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(RevisionsCount)] = RevisionsCount
+            };
         }
     }
 }

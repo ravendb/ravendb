@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
 using Voron.Impl;
+using Voron.Impl.Paging;
 using Xunit;
 
 namespace SlowTests.Voron.Issues
@@ -36,8 +38,16 @@ namespace SlowTests.Voron.Issues
 
                 var cryptoTxState = ((IPagerLevelTransactionState)tx.LowLevelTransaction).CryptoPagerTransactionState.Single().Value;
 
+                Dictionary<long, EncryptionBuffer> loadedBuffers = new Dictionary<long, EncryptionBuffer>();
+
+                var reversed = cryptoTxState.ToList();
+                reversed.Reverse();
+                foreach (var keyValue in reversed)
+                {
+                    loadedBuffers.Add(keyValue.Key, keyValue.Value);
+                }
                 // explicitly change the order of items in dictionary so we'll apply the buffer of overflow page before the already freed one
-                cryptoTxState.LoadedBuffers = cryptoTxState.LoadedBuffers.Reverse().ToDictionary(x => x.Key, x => x.Value);
+                cryptoTxState.SetBuffers(loadedBuffers);
 
                 tx.Commit();
             }

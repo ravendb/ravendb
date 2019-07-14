@@ -223,6 +223,11 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
+        protected virtual void RemoveIndexFromCache()
+        {
+
+        }
+
         protected virtual void DisposeIndex()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
@@ -238,6 +243,8 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
+
+                    DocumentDatabase = null;
                 }
 
                 _indexValidationStalenessCheck = null;
@@ -262,6 +269,8 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+                exceptionAggregator.Execute(RemoveIndexFromCache);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -651,7 +660,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (ObjectDisposedException ode)
                 {
-                    if(_disposeOne.Disposed == false)
+                    if (_disposeOne.Disposed == false)
                     {
                         ReportUnexpectedIndexingError(ode);
                     }
@@ -988,6 +997,8 @@ namespace Raven.Server.Documents.Indexes
                         if (_definitionChanged)
                             PersistIndexDefinition();
 
+                        PauseIfCpuCreditsBalanceIsTooLow();
+
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Starting indexing for '{Name}'.");
 
@@ -1271,6 +1282,33 @@ namespace Raven.Server.Documents.Indexes
                     if (DocumentDatabase != null)
                         DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
+            }
+        }
+
+        private void PauseIfCpuCreditsBalanceIsTooLow()
+        {
+            AlertRaised alert = null;
+            int numberOfTimesSlept = 0;
+            while (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() &&
+                DocumentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                // give us a bit more than a measuring cycle to gain more CPU credits
+                Thread.Sleep(1250);
+                if (alert == null && numberOfTimesSlept++ > 5)
+                {
+                    alert = AlertRaised.Create(
+                       DocumentDatabase.Name,
+                       Name,
+                       "Indexing has been paused because the CPU credits balance is almost completely used, will be resumed when there are enough CPU credits to use.",
+                       AlertType.Throttling_CpuCreditsBalance,
+                       NotificationSeverity.Warning,
+                       key: Name);
+                    DocumentDatabase.NotificationCenter.Add(alert);
+                }
+            }
+            if (alert != null)
+            {
+                DocumentDatabase.NotificationCenter.Dismiss(alert.Id);
             }
         }
 
@@ -2793,7 +2831,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {
-            DocumentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+            DocumentDatabase?.DatabaseShutdown.ThrowIfCancellationRequested();
 
             if (assertState && _isCompactionInProgress)
                 ThrowCompactionInProgress();
@@ -3218,22 +3256,14 @@ namespace Raven.Server.Documents.Indexes
         {
             get
             {
-                if (_transactionSizeLimit != null)
-                    return _transactionSizeLimit.Value;
+                var limit = DocumentDatabase.IsEncrypted
+                    ? Configuration.EncryptedTransactionSizeLimit ?? Configuration.TransactionSizeLimit
+                    : Configuration.TransactionSizeLimit;
 
-                if (Configuration.TransactionSizeLimit == null)
-                {
-                    _transactionSizeLimit = new Lazy<Size?>(() => null);
-                }
-                else
-                {
-                    var limit = Configuration.TransactionSizeLimit;
+                if (limit != null && Type == IndexType.MapReduce)
+                    limit = limit * 0.75;
 
-                    if (Type.IsMapReduce())
-                        limit = limit * 0.75; // let's decrease the limit to take into account additional work in reduce phase
-
-                    _transactionSizeLimit = new Lazy<Size?>(() => limit);
-                }
+                _transactionSizeLimit = new Lazy<Size?>(() => limit);
 
                 return _transactionSizeLimit.Value;
             }
@@ -3251,6 +3281,17 @@ namespace Raven.Server.Documents.Indexes
             if (_indexDisabled)
             {
                 stats.RecordMapCompletedReason("Index was disabled");
+                return false;
+            }
+
+            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
+            if (cpuCreditsAlertFlag.IsRaised())
+            {
+                HandleStoppedBatchesConcurrently(stats, count,
+                   canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
+                   reason: "CPU credits balance is low");
+
+                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because the CPU credits balance is almost completely used");
                 return false;
             }
 
@@ -3396,6 +3437,8 @@ namespace Raven.Server.Documents.Indexes
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
 
+            txAllocations += indexingContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+
             long indexWriterAllocations = 0;
             long luceneFilesAllocations = 0;
 
@@ -3464,7 +3507,7 @@ namespace Raven.Server.Documents.Indexes
                     break;
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a low memory condition in action...");
+                    _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a {reason} condition in action...");
             }
         }
 

@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.Handlers
 
             public bool SeenCounters;
             public bool SeenAttachments;
+            public ForceRevisionStrategy ForceRevisionCreationStrategy;
 
             [JsonIgnore]
             public PatchDocumentCommandBase PatchCommand;
@@ -557,6 +558,16 @@ namespace Raven.Server.Documents.Handlers
                             await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         }
                         break;
+                    case CommandPropertyName.ForceRevisionCreationStrategy: 
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.String, state);
+                        }
+                        
+                        commandData.ForceRevisionCreationStrategy = GetEnumValue(state, ctx);
+                        break;
                 }
             }
 
@@ -712,6 +723,7 @@ namespace Raven.Server.Documents.Handlers
             IdPrefixed,
             Index,
             ReturnDocument,
+            ForceRevisionCreationStrategy,
 
             #region Attachment
 
@@ -750,13 +762,6 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.Ids;
 
-                case 8:
-                    if (*(long*)state.StringBuffer == 8318823012450529091)
-                        return CommandPropertyName.Counters;
-                    if (*(long*)state.StringBuffer != 8389754676633104196)
-                        return CommandPropertyName.NoSuchProperty;
-                    return CommandPropertyName.Document;
-
                 case 4:
                     if (*(int*)state.StringBuffer == 1701869908)
                         return CommandPropertyName.Type;
@@ -772,23 +777,21 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[4] == (byte)'x')
                         return CommandPropertyName.Index;
                     return CommandPropertyName.NoSuchProperty;
-                case 14:
-                    if (*(int*)state.StringBuffer == 1668571472 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
-                        return CommandPropertyName.PatchIfMissing;
-
-                    if (*(int*)state.StringBuffer == 1970562386 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
-                        return CommandPropertyName.ReturnDocument;
-
-                    if (*(int*)state.StringBuffer == 1635021889 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 8742740794129868899 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
-                        return CommandPropertyName.AttachmentType;
-
+                
+                case 7:
+                    if (*(int*)state.StringBuffer == 1836020294 &&
+                        *(short*)(state.StringBuffer + sizeof(int)) == 29765 &&
+                        state.StringBuffer[6] == (byte)'l')
+                        return CommandPropertyName.FromEtl;
                     return CommandPropertyName.NoSuchProperty;
+                
+                case 8:
+                    if (*(long*)state.StringBuffer == 8318823012450529091)
+                        return CommandPropertyName.Counters;
+                    if (*(long*)state.StringBuffer != 8389754676633104196)
+                        return CommandPropertyName.NoSuchProperty;
+                    return CommandPropertyName.Document; //  todo - is this a bug ???
+                
                 case 10:
                     if (*(long*)state.StringBuffer == 8676578743001572425 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 25701)
@@ -807,33 +810,71 @@ namespace Raven.Server.Documents.Handlers
                         *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
                         return CommandPropertyName.ChangeVector;
                     return CommandPropertyName.NoSuchProperty;
-                case 7:
-                    if (*(int*)state.StringBuffer == 1836020294 &&
-                        *(short*)(state.StringBuffer + sizeof(int)) == 29765 &&
-                        state.StringBuffer[6] == (byte)'l')
-                        return CommandPropertyName.FromEtl;
-
-                    return CommandPropertyName.NoSuchProperty;
+               
                 case 13:
                     if (*(long*)state.StringBuffer == 8386105380344915268 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1231974249 &&
                         state.StringBuffer[12] == (byte)'d')
                         return CommandPropertyName.DestinationId;
-
                     return CommandPropertyName.NoSuchProperty;
+                
+                case 14:
+                    if (*(int*)state.StringBuffer == 1668571472 &&
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
+                        return CommandPropertyName.PatchIfMissing;
+                    if (*(int*)state.StringBuffer == 1970562386 &&
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 &&
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
+                        return CommandPropertyName.ReturnDocument;
+                    if (*(int*)state.StringBuffer == 1635021889 &&
+                        *(long*)(state.StringBuffer + sizeof(int)) == 8742740794129868899 &&
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
+                        return CommandPropertyName.AttachmentType;
+                    return CommandPropertyName.NoSuchProperty;
+                
                 case 15:
                     if (*(long*)state.StringBuffer == 8386105380344915268 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1315860329 &&
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28001 &&
                         state.StringBuffer[14] == (byte)'e')
                         return CommandPropertyName.DestinationName;
-
                     return CommandPropertyName.NoSuchProperty;
+                
+                case 29:
+                    if (*(long*)state.StringBuffer == 8531315664536891206 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 8247308551402910817 &&
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long) + sizeof(long)) == 1734702177 &&
+                        state.StringBuffer[28] == (byte)'y')
+                        return CommandPropertyName.ForceRevisionCreationStrategy;
+                    return CommandPropertyName.NoSuchProperty;
+                
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
         }
 
+        private static unsafe ForceRevisionStrategy GetEnumValue(JsonParserState state, JsonOperationContext ctx)
+        {
+            switch (state.StringSize)
+            {
+                case 6:
+                    if (*(int*)state.StringBuffer == 1868981570 &&
+                        *(short*)(state.StringBuffer + sizeof(int)) == 25970)
+                        return ForceRevisionStrategy.Before;
+                    
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+                
+                default:
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+            }
+
+            return 0;
+        }
+        
         private static unsafe AttachmentType GetAttachmentType(JsonParserState state, JsonOperationContext ctx)
         {
             // here we confirm that the value is matching our expectation, in order to save CPU instructions
@@ -848,6 +889,7 @@ namespace Raven.Server.Documents.Handlers
 
                     ThrowInvalidProperty(state, ctx);
                     break;
+                
                 default:
                     ThrowInvalidProperty(state, ctx);
                     break;
@@ -866,28 +908,29 @@ namespace Raven.Server.Documents.Handlers
                     if (*(short*)state.StringBuffer != 21840 ||
                         state.StringBuffer[2] != (byte)'T')
                         ThrowInvalidProperty(state, ctx);
-
                     return CommandType.PUT;
 
                 case 5:
                     if (*(int*)state.StringBuffer != 1129595216 ||
                         state.StringBuffer[4] != (byte)'H')
                         ThrowInvalidProperty(state, ctx);
-
                     return CommandType.PATCH;
 
                 case 6:
                     if (*(int*)state.StringBuffer != 1162626372 ||
                      *(short*)(state.StringBuffer + 4) != 17748)
                         ThrowInvalidProperty(state, ctx);
-
                     return CommandType.DELETE;
 
+                case 8:
+                    if (*(long*)state.StringBuffer != 8318823012450529091)
+                        ThrowInvalidProperty(state, ctx);
+                    return CommandType.Counters;
+                
                 case 10:
                     if (*(long*)state.StringBuffer != 6071222181947531586 ||
                         *(short*)(state.StringBuffer + sizeof(long)) != 18499)
                         ThrowInvalidProperty(state, ctx);
-
                     return CommandType.BatchPATCH;
 
                 case 13:
@@ -895,8 +938,8 @@ namespace Raven.Server.Documents.Handlers
                         *(int*)(state.StringBuffer + sizeof(long)) != 1431336046 ||
                         state.StringBuffer[sizeof(long) + sizeof(int)] != (byte)'T')
                         ThrowInvalidProperty(state, ctx);
-
                     return CommandType.AttachmentPUT;
+                
                 case 14:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1329820782 &&
@@ -910,18 +953,13 @@ namespace Raven.Server.Documents.Handlers
 
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
+                
                 case 16:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
                         return CommandType.AttachmentDELETE;
-
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
-                case 8:
-                    if (*(long*)state.StringBuffer != 8318823012450529091)
-                        ThrowInvalidProperty(state, ctx);
-
-                    return CommandType.Counters;
 
                 case 18:
                     if (*(long*)state.StringBuffer != 5000528724088418115 ||
@@ -931,17 +969,23 @@ namespace Raven.Server.Documents.Handlers
                         ThrowInvalidProperty(state, ctx);
                     }
                     return CommandType.CompareExchangePUT;
-
+              
                 case 21:
-                    if (*(long*)state.StringBuffer != 5000528724088418115 ||
-                        *(long*)(state.StringBuffer + sizeof(long)) != 4928459091005170552 ||
-                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 1413827653 ||
-                        state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] != (byte)'E')
-                    {
-                        ThrowInvalidProperty(state, ctx);
-                    }
-                    return CommandType.CompareExchangeDELETE;
-
+                    if (*(long*)state.StringBuffer == 5000528724088418115 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 4928459091005170552 &&
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1413827653 &&
+                        state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'E')
+                       return CommandType.CompareExchangeDELETE;
+                    
+                    if (*(long*)state.StringBuffer == 8531315664536891206 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
+                        *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1869182049 &&
+                        state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'n')
+                        return CommandType.ForceRevisionCreation;
+                    
+                    ThrowInvalidProperty(state, ctx);
+                    return CommandType.None;
+                
                 default:
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;

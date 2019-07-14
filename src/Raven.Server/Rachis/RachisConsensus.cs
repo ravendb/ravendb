@@ -288,6 +288,7 @@ namespace Raven.Server.Rachis
         private static readonly Slice LastTruncatedSlice;
         private static readonly Slice TopologySlice;
         private static readonly Slice TagSlice;
+        private static readonly Slice PreviousTagSlice;
         private static readonly Slice SnapshotRequestSlice;
         internal static readonly Slice EntriesSlice;
 
@@ -299,6 +300,7 @@ namespace Raven.Server.Rachis
             {
                 Slice.From(ctx, "GlobalState", out GlobalStateSlice);
                 Slice.From(ctx, "Tag", out TagSlice);
+                Slice.From(ctx, "PreviousTag", out PreviousTagSlice);
                 Slice.From(ctx, "CurrentTerm", out CurrentTermSlice);
                 Slice.From(ctx, "VotedFor", out VotedForSlice);
                 Slice.From(ctx, "LastCommit", out LastCommitSlice);
@@ -436,20 +438,7 @@ namespace Raven.Server.Rachis
                 }
 
                 CurrentState = RachisState.Follower;
-                if (topology.Members.Count == 1)
-                {
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    {
-                        using (ctx.OpenWriteTransaction())
-                        {
-                            SwitchToSingleLeader(ctx);
-                            ctx.Transaction.Commit();
-                        }
-
-                    }
-                }
-                else
-                    Timeout.Start(SwitchToCandidateStateOnTimeout);
+                Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
             catch (Exception)
             {
@@ -480,6 +469,14 @@ namespace Raven.Server.Rachis
 
             var readResult = state.Read(TagSlice);
             return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
+        }
+
+        public string ReadPreviousNodeTag(TransactionOperationContext context)
+        {
+            var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+
+            var readResult = state.Read(PreviousTagSlice);
+            return readResult?.Reader.ToStringValue();
         }
 
         private void SwitchToSingleLeader(TransactionOperationContext context)
@@ -625,7 +622,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void SetNewStateInTx(TransactionOperationContext context,
+        internal void SetNewStateInTx(TransactionOperationContext context,
             RachisState rachisState,
             IDisposable parent,
             long expectedTerm,
@@ -830,15 +827,6 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateStateOnTimeout()
         {
-            if (RequestSnapshot)
-            {
-                // we aren't allowed to be elected for leadership if we requested a snapshot 
-                if (Log.IsInfoEnabled)
-                {
-                    Log.Info("we aren't allowed to be elected for leadership if we requested a snapshot");
-                }
-                return;
-            }
             SwitchToCandidateState("Election timeout");
         }
 
@@ -873,12 +861,14 @@ namespace Raven.Server.Rachis
                         // we aren't a member, nothing that we can do here
                         return;
                     }
-                    if (clusterTopology.Members.Count == 1)
+                    if (clusterTopology.AllNodes.Count == 1 && 
+                        clusterTopology.Members.Count == 1)
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
+                            Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
                         }
+
                         SwitchToSingleLeader(context);
                         ctx.Commit();
                         return;
@@ -1027,17 +1017,22 @@ namespace Raven.Server.Rachis
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         initialMessage = remoteConnection.InitFollower(context);
-                        ValidateElectionTimeout(initialMessage);
+
                         using (context.OpenReadTransaction())
                         {
                             clusterTopology = GetTopology(context);
                         }
+
+                        ValidateCompatibility(initialMessage, clusterTopology);
+                        ValidateElectionTimeout(initialMessage);
+
                         if (clusterTopology.TopologyId == initialMessage.TopologyId && initialMessage.DebugSourceIdentifier == _tag)
                         {
                             throw new TopologyMismatchException($"Connection from ({remoteEndpoint}_ with the same topology id and tag {_tag}. " +
                                                                 "It is possible that you have DNS or routing issues that cause multiple URLs to go to the same node."  +
                                                                 $"Connection from {initialMessage.SourceUrl} and attempted to connect to {initialMessage.DestinationUrl}");
                         }
+
                         sayHello?.Invoke(initialMessage);
                     }
 
@@ -1129,6 +1124,20 @@ namespace Raven.Server.Rachis
                 }
 
                 throw;
+            }
+        }
+
+        private void ValidateCompatibility(RachisHello initialMessage, ClusterTopology clusterTopology)
+        {
+            var version = initialMessage.ServerBuildVersion;
+            if (ServerVersion.IsNightlyOrDev(version))
+                return;
+
+            if (clusterTopology.Members.ContainsKey(Tag) == false)
+            {
+                if (version >= 40_000 && version < 42_000)
+                    throw new NotSupportedException($"You cannot add a new node in version {ServerVersion.FullVersion} to a pre 4.2 cluster, " +
+                                                    "in order to add this node you should upgrade your cluster first.");
             }
         }
 
@@ -1489,15 +1498,25 @@ namespace Raven.Server.Rachis
                                 return;
                             break;
                         case CommitIndexModification.AnyChange:
-                            break;
+                            await WaitForCommitChangeOrThrowTimeoutException(timeoutTask, task);
+                            return;
                         default:
                             throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
                     }
                 }
 
-                if (timeoutTask == await Task.WhenAny(task, timeoutTask))
-                    ThrowTimeoutException();
+                await WaitForCommitChangeOrThrowTimeoutException(timeoutTask, task);
             }
+
+            ThrowTimeoutException();
+        }
+
+        private static async Task WaitForCommitChangeOrThrowTimeoutException(Task timeoutTask, Task task)
+        {
+            if (timeoutTask == await Task.WhenAny(task, timeoutTask))
+                ThrowTimeoutException();
+
+            await task; // propagate cancellation/exception 
         }
 
         private static void ThrowTimeoutException()
@@ -1762,8 +1781,6 @@ namespace Raven.Server.Rachis
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
-                var lastNode =  _tag;
-
                 var topologyId = Guid.NewGuid().ToString();
                 var topology = new ClusterTopology(
                     topologyId,
@@ -1773,9 +1790,11 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    lastNode,
+                    _tag,
                     GetLastEntryIndex(ctx) + 1
                 );
+
+                UpdateNodeTag(ctx, nodeTag);
 
                 SetTopology(this, ctx, topology);
 
@@ -1975,9 +1994,13 @@ namespace Raven.Server.Rachis
             ValidateNodeTag(newTag);
 
             using (Slice.From(context.Transaction.InnerTransaction.Allocator, newTag, out Slice str))
+            using (Slice.From(context.Transaction.InnerTransaction.Allocator, _tag, out Slice oldTag))
             {
                 var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
                 state.Add(TagSlice, str);
+
+                if (_tag != InitialTag)
+                    state.Add(PreviousTagSlice, oldTag);
             }
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>

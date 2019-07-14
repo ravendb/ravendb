@@ -8,6 +8,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Revisions;
@@ -357,9 +358,40 @@ namespace Raven.Server.Documents
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
+        internal HashSet<string> UnusedDatabaseIds;
+
+        public bool TryRemoveUnusedIds(ref string changeVector)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return false;
+
+            var list = UnusedDatabaseIds;
+            if (list == null || list.Count == 0)
+                return false;
+
+            var parsed = changeVector.ToChangeVectorList();
+            var removed = false;
+            for (var i = parsed.Count - 1; i >= 0; i--)
+            {
+                var entry = parsed[i];
+                if (list.Contains(entry.DbId))
+                {
+                    parsed.RemoveAt(i);
+                    removed = true;
+                }
+            }
+
+            if (removed == false)
+                return false;
+
+            changeVector = parsed.SerializeVector();
+            return true;
+        } 
+
         public string CreateNextDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var databaseChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref databaseChangeVector);
             changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, changeVector);
             return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector).ChangeVector;
         }
@@ -368,6 +400,8 @@ namespace Raven.Server.Documents
         {
             var changeVector = context.LastDatabaseChangeVector ??
                                (context.LastDatabaseChangeVector = GetDatabaseChangeVector(context));
+
+            context.SkipChangeVectorValidation = TryRemoveUnusedIds(ref changeVector);
 
             if (string.IsNullOrEmpty(changeVector))
             {
@@ -389,9 +423,10 @@ namespace Raven.Server.Documents
             return GetNewChangeVector(context, GenerateNextEtag());
         }
 
-        public static void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
-            ThrowOnNotUpdatedChangeVector(context, changeVector);
+            if (TryRemoveUnusedIds(ref changeVector) == false)
+                ThrowOnNotUpdatedChangeVector(context, changeVector);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, changeVector, out var slice))
@@ -403,11 +438,14 @@ namespace Raven.Server.Documents
         [Conditional("DEBUG")]
         private static void ThrowOnNotUpdatedChangeVector(DocumentsOperationContext context, string changeVector)
         {
+            if (context.SkipChangeVectorValidation)
+                return;
+
             var globalChangeVector = GetDatabaseChangeVector(context);
 
-            if (globalChangeVector != changeVector && 
+            if (globalChangeVector != changeVector &&
                 globalChangeVector != null &&
-                globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false && 
+                globalChangeVector.ToChangeVector().OrderByDescending(x => x).SequenceEqual(changeVector.ToChangeVector().OrderByDescending(x => x)) == false &&
                 ChangeVectorUtils.GetConflictStatus(changeVector, globalChangeVector) != ConflictStatus.Update)
             {
                 throw new InvalidOperationException($"Global Change Vector wasn't updated correctly. " +
@@ -596,7 +634,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
             // ReSharper disable once LoopCanBeConvertedToQuery
@@ -607,7 +645,7 @@ namespace Raven.Server.Documents
                     yield break;
                 }
 
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -689,7 +727,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take, DocumentFields fields = DocumentFields.All)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -706,7 +744,7 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                yield return TableValueToDocument(context, ref result.Reader);
+                yield return TableValueToDocument(context, ref result.Reader, fields);
             }
         }
 
@@ -777,7 +815,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public Document Get(DocumentsOperationContext context, string id, bool throwOnConflict = true)
+        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
@@ -786,16 +824,16 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Get(context, lowerId, throwOnConflict);
+                return Get(context, lowerId, fields, throwOnConflict);
             }
         }
 
-        public Document Get(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict = true, bool skipValidationInDebug = false)
+        public Document Get(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
         {
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
                 return null;
 
-            var doc = TableValueToDocument(context, ref tvr, skipValidationInDebug);
+            var doc = TableValueToDocument(context, ref tvr, fields, skipValidationInDebug);
 
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
@@ -1048,35 +1086,72 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, bool skipValidationInDebug = false)
+        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
-            var document = ParseDocument(context, ref tvr);
+            var document = ParseDocument(context, ref tvr, fields);
 #if DEBUG
             if (skipValidationInDebug == false)
             {
                 Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
                 DocumentPutAction.AssertMetadataWasFiltered(document.Data);
                 AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
-            } 
+            }
 #endif
             return document;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr)
+        private static Document ParseDocument(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
         {
-            var result = new Document
+            if (fields == DocumentFields.All)
             {
-                StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
-                Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
-                Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
-                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
-                LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
-                TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
-            };
+                return new Document
+                {
+                    StorageId = tvr.Id,
+                    LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr),
+                    Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
+                    Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
+                    Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
+                    ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
+                    LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
+                    Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
+                    TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr),
+                };
+            }
+
+            return ParseDocumentPartial(context, ref tvr, fields);
+        }
+
+        private static Document ParseDocumentPartial(JsonOperationContext context, ref TableValueReader tvr, DocumentFields fields)
+        {
+            var result = new Document();
+
+            if (fields.Contain(DocumentFields.StorageId))
+                result.StorageId = tvr.Id;
+
+            if (fields.Contain(DocumentFields.LowerId))
+                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+
+            if (fields.Contain(DocumentFields.Id))
+                result.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
+
+            if (fields.Contain(DocumentFields.Etag))
+                result.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
+
+            if (fields.Contain(DocumentFields.Data))
+                result.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
+
+            if (fields.Contain(DocumentFields.ChangeVector))
+                result.ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
+
+            if (fields.Contain(DocumentFields.LastModified))
+                result.LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr);
+
+            if (fields.Contain(DocumentFields.Flags))
+                result.Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
+
+            if (fields.Contain(DocumentFields.TransactionMarker))
+                result.TransactionMarker = TableValueToShort((int)DocumentsTable.TransactionMarker, nameof(DocumentsTable.TransactionMarker), ref tvr);
 
             return result;
         }
@@ -1087,7 +1162,7 @@ namespace Raven.Server.Documents
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
-            return ParseDocument(context, ref tvr);
+            return ParseDocument(context, ref tvr, DocumentFields.All);
         }
 
         private static Tombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
@@ -1179,7 +1254,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    flags, 
+                    flags,
                     nonPersistentFlags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
@@ -1230,14 +1305,14 @@ namespace Raven.Server.Documents
                 using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstoneId))
                 {
                     var tombstone = CreateTombstone(
-                        context, 
-                        tombstoneId, 
-                        doc.Etag, 
-                        collectionName, 
-                        doc.ChangeVector, 
-                        modifiedTicks, 
-                        changeVector, 
-                        flags, 
+                        context,
+                        tombstoneId,
+                        doc.Etag,
+                        collectionName,
+                        doc.ChangeVector,
+                        modifiedTicks,
+                        changeVector,
+                        flags,
                         nonPersistentFlags);
                     changeVector = tombstone.ChangeVector;
                     etag = tombstone.Etag;
@@ -1252,7 +1327,7 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, documentFlags);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, nonPersistentFlags, documentFlags);
                     }
                 }
 
@@ -1357,9 +1432,7 @@ namespace Raven.Server.Documents
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }
-
                 }
-
             }
 
             return deleteResults;
@@ -1400,12 +1473,12 @@ namespace Raven.Server.Documents
             string docChangeVector,
             long lastModifiedTicks,
             string changeVector,
-            DocumentFlags flags, 
+            DocumentFlags flags,
             NonPersistentDocumentFlags nonPersistentFlags)
         {
             var newEtag = GenerateNextEtag();
 
-            if (string.IsNullOrEmpty(changeVector) && 
+            if (string.IsNullOrEmpty(changeVector) &&
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
@@ -1572,7 +1645,6 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-
         public class CollectionStats
         {
             public string Name;
@@ -1587,7 +1659,7 @@ namespace Raven.Server.Documents
                 //This is the case where a read transaction reading a collection cached by a later write transaction we can safly ignore it.
                 if (collectionTable == null)
                 {
-                    if(context.Transaction.InnerTransaction.IsWriteTransaction == false)
+                    if (context.Transaction.InnerTransaction.IsWriteTransaction == false)
                         continue;
                     throw new InvalidOperationException($"Cached collection {kvp.Key} is missing its table, this is likley a bug.");
                 }

@@ -23,7 +23,7 @@ namespace Raven.Debug
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, int dwFlags);
 
-        private static void EnsureProperDebugDllsAreLoaded()
+        private static void EnsureProperDebugDllsAreLoadedForWindows()
         {
             var systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
 
@@ -41,7 +41,8 @@ namespace Raven.Debug
             if (args == null)
                 throw new ArgumentNullException(nameof(args));
 
-            EnsureProperDebugDllsAreLoaded();
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                EnsureProperDebugDllsAreLoadedForWindows();
 
             _app = new CommandLineApplication
             {
@@ -56,6 +57,7 @@ namespace Raven.Debug
                 cmd.ExtendedHelpText = cmd.Description = "Prints stack traces for the given process.";
                 cmd.HelpOption(HelpOptionString);
 
+                var waitOption = cmd.Option("--wait", "Wait for user input", CommandOptionType.NoValue);
                 var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach to", CommandOptionType.SingleValue);
                 var attachTimeoutOption = cmd.Option("--timeout", "Attaching to process timeout in milliseconds. Default 15000", CommandOptionType.SingleValue);
                 var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
@@ -64,6 +66,9 @@ namespace Raven.Debug
 
                 cmd.OnExecute(() =>
                 {
+                    if (waitOption.HasValue())
+                        Console.ReadLine(); // wait for the caller to finish preparing for us
+
                     if (pidOption.HasValue() == false)
                         return ExitWithError("Missing --pid option.", cmd);
 
@@ -102,7 +107,21 @@ namespace Raven.Debug
                     }
                     catch (Exception e)
                     {
-                        return ExitWithError($"Failed to show the stacktrace. Error: {e}", cmd);
+                        string desc;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == false)
+                            desc = "";
+                        else
+                        {
+                            var apppath = typeof(CommandLineApp).Assembly.Location;
+                            desc =
+                                $"Make sure to {Environment.NewLine}" +
+                                $"sudo chown root:root {apppath}{Environment.NewLine}" +
+                                $"sudo chmod +s {apppath}{Environment.NewLine}" + 
+                                $"sudo apt install libc6-dev{Environment.NewLine}" + 
+                                $"sudo setcap cap_sys_ptrace=eip {apppath}{Environment.NewLine}";
+                        }
+
+                        return ExitWithError($"Failed to show the stacktrace. {desc}Error: {e}", cmd);
                     }
                 });
             });
@@ -139,10 +158,20 @@ namespace Raven.Debug
 
             var threadInfoList = new List<ThreadInfo>();
 
-            using (var dataTarget = DataTarget.AttachToProcess(processId, attachTimeout))
+            using (var dataTarget = DataTarget.AttachToProcess(processId, attachTimeout, AttachFlag.Passive))
             {
                 var clrInfo = dataTarget.ClrVersions[0];
-                var runtime = clrInfo.CreateRuntime();
+                ClrRuntime runtime;
+                try
+                {
+                    runtime = clrInfo.CreateRuntime();
+                }
+                catch (Exception)
+                {
+                    var path = Path.Combine(AppContext.BaseDirectory, clrInfo.DacInfo.FileName);
+                    runtime = clrInfo.CreateRuntime(path);
+                }
+                
                 var sb = new StringBuilder(1024 * 1024);
                 var count = 0;
 
@@ -259,7 +288,7 @@ namespace Raven.Debug
                     threadInfo.StackTrace.Add(frame.DisplayString);
                 }
             }
-            else
+            else if(dataTarget.DebuggerInterface != null)
             {
                 var control = (IDebugControl)dataTarget.DebuggerInterface;
                 var sysObjs = (IDebugSystemObjects)dataTarget.DebuggerInterface;

@@ -12,15 +12,16 @@ using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
+using Raven.Client;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Extensions;
 
 namespace Raven.Server.Utils
 {
@@ -239,8 +240,25 @@ namespace Raven.Server.Utils
             if (value is IDictionary dictionary)
             {
                 var @object = new DynamicJsonValue();
+
                 foreach (var key in dictionary.Keys)
-                    @object[key.ToString()] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                {
+                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
+                    @object[keyAsString] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                }
+
+                return @object;
+            }
+
+            if (value is IDictionary<object, object> dDictionary)
+            {
+                var @object = new DynamicJsonValue();
+
+                foreach (var key in dDictionary.Keys)
+                {
+                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(root, key, flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context));
+                    @object[keyAsString] = ToBlittableSupportedType(root, dDictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
+                }
 
                 return @object;
             }
@@ -276,6 +294,37 @@ namespace Raven.Server.Utils
             }
 
             return inner;
+        }
+
+        public static string KeyAsString(object key)
+        {
+            string kvpKeyAsString;
+            switch (key)
+            {
+                case null:
+                    kvpKeyAsString = Constants.Documents.Indexing.Fields.NullValue;
+                    break;
+                case LazyStringValue lsv:
+                    kvpKeyAsString = lsv.Size == 0 ? Constants.Documents.Indexing.Fields.EmptyString : lsv;
+                    break;
+                case LazyCompressedStringValue lcsv:
+                    kvpKeyAsString = lcsv.ToLazyStringValue();
+                    break;
+                case DateTime dateTime:
+                    kvpKeyAsString = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+                    break;
+                case DateTimeOffset dateTimeOffset:
+                    kvpKeyAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
+                    break;
+                case TimeSpan timeSpan:
+                    kvpKeyAsString = timeSpan.ToString("c", CultureInfo.InvariantCulture);
+                    break;
+                default:
+                    kvpKeyAsString = key.ToString();
+                    break;
+            }
+
+            return kvpKeyAsString;
         }
 
         private static void ThrowInvalidObject(JsValue jsValue)

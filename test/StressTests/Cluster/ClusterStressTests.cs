@@ -18,18 +18,21 @@ namespace StressTests.Cluster
     public class ClusterStressTests : ReplicationTestBase
     {
         // the values are lower to make the cluster less stable
-        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
-            string customConfigPath = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
-            if (customSettings == null)
-                customSettings = new Dictionary<string, string>();
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
 
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "10";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "3000";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "10";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "3000";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50";
 
-            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+            return base.GetNewServer(options);
         }
 
         [Fact]

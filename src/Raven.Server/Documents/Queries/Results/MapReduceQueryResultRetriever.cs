@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
 
-        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
+        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
         {
             var reduceValue = input.GetField(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName).GetBinaryValue(state);
 
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
-                var doc = DirectGet(input, null, state);
+                var doc = DirectGet(input, null, DocumentFields.All, state);
 
                 FinishDocumentSetup(doc, lucene);
 

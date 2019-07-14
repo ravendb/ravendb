@@ -1394,6 +1394,10 @@ class ongoingTasksStats extends viewModelBase {
                         if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
                             tooltipHtml += `Currently allocated: ${generalUtils.formatBytesToSize(elementWithData.CurrentlyAllocated.SizeInBytes)} <br/>`;
                         }
+
+                        if (elementWithData.BatchSize && elementWithData.BatchSize.SizeInBytes) {
+                            tooltipHtml += `Batch size: ${generalUtils.formatBytesToSize(elementWithData.BatchSize.SizeInBytes)} <br/>`;
+                        }
                         break;
                 }
                 

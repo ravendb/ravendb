@@ -192,7 +192,7 @@ class registration extends dialogViewModelBase {
                 }
                 
             default:
-                if (license.Expired) {
+                if (license.Expired && !license.IsIsv) {
                     registration.showRegistrationDialog(license, false, false);
                 }
                 break;

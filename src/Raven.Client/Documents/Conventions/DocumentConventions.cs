@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Conventions
         {
             private readonly DocumentConventions _conventions;
             private readonly AggressiveCacheOptions _aggressiveCacheOptions;
-            
+
             internal AggressiveCacheConventions(DocumentConventions conventions)
             {
                 _conventions = conventions;
@@ -154,6 +154,7 @@ namespace Raven.Client.Documents.Conventions
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { };
+            CustomizeJsonDeserializer = serializer => { };
 
             BulkInsert = new BulkInsertConventions(this);
 
@@ -196,10 +197,11 @@ namespace Raven.Client.Documents.Conventions
         private bool _addIdFieldToDynamicObjects;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
+        private Action<JsonSerializer> _customizeJsonDeserializer;
         private TimeSpan? _requestTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
-        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
+        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;        
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
         private bool? _useCompression;
@@ -207,7 +209,6 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private string _topologyCacheLocation;
-
         public Func<MemberInfo, string> PropertyNameConverter
         {
             get => _propertyNameConverter;
@@ -285,6 +286,23 @@ namespace Raven.Client.Documents.Conventions
                 _customizeJsonSerializer = value;
             }
         }
+
+
+        /// <summary>
+        ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" /> for deserializations.
+        ///     When creating a JsonSerializer, the CustomizeJsonSerializer is always called before CustomizeJsonDeserializer
+        /// </summary>
+        public Action<JsonSerializer> CustomizeJsonDeserializer
+        {
+            get => _customizeJsonDeserializer;
+            set
+            {
+                AssertNotFrozen();
+                _customizeJsonDeserializer = value;
+            }
+        }
+
+        
 
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
@@ -774,13 +792,10 @@ namespace Raven.Client.Documents.Conventions
             return this;
         }
 
-        /// <summary>
-        ///     Creates the serializer.
-        /// </summary>
-        /// <returns></returns>
-        public JsonSerializer CreateSerializer()
+
+        private JsonSerializer CreateInitialSerializer()
         {
-            var jsonSerializer = new JsonSerializer
+            return new JsonSerializer
             {
                 DateParseHandling = DateParseHandling.None,
                 ObjectCreationHandling = ObjectCreationHandling.Auto,
@@ -790,9 +805,10 @@ namespace Raven.Client.Documents.Conventions
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double
             };
+        }
 
-            CustomizeJsonSerializer(jsonSerializer);
-
+        private void PostJsonSerializerInitiation(JsonSerializer jsonSerializer)
+        {
             if (SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
@@ -803,8 +819,31 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
+        }
 
+        /// <summary>
+        ///     Creates the serializer.
+        /// </summary>
+        /// <returns></returns>
+        public JsonSerializer CreateSerializer()
+        {
+            var jsonSerializer = CreateInitialSerializer();
+            CustomizeJsonSerializer(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer);
             return jsonSerializer;
+        }
+
+        /// <summary>
+        ///     Creates the serializer.
+        /// </summary>
+        /// <returns></returns>
+        public JsonSerializer CreateDeserializer()
+        {
+            var jsonSerializer = CreateInitialSerializer();
+            CustomizeJsonSerializer(jsonSerializer);
+            CustomizeJsonDeserializer(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer);
+            return jsonSerializer;            
         }
 
         /// <summary>

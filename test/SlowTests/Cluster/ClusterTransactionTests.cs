@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -11,10 +12,12 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -29,17 +32,21 @@ namespace SlowTests.Cluster
 {
     public class ClusterTransactionTests : ReplicationTestBase
     {
-        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
-            string customConfigPath = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
-            if (customSettings == null)
-                customSettings = new Dictionary<string, string>();
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
 
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
 
-            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+
+            return base.GetNewServer(options);
         }
 
         [Fact]
@@ -90,54 +97,43 @@ namespace SlowTests.Cluster
             }))
             {
                 var count = 0;
-                var tasks = new List<Task>();
-                for (int i = 0; i < 100; i++)
+                var parallelism = Environment.ProcessorCount * 5;
+
+                for (var i = 0; i < 10; i++)
                 {
-                    var t = Task.Run(async () =>
+                    var tasks = new List<Task>();
+                    for (var j = 0; j < parallelism; j++)
                     {
-                        /*
-                        for (int j = 0; j < 10; j++)
+                        tasks.Add(Task.Run(async () =>
                         {
-                            leaderStore.Operations.SendAsync(new PutCompareExchangeValueOperation<User>($"usernames/{Interlocked.Increment(ref count)}", new User(), 0));
-                        }
-*/
+                            using (var session = leaderStore.OpenSession(new SessionOptions
+                            {
+                                TransactionMode = TransactionMode.ClusterWide
+                            }))
+                            {
+                                session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
+                                session.SaveChanges();
+                            }
 
-                        using (var session = leaderStore.OpenAsyncSession(new SessionOptions
-                        {
-                            TransactionMode = TransactionMode.ClusterWide
-                        }))
-                        {
-                            session.Advanced.ClusterTransaction.CreateCompareExchangeValue($"usernames/{Interlocked.Increment(ref count)}", new User());
-                            await session.SaveChangesAsync();
-                        }
-
-                        await ActionWithLeader((l) =>
-                        {
-                            l.ServerStore.Engine.CurrentLeader?.StepDown();
-                            return Task.CompletedTask;
-                        });
-                    });
-                    tasks.Add(t);
-                }
-
-                var hasExecption = false;
-
-                foreach (var task in tasks)
-                {
-                    try
-                    {
-                        await task;
+                            await ActionWithLeader((l) =>
+                              {
+                                  l.ServerStore.Engine.CurrentLeader?.StepDown();
+                                  return Task.CompletedTask;
+                              });
+                        }));
                     }
-                    catch (Exception)
-                    {
-                        hasExecption = true;
-                        Console.WriteLine(task.Exception.InnerExceptions[0].Message);
-                    }
-                }
 
-                if (hasExecption)
-                {
-                    throw new InvalidOperationException();
+                    await Task.WhenAll(tasks.ToArray());
+                    using (var session = leaderStore.OpenSession(new SessionOptions
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    }))
+                    {
+                        var results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<User>(
+                            Enumerable.Range(i * parallelism, parallelism).Select(x =>
+                                $"usernames/{Interlocked.Increment(ref count)}").ToArray<string>());
+                        Assert.Equal(parallelism, results.Count);
+                    }
                 }
             }
 
@@ -189,79 +185,71 @@ namespace SlowTests.Cluster
         [InlineData(5)]
         public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
         {
-            NoTimeouts();
-            try
+            var numOfSessions = 10;
+            var docsPerSession = 2;
+            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            using (var store = GetDocumentStore(new Options
             {
-                var numOfSessions = 10;
-                var docsPerSession = 2;
-                var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
-                using (var store = GetDocumentStore(new Options
+                Server = leader,
+                ReplicationFactor = numberOfNodes
+            }))
+            {
+                for (int j = 0; j < numOfSessions; j++)
                 {
-                    Server = leader,
-                    ReplicationFactor = numberOfNodes
-                }))
-                {
-                    for (int j = 0; j < numOfSessions; j++)
+                    var trys = 5;
+                    do
                     {
-                        var trys = 5;
-                        do
+                        try
                         {
-                            try
+                            using (var session = store.OpenAsyncSession(new SessionOptions
                             {
-                                using (var session = store.OpenAsyncSession(new SessionOptions
+                                TransactionMode = TransactionMode.ClusterWide
+                            }))
+                            {
+                                for (int i = 0; i < docsPerSession; i++)
                                 {
-                                    TransactionMode = TransactionMode.ClusterWide
-                                }))
-                                {
-                                    for (int i = 0; i < docsPerSession; i++)
+                                    var user = new User
                                     {
-                                        var user = new User
-                                        {
-                                            LastName = RandomString(2048),
-                                            Age = i
-                                        };
-                                        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
-                                        {
-                                            await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1), cts.Token);
-                                        }
-                                    }
-
-                                    if (numberOfNodes > 1)
-                                        await ActionWithLeader(l =>
-                                        {
-                                            l.ServerStore.Engine.CurrentLeader?.StepDown();
-                                            return Task.CompletedTask;
-                                        });
+                                        LastName = RandomString(2048),
+                                        Age = i
+                                    };
                                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
                                     {
-                                        await session.SaveChangesAsync(cts.Token);
+                                        await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1), cts.Token);
                                     }
-
-                                    trys = 5;
                                 }
-                            }
-                            catch (Exception e) when (e is ConcurrencyException)
-                            {
-                                trys--;
-                            }
-                        } while (trys < 5 && trys > 0);
 
-                        Assert.True(trys > 0, $"Couldn't save a document after 5 retries.");
-                    }
+                                if (numberOfNodes > 1)
+                                    await ActionWithLeader(l =>
+                                    {
+                                        l.ServerStore.Engine.CurrentLeader?.StepDown();
+                                        return Task.CompletedTask;
+                                    });
+                                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                                {
+                                    await session.SaveChangesAsync(cts.Token);
+                                }
 
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
-                        {
-                            var res = await session.Query<User>().Customize(q => q.WaitForNonStaleResults()).ToListAsync(cts.Token);
-                            Assert.Equal(numOfSessions * docsPerSession, res.Count);
+                                trys = 5;
+                            }
                         }
+                        catch (Exception e) when (e is ConcurrencyException)
+                        {
+                            trys--;
+                        }
+                    } while (trys < 5 && trys > 0);
+
+                    Assert.True(trys > 0, $"Couldn't save a document after 5 retries.");
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(numberOfNodes)))
+                    {
+                        var res = await session.Query<User>().Customize(q => q.WaitForNonStaleResults()).ToListAsync(cts.Token);
+                        Assert.Equal(numOfSessions * docsPerSession, res.Count);
                     }
                 }
-            }
-            finally
-            {
-                SetTimeouts();
             }
         }
 
@@ -864,6 +852,114 @@ namespace SlowTests.Cluster
             }
         }
 
+        [Fact]
+        public async Task ModifyDocumentWithRevision()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(2, list.Count);
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(3, list.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(4, list.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PutDocumentInDifferentCollectionWithRevision()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task PutDocumentInDifferentCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration { Disabled = false } };
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Employee { FirstName = "Aviv2" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                    Assert.Equal(2, list.Count);
+                }
+            }
+        }
+
         /// <summary>
         /// This is a comprehensive test. The general flow of the test is as following:
         /// - Create cluster with 5 nodes with a database on _all_ of them and enable revisions.
@@ -953,11 +1049,16 @@ namespace SlowTests.Cluster
                 }
 
                 // revive the SUT node
-                var revived = Servers[1] = GetNewServer(new Dictionary<string, string>
+                var revived = Servers[1] = GetNewServer(new ServerCreationOptions{ CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url,
                     [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                },
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    PartialPath = dataDir,
+                    RegisterForDisposal = false
+                });
                 using (var revivedStore = new DocumentStore()
                 {
                     Urls = new[] { revived.WebUrl },
@@ -983,11 +1084,11 @@ namespace SlowTests.Cluster
                         Assert.Equal(2, count);
 
                         // revive another node so we should have a functional cluster now
-                        Servers[2] = GetNewServer(new Dictionary<string, string>
+                        Servers[2] = GetNewServer(new ServerCreationOptions { CustomSettings = new Dictionary<string, string>
                         {
                             [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
                             [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                        }, runInMemory: false, deletePrevious: false, partialPath: dataDir2);
+                        }, RunInMemory = false, DeletePrevious =  false, PartialPath = dataDir2});
 
                         // wait for the log to apply on the SUT node
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
@@ -1085,6 +1186,47 @@ namespace SlowTests.Cluster
 
                     var u = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende");
                     Assert.Equal(user1.Name, u.Value.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanAddNullValueToCompareExchange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    const string id = "test/user";
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue<string>(id, null);
+                    await session.SaveChangesAsync();
+
+                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id);
+                    Assert.Equal(null, compareExchangeValue.Value);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetListCompareExchange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var value = new List<string> { "1", null, "2" };
+                    const string id = "test/user";
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, value);
+                    await session.SaveChangesAsync();
+
+                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<List<string>>(id);
+                    Assert.True(value.SequenceEqual(compareExchangeValue.Value));
                 }
             }
         }

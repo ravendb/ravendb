@@ -69,7 +69,9 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
                 var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "B");
                 
@@ -177,7 +179,9 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(conflig));
                 var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
                     .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
@@ -278,7 +282,9 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var result = src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                Assert.NotNull(result.RaftCommandIndex);
+
                 src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
 
                 var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
@@ -322,10 +328,13 @@ namespace RachisTests.DatabaseCluster
                 var currentTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == currentNodeNodeTag);
 
                 // start server which originally was handling ETL task
-                GetNewServer(new Dictionary<string, string>()
-                {
-                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
-                }, runInMemory: false, deletePrevious: false, partialPath: originalServerDataDir);
+                GetNewServer(new ServerCreationOptions
+                    {
+                        CustomSettings = new Dictionary<string, string>
+                        {
+                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
+                        }, RunInMemory = false, DeletePrevious = false, PartialPath = originalServerDataDir
+                    });
 
                 using (var store = new DocumentStore
                 {

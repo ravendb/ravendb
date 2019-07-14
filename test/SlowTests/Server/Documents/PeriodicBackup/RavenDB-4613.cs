@@ -21,9 +21,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class RavenDB_4163 : RavenTestBase
     {
-        private const string AzureAccountName = "devstoreaccount1";
-        private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-
         [AzureStorageEmulatorFact]
         public async Task put_blob_64MB()
         {
@@ -100,7 +97,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task can_get_and_delete_container()
         {
             var containerName = Guid.NewGuid().ToString();
-            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), isTest: true))
             {
                 var containerNames = await client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
@@ -120,7 +117,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task can_get_container_not_found()
         {
             var containerName = Guid.NewGuid().ToString();
-            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, isTest: true))
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), isTest: true))
             {
                 var containerNames = await client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
@@ -142,7 +139,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 $"{Guid.NewGuid()}/folder/testKey";
 
             var progress = new Progress();
-            using (var client = new RavenAzureClient(AzureAccountName, AzureAccountKey, containerName, progress, isTest: true))
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), progress, isTest: true))
             {
                 try
                 {

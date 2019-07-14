@@ -179,7 +179,7 @@ namespace Raven.Server.Storage
             if (config.FreeSpaceAlertThresholdInMb != null &&
                 totalFreeSpace < config.FreeSpaceAlertThresholdInMb.Value)
             {
-                reason = $"has {totalFreeSpace} free what is below configured threshold ({config.FreeSpaceAlertThresholdInMb.Value})";
+                reason = $"has {totalFreeSpace} of free space which is below the configured threshold ({config.FreeSpaceAlertThresholdInMb.Value})";
                 return true;
             }
 
@@ -188,7 +188,8 @@ namespace Raven.Server.Storage
             if (config.FreeSpaceAlertThresholdInPercentages != null &&
                 availableInPercentages < config.FreeSpaceAlertThresholdInPercentages.Value)
             {
-                reason = $"has {availableInPercentages:#.#}% free what is below configured threshold ({config.FreeSpaceAlertThresholdInPercentages}%)";
+                reason = $"has {availableInPercentages:#.#}% of free space which is below the configured threshold ({config.FreeSpaceAlertThresholdInPercentages}%). " +
+                         $"Total free space: {totalFreeSpace}";
                 return true;
             }
 

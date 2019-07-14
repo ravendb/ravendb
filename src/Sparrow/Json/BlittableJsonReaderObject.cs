@@ -50,13 +50,24 @@ namespace Sparrow.Json
         }
 
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
+            : this(mem, size, context)
+        {
+            _buffer = buffer;
+        }
+
+        private BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, AllocatedMemoryData allocatedMemory)
+            : this(mem, size, context)
+        {
+            _allocatedMemory = allocatedMemory;
+        }
+
+        private BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context)
             : base(context)
         {
             if (size == 0)
                 ThrowOnZeroSize(size);
 
             _isRoot = true;
-            _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
 
@@ -960,7 +971,7 @@ namespace Sparrow.Json
 
             AssertContextNotDisposed();
 
-            if (_allocatedMemory != null && _buffer.IsDisposed == false)
+            if (_allocatedMemory != null)
             {
                 _context.ReturnMemory(_allocatedMemory);
                 _allocatedMemory = null;
@@ -1015,10 +1026,7 @@ namespace Sparrow.Json
             {
                 var mem = context.GetMemory(Size);
                 CopyTo(mem.Address);
-                return new BlittableJsonReaderObject(mem.Address, Size, context)
-                {
-                    _allocatedMemory = mem
-                };
+                return new BlittableJsonReaderObject(mem.Address, Size, context, mem);
             }
 
             return context.ReadObject(this, null);
@@ -1425,9 +1433,9 @@ namespace Sparrow.Json
 
             var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
-            for (int i = 0; i < _propCount; i++)
+            for (var i = 0; i < _propCount; i++)
             {
-                GetPropertyTypeAndPosition(i, metadataSize, out BlittableJsonToken token, out int position, out int id);
+                GetPropertyTypeAndPosition(i, metadataSize, out _, out _, out var id);
 
                 if (propertyName == GetPropertyName(id))
                     return true;

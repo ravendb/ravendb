@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -267,7 +268,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract List<TTransformed> GetTransformedResults();
 
-        public abstract void Transform(TExtracted item);
+        public abstract void Transform(TExtracted item, EtlStatsScope stats);
 
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {

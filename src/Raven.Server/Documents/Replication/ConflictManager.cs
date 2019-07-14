@@ -151,8 +151,16 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, string changeVector)
         {
-            if (!doc.TryGet("Max", out long highestMax))
-                throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name 'Max'");
+            long highestMax;
+            if (doc == null)
+            {
+                highestMax = 0;
+            }
+            else
+            {
+                if (!doc.TryGet("Max", out highestMax))
+                    throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name 'Max'");
+            }
 
             var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
 

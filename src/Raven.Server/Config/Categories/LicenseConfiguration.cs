@@ -35,6 +35,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("License.CanForceUpdate", ConfigurationEntryScope.ServerWideOnly)]
         public bool CanForceUpdate { get; set; }
 
+        [Description("EXPERT ONLY. Indicates if license can be renewed from api.ravendb.net")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("License.CanRenew", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("License.CanRenewLicense", ConfigurationEntryScope.ServerWideOnly)]
+        public bool CanRenew { get; set; }
+
         [Description("EXPERT ONLY. Skip logging of lease license errors")]
         [DefaultValue(false)]
         [ConfigurationEntry("License.SkipLeasingErrorsLogging", ConfigurationEntryScope.ServerWideOnly)]

@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Replication
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
 
-        public readonly DocumentDatabase Database;
+        public DocumentDatabase Database;
         private SingleUseFlag _isInitialized = new SingleUseFlag();
 
         private readonly Timer _reconnectAttemptTimer;
@@ -212,6 +212,7 @@ namespace Raven.Server.Documents.Replication
 
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+            outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
             outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions.Stream, supportedVersions);
@@ -384,8 +385,12 @@ namespace Raven.Server.Documents.Replication
             {
                 try
                 {
+                    if (failure.RetryOn > DateTime.UtcNow)
+                        continue;
+
                     if (_reconnectQueue.TryRemove(failure) == false)
                         continue;
+
                     AddAndStartOutgoingReplication(failure.Node, failure.External);
                 }
                 catch (Exception e)
@@ -560,6 +565,7 @@ namespace Raven.Server.Documents.Replication
 
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
                 instancesToDispose.Add(instance);
                 _outgoing.TryRemove(instance);
                 _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination _);
@@ -878,6 +884,7 @@ namespace Raven.Server.Documents.Replication
 
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
                 instancesToDispose.Add(instance);
                 _outgoing.TryRemove(instance);
                 _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination _);
@@ -904,6 +911,7 @@ namespace Raven.Server.Documents.Replication
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+            outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
             outgoingReplication.Start();
@@ -916,7 +924,8 @@ namespace Raven.Server.Documents.Replication
             var shutdownInfo = new ConnectionShutdownInfo
             {
                 Node = node,
-                External = external
+                External = external,
+                MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
             };
             _outgoingFailureInfo.TryAdd(node, shutdownInfo);
             try
@@ -1128,6 +1137,7 @@ namespace Raven.Server.Documents.Replication
             {
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instance.SuccessfulReplication -= ResetReplicationFailuresInfo;
 
                 _outgoing.TryRemove(instance);
                 OutgoingReplicationRemoved?.Invoke(instance);
@@ -1144,11 +1154,10 @@ namespace Raven.Server.Documents.Replication
                 failureInfo.DestinationDbId = instance.DestinationDbId;
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
 
-                _reconnectQueue.Add(failureInfo);
-
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Document replication connection ({instance.Node}) failed, and the connection will be retried later.", e);
+                    _log.Info($"Document replication connection ({instance.Node}) failed {failureInfo.RetriesCount} times, the connection will be retried on {failureInfo.RetryOn}.", e);
 
+                _reconnectQueue.Add(failureInfo);
             }
         }
 
@@ -1168,14 +1177,16 @@ namespace Raven.Server.Documents.Replication
         {
             UpdateLastEtag(instance);
 
-            if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo))
-                failureInfo.Reset();
-
-
             while (_waitForReplicationTasks.TryDequeue(out TaskCompletionSource<object> result))
             {
                 TaskExecutor.Complete(result);
             }
+        }
+
+        private void ResetReplicationFailuresInfo(OutgoingReplicationHandler instance)
+        {
+            if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo))
+                failureInfo.Reset();
         }
 
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
@@ -1219,6 +1230,7 @@ namespace Raven.Server.Documents.Replication
 
             Database.TombstoneCleaner?.Unsubscribe(this);
 
+            Database = null;
             ea.ThrowIfNeeded();
         }
 
@@ -1287,25 +1299,37 @@ namespace Raven.Server.Documents.Replication
 
         public class ConnectionShutdownInfo
         {
+            private readonly TimeSpan _initialTimeout = TimeSpan.FromMilliseconds(1000);
+            private readonly int _retriesCount = 0;
+
+            public ConnectionShutdownInfo()
+            {
+                NextTimeout = _initialTimeout;
+                RetriesCount = _retriesCount;
+            }
+
             public string DestinationDbId;
 
             public bool External;
 
             public long LastHeartbeatTicks;
 
-            public const int MaxConnectionTimeout = 60000;
+            public double MaxConnectionTimeout;
 
             public readonly Queue<Exception> Errors = new Queue<Exception>();
 
-            public TimeSpan NextTimeout { get; set; } = TimeSpan.FromMilliseconds(500);
+            public TimeSpan NextTimeout { get; set; }
 
             public DateTime RetryOn { get; set; }
 
             public ReplicationNode Node { get; set; }
 
+            public int RetriesCount { get; set; }
+
             public void Reset()
             {
-                NextTimeout = TimeSpan.FromMilliseconds(500);
+                NextTimeout = _initialTimeout;
+                RetriesCount = _retriesCount;
                 Errors.Clear();
             }
 
@@ -1315,7 +1339,9 @@ namespace Raven.Server.Documents.Replication
                 while (Errors.Count > 25)
                     Errors.TryDequeue(out _);
 
-                NextTimeout = TimeSpan.FromMilliseconds(Math.Min(NextTimeout.TotalMilliseconds * 4, MaxConnectionTimeout));
+                RetriesCount++;
+                NextTimeout *= 2;
+                NextTimeout = TimeSpan.FromMilliseconds(Math.Min(NextTimeout.TotalMilliseconds, MaxConnectionTimeout));
                 RetryOn = DateTime.UtcNow + NextTimeout;
             }
         }

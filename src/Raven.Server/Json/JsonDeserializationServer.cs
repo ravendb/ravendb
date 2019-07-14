@@ -51,6 +51,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport = GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
 
+        public static readonly Func<BlittableJsonReaderObject, MaintenanceReport> MaintenanceReport = GenerateJsonDeserializationRoutine<MaintenanceReport>();
+
         public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptionsServerSide> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptionsServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
@@ -79,8 +81,6 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
-
-        public static readonly Func<BlittableJsonReaderObject, DatabaseRestorePath> DatabaseRestorePath = GenerateJsonDeserializationRoutine<DatabaseRestorePath>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
 
@@ -195,6 +195,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, SetLogsConfigurationOperation.Parameters> SetLogsConfigurationParameters = GenerateJsonDeserializationRoutine<SetLogsConfigurationOperation.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, AdminRevisionsHandler.Parameters> DeleteRevisionsParameters = GenerateJsonDeserializationRoutine<AdminRevisionsHandler.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
         }
     }
 }

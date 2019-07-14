@@ -250,11 +250,12 @@ namespace Raven.Server.Documents.Revisions
         public bool ShouldVersionDocument(CollectionName collectionName, NonPersistentDocumentFlags nonPersistentFlags,
             BlittableJsonReaderObject existingDocument, BlittableJsonReaderObject document,
             DocumentsOperationContext context, string id,
+            long? lastModifiedTicks,
             ref DocumentFlags documentFlags, out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
 
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromRevision))
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
                 return false;
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
@@ -285,9 +286,19 @@ namespace Raven.Server.Documents.Revisions
                 return false;
             }
 
+            if (configuration.MinimumRevisionAgeToKeep.HasValue && lastModifiedTicks.HasValue)
+            {
+                if (_database.Time.GetUtcNow().Ticks - lastModifiedTicks.Value > configuration.MinimumRevisionAgeToKeep.Value.Ticks)
+                {
+                    DeleteRevisionsFor(context, id);
+                    documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+                    return false;
+                }
+            }
+
             if (existingDocument == null)
             {
-                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreationForSmuggler))
                 {
                     // Smuggler is configured to avoid creating new revisions during import
                     return false;
@@ -317,7 +328,7 @@ namespace Raven.Server.Documents.Revisions
             return true;
         }
 
-        public unsafe void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
+        public unsafe bool Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
             DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks,
             RevisionsCollectionConfiguration configuration = null, CollectionName collectionName = null)
         {
@@ -340,7 +351,7 @@ namespace Raven.Server.Documents.Revisions
                 if (revisionExists)
                 {
                     MarkRevisionsAsConflictedIfNeeded(context, lowerId, idSlice, flags, tvr, table, changeVectorSlice);
-                    return;
+                    return false;
                 }
 
                 // We want the revision's attachments to have a lower etag than the revision itself
@@ -384,6 +395,8 @@ namespace Raven.Server.Documents.Revisions
 
                 DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
             }
+
+            return true;
         }
 
         private BlittableJsonReaderObject RecreateCountersIfNeeded(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
@@ -450,11 +463,11 @@ namespace Raven.Server.Documents.Revisions
                 if (document == null)
                 {
                     _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
-                        nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
+                        nonPersistentFlags | NonPersistentDocumentFlags.SkipRevisionCreation);
                     return;
                 }
                 _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                    flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);
+                    flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.SkipRevisionCreation);
             }
         }
 
@@ -740,6 +753,9 @@ namespace Raven.Server.Documents.Revisions
             BlittableJsonReaderObject deleteRevisionDocument, string changeVector,
             long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
         {
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
+                return;
+
             Debug.Assert(changeVector != null, "Change vector must be set");
 
             flags.Strip(DocumentFlags.HasAttachments);
@@ -1241,7 +1257,17 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)
+        public long GetRevisionsCount(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            {
+                var count = CountOfRevisions(context, prefixSlice);
+                return count;
+            }
+        }
+        
+        public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, long start, long take)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
@@ -1253,7 +1279,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, int start, int take)
+        private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, long start, long take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, start))

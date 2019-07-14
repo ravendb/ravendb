@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public Size CurrentlyAllocated { get; set; }
 
+        public Size BatchSize { get; set; }
+
         public string BatchCompleteReason { get; set; }
 
         public int TransformationErrorCount { get; set; }

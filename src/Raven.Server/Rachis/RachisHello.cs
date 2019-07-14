@@ -29,5 +29,7 @@
         public int SendingThread;
 
         public int ElectionTimeout;
+
+        public int ServerBuildVersion;
     }
 }

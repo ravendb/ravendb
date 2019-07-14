@@ -11,6 +11,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using System.Linq;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -148,7 +149,8 @@ namespace Raven.Server.Documents
                     }
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
-                        collectionName, nonPersistentFlags, oldDoc, document, context, id, ref flags, out var configuration);
+                        collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
+                    
                     if (shouldVersion)
                     {
                         if (ShouldVersionOldDocument(flags, oldDoc))
@@ -160,8 +162,8 @@ namespace Raven.Server.Documents
                             _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions, NonPersistentDocumentFlags.None,
                                 oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
+                        
                         flags |= DocumentFlags.HasRevisions;
-
                         _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
@@ -261,7 +263,7 @@ namespace Raven.Server.Documents
 
             if (flags.Contain(DocumentFlags.Resolved))
                 return false; // we already versioned it with the a conflicted flag
-
+            
             return true;
         }
 
@@ -309,6 +311,7 @@ namespace Raven.Server.Documents
                 oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
             }
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
+            context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector);
             return (changeVector, nonPersistentFlags);
         }
 
@@ -619,6 +622,9 @@ namespace Raven.Server.Documents
         [Conditional("DEBUG")]
         public static void AssertMetadataWasFiltered(BlittableJsonReaderObject data)
         {
+            if (data == null)
+                return;
+
             var originalNoCacheValue = data.NoCache;
 
             data.NoCache = true;

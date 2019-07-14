@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,7 +7,6 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Security.Permissions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -60,6 +59,7 @@ namespace Raven.Server.Commercial
         private readonly bool _skipLeasingErrorsLogging;
         private DateTime? _lastPerformanceHint;
         private bool _eulaAcceptedButHasPendingRestart;
+        private bool _putMyNodeInfoSuccess;
 
         private readonly object _locker = new object();
         private LicenseSupportInfo _lastKnownSupportInfo;
@@ -127,7 +127,8 @@ namespace Raven.Server.Commercial
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
                 ReloadLicense(firstRun: true);
-                AsyncHelpers.RunSync(() => CalculateLicenseLimits());
+
+                Task.Run(PutMyNodeInfoAsync);
             }
             catch (Exception e)
             {
@@ -140,6 +141,23 @@ namespace Raven.Server.Commercial
                     AsyncHelpers.RunSync(ExecuteTasks), null,
                     (int)TimeSpan.FromMinutes(1).TotalMilliseconds,
                     (int)TimeSpan.FromHours(24).TotalMilliseconds);
+            }
+        }
+
+        private async Task PutMyNodeInfoAsync()
+        {
+            if (_putMyNodeInfoSuccess)
+                return;
+
+            try
+            {
+                await _serverStore.PutMyNodeInfoAsync(_licenseStatus.MaxCores);
+                _putMyNodeInfoSuccess = true;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to put my node info, will try again later", e);
             }
         }
 
@@ -362,15 +380,15 @@ namespace Raven.Server.Commercial
         public async Task CalculateLicenseLimits(
             NodeDetails newNodeDetails = null,
             bool forceFetchingNodeInfo = false,
-            bool waitToUpdate = false)
+            bool forceUpdate = false)
         {
-            if (_serverStore.IsLeader() == false)
+            if (forceUpdate == false && _serverStore.IsLeader() == false)
                 return;
 
             if (_disableCalculatingLicenseLimits)
                 return;
 
-            if (_licenseLimitsSemaphore.Wait(waitToUpdate ? 1000 : 0) == false)
+            if (_licenseLimitsSemaphore.Wait(forceFetchingNodeInfo ? 1000 : 0) == false)
                 return;
 
             try
@@ -379,7 +397,14 @@ namespace Raven.Server.Commercial
                 if (licenseLimits == null)
                     return;
 
-                _serverStore.PutLicenseLimits(licenseLimits, RaftIdGenerator.DontCareId);
+                if (forceFetchingNodeInfo)
+                {
+                    await _serverStore.PutLicenseLimitsAsync(licenseLimits, RaftIdGenerator.DontCareId);
+                }
+                else
+                {
+                    _serverStore.PutLicenseLimits(licenseLimits, RaftIdGenerator.DontCareId);
+                }
             }
             catch (Exception e)
             {
@@ -469,7 +494,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+            await CalculateLicenseLimits(forceFetchingNodeInfo: true, forceUpdate: true);
         }
 
         private void ResetLicense(string error)
@@ -691,9 +716,11 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                await PutMyNodeInfoAsync();
+
                 await LeaseLicense(RaftIdGenerator.NewId());
 
-                await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+                await CalculateLicenseLimits(forceFetchingNodeInfo: true);
 
                 ReloadLicenseLimits(addPerformanceHint: true);
             }
@@ -867,7 +894,7 @@ namespace Raven.Server.Commercial
                     detailsPerNode.Remove(nodeToRemove);
                 }
 
-                AssignMissingNodeCores(missingNodesAssignment, detailsPerNode);
+                AssignMissingCoresForMissingNodes(missingNodesAssignment, detailsPerNode);
                 VerifyCoresPerNode(detailsPerNode, ref hasChanges);
                 ValidateLicenseStatus(detailsPerNode);
             }
@@ -899,18 +926,44 @@ namespace Raven.Server.Commercial
             var maxCores = _licenseStatus.MaxCores;
             var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
 
-            if (maxCores >= utilizedCores)
+            if (maxCores == utilizedCores)
                 return;
 
             hasChanges = true;
-            var coresPerNode = Math.Max(1, maxCores / detailsPerNode.Count);
-            foreach (var nodeDetails in detailsPerNode)
+
+            if (maxCores < utilizedCores)
             {
-                nodeDetails.Value.UtilizedCores = coresPerNode;
+                // we have less licensed cores than we currently used
+                var coresPerNode = Math.Max(1, maxCores / detailsPerNode.Count);
+                foreach (var nodeDetails in detailsPerNode)
+                {
+                    nodeDetails.Value.UtilizedCores = coresPerNode;
+                }
+            }
+            else
+            {
+                // we have spare cores to distribute
+                var freeCoresToDistribute = maxCores - utilizedCores;
+                
+                foreach (var nodeDetails in detailsPerNode)
+                {
+                    if (freeCoresToDistribute == 0)
+                        break;
+
+                    var node = nodeDetails.Value;
+                    var utilizedCoresForNode = node.UtilizedCores;
+                    var availableCoresToAssignForNode = node.NumberOfCores - utilizedCoresForNode;
+                    if (availableCoresToAssignForNode == 0)
+                        continue;
+
+                    var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCoresToDistribute);
+                    nodeDetails.Value.UtilizedCores += numberOfCoresToAdd;
+                    freeCoresToDistribute -= numberOfCoresToAdd;
+                }
             }
         }
 
-        private void AssignMissingNodeCores(
+        private void AssignMissingCoresForMissingNodes(
             List<string> missingNodesAssignment,
             Dictionary<string, DetailsPerNode> detailsPerNode)
         {
@@ -918,8 +971,8 @@ namespace Raven.Server.Commercial
                 return;
 
             var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-            var availableCores = _licenseStatus.MaxCores - utilizedCores;
-            var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
+            var freeCoresToDistribute = _licenseStatus.MaxCores - utilizedCores;
+            var coresPerNode = Math.Max(1, freeCoresToDistribute / missingNodesAssignment.Count);
 
             foreach (var nodeTag in missingNodesAssignment)
             {
@@ -936,7 +989,7 @@ namespace Raven.Server.Commercial
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.Server.Certificate.Certificate))
             {
-                var infoCmd = new GetNodeInfoCommand();
+                var infoCmd = new GetNodeInfoCommand(TimeSpan.FromSeconds(15));
 
                 try
                 {
@@ -1312,33 +1365,28 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public void AssertCanAddPeriodicBackup(BlittableJsonReaderObject readerObject)
+        public void AssertCanAddPeriodicBackup(PeriodicBackupConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            if (configuration.BackupType == BackupType.Snapshot &&
+                _licenseStatus.HasSnapshotBackups == false)
             {
-                var backupBlittable = readerObject.Clone(context);
-                var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(backupBlittable);
-                if (configuration.BackupType == BackupType.Snapshot &&
-                    _licenseStatus.HasSnapshotBackups == false)
-                {
-                    const string details = "Your current license doesn't include the snapshot backups feature";
-                    throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
-                }
+                const string details = "Your current license doesn't include the snapshot backups feature";
+                throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
+            }
 
-                if (configuration.HasCloudBackup() && _licenseStatus.HasCloudBackups == false)
-                {
-                    const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
-                    throw GenerateLicenseLimit(LimitType.CloudBackup, details);
-                }
+            if (configuration.HasCloudBackup() && _licenseStatus.HasCloudBackups == false)
+            {
+                const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
+                throw GenerateLicenseLimit(LimitType.CloudBackup, details);
+            }
 
-                if (HasEncryptedBackup(configuration) && _licenseStatus.HasEncryptedBackups == false)
-                {
-                    const string details = "Your current license doesn't include the encrypted backup feature!";
-                    throw GenerateLicenseLimit(LimitType.CloudBackup, details);
-                }
+            if (HasEncryptedBackup(configuration) && _licenseStatus.HasEncryptedBackups == false)
+            {
+                const string details = "Your current license doesn't include the encrypted backup feature!";
+                throw GenerateLicenseLimit(LimitType.CloudBackup, details);
             }
         }
 
@@ -1457,46 +1505,28 @@ namespace Raven.Server.Commercial
             return _licenseStatus.HasHighlyAvailableTasks;
         }
 
-        public string GetLastResponsibleNodeForTask(
-            IDatabaseTaskStatus databaseTaskStatus,
-            DatabaseTopology databaseTopology,
-            IDatabaseTask databaseTask,
-            NotificationCenter.NotificationCenter notificationCenter)
+        public static AlertRaised CreateHighlyAvailableTasksAlert(DatabaseTopology databaseTopology, IDatabaseTask databaseTask, string lastResponsibleNode)
         {
-            if (_licenseStatus.HasHighlyAvailableTasks)
-                return null;
-
-            var lastResponsibleNode = databaseTaskStatus?.NodeTag;
-            if (lastResponsibleNode == null)
-                return null;
-
-            if (databaseTopology.Count > 1 &&
-                databaseTopology.Members.Contains(lastResponsibleNode) == false)
-            {
-                var taskName = databaseTask.GetTaskName();
-                var message = $"Node {lastResponsibleNode} cannot execute the task: '{taskName}'";
-                var alert = AlertRaised.Create(
-                    null,
-                    $@"You've reached your license limit ({EnumHelper.GetDescription(LimitType.HighlyAvailableTasks)})",
-                    message,
-                    AlertType.LicenseManager_HighlyAvailableTasks,
-                    NotificationSeverity.Warning,
-                    key: message,
-                    details: new MessageDetails
-                    {
-                        Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be executed " +
-                                  $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
-                                  $"or by any other node because your current license " +
-                                  $"doesn't include highly available tasks feature. " + Environment.NewLine +
-                                  $"You can choose a different mentor node that will execute the task " +
-                                  $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
-                                  $"Upgrading the license will allow RavenDB to manage that automatically."
-                    });
-
-                notificationCenter.Add(alert);
-            }
-
-            return lastResponsibleNode;
+            var taskName = databaseTask.GetTaskName();
+            var message = $"Node {lastResponsibleNode} cannot execute the task: '{taskName}'";
+            var alert = AlertRaised.Create(
+                null,
+                $@"You've reached your license limit ({EnumHelper.GetDescription(LimitType.HighlyAvailableTasks)})",
+                message,
+                AlertType.LicenseManager_HighlyAvailableTasks,
+                NotificationSeverity.Warning,
+                key: message,
+                details: new MessageDetails
+                {
+                    Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be executed " +
+                              $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
+                              $"or by any other node because your current license " +
+                              $"doesn't include highly available tasks feature. " + Environment.NewLine +
+                              $"You can choose a different mentor node that will execute the task " +
+                              $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
+                              $"Upgrading the license will allow RavenDB to manage that automatically."
+                });
+            return alert;
         }
 
         private static string GetTaskType(IDatabaseTask databaseTask)
@@ -1611,7 +1641,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (e is HttpRequestException == false && e is TaskCanceledException == false)
+                if (e is HttpRequestException == false && e is OperationCanceledException == false)
                     throw;
 
                 // couldn't reach api.ravendb.net

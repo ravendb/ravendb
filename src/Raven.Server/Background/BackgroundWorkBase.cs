@@ -79,6 +79,9 @@ namespace Raven.Server.Background
         {
             try
             {
+                if (time < TimeSpan.Zero)
+                    return;
+
                 // if cancellation requested then it will throw TaskCancelledException and we stop the work
                 await TimeoutManager.WaitFor(time, CancellationToken).ConfigureAwait(false); 
             }
@@ -131,7 +134,7 @@ namespace Raven.Server.Background
 
         protected abstract Task DoWork();
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             try
             {

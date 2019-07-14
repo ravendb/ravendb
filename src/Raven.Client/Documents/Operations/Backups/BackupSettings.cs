@@ -103,6 +103,11 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string AwsRegionName { get; set; }
 
+        /// <summary>
+        /// Remote folder name.
+        /// </summary>
+        public string RemoteFolderName { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var djv = base.ToJson();
@@ -111,6 +116,7 @@ namespace Raven.Client.Documents.Operations.Backups
             djv[nameof(AwsSecretKey)] = AwsSecretKey;
             djv[nameof(AwsRegionName)] = AwsRegionName;
             djv[nameof(AwsSessionToken)] = AwsSessionToken;
+            djv[nameof(RemoteFolderName)] = RemoteFolderName;
 
             return djv;
         }
@@ -122,11 +128,6 @@ namespace Raven.Client.Documents.Operations.Backups
         /// Amazon S3 Bucket name.
         /// </summary>
         public string BucketName { get; set; }
-
-        /// <summary>
-        /// Amazon S3 remote folder name.
-        /// </summary>
-        public string RemoteFolderName { get; set; }
 
         public override bool HasSettings()
         {
@@ -159,10 +160,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public override DynamicJsonValue ToJson()
         {
             var djv = base.ToJson();
-
-            djv[nameof(RemoteFolderName)] = RemoteFolderName;
             djv[nameof(BucketName)] = BucketName;
-
             return djv;
         }
     }
@@ -196,15 +194,16 @@ namespace Raven.Client.Documents.Operations.Backups
             if (other.VaultName != VaultName)
                 return false;
 
+            if (other.RemoteFolderName != RemoteFolderName)
+                return false;
+
             return true;
         }
 
         public override DynamicJsonValue ToJson()
         {
             var djv = base.ToJson();
-
             djv[nameof(VaultName)] = VaultName;
-
             return djv;
         }
     }

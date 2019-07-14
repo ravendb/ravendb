@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Raven.Server.SqlMigration;
+using Tests.Infrastructure.ConnectionString;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure
@@ -9,7 +10,7 @@ namespace Tests.Infrastructure
     {
         public RequiresNpgSqlInlineData()
         {
-            if (RequiresNpgSqlFactAttribute.IsNpgSqlAvailable == false)
+            if (NpgSqlConnectionString.Instance.CanConnect() == false)
                 Skip = "Test requires NpgSQL database";
         }
 

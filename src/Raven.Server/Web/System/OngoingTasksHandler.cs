@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -296,7 +297,7 @@ namespace Raven.Server.Web.System
         {
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
-            if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
+            if (Enum.TryParse(type, out PeriodicBackupConnectionType connectionType) == false)
                 throw new ArgumentException($"Unknown backup connection: {type}");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -307,47 +308,43 @@ namespace Raven.Server.Web.System
                     var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
                     switch (connectionType)
                     {
-                        case PeriodicBackupTestConnectionType.S3:
+                        case PeriodicBackupConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
                             using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await awsClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.Glacier:
+                        case PeriodicBackupConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
                             using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await glacierClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.Azure:
+                        case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(
-                                azureSettings.AccountName, azureSettings.AccountKey,
-                                azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
+                            using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
                                 await azureClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.GoogleCloud:
+                        case PeriodicBackupConnectionType.GoogleCloud:
                             var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
-                            using (var GoogleCloudeClient = new RavenGoogleCloudClient(
-                                googleCloudSettings.GoogleCredentialsJson,googleCloudSettings.BucketName, cancellationToken: ServerStore.ServerShutdown))
+                            using (var googleCloudClient = new RavenGoogleCloudClient(googleCloudSettings, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await GoogleCloudeClient.TestConnection();
+                                await googleCloudClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.FTP:
+                        case PeriodicBackupConnectionType.FTP:
                             var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                            using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
-                                ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
+                            using (var ftpClient = new RavenFtpClient(ftpSettings))
                             {
                                 await ftpClient.TestConnection();
                             }
                             break;
-                        case PeriodicBackupTestConnectionType.Local:
-                        case PeriodicBackupTestConnectionType.None:
+                        case PeriodicBackupConnectionType.Local:
+                        case PeriodicBackupConnectionType.None:
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -414,82 +411,14 @@ namespace Raven.Server.Web.System
 
         private void BeforeSetupConfiguration(string _, ref BlittableJsonReaderObject readerObject, JsonOperationContext context)
         {
-            ServerStore.LicenseManager.AssertCanAddPeriodicBackup(readerObject);
-            VerifyPeriodicBackupConfiguration(ref readerObject, context);
-        }
-
-        private void AssertDestinationAndRegionAreAllowed(BlittableJsonReaderObject readerObject)
-        {
             var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
 
-            foreach (var backupDestination in configuration.GetDestinations())
-            {
-                ServerStore.Configuration.Backup.AssertDestinationAllowed(backupDestination);
-            }
+            ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
+            BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
+            BackupConfigurationHelper.AssertBackupConfiguration(configuration);
+            BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
 
-            if (configuration.S3Settings != null && configuration.S3Settings.Disabled == false)
-                ServerStore.Configuration.Backup.AssertRegionAllowed(configuration.S3Settings.AwsRegionName);
-
-            if (configuration.GlacierSettings != null && configuration.GlacierSettings.Disabled == false)
-                ServerStore.Configuration.Backup.AssertRegionAllowed(configuration.GlacierSettings.AwsRegionName);
-        }
-
-        private void VerifyPeriodicBackupConfiguration(ref BlittableJsonReaderObject readerObject, JsonOperationContext context)
-        {
-            AssertDestinationAndRegionAreAllowed(readerObject);
-
-            readerObject.TryGet(nameof(PeriodicBackupConfiguration.FullBackupFrequency), out string fullBackupFrequency);
-            readerObject.TryGet(nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency), out string incrementalBackupFrequency);
-
-            if (VerifyBackupFrequency(fullBackupFrequency) == null &&
-                VerifyBackupFrequency(incrementalBackupFrequency) == null)
-            {
-                throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
-                                            $"full backup cron expression: {fullBackupFrequency}, " +
-                                            $"incremental backup cron expression: {incrementalBackupFrequency}");
-            }
-
-            readerObject.TryGet(nameof(PeriodicBackupConfiguration.LocalSettings),
-                out BlittableJsonReaderObject localSettings);
-
-            if (localSettings == null)
-                return;
-
-            localSettings.TryGet(nameof(LocalSettings.Disabled), out bool disabled);
-            if (disabled)
-                return;
-
-            localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
-            if (folderPath == null)
-                return;
-
-            var pathResult = GetActualFullPath(folderPath);
-            if (pathResult.Error != null)
-                throw new ArgumentException(pathResult.Error);
-
-            folderPath = pathResult.FolderPath;
-
-            if (pathResult.HasLocalRootPath)
-            {
-                readerObject.Modifications = new DynamicJsonValue
-                {
-                    [nameof(LocalSettings)] = new DynamicJsonValue
-                    {
-                        [nameof(LocalSettings.Disabled)] = disabled,
-                        [nameof(LocalSettings.FolderPath)] = folderPath
-                    }
-                };
-
-                readerObject = context.ReadObject(readerObject, "modified-backup-configuration");
-            }
-
-            if (DataDirectoryInfo.CanAccessPath(folderPath, out var error) == false)
-                throw new ArgumentException(error);
-
-            CrontabSchedule VerifyBackupFrequency(string backupFrequency)
-            {
-                return string.IsNullOrWhiteSpace(backupFrequency) ? null : CrontabSchedule.Parse(backupFrequency);
-            }
+            readerObject = context.ReadObject(configuration.ToJson(), "updated-backup-configuration");
         }
 
         [RavenAction("/databases/*/admin/backup-data-directory", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -498,57 +427,10 @@ namespace Raven.Server.Web.System
             var path = GetStringQueryString("path", required: true);
             var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
 
-            var pathResult = GetActualFullPath(path);
+            var pathResult = BackupConfigurationHelper.GetActualFullPath(ServerStore, path);
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
             var info = new DataDirectoryInfo(ServerStore, pathResult.FolderPath, Database.Name, isBackup: true, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
             await info.UpdateDirectoryResult(databaseName: Database.Name, error: pathResult.Error);
-        }
-
-        private ActualPathResult GetActualFullPath(string folderPath)
-        {
-            var pathResult = new ActualPathResult();
-            if (ServerStore.Configuration.Backup.LocalRootPath == null)
-            {
-                pathResult.FolderPath = folderPath;
-
-                if (string.IsNullOrWhiteSpace(folderPath))
-                {
-                    pathResult.Error = "Backup directory cannot be null or empty";
-                }
-
-                return pathResult;
-            }
-
-            // in this case we receive a path relative to the root path
-            try
-            {
-                pathResult.FolderPath = ServerStore.Configuration.Backup.LocalRootPath.Combine(folderPath).FullPath;
-            }
-            catch
-            {
-                pathResult.Error = $"Unable to combine the local root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' " +
-                                         $"with the user supplied relative path '{folderPath}'";
-                return pathResult;
-            }
-
-            if (PathUtil.IsSubDirectory(pathResult.FolderPath, ServerStore.Configuration.Backup.LocalRootPath.FullPath) == false)
-            {
-                pathResult.Error = $"The administrator has restricted local backups to be saved under the following root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' " +
-                                         $"but the actual chosen path is '{pathResult.FolderPath}' which is not a sub-directory of the root path.";
-                return pathResult;
-            }
-
-            pathResult.HasLocalRootPath = true;
-            return pathResult;
-        }
-
-        private class ActualPathResult
-        {
-            public bool HasLocalRootPath { get; set; }
-
-            public string FolderPath { get; set; }
-
-            public string Error { get; set; }
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
@@ -633,7 +515,7 @@ namespace Raven.Server.Web.System
             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
             var backupDestinations = backupConfiguration.GetDestinations();
-            var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, useLastResponsibleNodeIfNoAvailableNodes: true);
+            var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
 
             return new OngoingTaskBackup
             {

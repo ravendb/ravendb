@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
@@ -12,6 +13,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -53,6 +55,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, RefreshConfiguration> RefreshConfiguration = GenerateJsonDeserializationRoutine<RefreshConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfiguration> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfiguration>();
@@ -60,6 +64,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, ExternalReplicationState> ExternalReplicationState = GenerateJsonDeserializationRoutine<ExternalReplicationState>();
 
         public static readonly Func<BlittableJsonReaderObject, RestoreBackupConfiguration> RestoreBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreBackupConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, RestoreFromS3Configuration> RestoreS3BackupConfiguration = GenerateJsonDeserializationRoutine<RestoreFromS3Configuration>();
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
@@ -92,7 +98,7 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, RecheckStatusOfServerCertificateCommand> RecheckStatusOfServerCertificateCommand = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateCommand>();
         public static Func<BlittableJsonReaderObject, ConfirmServerCertificateReplacedCommand> ConfirmServerCertificateReplacedCommand = GenerateJsonDeserializationRoutine<ConfirmServerCertificateReplacedCommand>();
         public static Func<BlittableJsonReaderObject, RecheckStatusOfServerCertificateReplacementCommand> RecheckStatusOfServerCertificateReplacementCommand = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateReplacementCommand>();
-
+        
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(AddOrUpdateCompareExchangeBatchCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeBatchCommand>(),
@@ -110,6 +116,7 @@ namespace Raven.Server.ServerWide
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
+            [nameof(EditRefreshCommand)] = GenerateJsonDeserializationRoutine<EditRefreshCommand>(),
             [nameof(DeleteDatabaseCommand)] = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>(),
             [nameof(IncrementClusterIdentityCommand)] = GenerateJsonDeserializationRoutine<IncrementClusterIdentityCommand>(),
             [nameof(IncrementClusterIdentitiesBatchCommand)] = GenerateJsonDeserializationRoutine<IncrementClusterIdentitiesBatchCommand>(),
@@ -132,6 +139,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
             [nameof(DeleteMultipleValuesCommand)] = GenerateJsonDeserializationRoutine<DeleteMultipleValuesCommand>(),
             [nameof(PutLicenseCommand)] = GenerateJsonDeserializationRoutine<PutLicenseCommand>(),
+            [nameof(UpdateLicenseLimitsCommand)] = GenerateJsonDeserializationRoutine<UpdateLicenseLimitsCommand>(),
             [nameof(PutLicenseLimitsCommand)] = GenerateJsonDeserializationRoutine<PutLicenseLimitsCommand>(),
             [nameof(PutServerWideBackupConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationCommand>(),
             [nameof(DeleteServerWideBackupConfigurationCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideBackupConfigurationCommand>(),
@@ -165,7 +173,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabaseIndexesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseIndexesMappingCommand>(),
             [nameof(RemoveEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveEtlProcessStateCommand>(),
             [nameof(PutSortersCommand)] = GenerateJsonDeserializationRoutine<PutSortersCommand>(),
-            [nameof(DeleteSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteSorterCommand>()
+            [nameof(DeleteSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteSorterCommand>(),
+            [nameof(UpdateUnusedDatabaseIdsCommand)] = GenerateJsonDeserializationRoutine<UpdateUnusedDatabaseIdsCommand>()
         };
     }
 }

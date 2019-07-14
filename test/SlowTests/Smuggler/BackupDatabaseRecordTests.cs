@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -101,8 +103,8 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        HubDefinitionName = "hub"
-
+                        HubDefinitionName = "hub",
+                        ConnectionStringName = "ConnectionName"
                     }));
                     store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
                     {
@@ -112,12 +114,13 @@ namespace SlowTests.Smuggler
                         DelayReplicationFor = new TimeSpan(3),
                     }));
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    var result1 = store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                     {
                         Name = "ConnectionName",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
                     var sqlConnectionString = new SqlConnectionString
                     {
@@ -126,7 +129,9 @@ namespace SlowTests.Smuggler
                         FactoryName = "System.Data.SqlClient"
                     };
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    Assert.NotNull(result2.RaftCommandIndex);
+
                     store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         AllowEtlOnNonEncryptedChannel = true,
@@ -281,8 +286,8 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        HubDefinitionName = "hub"
-
+                        HubDefinitionName = "hub",
+                        ConnectionStringName = "ConnectionName"
                     }));
                     store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
                     {
@@ -292,12 +297,13 @@ namespace SlowTests.Smuggler
                         DelayReplicationFor = new TimeSpan(3),
                     }));
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    var result1 = store1.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                     {
                         Name = "ConnectionName",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
                     var sqlConnectionString = new SqlConnectionString
                     {
@@ -306,7 +312,9 @@ namespace SlowTests.Smuggler
                         FactoryName = "System.Data.SqlClient"
                     };
 
-                    store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    var result2 = store1.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    Assert.NotNull(result2.RaftCommandIndex);
+
                     store1.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         AllowEtlOnNonEncryptedChannel = true,
@@ -614,10 +622,14 @@ namespace SlowTests.Smuggler
                         Name = "con4",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8084" }
                     };
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con1));
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con2));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con3));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con4));
+                    var result1 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con1));
+                    var result2 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con2));
+                    var result3 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con3));
+                    var result4 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(con4));
+                    Assert.NotNull(result1.RaftCommandIndex);
+                    Assert.NotNull(result2.RaftCommandIndex);
+                    Assert.NotNull(result3.RaftCommandIndex);
+                    Assert.NotNull(result4.RaftCommandIndex);
 
                     var sink1 = new PullReplicationAsSink()
                     {
@@ -751,10 +763,14 @@ namespace SlowTests.Smuggler
                         ConnectionString = "http://127.0.0.1:8084",
                         FactoryName = "System.Data.SqlClient"
                     };
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon1));
-                    await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon2));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon3));
-                    await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon4));
+                    var putResult1 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon1));
+                    var putResult2 = await store1.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon2));
+                    var putResult3 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon3));
+                    var putResult4 = await store2.Maintenance.SendAsync(new PutConnectionStringOperation<SqlConnectionString>(scon4));
+                    Assert.NotNull(putResult1.RaftCommandIndex);
+                    Assert.NotNull(putResult2.RaftCommandIndex);
+                    Assert.NotNull(putResult3.RaftCommandIndex);
+                    Assert.NotNull(putResult4.RaftCommandIndex);
 
                     var sqlEtl =new SqlEtlConfiguration
                     {
@@ -1043,8 +1059,8 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        HubDefinitionName = "hub"
-
+                        HubDefinitionName = "hub",
+                        ConnectionStringName = "ConnectionName"
                     }));
                     store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
                     {
@@ -1054,12 +1070,13 @@ namespace SlowTests.Smuggler
                         DelayReplicationFor = new TimeSpan(3),
                     }));
 
-                    store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                    var result1 = store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                     {
                         Name = "ConnectionName",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
                     }));
+                    Assert.NotNull(result1.RaftCommandIndex);
 
                     var sqlConnectionString = new SqlConnectionString
                     {
@@ -1068,7 +1085,8 @@ namespace SlowTests.Smuggler
                         FactoryName = "System.Data.SqlClient"
                     };
 
-                    store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                    Assert.NotNull(result2.RaftCommandIndex);
                     store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         AllowEtlOnNonEncryptedChannel = true,
@@ -1211,6 +1229,134 @@ namespace SlowTests.Smuggler
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanRestoreSubscriptionsFromBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                store.Subscriptions.Create<User>(x => x.Name == "Marcin");
+                store.Subscriptions.Create<User>();
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config)).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                SpinWait.SpinUntil(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                }, TimeSpan.FromSeconds(15));
+
+                await ValidateSubscriptions(store);
+
+                // restore the database with a different name
+                var restoredDatabaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = restoredDatabaseName
+                }))
+                {
+                    using (var restoredStore = new DocumentStore
+                    {
+                        Urls = store.Urls,
+                        Database = restoredDatabaseName
+                    })
+                    {
+                        restoredStore.Initialize();
+                        var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
+
+                        Assert.Equal(2, subscriptions.Count);
+
+                        var taskIds = subscriptions
+                            .Select(x => x.SubscriptionId)
+                            .ToHashSet();
+
+                        Assert.Equal(2, taskIds.Count);
+
+                        foreach (var subscription in subscriptions)
+                        {
+                            Assert.NotNull(subscription.SubscriptionName);
+                            Assert.NotNull(subscription.Query);
+                        }
+
+                        await ValidateSubscriptions(restoredStore);
+                    }
+                }
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                var dir = Directory.GetDirectories(backupPath).First();
+                var file = Directory.GetFiles(dir).First();
+
+                var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                op.WaitForCompletion(TimeSpan.FromSeconds(30));
+
+                var subscriptions = store.Subscriptions.GetSubscriptions(0, 10);
+
+                Assert.Equal(2, subscriptions.Count);
+
+                var taskIds = subscriptions
+                    .Select(x => x.SubscriptionId)
+                    .ToHashSet();
+
+                Assert.Equal(2, taskIds.Count);
+
+                foreach (var subscription in subscriptions)
+                {
+                    Assert.NotNull(subscription.SubscriptionName);
+                    Assert.NotNull(subscription.Query);
+                }
+
+                await ValidateSubscriptions(store);
+            }
+        }
+        private async Task ValidateSubscriptions(DocumentStore restoredStore)
+        {
+            var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
+
+            int count = 0;
+
+            foreach (var sub in subscriptions)
+            {
+                var worker = restoredStore.Subscriptions.GetSubscriptionWorker<User>(sub.SubscriptionName);
+                var t = worker.Run((batch) =>
+                {
+                    Interlocked.Add(ref count, batch.NumberOfItemsInBatch);
+                });
+                GC.KeepAlive(t);
+            }
+
+            using (var session = restoredStore.OpenSession())
+            {
+                session.Store(new User { Name = "Marcin" }, "users/1");
+                session.Store(new User { Name = "Karmel" }, "users/2");
+                session.SaveChanges();
+            }
+
+            var actual = await WaitForValueAsync(() => count, 3);
+            Assert.Equal(3, actual);
+
+            foreach (var subscription in subscriptions)
+            {
+                Assert.NotNull(subscription.SubscriptionName);
+                Assert.NotNull(subscription.Query);
             }
         }
 

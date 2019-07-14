@@ -25,6 +25,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
 
+        public RetentionPolicy RetentionPolicy { get; set; }
+
         /// <summary>
         /// Frequency of full backup jobs in cron format
         /// </summary>
@@ -143,6 +145,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(BackupType)] = BackupType,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
+                [nameof(RetentionPolicy)] = RetentionPolicy?.ToJson(),
                 [nameof(FullBackupFrequency)] = FullBackupFrequency,
                 [nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency,
                 [nameof(LocalSettings)] = LocalSettings?.ToJson(),

@@ -2,18 +2,19 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Platform;
+using Sparrow.Server.Utils;
 
 namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42009; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42010; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
-        {            
+        {
             var toFilename = LIBRVNPAL;
-            string fromFilename;         
+            string fromFilename;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 if (RuntimeInformation.ProcessArchitecture != Architecture.Arm &&
@@ -47,12 +48,16 @@ namespace Sparrow.Server.Platform
 
             try
             {
-                var toTime = DateTime.MinValue.Ticks;
+                var copy = true;
                 if (File.Exists(toFilename))
-                    toTime = new FileInfo(toFilename).CreationTime.Ticks;
+                {
+                    var fromHash = FileHelper.CalculateHash(fromFilename);
+                    var toHash = FileHelper.CalculateHash(toFilename);
 
-                if (File.Exists(fromFilename) &&
-                    new FileInfo(fromFilename).CreationTime.Ticks > toTime)
+                    copy = fromHash != toHash;
+                }
+
+                if (copy)
                     File.Copy(fromFilename, toFilename, overwrite: true);
             }
             catch (IOException e)
@@ -75,17 +80,16 @@ namespace Sparrow.Server.Platform
 
                 rc = rvn_get_system_information(out SysInfo, out errorCode);
             }
-            catch (IncorrectDllException)
-            {
-                throw;
-            }
             catch (Exception ex)
             {
-                var ErrString =
-                    "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
-                throw new IncorrectDllException(
-                    $"{LIBRVNPAL} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
-                    ex);
+                var errString = $"{LIBRVNPAL} version might be invalid, missing or not usable on current platform.";
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.";
+
+                errString += $" Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}";
+
+                throw new IncorrectDllException(errString, ex);
             }
 
             if (rc != PalFlags.FailCodes.Success)
@@ -120,7 +124,7 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_prefetch_virtual_memory(
-            void *virtualAddress,
+            void* virtualAddress,
             Int64 length,
             out Int32 errorCode);
 
@@ -131,7 +135,7 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_memory_sync(
-            void *address,
+            void* address,
             Int64 size,
             out Int32 errorCode);
 
@@ -221,7 +225,7 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_open_journal_for_reads(
             string fileNameFullPath,
-            out SafeJournalHandle  handle,
+            out SafeJournalHandle handle,
             out Int32 errorCode
         );
 

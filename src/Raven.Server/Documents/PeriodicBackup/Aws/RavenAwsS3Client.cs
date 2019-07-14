@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions.PeriodicBackup;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
@@ -33,6 +35,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public RavenAwsS3Client(S3Settings s3Settings, Progress progress = null, CancellationToken? cancellationToken = null)
             : base(s3Settings, progress, cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(s3Settings.BucketName))
+                throw new ArgumentException("AWS Bucket name cannot be null or empty");  
             _bucketName = s3Settings.BucketName;
         }
 
@@ -500,6 +504,127 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
+        public async Task<ListObjectsResult> ListObjects(string prefix, string delimiter, bool listFolders, int? take = null, string continuationToken = null)
+        {
+            var url = $"{GetUrl()}/?list-type=2";
+            if (prefix != null)
+                url += $"&prefix={Uri.EscapeDataString(prefix)}";
+
+            if (delimiter != null)
+                url += $"&delimiter={delimiter}";
+
+            if (take != null)
+                url += $"&max-keys={take}";
+
+            if (continuationToken != null)
+                url += $"&continuation-token={Uri.EscapeDataString(continuationToken)}";
+
+            var now = SystemTime.UtcNow;
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
+            UpdateHeaders(requestMessage.Headers, now, null);
+
+            var headers = ConvertToHeaders(requestMessage.Headers);
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
+
+            var response = await client.SendAsync(requestMessage, CancellationToken);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return new ListObjectsResult();
+
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
+
+            var responseStream = await response.Content.ReadAsStreamAsync();
+            var listBucketResult = XDocument.Load(responseStream);
+            var ns = listBucketResult.Root.Name.Namespace;
+            var result = GetResult();
+
+            var isTruncated = listBucketResult.Root.Element(ns + "IsTruncated").Value;
+
+            return new ListObjectsResult
+            {
+                FileInfoDetails = result.ToList(),
+                ContinuationToken = isTruncated == "true" ? listBucketResult.Root.Element(ns + "NextContinuationToken").Value : null
+            };
+
+            IEnumerable<S3FileInfoDetails> GetResult()
+            {
+                if (listFolders)
+                {
+                    var commonPrefixes = listBucketResult.Root.Elements(ns + "CommonPrefixes");
+                    var isFirst = true;
+                    foreach (var commonPrefix in commonPrefixes)
+                    {
+                        if (isFirst)
+                        {
+                            if (commonPrefix.Value.Equals($"{prefix}/"))
+                                continue;
+
+                            isFirst = false;
+                        }
+
+                        yield return new S3FileInfoDetails
+                        {
+                            FullPath = commonPrefix.Value
+                        };
+                    }
+
+                    yield break;
+                }
+
+                var contents = listBucketResult.Root.Descendants(ns + "Contents");
+                foreach (var content in contents)
+                {
+                    var fullPath = content.Element(ns + "Key").Value;
+                    if (fullPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
+                        continue; // folder
+
+                    if (BackupLocationDegree(fullPath) - BackupLocationDegree(prefix) > 2)
+                        continue; // backup not in current folder or in sub folder
+
+                    yield return new S3FileInfoDetails
+                    {
+                        FullPath = fullPath,
+                        LastModifiedAsString = content.Element(ns + "LastModified").Value
+                    };
+                }
+            }
+
+            int BackupLocationDegree(string path)
+            {
+                var length = path.Length;
+                var count = 0;
+                for (int n = length - 1; n >= 0; n--)
+                {
+                    if (path[n] == '/')
+                        count++;
+                }
+
+                return count;
+            }
+        }
+
+        public async Task<List<S3FileInfoDetails>> ListAllObjects(string prefix, string delimiter, bool listFolders, int? take = null)
+        {
+            var allObjects = new List<S3FileInfoDetails>();
+
+            string continuationToken = null;
+
+            while (true)
+            {
+                var objects = await ListObjects(prefix, delimiter, listFolders, continuationToken: continuationToken);
+                allObjects.AddRange(objects.FileInfoDetails);
+
+                continuationToken = objects.ContinuationToken;
+                if (continuationToken == null)
+                    break;
+            }
+
+            return allObjects;
+        }
+
         public async Task<Blob> GetObject(string key)
         {
             var url = $"{GetUrl()}/{key}";
@@ -548,6 +673,64 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return;
 
             throw StorageException.FromResponseMessage(response);
+        }
+
+        public async Task DeleteMultipleObjects(List<string> objects)
+        {
+            var url = $"{GetUrl()}/?delete";
+            var now = SystemTime.UtcNow;
+
+            var xml = new XElement("Delete");
+            foreach (var objectPath in objects)
+            {
+                var obj = new XElement("Object");
+                var key = new XElement("Key", objectPath);
+                obj.Add(key);
+                xml.Add(obj);
+            }
+
+            var xmlString = xml.ToString();
+            var md5Hash = CalculateMD5Hash(xmlString);
+            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            {
+                Content = new StringContent(xmlString, Encoding.UTF8, "text/plain")
+                {
+                    Headers =
+                    {
+                        {"Content-Length", xmlString.Length.ToString(CultureInfo.InvariantCulture)},
+                        {"Content-MD5", md5Hash}
+                    }
+                }
+            };
+
+            UpdateHeaders(requestMessage.Headers, now, null, RavenAwsHelper.CalculatePayloadHashFromString(xmlString));
+
+            var headers = ConvertToHeaders(requestMessage.Headers);
+            headers.Add("Content-MD5", md5Hash);
+
+            var client = GetClient(TimeSpan.FromHours(1));
+            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
+            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
+
+            var response = await client.SendAsync(requestMessage);
+            if (response.IsSuccessStatusCode)
+                return;
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return;
+
+            throw StorageException.FromResponseMessage(response);
+        }
+
+        public string CalculateMD5Hash(string input)
+        {
+            using (var md5 = MD5.Create())
+            {
+                var sourceBytes = Encoding.UTF8.GetBytes(input);
+                var hashBytes = md5.ComputeHash(sourceBytes);
+
+                return Convert.ToBase64String(hashBytes);
+            }
         }
 
         public override string ServiceName { get; } = "s3";

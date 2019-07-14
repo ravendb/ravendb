@@ -581,11 +581,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
+        internal void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
             if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
             {
-                DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
+                _parent.DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
             }
 
             if (context.LastReplicationEtagFrom != null)
@@ -829,6 +829,8 @@ namespace Raven.Server.Documents
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
+
+                modifiedSize += llt.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
                 var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
                 if (canCloseCurrentTx || _is32Bits)

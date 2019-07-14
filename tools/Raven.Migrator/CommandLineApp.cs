@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using Raven.Migrator.CosmosDB;
@@ -71,11 +72,16 @@ namespace Raven.Migrator
                 cmd.ExtendedHelpText = cmd.Description = description;
                 cmd.HelpOption(HelpOptionString);
 
+                var jsonOption = cmd.Option("-j|--Json <Json>",
+                    "Target version of project.json", CommandOptionType.SingleValue);
+                
                 cmd.OnExecute(() =>
                 {
                     try
                     {
-                        var configurationString = Console.ReadLine();
+                        var configurationString = jsonOption.Values.Any()
+                            ? jsonOption.Values.First()
+                            : Console.ReadLine();
                         var configuration = JsonConvert.DeserializeObject<T>(configurationString);
 
                         if (string.IsNullOrWhiteSpace(configuration.Command))

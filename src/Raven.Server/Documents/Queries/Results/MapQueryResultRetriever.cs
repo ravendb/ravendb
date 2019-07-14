@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {
-                    var doc = DirectGet(null, id, state);
+                    var doc = DirectGet(null, id, DocumentFields, state);
 
                     FinishDocumentSetup(doc, lucene);
                     return doc;
@@ -49,9 +49,9 @@ namespace Raven.Server.Documents.Queries.Results
             return key != null;
         }
 
-        protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
+        protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
         {
-            return DocumentsStorage.Get(_context, id);
+            return DocumentsStorage.Get(_context, id, fields);
         }
 
         protected override Document LoadDocument(string id)

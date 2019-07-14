@@ -558,12 +558,44 @@ namespace Raven.Server.Documents.Indexes.Static
             return Enumerable.ToList(this);
         }
 
-        public Dictionary<TKey, dynamic> ToDictionary<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector = null)
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<IGrouping<dynamic, dynamic>, dynamic> keySelector)
         {
-            if (elementSelector == null)
-                return Enumerable.ToDictionary(this, keySelector);
+            return new DynamicDictionary(Enumerable.ToDictionary(this, o => keySelector((IGrouping<object, object>)o)));
+        }
 
-            return Enumerable.ToDictionary(this, keySelector, elementSelector);
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, IEqualityComparer<dynamic> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, o => keySelector((IGrouping<object, object>)o), comparer));
+        }
+
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, o => keySelector((IGrouping<object, object>)o), u => elementSelector((IGrouping<object, object>)u)));
+        }
+
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, o => keySelector((IGrouping<object, object>)o), u => elementSelector((IGrouping<object, object>)u), comparer));
+        }
+
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<dynamic, dynamic> keySelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector));
+        }
+
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<dynamic, dynamic> keySelector, IEqualityComparer<dynamic> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, comparer));
+        }
+
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, elementSelector));
+        }
+
+        public IDictionary<dynamic, dynamic> ToDictionary(Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(this, keySelector, elementSelector, comparer));
         }
 
         public ILookup<TKey, dynamic> ToLookup<TKey>(Func<dynamic, TKey> keySelector, Func<dynamic, dynamic> elementSelector = null)

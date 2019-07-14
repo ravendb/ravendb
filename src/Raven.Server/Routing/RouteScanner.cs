@@ -69,7 +69,8 @@ namespace Raven.Server.Routing
                                 route.RequiredAuthorization, 
                                 route.SkipUsagesCount,
                                 route.CorsMode,
-                                route.IsDebugInformationEndpoint);
+                                route.IsDebugInformationEndpoint,
+                                route.DisableOnCpuCreditsExhaustion);
                             
                             optionsRouteInfo.Build(corsHandler);
                         }
@@ -84,7 +85,8 @@ namespace Raven.Server.Routing
                             route.RequiredAuthorization, 
                             route.SkipUsagesCount,
                             route.CorsMode,
-                            route.IsDebugInformationEndpoint);
+                            route.IsDebugInformationEndpoint,
+                            route.DisableOnCpuCreditsExhaustion);
                     }
                     else
                     {

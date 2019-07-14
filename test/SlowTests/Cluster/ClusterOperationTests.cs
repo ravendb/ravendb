@@ -19,6 +19,7 @@ using Tests.Infrastructure;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Raven.Client.Documents.Operations.Identities;
 
 namespace SlowTests.Cluster
 {
@@ -80,13 +81,9 @@ namespace SlowTests.Cluster
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var command = new SeedIdentityForCommand("users", 1990);
+                    var result = store.Maintenance.SendAsync(new SeedIdentityForOperation("users", 1990));
+                    Assert.Equal(1990, result.Result);
 
-                    await session.Advanced.RequestExecutor.ExecuteAsync(command, session.Advanced.Context);
-
-                    var result = command.Result;
-
-                    Assert.Equal(1990, result);
                     var user = new User
                     {
                         Name = "Adi",

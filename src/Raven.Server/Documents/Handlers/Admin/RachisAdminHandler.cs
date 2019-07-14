@@ -195,27 +195,10 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var json = new DynamicJsonValue();
-                using (context.OpenReadTransaction())
-                {
-                    json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
-                    json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
-                    json[nameof(NodeInfo.Certificate)] = ServerStore.Server.Certificate.CertificateForClients;
-                    json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
-                    json[nameof(NodeInfo.NumberOfCores)] = ProcessorInfo.ProcessorCount;
+                var nodeInfo = ServerStore.GetNodeInfo();
+                var json = nodeInfo.ToJson();
+                json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
 
-                    var memoryInformation = MemoryInformation.GetMemoryInfo();
-                    json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
-                    json[nameof(NodeInfo.UsableMemoryInGb)] = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
-                    json[nameof(NodeInfo.BuildInfo)] = LicenseManager.BuildInfo;
-                    json[nameof(NodeInfo.OsInfo)] = LicenseManager.OsInfo;
-                    json[nameof(NodeInfo.ServerId)] = ServerStore.GetServerId().ToString();
-                    json[nameof(NodeInfo.CurrentState)] = ServerStore.CurrentRachisState;
-
-                    json[nameof(NodeInfo.HasFixedPort)] = ServerStore.HasFixedPort;
-                    json[nameof(NodeInfo.ServerSchemaVersion)] = SchemaUpgrader.CurrentVersion.ServerVersion;
-
-                }
                 context.Write(writer, json);
                 writer.Flush();
             }
@@ -544,7 +527,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             BuildInfo = nodeInfo.BuildInfo,
                             OsInfo = nodeInfo.OsInfo
                         };
-                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true, waitToUpdate: true);
+                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true);
                     }
 
                     NoContentStatus();
@@ -571,7 +554,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                 NoContentStatus();
                 return;
             }

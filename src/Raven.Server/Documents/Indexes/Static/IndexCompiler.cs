@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
-
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -75,6 +74,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return results.ToArray();
         }
 
+        private static readonly string IndexesStaticNamespace = "Raven.Server.Documents.Indexes.Static";
+
+
         private static readonly UsingDirectiveSyntax[] Usings =
         {
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
@@ -88,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName(typeof(CreateFieldOptions).Namespace)),
 
-            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName(IndexesStaticNamespace)),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Linq")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
         };
@@ -131,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
-
+            
             var res = GetUsingDirectiveAndSyntaxTreesAndReferences(extensions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
@@ -158,11 +160,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 : SyntaxFactory.ParseSyntaxTree(formattedCompilationUnit.ToFullString());
 
             res.SyntaxTrees.Add(st);
-            var syntaxTrees = res.SyntaxTrees;
-
+            
             var compilation = CSharpCompilation.Create(
                 assemblyName: name,
-                syntaxTrees: syntaxTrees,
+                syntaxTrees: res.SyntaxTrees,
                 references: res.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
@@ -189,7 +190,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var diagnostic in failures)
                     sb.AppendLine(diagnostic.ToString());
 
-
                 throw new IndexCompilationException(sb.ToString());
 
             }
@@ -215,35 +215,73 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(Dictionary<string, string> extensions)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) 
+            GetUsingDirectiveAndSyntaxTreesAndReferences(Dictionary<string, string> extensions)
         {
-            var syntaxTrees = new List<SyntaxTree>();
             if (extensions == null)
             {
-                return (Usings, syntaxTrees, References);
+                return (Usings, new List<SyntaxTree>(), References);
             }
+
+            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) res;
+            var syntaxTrees = new List<SyntaxTree>();
             var @using = new HashSet<string>();
 
             foreach (var ext in extensions)
             {
-                var rewrite = MethodDynamicParametersRewriter.Instance.Visit(SyntaxFactory.ParseSyntaxTree(ext.Value).GetRoot());
-                var tree = SyntaxFactory.SyntaxTree(rewrite);
+                var tree = SyntaxFactory.ParseSyntaxTree(AddUsingIndexStatic(ext.Value));
                 syntaxTrees.Add(tree);
-                var ns = rewrite.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+
+                var ns = tree.GetRoot().DescendantNodes()
+                    .OfType<NamespaceDeclarationSyntax>()
+                    .FirstOrDefault();
+
                 if (ns != null)
                 {
                     @using.Add(ns.Name.ToString());
                 }
             }
-            var references = GetReferences();
+
             if (@using.Count > 0)
             {
                 //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
                 var newUsing = @using.Select(x => SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
                 newUsing.AddRange(Usings);
-                return (newUsing.ToArray(), syntaxTrees, references);
+                res.UsingDirectiveSyntaxes = newUsing.ToArray();
             }
-            return (Usings, syntaxTrees, references);
+            else
+            {
+                res.UsingDirectiveSyntaxes = Usings;
+            }
+
+            res.References = GetReferences();
+
+            var tempCompilation = CSharpCompilation.Create(
+                assemblyName: string.Empty,
+                syntaxTrees: syntaxTrees,
+                references: res.References,
+                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                    .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
+            );
+
+            var rewriter = new MethodDynamicParametersRewriter();
+            res.SyntaxTrees = new List<SyntaxTree>();
+
+            foreach (var tree in syntaxTrees) //now do the rewrites
+            {
+                rewriter.SemanticModel = tempCompilation.GetSemanticModel(tree);
+
+                var rewritten = rewriter.Visit(tree.GetRoot()).NormalizeWhitespace();
+                res.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten, new CSharpParseOptions(documentationMode: DocumentationMode.None)));
+
+            }
+
+            return res;
+        }
+
+        private static string AddUsingIndexStatic(string ext)
+        {
+            return $"using {IndexesStaticNamespace};{Environment.NewLine}{ext}";
         }
 
         private static MetadataReference[] GetReferences()

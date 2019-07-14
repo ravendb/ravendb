@@ -49,6 +49,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var tryToSetName = true;
             result = null;
             var subscriptionId = SubscriptionId ?? index;
+
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
             var baseName = SubscriptionName;
             if (SubscriptionName.Length > DocumentIdWorker.MaxIdSize)
@@ -66,7 +67,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         var doc = new BlittableJsonReaderObject(ptr, size, context);
 
                         var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-
                         if (SubscriptionId != existingSubscriptionState.SubscriptionId)
                         {
                             if (string.IsNullOrEmpty(originalName))
@@ -105,11 +105,38 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         LastClientConnectionTime = null
                     }.ToJson(), SubscriptionName))
                     {
-                        ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, receivedSubscriptionState);
+                        ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, receivedSubscriptionState);
                     }
                     tryToSetName = false;
                 }
             }
+        }
+
+        public long FindFreeId(TransactionOperationContext context, long subscriptionId)
+        {
+            if (SubscriptionId.HasValue)
+                return SubscriptionId.Value;
+
+            bool idTaken;
+            do
+            {
+                idTaken = false;
+                foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
+                    SubscriptionState.SubscriptionPrefix(DatabaseName)))
+                {
+                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                        continue;
+
+                    if (id == subscriptionId)
+                    {
+                        subscriptionId--; //  we don't care if this end up as a negative value, we need only to be unique
+                        idTaken = true;
+                        break;
+                    }
+                }
+            } while (idTaken);
+
+            return subscriptionId;
         }
 
         private void AssertValidChangeVector()

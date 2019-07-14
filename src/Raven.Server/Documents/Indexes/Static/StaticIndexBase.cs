@@ -317,5 +317,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return Convert.ToDouble(value);
         }
+
+        public virtual void RemoveIndexFromCache()
+        {
+        }
     }
 }

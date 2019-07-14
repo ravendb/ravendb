@@ -23,8 +23,6 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent";
 
-
-
 interface connectedDocumentItem { 
     id: string;
     href: string;
@@ -49,7 +47,6 @@ class connectedDocuments {
     searchInputVisible: KnockoutObservable<boolean>;
     clearSearchInputSubscription: KnockoutSubscription;
     gridResetSubscription: KnockoutSubscription;
-    revisionsCount = ko.observable<number>();   
 
     crudActionsProvider: () => editDocumentCrudActions;
     
@@ -78,15 +75,6 @@ class connectedDocuments {
 
     gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem | counterItem>>();
     uploader: editDocumentUploader;
-
-    revisionsEnabled = ko.pureComputed(() => {
-        const doc = this.document();
-
-        if (!doc) {
-            return false;
-        }
-        return doc.__metadata.hasFlag("HasRevisions") || doc.__metadata.hasFlag("DeleteRevision");
-    });
 
     constructor(document: KnockoutObservable<document>,
         db: KnockoutObservable<database>,
@@ -291,11 +279,14 @@ class connectedDocuments {
         }
 
         const fetchTask = $.Deferred<pagedResult<connectedDocumentItem>>();
+        
         new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
             .execute()
             .done(result => {
                 const mappedResults = result.items.map(x => this.revisionToConnectedDocument(x));
-                this.revisionsCount(result.totalResultCount);
+                
+                this.crudActionsProvider().revisionsCount(result.totalResultCount);
+                
                 fetchTask.resolve({
                     items: mappedResults,
                     totalResultCount: result.totalResultCount
