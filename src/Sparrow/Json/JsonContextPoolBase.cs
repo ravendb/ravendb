@@ -169,8 +169,7 @@ namespace Sparrow.Json
         private ContextStack MaybeGetCurrentContextStack()
         {
             ContextStack x = null;
-            if (_contextStacksByThreadId != null)
-                _contextStacksByThreadId.TryGetValue(NativeMemory.CurrentThreadStats.InternalId, out x);
+            _contextStacksByThreadId?.TryGetValue(NativeMemory.CurrentThreadStats.InternalId, out x);
             return x;
         }
 
@@ -272,7 +271,8 @@ namespace Sparrow.Json
                 if (id == -1)
                     continue;
 
-                if (_contextStacksByThreadId != null && _contextStacksByThreadId.TryGetValue(id, out var ctx))
+                var contextStacksByThreadId = _contextStacksByThreadId;
+                if (contextStacksByThreadId != null && contextStacksByThreadId.TryGetValue(id, out var ctx))
                     yield return ctx;
             }
         }
