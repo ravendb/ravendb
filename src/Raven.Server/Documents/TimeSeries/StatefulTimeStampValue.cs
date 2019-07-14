@@ -43,12 +43,9 @@ namespace Raven.Server.Documents.TimeSeries
         public Span<StatefulTimeStampValue> Span => new Span<StatefulTimeStampValue>(Pointer, Length);
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 10)]
     public struct TimeStampState
     {
-        [FieldOffset(0)]
         public byte LeadingZeroes;
-        [FieldOffset(1)]
         public byte TrailingZeroes;
     }
 }
