@@ -148,11 +148,18 @@ namespace Tests.Infrastructure
 
         private void RunLocalServer(ProcessNode node)
         {
-            var server = GetNewServer(customSettings: new Dictionary<string, string>
+            var options = new ServerCreationOptions
             {
-                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.Url,
-                [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = node.DataDir,
-            }, runInMemory: false, deletePrevious: false);
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.Url,
+                    [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = node.DataDir,
+                },
+                RunInMemory = false,
+                DeletePrevious = false
+            };
+
+            var server = GetNewServer(options);
 
             Servers.Add(server);
 
