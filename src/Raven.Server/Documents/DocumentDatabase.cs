@@ -447,7 +447,9 @@ namespace Raven.Server.Documents
                         var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
                         try
                         {
-                            await TxMerger.Enqueue(mergedCommands).WithCancellation(DatabaseShutdown);
+                            //If we get a database shutdown while we process a cluster tx command this
+                            //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
+                            await TxMerger.Enqueue(mergedCommands);
                         }
                         catch (Exception e)
                         {
