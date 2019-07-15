@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public DynamicDictionary TakeLast(int count)
         {
-            return new DynamicDictionary(_dictionary.Take(count));
+            return new DynamicDictionary(_dictionary.Take(count).ToDictionary(x => x.Key, x => x.Value));
         }
 
         public DynamicDictionary Union(DynamicDictionary second)
