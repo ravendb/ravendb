@@ -1506,7 +1506,23 @@ namespace Raven.Client.Documents.Indexes
             var isExtension = false;
             var num = 0;
             var expression = node.Object;
-            if (IsExtensionMethod(node))
+
+            var isDictionary = false;
+            var isDictionaryReturn = false;
+
+            if (node.Arguments[0].Type.IsGenericType)
+            {
+                if (node.Arguments[0].Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                    isDictionary = true;
+            }
+
+            if (node.Method.ReturnType.IsGenericType)
+            {
+                if (node.Method.ReturnType.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                    isDictionaryReturn = true;
+            }
+
+            if (isDictionary || isDictionaryReturn || IsExtensionMethod(node))
             {
                 num = 1;
                 expression = node.Arguments[0];
@@ -1520,6 +1536,18 @@ namespace Raven.Client.Documents.Indexes
                     // exists on both the server side and the client side
                     Out("this");
                 }
+                else if (isDictionary && isDictionaryReturn == false)
+                {
+                    if (expression is MethodCallExpression)
+                    {
+                        Visit(expression);
+                    }
+                    else
+                    {
+                        Visit(expression);
+                        Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
+                    }
+                }
                 else
                 {
                     Visit(expression);
@@ -1530,11 +1558,11 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
-            if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+            if (isDictionary == false && isDictionaryReturn == false && node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
             {
                 Out("DynamicEnumerable.");
             }
-            else if (node.Method.IsStatic && isExtension == false)
+            else if (isDictionary == false && isDictionaryReturn == false && node.Method.IsStatic && isExtension == false)
             {
                 if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
                 {
@@ -1763,10 +1791,6 @@ namespace Raven.Client.Documents.Indexes
                     case "TakeWhile":
                     case "SkipWhile":
                     case "OfType":
-                    case "ToDictionary":
-                    case "Aggregate":
-                    case "Join":
-                    case "LongCount":
                         return true;
                 }
                 return false;
