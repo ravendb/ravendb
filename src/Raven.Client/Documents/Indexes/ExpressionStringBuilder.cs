@@ -1763,9 +1763,6 @@ namespace Raven.Client.Documents.Indexes
                     case "TakeWhile":
                     case "SkipWhile":
                     case "OfType":
-                    case "ToDictionary":
-                    case "Aggregate":
-                    case "Join":
                         return true;
                 }
                 return false;

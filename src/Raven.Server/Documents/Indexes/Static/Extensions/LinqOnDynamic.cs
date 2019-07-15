@@ -96,39 +96,45 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<IGrouping<dynamic, dynamic>> source, Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector)
+        public static IEnumerable<dynamic> Select(this IDictionary<dynamic, dynamic> source)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u)));
+            return new DynamicArray(source);
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<IGrouping<dynamic, dynamic>> source, Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
+        public static IEnumerable<dynamic> Select(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> func)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u), comparer));
+            return new DynamicArray(Enumerable.Select(source, pair => func(pair)));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector)
+        public static IEnumerable<dynamic> Select(this IDictionary<dynamic, dynamic> source, Func<dynamic, int, dynamic> func)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector));
+            return new DynamicArray(Enumerable.Select(source, (pair, i) => func(pair, i)));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, IEqualityComparer<dynamic> comparer)
+        public static IOrderedEnumerable<dynamic> OrderBy(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, comparer));
+            return new DynamicArray(Enumerable.OrderBy(source, pair => keySelector(pair)));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector)
+        public static IOrderedEnumerable<dynamic> OrderBy(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector));
+            return new DynamicArray(Enumerable.OrderBy(source, pair => keySelector(pair), comparer));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
+        public static IOrderedEnumerable<dynamic> OrderByDescending(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector)
         {
-            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector, comparer));
+            return new DynamicArray(Enumerable.OrderByDescending(source, pair => keySelector(pair)));
+        }
+
+        [Obsolete("This method should never be used directly.")]
+        public static IOrderedEnumerable<dynamic> OrderByDescending(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
+        {
+            return new DynamicArray(Enumerable.OrderByDescending(source, pair => keySelector(pair), comparer));
         }
 
         private static IEnumerable<dynamic> Select(this object self)
