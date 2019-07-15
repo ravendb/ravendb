@@ -52,8 +52,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal const string IsArrayFieldSuffix = "_IsArray";
 
-        internal const string IsDictionaryFieldSuffix = "_IsDictionary";
-
         internal const string ConvertToJsonSuffix = "_ConvertToJson";
 
         internal const string TrueString = "true";
@@ -317,14 +315,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return newFields;
             }
 
-            if (valueType == ValueType.DynamicDictionary)
-            {
-                instance.Add(GetOrCreateField(path + IsDictionaryFieldSuffix, TrueString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
-                newFields++;
-
-                valueType = ValueType.ConvertToJson;
-            }
-
             if (valueType == ValueType.Enumerable)
             {
                 return HandleArray((IEnumerable)value);
@@ -486,7 +476,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return ValueType.DynamicJsonObject;
 
             if (value is DynamicDictionary)
-                return ValueType.DynamicDictionary;
+                return ValueType.ConvertToJson;
 
             if (value is IEnumerable)
                 return ValueType.Enumerable;
@@ -770,9 +760,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Lucene,
 
-            ConvertToJson,
-
-            DynamicDictionary
+            ConvertToJson
         }
 
         protected class ConversionScope : IDisposable
