@@ -19,35 +19,41 @@ namespace SlowTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                var environment = database.GetAllStoragesEnvironment().First().Environment;
+
                 var actions = new AsyncQueue<DynamicJsonValue>();
 
                 var writer = new TestWebSocketWriter();
                 var taskList = new List<Task>();
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("SomeTitle", "SomeKey", new OutOfMemoryException())));
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("SomeTitle", "SomeKey", new OutOfMemoryException())));
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("SomeTitle", "SomeKey", new OutOfMemoryException())));
+
+                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add(environment, new OutOfMemoryException())));
+                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add(environment, new OutOfMemoryException())));
+                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add(environment, new OutOfMemoryException())));
 
                     Task.WaitAll(taskList.ToArray());
                 }
 
-                using (database.NotificationCenter.GetStored(out var notification))
+                using (database.NotificationCenter.GetStored(out var notifications))
                 {
-                    var jsonAlerts = notification.ToList();
-
-                    Assert.Equal(1, jsonAlerts.Count);
-                    Assert.Equal("SomeTitle", jsonAlerts[0].Json["Title"].ToString());
-                    Assert.Equal("SomeKey", jsonAlerts[0].Json["Key"].ToString());
+                    Assert.Equal(1, notifications.Count());
+                    Assert.Equal($"Out of memory occurred for '{environment}'", notifications.First().Json["Title"].ToString());
+                    Assert.Equal($"{environment}:{typeof(OutOfMemoryException)}", notifications.First().Json["Key"].ToString());
                 }
             }
         }
 
         [Fact]
-        public void Add_WhileNotificationsHaveTwoDifferentKeys_ShouldRemindTwo()
+        public void Add_WhileNotificationsAreForDifferentEnvironments_ShouldRemindTwo()
         {
             using (var database = CreateDocumentDatabase())
             {
+                var environments = database.GetAllStoragesEnvironment().ToArray();
+
+                var firstEnvironment = environments[0].Environment;
+                var secondEnvironment = environments[1].Environment;
+
                 var actions = new AsyncQueue<DynamicJsonValue>();
 
                 var writer = new TestWebSocketWriter();
@@ -56,8 +62,8 @@ namespace SlowTests.Server.NotificationCenter
                 {
                     for (var i = 0; i < 3; i++)
                     {
-                        taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add("Title1", "Key1", new OutOfMemoryException())));
-                        taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add("Title2", "Key2", new OutOfMemoryException())));
+                        taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(firstEnvironment, new OutOfMemoryException())));
+                        taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(secondEnvironment, new OutOfMemoryException())));
                     }
 
                     Task.WaitAll(taskList.ToArray());
@@ -67,10 +73,44 @@ namespace SlowTests.Server.NotificationCenter
                 {
                     Assert.Equal(2, notifications.Count());
 
-                    var titles = notifications.Select(n => n.Json["Title"].ToString()).ToArray();
+                    var keys = notifications.Select(n => n.Json["Key"].ToString()).ToArray();
 
-                    Assert.Contains("Title1", titles);
-                    Assert.Contains("Title2", titles);
+                    Assert.Contains($"{firstEnvironment}:{typeof(OutOfMemoryException)}", keys);
+                    Assert.Contains($"{secondEnvironment}:{typeof(OutOfMemoryException)}", keys);
+                }
+            }
+        }
+
+        [Fact]
+        public void Add_WhileNotificationsHaveDifferentExceptionTypeInSameEnvironment_ShouldRemindTwo()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var environment = database.GetAllStoragesEnvironment().First().Environment;
+
+                var actions = new AsyncQueue<DynamicJsonValue>();
+
+                var writer = new TestWebSocketWriter();
+                var taskList = new List<Task>();
+                using (database.NotificationCenter.TrackActions(actions, writer))
+                {
+                    for (var i = 0; i < 3; i++)
+                    {
+                        taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(environment, new OutOfMemoryException())));
+                        taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(environment, new InsufficientMemoryException())));
+                    }
+
+                    Task.WaitAll(taskList.ToArray());
+                }
+
+                using (database.NotificationCenter.GetStored(out var notifications))
+                {
+                    Assert.Equal(2, notifications.Count());
+
+                    var keys = notifications.Select(n => n.Json["Key"].ToString()).ToArray();
+
+                    Assert.Contains($"{environment}:{typeof(OutOfMemoryException)}", keys);
+                    Assert.Contains($"{environment}:{typeof(InsufficientMemoryException)}", keys);
                 }
             }
         }
@@ -81,30 +121,29 @@ namespace SlowTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
+                var environment = database.GetAllStoragesEnvironment().First().Environment;
+
                 var actions = new AsyncQueue<DynamicJsonValue>();
 
                 var writer = new TestWebSocketWriter();
                 var taskList = new List<Task>();
                 using (database.NotificationCenter.TrackActions(actions, writer))
                 {
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("FirsTitle1", "SomeKey", new OutOfMemoryException())));
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("FirsTitle2", "SomeKey", new OutOfMemoryException())));
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("FirsTitle3", "SomeKey", new OutOfMemoryException())));
+                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add(environment, new Exception("First Message"))));
 
                     await Task.Delay(16_000);
-                    
-                    taskList.Add(Task.Run( () => database.NotificationCenter.OutOfMemory.Add("SecondTitle", "SomeKey", new OutOfMemoryException())));
+
+                    taskList.Add(Task.Run(() => database.NotificationCenter.OutOfMemory.Add(environment, new Exception("Second Message"))));
 
                     Task.WaitAll(taskList.ToArray());
                 }
 
-                using (database.NotificationCenter.GetStored(out var notification))
+                using (database.NotificationCenter.GetStored(out var notifications))
                 {
-                    var jsonAlerts = notification.ToList();
+                    var jsonAlerts = notifications.ToList();
 
-                    Assert.Equal(1, jsonAlerts.Count);
-                    Assert.Equal("SecondTitle", jsonAlerts[0].Json["Title"].ToString());
-                    Assert.Equal("SomeKey", jsonAlerts[0].Json["Key"].ToString());
+                    Assert.Equal(1, notifications.Count());
+                    Assert.Equal("Second Message", notifications.First().Json["Message"].ToString());
                 }
             }
         }
