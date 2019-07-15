@@ -1073,17 +1073,13 @@ namespace Raven.Server.Documents.Indexes
                                     if (_logger.IsOperationsEnabled)
                                         _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
                                 }
-                                catch (InsufficientMemoryException ime)
-                                {
-                                    HandleOutOfMemoryException(ime, scope, $"{_environment}:{nameof(InsufficientMemoryException)}");
-                                }
                                 catch (OutOfMemoryException oome)
                                 {
-                                    HandleOutOfMemoryException(oome, scope, $"{_environment}:{nameof(OutOfMemoryException)}");
+                                    HandleOutOfMemoryException(oome, scope);
                                 }
                                 catch (EarlyOutOfMemoryException eoome)
                                 {
-                                    HandleOutOfMemoryException(eoome, scope, $"{_environment}:{nameof(EarlyOutOfMemoryException)}");
+                                    HandleOutOfMemoryException(eoome, scope);
                                 }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
@@ -1547,20 +1543,18 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
-        private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope, string key)
+        private void HandleOutOfMemoryException(Exception exception, IndexingStatsScope scope)
         {
             try
             {
-                scope.AddMemoryError(oome);
+                scope.AddMemoryError(exception);
                 Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
 
-                var title = $"Out of memory occurred for '{Name}'";
                 if (_logger.IsInfoEnabled)
-                    _logger.Info(title, oome);
+                    _logger.Info($"Out of memory occurred for '{Name}'", exception);
 
-//                DocumentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.OutOfMemoryException, key));
-                DocumentDatabase.NotificationCenter.OutOfMemory.Add(title,  key, oome);
+                DocumentDatabase.NotificationCenter.OutOfMemory.Add(_environment, exception);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
