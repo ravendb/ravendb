@@ -317,7 +317,9 @@ namespace Raven.Server.Documents.Queries.Results
             return new FieldType
             {
                 IsArray = indexDocument.GetField(field + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
-                IsJson = indexDocument.GetField(field + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
+                IsJson = indexDocument.GetField(field + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null,
+                IsDictionary = indexDocument.GetField(field + LuceneDocumentConverterBase.IsDictionaryFieldSuffix) != null,
+
             };
         }
 
@@ -325,6 +327,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             public bool IsArray;
             public bool IsJson;
+            public bool IsDictionary;
         }
 
         private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)
