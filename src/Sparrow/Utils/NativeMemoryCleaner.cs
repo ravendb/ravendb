@@ -8,28 +8,30 @@ namespace Sparrow.Utils
     public class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
     {
         private readonly object _lock = new object();
-        private readonly Func<ICollection<TStack>> _getContexts;
+        private readonly Func<object, ICollection<TStack>> _getContextsFromCleanupTarget;
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
         private readonly TimeSpan _idleTime;
         private readonly Timer _timer;
-        private WeakReference _selfweakref;
+        private WeakReference _cleanupTargetWeakRef;
 
 #if NETSTANDARD1_3
         private bool _disposed;
 #endif
 
-        public NativeMemoryCleaner(object self, Func<object, ICollection<TStack>> getContexts, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
+        public NativeMemoryCleaner(object cleanupTarget, Func<object, ICollection<TStack>> getContexts, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
-            _selfweakref = new WeakReference(self);
-
-            _getContexts = () =>
-            {
-                object target = _selfweakref.Target;
-                return target == null ? Array.Empty<TStack>() : getContexts(target);
-            };
+            _cleanupTargetWeakRef = new WeakReference(cleanupTarget);
+            _getContextsFromCleanupTarget = getContexts;
+            
             _lowMemoryFlag = lowMemoryFlag;
             _idleTime = idleTime;
             _timer = new Timer(CleanNativeMemory, null, period, period);
+        }
+
+        private ICollection<TStack> GetContexts()
+        {
+            object cleanupTarget = _cleanupTargetWeakRef.Target;
+            return cleanupTarget == null ? Array.Empty<TStack>() : _getContextsFromCleanupTarget(cleanupTarget);
         }
 
         public void CleanNativeMemory(object state)
@@ -50,7 +52,7 @@ namespace Sparrow.Utils
                 ICollection<TStack> values;
                 try
                 {
-                    values = _getContexts();
+                    values = GetContexts();
                 }
                 catch (OutOfMemoryException)
                 {
