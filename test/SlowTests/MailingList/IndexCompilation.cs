@@ -674,13 +674,13 @@ namespace SlowTests.MailingList
         }
 
         [Fact]
-        public void DynamicDictionaryIndexShouldWorkWithExtensionMethods()
+        public void DynamicDictionaryIndexShouldWorkWithSelectManyGroupBySumAggregate()
         {
             const int countOfEmployees = 20;
             var listOfUsers = new List<Employee>();
             using (var store = GetDocumentStore())
             {
-                new DynamicDictionaryTestMapIndexWithExtensionMethods().Execute(store);
+                new DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate().Execute(store);
                 var rnd = new System.Random();
                 using (var session = store.OpenSession())
                 {
@@ -707,8 +707,8 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<DynamicDictionaryTestMapIndexWithExtensionMethods.Result, DynamicDictionaryTestMapIndexWithExtensionMethods>()
-                        .ProjectInto<DynamicDictionaryTestMapIndexWithExtensionMethods.Result>()
+                    var results = session.Query<DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result, DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate>()
+                        .ProjectInto<DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result>()
                         .ToList();
 
                     Assert.Equal(countOfEmployees, results.Count);
@@ -716,30 +716,25 @@ namespace SlowTests.MailingList
                     for (int i = 0; i < countOfEmployees; i++)
                     {
                         var dict = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value));
-                        var expectedResult = new DynamicDictionaryTestMapIndexWithExtensionMethods.Result()
+                        var expectedResult = new DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result()
                         {
                             Id = listOfUsers[i].Id,
                             DictionaryAggregateOne = dict.Aggregate(0, (x1, x2) => x1 + x2.Value),
                             DictionarySumOne = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value)).Sum(x => x.Value),
                             DictionaryAggregateTwo = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Aggregate(0, (x1, x2) => x1 + x2.Value),
                             DictionarySumTwo = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value)).Sum(x => x.Value),
-                            IsDictionaryOfInt = listOfUsers[i].DictionaryOfIntegers.All(x => (int)x.Value is int),
-                            LongCount = listOfUsers[i].DictionaryOfIntegers.LongCount(pair => pair.Value > 50)
                         };
                         Assert.Equal(expectedResult.Id, results[i].Id);
                         Assert.Equal(expectedResult.DictionaryAggregateOne, results[i].DictionaryAggregateOne);
                         Assert.Equal(expectedResult.DictionarySumOne, results[i].DictionarySumOne);
                         Assert.Equal(expectedResult.DictionaryAggregateTwo, results[i].DictionaryAggregateTwo);
                         Assert.Equal(expectedResult.DictionarySumTwo, results[i].DictionarySumTwo);
-                        Assert.Equal(expectedResult.IsDictionaryOfInt, results[i].IsDictionaryOfInt);
-                        Assert.Equal(expectedResult.LongCount, results[i].LongCount);
                         Assert.Equal(null, results[i].DictionaryOfIntegers);
                     }
                 }
             }
         }
-
-        private class DynamicDictionaryTestMapIndexWithExtensionMethods : AbstractIndexCreationTask<Employee, DynamicDictionaryTestMapIndexWithExtensionMethods.Result>
+        private class DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate : AbstractIndexCreationTask<Employee, DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result>
         {
             public class Result
             {
@@ -749,11 +744,9 @@ namespace SlowTests.MailingList
                 public Dictionary<int, int> DictionaryOfIntegers { get; set; }
                 public int DictionaryAggregateTwo { get; set; }
                 public int DictionarySumTwo { get; set; }
-                public bool IsDictionaryOfInt { get; set; }
-                public long LongCount { get; set; }
             }
 
-            public DynamicDictionaryTestMapIndexWithExtensionMethods()
+            public DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate()
             {
                 Map = employees => from e in employees
                                    select new Result
@@ -763,9 +756,7 @@ namespace SlowTests.MailingList
                                        DictionarySumOne = 0,
                                        DictionaryAggregateTwo = 0,
                                        DictionarySumTwo = 0,
-                                       DictionaryOfIntegers = e.DictionaryOfIntegers,
-                                       IsDictionaryOfInt = false,
-                                       LongCount = 0L
+                                       DictionaryOfIntegers=e.DictionaryOfIntegers
                                    };
                 Reduce = results => from
                         result in results
@@ -785,9 +776,7 @@ namespace SlowTests.MailingList
                                         DictionarySumTwo = dicTotalSum,
                                         DictionaryAggregateOne = dicDic.Aggregate(0, (x1, x2) => x1 + x2.Value),
                                         DictionarySumOne = dicDic.Sum(x => x.Value),
-                                        DictionaryOfIntegers = null,
-                                        IsDictionaryOfInt = dic.All(x => (int)x.Value is int),
-                                        LongCount = dic.LongCount(pair => pair.Value > 50)
+                                        DictionaryOfIntegers = null
                                     };
             }
         }
