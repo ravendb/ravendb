@@ -12,7 +12,6 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Sparrow.Extensions;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -224,7 +223,7 @@ namespace SlowTests.MailingList
                             SelectSum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
                             OrderBySum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
                             IdsWithDecimals = listOfUsers[i].ListOfDecimals.ToDictionary(k => k, k => 0),
-                            OrderByDescending = listOfUsers[i].LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.GetDefaultRavenFormat(isUtc: y.Key.Kind == DateTimeKind.Utc), y => y.Value),
+                            OrderByDescending = listOfUsers[i].LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.ToString(CultureInfo.InvariantCulture), y => y.Value),
                             Items = new[] { listOfUsers[i].Id }
                         };
                         Assert.Equal(expectedResult.Id, results[i].Id);
@@ -566,7 +565,7 @@ namespace SlowTests.MailingList
                             Id = listOfUsers[i].Id,
                             DictionarySum = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Sum(x => x.Value),
                             DictionarySumAggregate = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Aggregate(0, (x1, x2) => x1 + x2.Value),
-                            OrderByDescending = listOfUsers[i].LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.GetDefaultRavenFormat(isUtc: y.Key.Kind == DateTimeKind.Utc), y => y.Value),
+                            OrderByDescending = listOfUsers[i].LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.ToString(CultureInfo.InvariantCulture), y => y.Value),
                             IntIntDic = intDict1,
                             IntIntDic2 = intDict2,
                             IdsWithDecimals = dict1,
@@ -616,30 +615,15 @@ namespace SlowTests.MailingList
                             Id = $"{i}",
                             DictionaryOfIntegers = new Dictionary<int, int>
                             {
-                                {1, 1},
+                                {rnd.Next(1, 10), rnd.Next(1, 100)},
                                 {rnd.Next(11, 20), rnd.Next(1, 100)},
                                 {rnd.Next(21, 30), rnd.Next(1, 100)}
-                            },
-                            DictionaryOfStringInteger = new Dictionary<string, int>
-                            {
-                                { "int", 322 }
-                            },
-                            DictionaryOfStringShort = new Dictionary<string, short>
-                            {
-                                { "short", 322 }
-                            },
-                            DictionaryOfStringLong = new Dictionary<string, long>
-                            {
-                                { "long", 322 }
-                            },
-                            DictionaryOfStringDouble = new Dictionary<string, double>
-                            {
-                                { "double", 3.22 }
                             }
                         };
                         listOfUsers.Add(u);
                         session.Store(u);
                     }
+
                     session.SaveChanges();
                 }
 
@@ -656,26 +640,14 @@ namespace SlowTests.MailingList
                     for (int i = 0; i < countOfEmployees; i++)
                     {
                         var dict = listOfUsers[i].DictionaryOfIntegers;
-                        var strIntDict = listOfUsers[i].DictionaryOfStringInteger;
-                        var strDoubleDict = listOfUsers[i].DictionaryOfStringDouble;
                         var expectedResult = new DynamicDictionaryTestMapIndexWithCount.Result()
                         {
                             Count = listOfUsers[i].DictionaryOfIntegers.Count,
-                            Count2 = dict.Count,
-                            ContainsIntInt = dict.Contains(new KeyValuePair<int, int>(1, 1)),
-                            ContainsInt = strIntDict.Contains(new KeyValuePair<string, int>("int", 322)),
-                            ContainsDouble = strDoubleDict.Contains(new KeyValuePair<string, double>("double", 3.22)),
-                            ContainsShort = listOfUsers[i].DictionaryOfStringShort.Contains(new KeyValuePair<string, short>("short", 322)),
-                            ContainsLong = listOfUsers[i].DictionaryOfStringLong.Contains(new KeyValuePair<string, long>("long", 322))
+                            Count2 = dict.Count
                         };
                         Assert.Equal(expectedResult.Count, results[i].Count);
                         Assert.Equal(expectedResult.Count2, results[i].Count2);
                         Assert.Equal(results[i].Count, results[i].Count2);
-                        Assert.Equal(expectedResult.ContainsIntInt, results[i].ContainsIntInt);
-                        Assert.Equal(expectedResult.ContainsInt, results[i].ContainsInt);
-                        Assert.Equal(expectedResult.ContainsDouble, results[i].ContainsDouble);
-                        Assert.Equal(expectedResult.ContainsShort, results[i].ContainsShort);
-                        Assert.Equal(expectedResult.ContainsLong, results[i].ContainsLong);
                     }
                 }
             }
@@ -686,26 +658,16 @@ namespace SlowTests.MailingList
             {
                 public int Count { get; set; }
                 public int Count2 { get; set; }
-                public bool ContainsIntInt { get; set; }
-                public bool ContainsInt { get; set; }
-                public bool ContainsDouble { get; set; }
-                public bool ContainsShort { get; set; }
-                public bool ContainsLong { get; set; }
             }
 
             public DynamicDictionaryTestMapIndexWithCount()
             {
                 Map = employees => from e in employees
-                                   let dict = e.DictionaryOfIntegers.ToDictionary(x => x.Key, x => x.Value)
+                                   let dict = e.DictionaryOfIntegers.ToDictionary(x => x)
                                    select new Result
                                    {
                                        Count = e.DictionaryOfIntegers.ToDictionary(x => x.Key, x => x.Value).Count,
-                                       Count2 = dict.Count,
-                                       ContainsIntInt = dict.Contains(new KeyValuePair<int, int>(1, 1)),
-                                       ContainsInt = e.DictionaryOfStringInteger.Contains(new KeyValuePair<string, int>("int", 322)),
-                                       ContainsShort = e.DictionaryOfStringShort.ToDictionary(x => x.Key, x => x.Value).Contains(new KeyValuePair<string, short>("short", 322)),
-                                       ContainsLong = e.DictionaryOfStringLong.Contains(new KeyValuePair<string, long>("long", 322)),
-                                       ContainsDouble = e.DictionaryOfStringDouble.ToDictionary(x => x.Key, x => x.Value).Contains(new KeyValuePair<string, double>("double", 3.22)),
+                                       Count2 = dict.Count
                                    };
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -926,13 +888,6 @@ namespace SlowTests.MailingList
             public List<decimal> ListOfDecimals2 { get; set; }
             public Dictionary<int, int> DictionaryOfIntegers { get; set; }
             public Dictionary<int, int> DictionaryOfIntegers2 { get; set; }
-            public Dictionary<string, int> DictionaryOfStringInteger { get; set; }
-            public Dictionary<string, double> DictionaryOfStringDouble { get; set; }
-            public Dictionary<string, short> DictionaryOfStringShort { get; set; }
-            public Dictionary<string, long> DictionaryOfStringLong { get; set; }
-            public Dictionary<string, float> DictionaryOfStringFloat { get; set; }
-            public Dictionary<string, decimal> DictionaryOfStringDecimal { get; set; }
-            public Dictionary<string, byte> DictionaryOfStringByte { get; set; }
         }
 
         private class AccommodationFlightPriceCalendarAccommodationPrice

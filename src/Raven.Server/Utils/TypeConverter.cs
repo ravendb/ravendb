@@ -296,7 +296,7 @@ namespace Raven.Server.Utils
             return inner;
         }
 
-        public static string KeyAsString(object key)
+        private static string KeyAsString(object key)
         {
             string kvpKeyAsString;
             switch (key)
