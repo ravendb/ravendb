@@ -156,12 +156,11 @@ namespace SlowTests.MailingList
                             Id = listOfUsers[i].Id,
                             SelectSum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
                             OrderBySum = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
-                            DateTimeIntDictionary = listOfUsers[i].LoginCountByDate.ToDictionary(y => y.Key, y => y.Value)
                         };
                         Assert.Equal(expectedResult.Id, results[i].Id);
                         Assert.Equal(expectedResult.SelectSum, results[i].SelectSum);
                         Assert.Equal(expectedResult.OrderBySum, results[i].OrderBySum);
-                        Assert.Equal(expectedResult.DateTimeIntDictionary, results[i].DateTimeIntDictionary);
+
                     }
                 }
             }
@@ -419,19 +418,18 @@ namespace SlowTests.MailingList
 
                 public int OrderBySum { get; set; }
 
-                public Dictionary<DateTime, int> DateTimeIntDictionary { get; set; }
+                public Dictionary<decimal, int> IdsWithDecimals { get; set; }
             }
 
             public ToDictionarySelectOrderBySumIndex()
             {
                 Map = users => from user in users
-                               select new Result
-                               {
-                                   Id = user.Id,
-                                   SelectSum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
-                                   OrderBySum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
-                                   DateTimeIntDictionary = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value)
-                               };
+                    select new Result
+                    {
+                        Id = user.Id,
+                        SelectSum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).OrderBy(x => x.Value).Select(x => x.Value).Sum(x => x),
+                        OrderBySum = user.LoginCountByDate.ToDictionary(y => y.Key, y => y.Value).Select(x => x.Value).Sum(x => x),
+                    };
                 StoreAllFields(FieldStorage.Yes);
             }
         }
@@ -467,292 +465,24 @@ namespace SlowTests.MailingList
                                };
 
                 Reduce = results => from result in results
-                                    group result by new
-                                    {
-                                        result.Id,
-                                        result.OrderBySum,
-                                        result.SelectSum,
-                                        result.OrderByDescending
-                                    }
+                    group result by new
+                    {
+                        result.Id,
+                        result.OrderBySum,
+                        result.SelectSum,
+                        result.OrderByDescending
+                    }
                     into g
-                                    let numbersDictionary = g.SelectMany(x => x.IdsWithDecimals).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
-                                    select new Result
-                                    {
-                                        Id = g.Key.Id,
-                                        SelectSum = g.Key.SelectSum,
-                                        OrderBySum = g.Key.OrderBySum,
-                                        IdsWithDecimals = numbersDictionary,
-                                        OrderByDescending = g.Key.OrderByDescending,
-                                        Items = g.SelectMany(x => x.Items).Distinct().OrderBy(x => x).ToList()
-                                    };
-            }
-        }
-
-
-        [Fact]
-        public void DynamicDictionaryIndexShouldWork()
-        {
-            const int countOfEmployees = 20;
-            var listOfUsers = new List<Employee>();
-            using (var store = GetDocumentStore())
-            {
-                new DynamicDictionaryTestMapReduceIndex().Execute(store);
-                var rnd = new System.Random();
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 0; i < countOfEmployees; i++)
+                    let numbersDictionary = g.SelectMany(x => x.IdsWithDecimals).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
+                    select new Result
                     {
-                        var u = new Employee
-                        {
-                            Id = $"{i}",
-                            LoginCountByDate = new Dictionary<DateTime, int>
-                            {
-                                {new DateTime(), 44},
-                                {new DateTime().AddDays(1), 55},
-                                {new DateTime().AddDays(10), 66}
-                            },
-                            DictionaryOfIntegers = new Dictionary<int, int>
-                            {
-                                {1, 77},
-                                {2, 22},
-                                {5, 33}
-                            },
-                            DictionaryOfIntegers2 = new Dictionary<int, int>
-                            {
-                                {2, 44},
-                                {1, 55},
-                                {4, 66}
-                            },
-                            ListOfDecimals = new List<decimal>()
-                            {
-                               12,
-                                38,
-                                44,
-                                66
-                            },
-                            ListOfDecimals2 = new List<decimal>()
-                            {
-                                33,
-                                222,
-                                444,
-                               12,
-                            }
-                        };
-                        listOfUsers.Add(u);
-                        session.Store(u);
-                    }
-
-                    session.SaveChanges();
-                }
-
-                WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var results = session.Query<DynamicDictionaryTestMapReduceIndex.Result, DynamicDictionaryTestMapReduceIndex>()
-                        .ProjectInto<DynamicDictionaryTestMapReduceIndex.Result>()
-                        .ToList();
-
-                    Assert.Equal(countOfEmployees, results.Count);
-
-                    for (int i = 0; i < countOfEmployees; i++)
-                    {
-                        var dict1 = listOfUsers[i].ListOfDecimals.ToDictionary(x => x, x => 5).ToDictionary(x => x.Key, x => x.Value);
-                        var dict2 = listOfUsers[i].ListOfDecimals2.ToDictionary(x => x, x => 2);
-                        var intDict1 = listOfUsers[i].DictionaryOfIntegers2;
-                        var intDict2 = listOfUsers[i].DictionaryOfIntegers;
-                        var expectedResult = new DynamicDictionaryTestMapReduceIndex.Result()
-                        {
-                            Id = listOfUsers[i].Id,
-                            DictionarySum = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Sum(x => x.Value),
-                            DictionarySumAggregate = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Aggregate(0, (x1, x2) => x1 + x2.Value),
-                            OrderByDescending = listOfUsers[i].LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.ToString(CultureInfo.InvariantCulture), y => y.Value),
-                            IntIntDic = intDict1,
-                            IntIntDic2 = intDict2,
-                            IdsWithDecimals = dict1,
-                            IdsWithDecimals2 = dict2,
-                            RemainingFt = dict1.Join(dict2, tot => tot.Key, good => good.Key, (tot, good) => Math.Max(tot.Value - (int)good.Value, 0)).Aggregate(0m, (d1, d2) => d1 + d2),
-                            CompleteFt = dict2.Select(y => y.Value).Aggregate(0m, (d1, d2) => d1 + d2),
-                            TotalFt = dict1.Select(y => y.Value).Aggregate(0m, (d1, d2) => d1 + d2),
-                            RemainingQty = intDict1.Join(intDict2, q1 => q1.Key, q2 => q2.Key, (q, qdone) => Math.Max(q.Value - (int)qdone.Value, 0)).Aggregate(0, (i1, i2) => i1 + i2),
-                            ScheduleState = State.Done,
-                            Items = new List<string>
-                            {
-                                listOfUsers[i].Id
-                            },
-                        };
-                        Assert.Equal(expectedResult.Id, results[i].Id);
-                        Assert.Equal(expectedResult.DictionarySum, results[i].DictionarySum);
-                        Assert.Equal(expectedResult.DictionarySumAggregate, results[i].DictionarySumAggregate);
-                        Assert.Equal(expectedResult.OrderByDescending, results[i].OrderByDescending);
-                        Assert.Equal(expectedResult.IntIntDic, results[i].IntIntDic2);
-                        Assert.Equal(expectedResult.IntIntDic2, results[i].IntIntDic);
-                        Assert.Equal(expectedResult.RemainingFt, results[i].RemainingFt);
-                        Assert.Equal(expectedResult.CompleteFt, results[i].CompleteFt);
-                        Assert.Equal(expectedResult.TotalFt, results[i].TotalFt);
-                        Assert.Equal(expectedResult.RemainingQty, results[i].RemainingQty);
-                        Assert.Equal(expectedResult.ScheduleState, results[i].ScheduleState);
-                        Assert.Equal(expectedResult.Items, results[i].Items);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public void DynamicDictionaryIndexShouldWorkWithCount()
-        {
-            const int countOfEmployees = 20;
-            var listOfUsers = new List<Employee>();
-            using (var store = GetDocumentStore())
-            {
-                new DynamicDictionaryTestMapIndexWithCount().Execute(store);
-                var rnd = new System.Random();
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 0; i < countOfEmployees; i++)
-                    {
-                        var u = new Employee
-                        {
-                            Id = $"{i}",
-                            DictionaryOfIntegers = new Dictionary<int, int>
-                            {
-                                {1, 77},
-                                {2, 22},
-                                {5, 33}
-                            }
-                        };
-                        listOfUsers.Add(u);
-                        session.Store(u);
-                    }
-
-                    session.SaveChanges();
-                }
-
-                WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var results = session.Query<DynamicDictionaryTestMapIndexWithCount.Result, DynamicDictionaryTestMapIndexWithCount>()
-                        .ProjectInto<DynamicDictionaryTestMapIndexWithCount.Result>()
-                        .ToList();
-
-                    Assert.Equal(countOfEmployees, results.Count);
-
-                    for (int i = 0; i < countOfEmployees; i++)
-                    {
-                        var dict = listOfUsers[i].DictionaryOfIntegers;
-                        var expectedResult = new DynamicDictionaryTestMapIndexWithCount.Result()
-                        {
-                            Count = listOfUsers[i].DictionaryOfIntegers.Count,
-                            Count2 = dict.Count
-                        };
-                        Assert.Equal(expectedResult.Count, results[i].Count);
-                        Assert.Equal(expectedResult.Count2, results[i].Count2);
-                        Assert.Equal(results[i].Count, results[i].Count2);
-                    }
-                }
-            }
-        }
-        private class DynamicDictionaryTestMapIndexWithCount : AbstractIndexCreationTask<Employee, DynamicDictionaryTestMapIndexWithCount.Result>
-        {
-            public class Result
-            {
-                public int Count { get; set; }
-                public int Count2 { get; set; }
-            }
-
-            public DynamicDictionaryTestMapIndexWithCount()
-            {
-                Map = employees => from e in employees
-                                   let dict = e.DictionaryOfIntegers.ToDictionary(x => x)
-                                   select new Result
-                                   {
-                                       Count = e.DictionaryOfIntegers.ToDictionary(x => x.Key, x => x.Value).Count,
-                                       Count2 = dict.Count
-                                   };
-                StoreAllFields(FieldStorage.Yes);
-            }
-        }
-
-
-        private class DynamicDictionaryTestMapReduceIndex : AbstractIndexCreationTask<Employee, DynamicDictionaryTestMapReduceIndex.Result>
-        {
-            public class Result
-            {
-                public string Id { get; set; }
-                public int DictionarySum { get; set; }
-                public int DictionarySumAggregate { get; set; }
-                public Dictionary<decimal, int> IdsWithDecimals { get; set; }
-                public Dictionary<decimal, int> IdsWithDecimals2 { get; set; }
-                public Dictionary<string, int> OrderByDescending { get; set; }
-                public Dictionary<int, int> IntIntDic { get; set; }
-                public IList<string> Items { get; set; } = new List<string>();
-                public Dictionary<int, int> IntIntDic2 { get; set; }
-                public decimal CompleteFt { get; set; }
-                public decimal RemainingFt { get; set; }
-                public decimal TotalFt { get; set; }
-                public int RemainingQty { get; set; }
-                public State ScheduleState { get; set; }
-            }
-
-            public DynamicDictionaryTestMapReduceIndex()
-            {
-                Map = employees => from e in employees
-                                   select new Result
-                                   {
-                                       Id = e.Id,
-                                       DictionarySum = e.DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Sum(x => x.Value),
-                                       DictionarySumAggregate = e.DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Aggregate(0, (x1, x2) => x1 + x2.Value),
-                                       IdsWithDecimals = e.ListOfDecimals2.ToDictionary(i => i, i => 5),
-                                       IdsWithDecimals2 = e.ListOfDecimals.ToDictionary(i => i, i => 2),
-                                       OrderByDescending = e.LoginCountByDate.OrderByDescending(x => x.Value).ToDictionary(y => y.Key.ToString(CultureInfo.InvariantCulture), y => y.Value),
-                                       IntIntDic = e.DictionaryOfIntegers,
-                                       IntIntDic2 = e.DictionaryOfIntegers2,
-                                       Items = new[] { e.Id },
-                                       CompleteFt = 0,
-                                       RemainingFt = 0,
-                                       TotalFt = 0,
-                                       RemainingQty = 0,
-                                       ScheduleState = State.Undone
-                                   };
-
-                Reduce = results => from result in results
-                                    group result by new
-                                    {
-                                        result.Id,
-                                        result.OrderByDescending,
-                                        result.DictionarySum,
-                                        result.DictionarySumAggregate
-                                    }
-                    into g
-                                    let dic1 = g.SelectMany(x => x.IdsWithDecimals).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
-                                    let dic2 = g.SelectMany(x => x.IdsWithDecimals2).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
-                                    let dic3 = g.SelectMany(x => x.IntIntDic2).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
-                                    let dic4 = g.SelectMany(x => x.IntIntDic).ToDictionary(y => y.Key, y => y.Value)
-                                    let totalQty = dic4.Aggregate((int)0, (x1, x2) => (int)x1 + (int)x2.Value)
-                                    let remainingQty = dic4.Join(dic3, q1 => q1.Key, q2 => q2.Key, (q, qdone) => Math.Max(q.Value - (int)qdone.Value, 0)).Aggregate(0, (i1, i2) => i1 + i2)
-                                    let numbersDictionary = g.SelectMany(x => x.IdsWithDecimals).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
-                                    let totalFt = g.SelectMany(x => x.IdsWithDecimals.Select(y => y.Value)).Aggregate(0m, (d1, d2) => d1 + d2)
-                                    let completeFt = g.SelectMany(x => x.IdsWithDecimals2.Select(y => y.Value)).Aggregate(0m, (d1, d2) => d1 + d2)
-                                    let remainingFt = dic1.Join(dic2, tot => tot.Key, good => good.Key, (tot, good) => Math.Max(tot.Value - (int)good.Value, 0)).Aggregate(0m, (d1, d2) => d1 + d2)
-                                    let scheduleState = totalQty <= 0 ? State.Undone : State.Done
-                                    select new Result
-                                    {
-                                        Id = g.Key.Id,
-                                        DictionarySum = g.Key.DictionarySum,
-                                        DictionarySumAggregate = g.Key.DictionarySumAggregate,
-                                        IdsWithDecimals = dic2,
-                                        IdsWithDecimals2 = dic1,
-                                        IntIntDic = dic4,
-                                        IntIntDic2 = dic3,
-                                        OrderByDescending = g.Key.OrderByDescending,
-                                        Items = g.SelectMany(x => x.Items).Distinct().OrderBy(x => x).ToList(),
-                                        CompleteFt = completeFt,
-                                        TotalFt = totalFt,
-                                        RemainingFt = remainingFt,
-                                        RemainingQty = remainingQty,
-                                        ScheduleState = scheduleState
-                                    };
+                        Id = g.Key.Id,
+                        SelectSum = g.Key.SelectSum,
+                        OrderBySum = g.Key.OrderBySum,
+                        IdsWithDecimals = numbersDictionary,
+                        OrderByDescending = g.Key.OrderByDescending,
+                        Items = g.SelectMany(x => x.Items).Distinct().OrderBy(x => x).ToList()
+                    };
             }
         }
 
@@ -761,16 +491,6 @@ namespace SlowTests.MailingList
             public string Id { get; set; }
             public Dictionary<DateTime, int> LoginCountByDate { get; set; }
             public List<decimal> ListOfDecimals { get; set; }
-        }
-
-        public class Employee
-        {
-            public string Id { get; set; }
-            public Dictionary<DateTime, int> LoginCountByDate { get; set; }
-            public List<decimal> ListOfDecimals { get; set; }
-            public List<decimal> ListOfDecimals2 { get; set; }
-            public Dictionary<int, int> DictionaryOfIntegers { get; set; }
-            public Dictionary<int, int> DictionaryOfIntegers2 { get; set; }
         }
 
         private class AccommodationFlightPriceCalendarAccommodationPrice
@@ -814,12 +534,6 @@ namespace SlowTests.MailingList
         {
             public PeriodDefinition Period { get; private set; }
             public List<PricedDated> Dates { get; private set; }
-        }
-
-        private enum State
-        {
-            Done,
-            Undone
         }
     }
 }
