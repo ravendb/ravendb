@@ -469,8 +469,6 @@ namespace Voron
 
                 OnLogsApplied = null;
 
-                _options.NullifyHandlers();
-
                 foreach (var disposable in new IDisposable[]
                 {
                     _journal,

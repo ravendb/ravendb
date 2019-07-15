@@ -463,14 +463,9 @@ namespace SlowTests.Client.Counters
         public async Task RestoreAndReplicateCounters()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var server = GetNewServer(
-                new ServerCreationOptions
-                {
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString()                
-                    },
-                    RegisterForDisposal = false
+            using (var server = GetNewServer(new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString()
             }))
             {
                 using (var store1 = GetDocumentStore(new Options

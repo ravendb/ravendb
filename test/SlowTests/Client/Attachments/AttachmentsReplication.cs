@@ -1143,16 +1143,10 @@ namespace SlowTests.Client.Attachments
         [Fact]
         public async Task RavenDB_13535()
         {
-            var co = new ServerCreationOptions
+            using (var server = GetNewServer(runInMemory: false, customSettings: new Dictionary<string, string>
             {
-                RunInMemory = false,
-                CustomSettings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 1.ToString()
-                },
-                RegisterForDisposal = false
-            };
-            using (var server = GetNewServer(co))
+                [RavenConfiguration.GetKey(x => x.Replication.MaxSizeToSend)] = 1.ToString()
+            }))
             using (var store1 = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
             using (var store2 = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
             using (var store3 = GetDocumentStore(new Options { Server = server, RunInMemory = false }))

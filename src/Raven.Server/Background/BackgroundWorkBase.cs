@@ -134,7 +134,7 @@ namespace Raven.Server.Background
 
         protected abstract Task DoWork();
 
-        public virtual void Dispose()
+        public void Dispose()
         {
             try
             {

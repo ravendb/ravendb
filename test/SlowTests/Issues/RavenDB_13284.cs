@@ -14,14 +14,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ExternalReplicationCanReestablishAfterServerRestarts()
         {
-            var serverSrc = GetNewServer(new ServerCreationOptions
-            {
-                RunInMemory = false
-            });
-            var serverDst = GetNewServer(new ServerCreationOptions
-            {
-                RunInMemory = false
-            });
+            var serverSrc = GetNewServer(runInMemory: false);
+            var serverDst = GetNewServer(runInMemory: false);
             using (var storeSrc = GetDocumentStore(new Options
             {
                 Server = serverSrc,
@@ -58,7 +52,7 @@ namespace SlowTests.Issues
                 }
 
                 // Bring destination server up
-                serverDst = GetNewServer(new ServerCreationOptions{RunInMemory = false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = settings});
+                serverDst = GetNewServer(runInMemory: false, deletePrevious: false, partialPath: nodePath, customSettings: settings);
 
                 Assert.True(WaitForDocument(storeDst, "user/2"));
             }
