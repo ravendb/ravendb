@@ -220,6 +220,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (DrainRunningQueries())
                     DisposeIndex();
+
+                RemoveIndexFromCache();
             });
         }
 
@@ -270,7 +272,7 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
 
-                exceptionAggregator.Execute(RemoveIndexFromCache);
+                RemoveIndexFromCache();
 
                 exceptionAggregator.ThrowIfNeeded();
             }
