@@ -96,45 +96,39 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IEnumerable<dynamic> Select(this IDictionary<dynamic, dynamic> source)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<IGrouping<dynamic, dynamic>> source, Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector)
         {
-            return new DynamicArray(source);
+            return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u)));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IEnumerable<dynamic> Select(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> func)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<IGrouping<dynamic, dynamic>> source, Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
         {
-            return new DynamicArray(Enumerable.Select(source, pair => func(pair)));
+            return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u), comparer));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IEnumerable<dynamic> Select(this IDictionary<dynamic, dynamic> source, Func<dynamic, int, dynamic> func)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector)
         {
-            return new DynamicArray(Enumerable.Select(source, (pair, i) => func(pair, i)));
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IOrderedEnumerable<dynamic> OrderBy(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, IEqualityComparer<dynamic> comparer)
         {
-            return new DynamicArray(Enumerable.OrderBy(source, pair => keySelector(pair)));
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, comparer));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IOrderedEnumerable<dynamic> OrderBy(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector)
         {
-            return new DynamicArray(Enumerable.OrderBy(source, pair => keySelector(pair), comparer));
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IOrderedEnumerable<dynamic> OrderByDescending(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
         {
-            return new DynamicArray(Enumerable.OrderByDescending(source, pair => keySelector(pair)));
-        }
-
-        [Obsolete("This method should never be used directly.")]
-        public static IOrderedEnumerable<dynamic> OrderByDescending(this IDictionary<dynamic, dynamic> source, Func<dynamic, dynamic> keySelector, IComparer<dynamic> comparer)
-        {
-            return new DynamicArray(Enumerable.OrderByDescending(source, pair => keySelector(pair), comparer));
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector, comparer));
         }
 
         private static IEnumerable<dynamic> Select(this object self)
