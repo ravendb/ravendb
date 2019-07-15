@@ -776,6 +776,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (fieldName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||
                     fieldName.EndsWith(LuceneDocumentConverterBase.IsArrayFieldSuffix) ||
+                    fieldName.EndsWith(LuceneDocumentConverterBase.IsDictionaryFieldSuffix) ||
                     fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                     continue;
 
