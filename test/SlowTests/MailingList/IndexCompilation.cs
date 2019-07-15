@@ -911,6 +911,171 @@ namespace SlowTests.MailingList
             }
         }
 
+        [Fact]
+        public void DynamicDictionaryIndexShouldWorkWithMethods()
+        {
+            const int countOfVisitors = 20;
+            var listOfVisitors = new List<Visitor>();
+            using (var store = GetDocumentStore())
+            {
+                new DynamicDictionaryIndex().Execute(store);
+                var rnd = new System.Random();
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < countOfVisitors; i++)
+                    {
+                        var u = new Visitor
+                        {
+                            Id = $"{i}",
+                            DictionaryOfIntegers = new Dictionary<int, int>
+                            {
+                                {1, rnd.Next(1, 100)},
+                                {rnd.Next(4, 10), rnd.Next(1, 100)},
+                                {rnd.Next(11, 20), rnd.Next(1, 100)},
+                                {rnd.Next(21, 30), rnd.Next(1, 100)},
+                                {322, 322}
+                            },
+                            DictionaryOfIntegersToUnion = new Dictionary<int, int>
+                            {
+                                {2, rnd.Next(1, 100)},
+                                {3, rnd.Next(1, 100)},
+                            },
+                            DictionaryOfIntegersToIntersect = new Dictionary<int, int>
+                            {
+                                {1, rnd.Next(1, 100)},
+                                {322, 322},
+                            },
+                            DictionaryOfIntegersToExcept = new Dictionary<int, int>
+                            {
+                                {322, 322},
+                            }
+                        };
+                        listOfVisitors.Add(u);
+                        session.Store(u);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<DynamicDictionaryIndex.Result, DynamicDictionaryIndex>()
+                        .ProjectInto<DynamicDictionaryIndex.Result>()
+                        .ToList();
+
+                    Assert.Equal(countOfVisitors, results.Count);
+                    for (int i = 0; i < countOfVisitors; i++)
+                    {
+                        var expectedResult = new DynamicDictionaryIndex.Result()
+                        {
+                            Id = listOfVisitors[i].Id,
+                            ContainsKeyResult = listOfVisitors[i].DictionaryOfIntegers.ContainsKey(1),
+                            LastResult = listOfVisitors[i].DictionaryOfIntegers.Last(),
+                            LastOrDefaultResult = listOfVisitors[i].DictionaryOfIntegers.LastOrDefault(),
+                            ElementAtResult = listOfVisitors[i].DictionaryOfIntegers.ElementAt(0),
+                            ElementAtOrDefaultResult = listOfVisitors[i].DictionaryOfIntegers.ElementAtOrDefault(0),
+                            AnyResult = listOfVisitors[i].DictionaryOfIntegers.Any(),
+                            AnyWithPredicateResult = listOfVisitors[i].DictionaryOfIntegers.Any(x => x.Value > 1),
+
+                            SkipResult = listOfVisitors[i].DictionaryOfIntegers.Skip(1).ToDictionary(x => x.Key, x => x.Value),
+                            SkipLastResult = listOfVisitors[i].DictionaryOfIntegers.SkipLast(1).ToDictionary(x => x.Key, x => x.Value),
+                            TakeResult = listOfVisitors[i].DictionaryOfIntegers.Take(3).ToDictionary(x => x.Key, x => x.Value),
+                            TakeLastResult = listOfVisitors[i].DictionaryOfIntegers.TakeLast(3).ToDictionary(x => x.Key, x => x.Value),
+                            UnionResult = listOfVisitors[i].DictionaryOfIntegers.Union(listOfVisitors[i].DictionaryOfIntegersToUnion).ToDictionary(x => x.Key, x => x.Value),
+                            IntersectResult = listOfVisitors[i].DictionaryOfIntegers.Intersect(listOfVisitors[i].DictionaryOfIntegersToIntersect).ToDictionary(x => x.Key, x => x.Value),
+                            PrependResult = listOfVisitors[i].DictionaryOfIntegers.Prepend(new KeyValuePair<int, int>(321, 322)).ToDictionary(x => x.Key, x => x.Value),
+                            ExceptResult = listOfVisitors[i].DictionaryOfIntegers.Except(listOfVisitors[i].DictionaryOfIntegersToExcept).ToDictionary(x => x.Key, x => x.Value),
+
+                            //TryGetValueResult = listOfVisitors[i].DictionaryOfIntegers.TryGetValue(1, out _),
+                        };
+                        Assert.Equal(expectedResult.Id, results[i].Id);
+                        Assert.Equal(expectedResult.ContainsKeyResult, results[i].ContainsKeyResult);
+                        Assert.Equal(expectedResult.LastResult, results[i].LastResult);
+                        Assert.Equal(expectedResult.LastOrDefaultResult, results[i].LastOrDefaultResult);
+                        Assert.Equal(expectedResult.LastResult, results[i].LastOrDefaultResult); // Last converted to LastOrDefault in index expression
+                        Assert.Equal(expectedResult.ElementAtResult, results[i].ElementAtResult);
+                        Assert.Equal(expectedResult.ElementAtOrDefaultResult, results[i].ElementAtOrDefaultResult);
+                        Assert.Equal(expectedResult.AnyResult, results[i].AnyResult);
+                        Assert.Equal(expectedResult.AnyWithPredicateResult, results[i].AnyWithPredicateResult);
+
+                        Assert.Equal(expectedResult.SkipResult, results[i].SkipResult);
+                        Assert.Equal(expectedResult.SkipLastResult, results[i].SkipLastResult);
+                        Assert.Equal(expectedResult.TakeResult, results[i].TakeResult);
+                        Assert.Equal(expectedResult.TakeLastResult, results[i].TakeLastResult);
+                        Assert.Equal(expectedResult.UnionResult, results[i].UnionResult);
+                        Assert.Equal(expectedResult.IntersectResult, results[i].IntersectResult);
+                        Assert.Equal(expectedResult.PrependResult, results[i].PrependResult);
+                        Assert.Equal(expectedResult.ExceptResult, results[i].ExceptResult);
+
+                        //Assert.Equal(expectedResult.TryGetValueResult, results[i].TryGetValueResult);
+                    }
+                }
+            }
+        }
+
+        private class DynamicDictionaryIndex : AbstractIndexCreationTask<Visitor, DynamicDictionaryIndex.Result>
+        {
+            public class Result
+            {
+                public string Id { get; set; }
+                public bool ContainsKeyResult { get; set; }
+                public bool AnyResult { get; set; }
+                public bool AnyWithPredicateResult { get; set; }
+                public KeyValuePair<int, int> LastResult { get; set; }
+                public KeyValuePair<int, int> LastOrDefaultResult { get; set; }
+                public KeyValuePair<int, int> ElementAtResult { get; set; }
+                public KeyValuePair<int, int> ElementAtOrDefaultResult { get; set; }
+                public Dictionary<int, int> SkipResult { get; set; }
+                public Dictionary<int, int> SkipLastResult { get; set; }
+                public Dictionary<int, int> TakeResult { get; set; }
+                public Dictionary<int, int> TakeLastResult { get; set; }
+                public Dictionary<int, int> UnionResult { get; set; }
+                public Dictionary<int, int> IntersectResult { get; set; }
+                public Dictionary<int, int> PrependResult { get; set; }
+                public Dictionary<int, int> ExceptResult { get; set; }
+
+                public bool TryGetValueResult { get; set; }
+            }
+            public DynamicDictionaryIndex()
+            {
+                Map = visitors => from e in visitors
+                                  select new Result
+                                  {
+                                      Id = e.Id,
+                                      ContainsKeyResult = e.DictionaryOfIntegers.ContainsKey(1),
+                                      LastResult = e.DictionaryOfIntegers.Last(),
+                                      LastOrDefaultResult = e.DictionaryOfIntegers.LastOrDefault(),
+                                      ElementAtResult = e.DictionaryOfIntegers.ElementAt(0),
+                                      ElementAtOrDefaultResult = e.DictionaryOfIntegers.ElementAtOrDefault(0),
+                                      AnyResult = e.DictionaryOfIntegers.Any(),
+                                      AnyWithPredicateResult = e.DictionaryOfIntegers.Any(x => x.Value > 1),
+
+                                      SkipResult = e.DictionaryOfIntegers.Skip(1).ToDictionary(x=>x.Key, x=>x.Value),
+                                      SkipLastResult = e.DictionaryOfIntegers.SkipLast(1).ToDictionary(x => x.Key, x => x.Value),
+                                      TakeResult = e.DictionaryOfIntegers.Take(3).ToDictionary(x => x.Key, x => x.Value),
+                                      TakeLastResult = e.DictionaryOfIntegers.TakeLast(3).ToDictionary(x => x.Key, x => x.Value),
+                                      UnionResult = e.DictionaryOfIntegers.Union(e.DictionaryOfIntegersToUnion).ToDictionary(x => x.Key, x => x.Value),
+                                      IntersectResult = e.DictionaryOfIntegers.Intersect(e.DictionaryOfIntegersToIntersect).ToDictionary(x => x.Key, x => x.Value),
+                                      PrependResult = e.DictionaryOfIntegers.Prepend(new KeyValuePair<int, int>(321, 322)).ToDictionary(x => x.Key, x => x.Value),
+                                      ExceptResult = e.DictionaryOfIntegers.Except(e.DictionaryOfIntegersToExcept).ToDictionary(x => x.Key, x => x.Value),
+
+                                      //TryGetValueResult = e.DictionaryOfIntegers.TryGetValue(1, out s),
+                                  };
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        public class Visitor
+        {
+            public string Id { get; set; }
+            public Dictionary<int, int> DictionaryOfIntegers { get; set; }
+            public Dictionary<int, int> DictionaryOfIntegersToUnion { get; set; }
+            public Dictionary<int, int> DictionaryOfIntegersToIntersect { get; set; }
+            public Dictionary<int, int> DictionaryOfIntegersToExcept { get; set; }
+        }
+
         public class User
         {
             public string Id { get; set; }

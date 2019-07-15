@@ -124,7 +124,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var propertyName = term.Field;
                         if (propertyName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||
                             propertyName.EndsWith(LuceneDocumentConverterBase.IsArrayFieldSuffix) ||
-                            propertyName.EndsWith(LuceneDocumentConverterBase.IsDictionaryFieldSuffix) ||
                             propertyName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                             continue;
 
