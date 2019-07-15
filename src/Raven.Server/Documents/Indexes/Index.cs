@@ -1073,13 +1073,17 @@ namespace Raven.Server.Documents.Indexes
                                     if (_logger.IsOperationsEnabled)
                                         _logger.Operations($"Failed to open write transaction, indexing will be retried", te);
                                 }
+                                catch (InsufficientMemoryException ime)
+                                {
+                                    HandleOutOfMemoryException(ime, scope, $"{_environment}:{nameof(InsufficientMemoryException)}");
+                                }
                                 catch (OutOfMemoryException oome)
                                 {
-                                    HandleOutOfMemoryException(oome, scope);
+                                    HandleOutOfMemoryException(oome, scope, $"{_environment}:{nameof(OutOfMemoryException)}");
                                 }
                                 catch (EarlyOutOfMemoryException eoome)
                                 {
-                                    HandleOutOfMemoryException(eoome, scope);
+                                    HandleOutOfMemoryException(eoome, scope, $"{_environment}:{nameof(EarlyOutOfMemoryException)}");
                                 }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
@@ -1543,7 +1547,7 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
-        private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope)
+        private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope, string key)
         {
             try
             {
@@ -1555,20 +1559,8 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info(title, oome);
 
-                var message = $"Error message: {oome.Message}";
-                var alert = AlertRaised.Create(
-                    null,
-                    title,
-                    message,
-                    AlertType.OutOfMemoryException,
-                    NotificationSeverity.Error,
-                    key: message,
-                    details: new MessageDetails
-                    {
-                        Message = OutOfMemoryDetails(oome)
-                    });
-
-                DocumentDatabase.NotificationCenter.Add(alert);
+//                DocumentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.OutOfMemoryException, key));
+                DocumentDatabase.NotificationCenter.OutOfMemory.Add(title,  key, oome);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
@@ -1579,20 +1571,6 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed out of memory exception handling for index '{Name}'", e);
             }
-        }
-
-        private static string OutOfMemoryDetails(Exception oome)
-        {
-            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
-
-            return $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-                   $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
-                   $"Shared clean: {memoryInfo.SharedCleanMemory}, " +
-                   $"Working set: {memoryInfo.WorkingSet}, " +
-                   $"Available memory: {memoryInfo.AvailableMemory}, " +
-                   $"Calculated Available memory: {memoryInfo.AvailableWithoutTotalCleanMemory}, " +
-                   $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
-                   $"Error: {oome}";
         }
 
         private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)
