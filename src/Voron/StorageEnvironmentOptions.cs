@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -1092,8 +1091,6 @@ namespace Voron
 
         public unsafe void Dispose()
         {
-            NullifyHandlers();
-
             var copy = MasterKey;
             if (copy != null)
             {
@@ -1107,14 +1104,6 @@ namespace Voron
             ScratchSpaceUsage?.Dispose();
 
             Disposing();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void NullifyHandlers()
-        {
-            SchemaUpgrader = null;
-            OnRecoveryError = null;
-            OnNonDurableFileSystemError = null;
         }
 
         protected abstract void Disposing();

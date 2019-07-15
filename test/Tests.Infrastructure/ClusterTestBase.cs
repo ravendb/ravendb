@@ -503,13 +503,8 @@ namespace Tests.Infrastructure
                     serverUrl = UseFiddlerUrl("http://127.0.0.1:0");
                     customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
                 }
-                var co = new ServerCreationOptions
-                {
-                    CustomSettings = customSettings,
-                    RunInMemory = shouldRunInMemory,
-                    RegisterForDisposal = false
-                };
-                var server = GetNewServer(co);
+
+                var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
                 var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
                 var prefix = useSsl ? "https" : "http";
                 serverUrl = UseFiddlerUrl($"{prefix}://127.0.0.1:{port}");
@@ -569,13 +564,7 @@ namespace Tests.Infrastructure
                 var customSettings = GetServerSettingsForPort(useSsl, out serverUrl);
 
                 int proxyPort = 10000;
-                var co = new ServerCreationOptions
-                {
-                    CustomSettings = customSettings,
-                    RunInMemory = shouldRunInMemory,
-                    RegisterForDisposal = false
-                };
-                var server = GetNewServer(co);
+                var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
                 var proxy = new ProxyServer(ref proxyPort, Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl()), delay);
                 serversToProxies.Add(server, proxy);
 
