@@ -94,6 +94,10 @@ namespace Raven.Client.Documents.Identity
                 //local range is exhausted , need to get a new range
                 var maybeNextTask = new Lazy<Task>(GetNextRangeAsync);
 
+                // other thread got new range
+                if (id <= Range.Max)
+                    continue;
+
                 var nextTask = Interlocked.CompareExchange(ref _nextRangeTask,
                                    maybeNextTask, null) ?? maybeNextTask;
                 try
