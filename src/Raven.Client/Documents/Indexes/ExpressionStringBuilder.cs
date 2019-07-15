@@ -1507,14 +1507,13 @@ namespace Raven.Client.Documents.Indexes
             var num = 0;
             var expression = node.Object;
 
-            var isDictionaryArgument = false;
+            var isDictionary = false;
             var isDictionaryReturn = false;
-            var isConvertToDictionary = false;
 
             if (node.Arguments.Count > 0 && node.Arguments[0].Type.IsGenericType)
             {
                 if (node.Arguments[0].Type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
-                    isDictionaryArgument = true;
+                    isDictionary = true;
             }
 
             if (node.Method.ReturnType.IsGenericType)
@@ -1523,109 +1522,58 @@ namespace Raven.Client.Documents.Indexes
                     isDictionaryReturn = true;
             }
 
-            if (IsExtensionMethod(node))
+            if (isDictionary || isDictionaryReturn || IsExtensionMethod(node))
             {
                 num = 1;
                 expression = node.Arguments[0];
                 isExtension = true;
             }
-
-            if (isDictionaryArgument && isDictionaryReturn)
+            if (expression != null)
             {
-                if (isExtension)
+                if (typeof(AbstractCommonApiForIndexes).IsAssignableFrom(expression.Type))
                 {
-                    // TODO: remove if unnecessary
+                    // this is a method that
+                    // exists on both the server side and the client side
+                    Out("this");
                 }
-                else
+                else if (isDictionary && isDictionaryReturn == false)
                 {
-                    num = 1;
-                    expression = node.Arguments[0];
-                    Visit(expression);
-                    Out(".");
-                }
-            }
-            else if (isDictionaryArgument)
-            {
-                if (isExtension)
-                {
-                    Visit(expression);
-
-                    if (expression is MethodCallExpression == false)
-                        Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
-                }
-                else
-                {
-                    if (node.Method.DeclaringType.Name == "Enumerable")
+                    if (expression is MethodCallExpression)
                     {
-                        num = 1;
-                        expression = node.Arguments[0];
-
                         Visit(expression);
-
-                        if (expression is MethodCallExpression == false)
-                            Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
                     }
                     else
                     {
-                        Out(node.Method.DeclaringType.Name);
-                        isConvertToDictionary = true;
+                        Visit(expression);
+                        Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
                     }
                 }
+                else
+                {
+                    Visit(expression);
+                }
+                if (IsIndexerCall(node) == false)
+                {
+                    Out(".");
+                }
+            }
+
+            if (isDictionary == false && isDictionaryReturn == false && node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
+            {
+                Out("DynamicEnumerable.");
+            }
+            else if (isDictionary == false && isDictionaryReturn == false && node.Method.IsStatic && isExtension == false)
+            {
+                if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
+                {
+                    Out("new DynamicArray(");
+                    Visit(node.Arguments[0]);
+                    Out(")");
+                    return node; // we don't do casting on the server
+                }
+                Out(node.Method.DeclaringType.Name);
                 Out(".");
             }
-            else if (isDictionaryReturn)
-            {
-                if (isExtension)
-                {
-                    // TODO: remove if unnecessary
-                }
-                else
-                {
-                    num = 1;
-                    expression = node.Arguments[0];
-                    Visit(expression);
-                    Out(".");
-                }
-            }
-            else
-            {
-                if (expression != null)
-                {
-                    if (typeof(AbstractCommonApiForIndexes).IsAssignableFrom(expression.Type))
-                    {
-                        // this is a method that
-                        // exists on both the server side and the client side
-                        Out("this");
-                    }
-                    else
-                    {
-                        Visit(expression);
-                    }
-                    if (IsIndexerCall(node) == false)
-                    {
-                        Out(".");
-                    }
-                }
-
-                if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
-                {
-                    Out("DynamicEnumerable.");
-                }
-                else if (node.Method.IsStatic && isExtension == false)
-                {
-                    if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
-                    {
-                        Out("new DynamicArray(");
-                        Visit(node.Arguments[0]);
-                        Out(")");
-                        return node; // we don't do casting on the server
-                    }
-
-                    Out(node.Method.DeclaringType.Name);
-                    Out(".");
-                }
-            }
-
             if (IsIndexerCall(node))
             {
                 Out("[");
@@ -1701,9 +1649,6 @@ namespace Raven.Client.Documents.Indexes
                         _avoidDuplicatedParameters = true;
 
                     Visit(node.Arguments[num2]);
-
-                    if (isConvertToDictionary)
-                        Out(".ToDictionary(eg => eg.Key, or => or.Value)");
 
                     _isSelectMany = oldIsSelectMany;
                     _avoidDuplicatedParameters = oldAvoidDuplicateParameters;
