@@ -105,7 +105,7 @@ namespace Raven.Server.Dashboard
             return machineResources;
         }
 
-        public new void Dispose()
+        public override void Dispose()
         {
             base.Dispose();
 

@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ChangesApiShouldReconnectToServerWhenServerReturn()
         {
-            var server = GetNewServer(runInMemory: false);
+            var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, RegisterForDisposal = false});
             try
             {
                 using (var store = GetDocumentStore(new Options { Server = server, Path = Path.Combine(server.Configuration.Core.DataDirectory.FullPath, "ChangesApiShouldReconnectToServerWhenServerReturn") }))
@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                     {
                         {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
                     };
-                    server = GetNewServer(runInMemory: false, deletePrevious: false, partialPath: nodePath, customSettings: settings);
+                    server = GetNewServer(new ServerCreationOptions {RunInMemory= false, DeletePrevious = false, PartialPath = nodePath, CustomSettings = settings});
                     await taskObservable.EnsureConnectedNow();
                     PushUser(store);
                     value = WaitForValue(() => list.Count, 2);

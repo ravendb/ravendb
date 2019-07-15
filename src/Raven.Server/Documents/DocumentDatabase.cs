@@ -647,7 +647,7 @@ namespace Raven.Server.Documents
                         connection.Dispose();
                     });
                 }
-                
+
                 exceptionAggregator.Execute(() =>
                 {
                     TxMerger?.Dispose();

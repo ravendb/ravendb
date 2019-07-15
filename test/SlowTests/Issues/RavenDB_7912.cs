@@ -44,14 +44,14 @@ namespace SlowTests.Issues
                         var url = Servers[1].WebUrl;
                         var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
 
-                        Servers[1] = GetNewServer(new Dictionary<string, string>
+                        Servers[1] = GetNewServer(new ServerCreationOptions {CustomSettings = new Dictionary<string, string>
                             {
                                 {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), url},
                                 {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
                             },
-                            runInMemory: false,
-                            deletePrevious: false,
-                            partialPath: dataDir);
+                            RunInMemory = false,
+                            DeletePrevious = false,
+                            PartialPath = dataDir});
 
                         Assert.True(await WaitForDatabaseToBeDeleted(Servers[1], databaseName, TimeSpan.FromSeconds(30), cts.Token));
                     }

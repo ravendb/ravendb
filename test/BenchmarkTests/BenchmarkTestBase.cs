@@ -18,15 +18,18 @@ namespace BenchmarkTests
     {
         public abstract Task InitAsync(DocumentStore store);
 
-        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
-            string customConfigPath = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
-            if (customSettings == null)
-                customSettings = new Dictionary<string, string>();
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
 
-            customSettings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = int.MaxValue.ToString();
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = int.MaxValue.ToString();
 
-            return base.GetNewServer(customSettings, deletePrevious, false, partialPath, customConfigPath);
+            return base.GetNewServer(options);
         }
 
         protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
