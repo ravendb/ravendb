@@ -1766,7 +1766,6 @@ namespace Raven.Client.Documents.Indexes
                     case "ToDictionary":
                     case "Aggregate":
                     case "Join":
-                    case "LongCount":
                         return true;
                 }
                 return false;

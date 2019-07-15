@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -62,22 +59,7 @@ namespace Raven.Client.Json
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
-                {
-                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(key, conventions, context));
-                    @object[keyAsString] = ToBlittableSupportedType(dictionary[key], conventions, context);
-                }
-
-                return @object;
-            }
-
-            if (value is IDictionary<object, object> dDictionary)
-            {
-                var @object = new DynamicJsonValue();
-                foreach (var key in dDictionary.Keys)
-                {
-                    var keyAsString = KeyAsString(key: ToBlittableSupportedType(key, conventions, context));
-                    @object[keyAsString] = ToBlittableSupportedType(dDictionary[key], conventions, context);
-                }
+                    @object[key.ToString()] = ToBlittableSupportedType(dictionary[key], conventions, context);
 
                 return @object;
             }
@@ -111,37 +93,5 @@ namespace Raven.Client.Json
                 return reader["Value"];
             }
         }
-
-        private static string KeyAsString(object key)
-        {
-            string kvpKeyAsString;
-            switch (key)
-            {
-                case null:
-                    kvpKeyAsString = Constants.Documents.Indexing.Fields.NullValue;
-                    break;
-                case LazyStringValue lsv:
-                    kvpKeyAsString = lsv.Size == 0 ? Constants.Documents.Indexing.Fields.EmptyString : lsv;
-                    break;
-                case LazyCompressedStringValue lcsv:
-                    kvpKeyAsString = lcsv.ToLazyStringValue();
-                    break;
-                case DateTime dateTime:
-                    kvpKeyAsString = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
-                    break;
-                case DateTimeOffset dateTimeOffset:
-                    kvpKeyAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                    break;
-                case TimeSpan timeSpan:
-                    kvpKeyAsString = timeSpan.ToString("c", CultureInfo.InvariantCulture);
-                    break;
-                default:
-                    kvpKeyAsString = key.ToString();
-                    break;
-            }
-
-            return kvpKeyAsString;
-        }
-
     }
 }
