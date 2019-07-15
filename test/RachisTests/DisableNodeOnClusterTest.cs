@@ -62,7 +62,10 @@ namespace RachisTests
 
                 Assert.NotEqual(re.Url, firstNodeUrl);
                 settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = firstNodeUrl;
-                Servers.Add(GetNewServer(settings, runInMemory: false, deletePrevious: false, partialPath: nodePath));
+                Servers.Add(GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = settings, RunInMemory = false, DeletePrevious = false, PartialPath = nodePath
+                }));
                 await re.CheckNodeStatusNow(tag);
                 Assert.True(WaitForValue(() => firstNodeUrl == re.Url, true));
             }

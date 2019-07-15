@@ -26,7 +26,7 @@ namespace SlowTests.SchemaUpgrade.Server
 
             ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
 
-            using (var server = GetNewServer(deletePrevious: false, runInMemory: false, partialPath: folder))
+            using (var server = GetNewServer(new ServerCreationOptions{DeletePrevious = false, RunInMemory = false, PartialPath = folder, RegisterForDisposal = false}))
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {

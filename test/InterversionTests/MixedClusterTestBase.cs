@@ -28,21 +28,25 @@ namespace InterversionTests
             public string Url;
         }
 
-        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
-            string customConfigPath = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
-            if (customSettings == null)
-                customSettings = new Dictionary<string, string>();
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
+
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
             var key = RavenConfiguration.GetKey(x => x.Http.UseLibuv);
-            if (customSettings.ContainsKey(key) == false)
-                customSettings[key] = "true";
-            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+            if (options.CustomSettings.ContainsKey(key) == false)
+                options.CustomSettings[key] = "true";
+            return base.GetNewServer(options);
         }
 
         protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(
             string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
         {
-            var leaderServer = GetNewServer(customSettings);
+            var leaderServer = GetNewServer(new ServerCreationOptions {CustomSettings = customSettings});
             leaderServer.ServerStore.EnsureNotPassive(leaderServer.WebUrl);
 
             var nodeAdded = new ManualResetEvent(false);
@@ -68,7 +72,7 @@ namespace InterversionTests
 
                 for (int i = 0; i < localPeers; i++)
                 {
-                    var peer = GetNewServer(customSettings);
+                    var peer = GetNewServer(new ServerCreationOptions{CustomSettings = customSettings});
                     var addCommand = new AddClusterNodeCommand(peer.WebUrl);
                     await requestExecutor.ExecuteAsync(addCommand, context);
                     Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));

@@ -469,10 +469,17 @@ namespace FastTests.Client.Subscriptions
             SubscriptionWorker<dynamic> subscriptionWorker = null;
             try
             {
-                server = GetNewServer(runInMemory: false, customSettings: new Dictionary<string, string>()
+                var co = new ServerCreationOptions
                 {
-                    [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = dataPath
-                });
+                    RunInMemory = false,
+                    CustomSettings = new Dictionary<string, string>()
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = dataPath
+                    },
+                    RegisterForDisposal = false
+                };
+
+                server = GetNewServer(co);
 
                 store = new DocumentStore()
                 {
