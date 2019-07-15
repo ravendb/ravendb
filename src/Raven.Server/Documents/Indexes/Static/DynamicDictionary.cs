@@ -1,14 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
-using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicDictionary : DynamicObject, IDictionary<object, object>, IEnumerable<object>
+    public class DynamicDictionary : IDictionary<object, object>, IOrderedEnumerable<object>
     {
         private readonly Dictionary<object, object> _dictionary;
 
@@ -101,32 +98,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public bool Contains(KeyValuePair<object, object> item)
         {
-            return Contains<object, object>(item);
+            return _dictionary.Contains(item);
         }
-
-        public bool Contains<TKey, TValue>(KeyValuePair<TKey, TValue> item)
-        {
-            var key = TypeConverter.KeyAsString(TypeConverter.ToBlittableSupportedType(item.Key));
-            var vType = ToDynamicDictionarySupportedType(item.Value);
-            var newItem = new KeyValuePair<object, object>(key, vType);
-
-            return _dictionary.Contains(newItem);
-        }
-
-        public bool Contains<TKey, TValue>(KeyValuePair<TKey, TValue> item, IEqualityComparer<KeyValuePair<TKey, TValue>> comparer)
-        {
-            var key = TypeConverter.KeyAsString(TypeConverter.ToBlittableSupportedType(item.Key));
-            var vType = ToDynamicDictionarySupportedType(item.Value);
-            var newItem = new KeyValuePair<object, object>(key, vType);
-
-            return _dictionary.Contains(newItem, (IEqualityComparer<KeyValuePair<object, object>>)(comparer));
-        }
-
-        public DynamicDictionary ToDictionary<T>(Func<T, dynamic> keySelector, Func<T, dynamic> elementSelector)
-        {
-            return new DynamicDictionary(_dictionary);
-        }
-
 
         public void CopyTo(KeyValuePair<object, object>[] array, int arrayIndex)
         {
@@ -134,11 +107,6 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         public bool Remove(KeyValuePair<object, object> item)
-        {
-            return Remove<object, object>(item);
-        }
-
-        public bool Remove<TKey, TValue>(KeyValuePair<TKey, TValue> item)
         {
             return _dictionary.Remove(item);
         }
@@ -627,53 +595,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public decimal? Sum(Func<dynamic, decimal?> selector)
         {
             return Enumerable.Sum(this, selector) ?? DynamicNullObject.Null;
-        }
-
-        private static dynamic ToDynamicDictionarySupportedType(object value)
-        { 
-            if (value == null || value is DynamicNullObject)
-                return null;
-
-            if (value is DynamicBlittableJson dynamicDocument)
-                return dynamicDocument.BlittableJson;
-
-            if (value is string)
-                return value;
-
-            if (value is LazyStringValue || value is LazyCompressedStringValue)
-                return value;
-
-            if (value is bool)
-                return value;
-
-            if (value is int iVal)
-                return (long)iVal;
-
-            if (value is short sVal)
-                return (long)sVal;
-
-            if (value is long)
-                return value;
-
-            if (value is double)
-                return value;
-
-            if (value is decimal || value is float || value is byte)
-            {
-                // TODO: need to create a LazyNumberValue
-                throw new NotImplementedException();
-            }
-
-            if (value is LazyNumberValue)
-                return value;
-
-            if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
-                return value;
-
-            if (value is Guid guid)
-                return guid.ToString("D");
-
-            return value;
         }
     }
 }
