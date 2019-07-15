@@ -96,35 +96,39 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary<T>(this IEnumerable<T> source, Func<T, dynamic> keySelector, Func<T, dynamic> elementSelector)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<IGrouping<dynamic, dynamic>> source, Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector)
         {
-            var type = typeof(T);
-            if (type == typeof(object))
-            {
-                return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector));
-            }
-            if (type == typeof(IGrouping<dynamic, dynamic>))
-            {
-                return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u)));
-            }
-
-            throw new NotSupportedException($"ToDictionary method is not supported on IEnumerable type {type}.");
+            return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u)));
         }
 
         [Obsolete("This method should never be used directly.")]
-        public static IDictionary<dynamic, dynamic> ToDictionary<T>(this IEnumerable<T> source, Func<T, dynamic> keySelector, Func<T, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<IGrouping<dynamic, dynamic>> source, Func<IGrouping<dynamic, dynamic>, dynamic> keySelector, Func<IGrouping<dynamic, dynamic>, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
         {
-            var type = typeof(T);
-            if (type == typeof(object))
-            {
-                return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector, comparer));
-            }
-            if (type == typeof(IGrouping<dynamic, dynamic>))
-            {
-                return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u), comparer));
-            }
+            return new DynamicDictionary(Enumerable.ToDictionary(source, o => keySelector(o), u => elementSelector(u), comparer));
+        }
 
-            throw new NotSupportedException($"ToDictionary method is not supported on IEnumerable type {type}.");
+        [Obsolete("This method should never be used directly.")]
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector));
+        }
+
+        [Obsolete("This method should never be used directly.")]
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, IEqualityComparer<dynamic> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, comparer));
+        }
+
+        [Obsolete("This method should never be used directly.")]
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector));
+        }
+
+        [Obsolete("This method should never be used directly.")]
+        public static IDictionary<dynamic, dynamic> ToDictionary(this IEnumerable<object> source, Func<dynamic, dynamic> keySelector, Func<dynamic, dynamic> elementSelector, IEqualityComparer<dynamic> comparer)
+        {
+            return new DynamicDictionary(Enumerable.ToDictionary(source, keySelector, elementSelector, comparer));
         }
 
         private static IEnumerable<dynamic> Select(this object self)
