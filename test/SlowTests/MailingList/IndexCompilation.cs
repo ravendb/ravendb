@@ -497,7 +497,6 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 new DynamicDictionaryTestMapReduceIndex().Execute(store);
-                var rnd = new System.Random();
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < countOfEmployees; i++)
@@ -616,9 +615,9 @@ namespace SlowTests.MailingList
                             Id = $"{i}",
                             DictionaryOfIntegers = new Dictionary<int, int>
                             {
-                                {1, 77},
-                                {2, 22},
-                                {5, 33}
+                                {rnd.Next(1, 10), rnd.Next(1, 100)},
+                                {rnd.Next(11, 20), rnd.Next(1, 100)},
+                                {rnd.Next(21, 30), rnd.Next(1, 100)}
                             }
                         };
                         listOfUsers.Add(u);
@@ -674,6 +673,113 @@ namespace SlowTests.MailingList
             }
         }
 
+        [Fact]
+        public void DynamicDictionaryIndexShouldWorkWithSelectManyGroupBySumAggregate()
+        {
+            const int countOfEmployees = 20;
+            var listOfUsers = new List<Employee>();
+            using (var store = GetDocumentStore())
+            {
+                new DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate().Execute(store);
+                var rnd = new System.Random();
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < countOfEmployees; i++)
+                    {
+                        var u = new Employee
+                        {
+                            Id = $"{i}",
+                            DictionaryOfIntegers = new Dictionary<int, int>
+                            {
+                                {rnd.Next(1, 10), rnd.Next(1, 100)},
+                                {rnd.Next(11, 20), rnd.Next(1, 100)},
+                                {rnd.Next(21, 30), rnd.Next(1, 100)}
+                            }
+                        };
+                        listOfUsers.Add(u);
+                        session.Store(u);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result, DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate>()
+                        .ProjectInto<DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result>()
+                        .ToList();
+
+                    Assert.Equal(countOfEmployees, results.Count);
+
+                    for (int i = 0; i < countOfEmployees; i++)
+                    {
+                        var dict = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value));
+                        var expectedResult = new DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result()
+                        {
+                            Id = listOfUsers[i].Id,
+                            DictionaryAggregateOne = dict.Aggregate(0, (x1, x2) => x1 + x2.Value),
+                            DictionarySumOne = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value)).Sum(x => x.Value),
+                            DictionaryAggregateTwo = listOfUsers[i].DictionaryOfIntegers.ToDictionary(y => y.Key, y => y.Value).Aggregate(0, (x1, x2) => x1 + x2.Value),
+                            DictionarySumTwo = listOfUsers[i].DictionaryOfIntegers.GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value)).Sum(x => x.Value),
+                        };
+                        Assert.Equal(expectedResult.Id, results[i].Id);
+                        Assert.Equal(expectedResult.DictionaryAggregateOne, results[i].DictionaryAggregateOne);
+                        Assert.Equal(expectedResult.DictionarySumOne, results[i].DictionarySumOne);
+                        Assert.Equal(expectedResult.DictionaryAggregateTwo, results[i].DictionaryAggregateTwo);
+                        Assert.Equal(expectedResult.DictionarySumTwo, results[i].DictionarySumTwo);
+                        Assert.Equal(null, results[i].DictionaryOfIntegers);
+                    }
+                }
+            }
+        }
+        private class DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate : AbstractIndexCreationTask<Employee, DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate.Result>
+        {
+            public class Result
+            {
+                public string Id { get; set; }
+                public int DictionaryAggregateOne { get; set; }
+                public int DictionarySumOne { get; set; }
+                public Dictionary<int, int> DictionaryOfIntegers { get; set; }
+                public int DictionaryAggregateTwo { get; set; }
+                public int DictionarySumTwo { get; set; }
+            }
+
+            public DynamicDictionaryTestMapIndexWithSelectManyGroupBySumAggregate()
+            {
+                Map = employees => from e in employees
+                                   select new Result
+                                   {
+                                       Id = e.Id,
+                                       DictionaryAggregateOne = 0,
+                                       DictionarySumOne = 0,
+                                       DictionaryAggregateTwo = 0,
+                                       DictionarySumTwo = 0,
+                                       DictionaryOfIntegers=e.DictionaryOfIntegers
+                                   };
+                Reduce = results => from
+                        result in results
+                                    group result by new
+                                    {
+                                        result.Id
+                                    }
+                    into g
+                                    let dic = g.SelectMany(x => x.DictionaryOfIntegers).ToDictionary(y => y.Key, y => y.Value)
+                                    let dicDic = g.SelectMany(x => x.DictionaryOfIntegers).GroupBy(x => x.Key).ToDictionary(y => y.Key, y => y.Sum(x => x.Value))
+                                    let dicTotalAggregate = dic.Aggregate(0, (x1, x2) => x1 + x2.Value)
+                                    let dicTotalSum = dic.Sum(x => x.Value)
+                                    select new Result
+                                    {
+                                        Id = g.Key.Id,
+                                        DictionaryAggregateTwo = dicTotalAggregate,
+                                        DictionarySumTwo = dicTotalSum,
+                                        DictionaryAggregateOne = dicDic.Aggregate(0, (x1, x2) => x1 + x2.Value),
+                                        DictionarySumOne = dicDic.Sum(x => x.Value),
+                                        DictionaryOfIntegers = null
+                                    };
+            }
+        }
 
         private class DynamicDictionaryTestMapReduceIndex : AbstractIndexCreationTask<Employee, DynamicDictionaryTestMapReduceIndex.Result>
         {
