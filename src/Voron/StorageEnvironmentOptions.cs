@@ -1109,6 +1109,7 @@ namespace Voron
             Disposing();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void NullifyHandlers()
         {
             SchemaUpgrader = null;
