@@ -160,6 +160,7 @@ namespace Tests.Infrastructure
             };
 
             var server = GetNewServer(options);
+            server.ServerStore.Engine.InMemoryDebug.IsInterVersionTest = true;
 
             Servers.Add(server);
 

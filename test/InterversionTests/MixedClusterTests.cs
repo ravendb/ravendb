@@ -32,17 +32,6 @@ namespace InterversionTests
 {
     public class MixedClusterTests : MixedClusterTestBase
     {
-        public MixedClusterTests()
-        {
-            InterVersionTestUtil.InProgress = true;
-        }
-
-        public override void Dispose()
-        {
-            InterVersionTestUtil.InProgress = false;
-            base.Dispose();
-        }
-
         [Theory]
         [InlineData("4.1.7", "4.1.7", "4.1.7")]
         [InlineData("4.1.6", "4.1.6", "4.1.6")]
