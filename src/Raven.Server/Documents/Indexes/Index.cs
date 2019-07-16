@@ -243,8 +243,6 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
-
-                    DocumentDatabase = null;
                 }
 
                 _indexValidationStalenessCheck = null;
