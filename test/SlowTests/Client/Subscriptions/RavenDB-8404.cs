@@ -48,7 +48,11 @@ namespace SlowTests.Client.Subscriptions
                 _ = subscription.Run(x =>
                 {
                     users.AddRange(x.Items.Select(i => i.Result));
-                    amre.Set();
+                    //in 32bit we seem to send batches of 1 User
+                    if (users.Count == 3)
+                    {
+                        amre.Set();
+                    }
                 });
                 
                 Assert.True(await amre.WaitAsync(_reasonableWaitTime));
