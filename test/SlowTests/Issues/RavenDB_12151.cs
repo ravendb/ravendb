@@ -116,7 +116,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip ="Transaction size changed below 1MB")]
         public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
             string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
