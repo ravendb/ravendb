@@ -1217,7 +1217,9 @@ namespace Raven.Server.Documents.Replication
                 }
             });
 
-            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
+            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait(TimeSpan.FromSeconds(15)));
+
+            ConflictResolver = null;
 
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");
