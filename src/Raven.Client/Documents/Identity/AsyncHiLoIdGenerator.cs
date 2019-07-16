@@ -91,10 +91,17 @@ namespace Raven.Client.Documents.Identity
                 if (id <= range.Max)
                     return id;
 
-                // let's try to call the existing task for next range
-                await current.Value.ConfigureAwait(false);
-                if (range != Range)
-                    continue;
+                try
+                {
+                    // let's try to call the existing task for next range
+                    await current.Value.ConfigureAwait(false);
+                    if (range != Range)
+                        continue;
+                }
+                catch
+                {
+                    // previous task was faulted, we will replace it
+                }
 
                 // local range is exhausted , need to get a new range
                 var maybeNextTask = new Lazy<Task>(GetNextRangeAsync);
