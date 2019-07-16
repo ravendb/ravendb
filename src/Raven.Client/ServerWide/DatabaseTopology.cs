@@ -190,6 +190,24 @@ namespace Raven.Client.ServerWide
             return destinations;
         }
 
+        public bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
+        {
+            if (Count == 0)
+                return true;
+
+            if (deletionInProgress?.Count > 0)
+            {
+                foreach (var node in AllNodes)
+                {
+                    if (deletionInProgress.ContainsKey(node) == false)
+                        return false;
+                }
+                return true;
+            }
+
+            return false;
+        }
+
         public static (List<string> Members, List<string> Promotables, List<string> Rehabs) Reorder(DatabaseTopology topology, List<string> order)
         {
             if (topology.Count != order.Count
