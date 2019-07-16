@@ -278,6 +278,8 @@ namespace FastTests
                                     {
                                         result = store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                                     }
+									
+									AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(5)));
                                 }
                                 catch (DatabaseDoesNotExistException)
                                 {
@@ -286,8 +288,8 @@ namespace FastTests
                                 catch (NoLeaderException)
                                 {
                                     continue;
-                                }
-                             }
+                                }                                
+                            }
                         }
                     };
                     CreatedStores.Add(store);
