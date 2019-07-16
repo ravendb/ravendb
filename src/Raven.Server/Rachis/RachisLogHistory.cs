@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -47,6 +48,27 @@ namespace Raven.Server.Rachis
             None,
             Appended,
             Committed
+        }
+
+        private static long _lastTicks;
+        private static long GetUniqueTicks()
+        {
+            while (true)
+            {
+                var lastTicks = _lastTicks;
+                var ticks = DateTime.UtcNow.Ticks;
+
+                if (ticks <= lastTicks)
+                {
+                    ticks = lastTicks + 1;
+                }
+
+                var oldValue = Interlocked.CompareExchange(ref _lastTicks, ticks, lastTicks);
+                if (oldValue == lastTicks)
+                {
+                    return ticks;
+                }
+            }
         }
 
         static RachisLogHistory()
@@ -127,7 +149,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
+                tvb.Add(Bits.SwapBytes(GetUniqueTicks()));
                 tvb.Add(term);
                 tvb.Add(0L);
                 tvb.Add(typeSlice);
@@ -180,7 +202,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
+                tvb.Add(Bits.SwapBytes(GetUniqueTicks()));
                 tvb.Add(*(long*)reader.Read((int)(LogHistoryColumn.Term), out _));
                 tvb.Add(term);
                 tvb.Add(typeSlice);
