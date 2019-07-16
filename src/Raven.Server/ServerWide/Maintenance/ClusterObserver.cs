@@ -546,23 +546,35 @@ namespace Raven.Server.ServerWide.Maintenance
             if (hasLivingNodes == false)
             {
                 var recoverable = new List<string>();
+
                 foreach (var rehab in databaseTopology.Rehabs)
                 {
                     if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) == DatabaseHealth.Good)
                         recoverable.Add(rehab);
                 }
 
+                if (databaseTopology.Members.Count == 0)
+                {
+                    // as last resort we will promote a promotable
+                    foreach (var promotable in databaseTopology.Promotables)
+                    {
+                        if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Good)
+                            recoverable.Add(promotable);
+                    }
+                }
+
                 if (recoverable.Count > 0)
                 {
                     var node = FindMostUpToDateNode(recoverable, dbName, current);
                     databaseTopology.Rehabs.Remove(node);
+                    databaseTopology.Promotables.Remove(node);
                     databaseTopology.Members.Add(node);
 
-                    RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
-                    return $"None of '{dbName}' nodes are responding, promoting {node} from rehab";
+                    RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} to avoid making the database completely unreachable.", dbName);
+                    return $"None of '{dbName}' nodes are responding, promoting {node}";
                 }
 
-                if (databaseTopology.Members.Count == 0 && deletionInProgress?.Count > 0)
+                if (databaseTopology.EntireDatabasePendingDeletion(deletionInProgress))
                 {
                     return null; // We delete the whole database.
                 }
