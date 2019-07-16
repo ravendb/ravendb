@@ -190,6 +190,8 @@ namespace Raven.Server.Rachis
         public readonly ConcurrentDictionary<string, ConcurrentQueue<RachisTimings>> TimingTracking = new ConcurrentDictionary<string, ConcurrentQueue<RachisTimings>>();
         public readonly ConcurrentQueue<string> StateChangeTracking = new ConcurrentQueue<string>();
 
+        public bool IsInterVersionTest;
+
         public RachisLogRecorder GetNewRecorder(string name)
         {
             var queue = new ConcurrentQueue<RachisTimings>();
@@ -241,7 +243,7 @@ namespace Raven.Server.Rachis
         public const string InitialTag = "?";
 
         public readonly RachisDebug InMemoryDebug = new RachisDebug();
-        
+
         public RachisState CurrentState { get; private set; }
 
         public string LastStateChangeReason

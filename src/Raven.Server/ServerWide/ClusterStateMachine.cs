@@ -539,9 +539,9 @@ namespace Raven.Server.ServerWide
         }
 
         [Conditional("DEBUG")]
-        private static void ValidateGuid(BlittableJsonReaderObject cmd, string type)
+        private void ValidateGuid(BlittableJsonReaderObject cmd, string type)
         {
-            if (InterVersionTestUtil.InProgress)
+            if (_parent.InMemoryDebug.IsInterVersionTest)
                 return;
 
             if (cmd.TryGet(nameof(CommandBase.UniqueRequestId), out string guid) == false)
