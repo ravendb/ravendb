@@ -279,6 +279,11 @@ namespace FastTests
 
                                     AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(5)));
                                 }
+                                catch (OperationCanceledException)
+                                {
+                                    //failed to delete in time
+                                    continue;
+                                }
                                 catch (TimeoutException)
                                 {
                                     //failed to delete in time
