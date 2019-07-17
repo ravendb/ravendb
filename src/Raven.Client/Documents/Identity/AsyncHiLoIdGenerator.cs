@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Identity
                 }
                 catch
                 {
-                    // previous task was faulted, we will replace it
+                    // previous task was faulted, we will try to replace it
                 }
 
                 // local range is exhausted , need to get a new range
@@ -112,8 +112,15 @@ namespace Raven.Client.Documents.Identity
                     continue;
                 }
 
-                // failed to replace, let's wait on the previous task
-                await nextTask.Value.ConfigureAwait(false);
+                try
+                {
+                    // failed to replace, let's wait on the previous task
+                    await nextTask.Value.ConfigureAwait(false);
+                }
+                catch
+                {
+                    // previous task was faulted, we will try again
+                }
             }
         }
 
