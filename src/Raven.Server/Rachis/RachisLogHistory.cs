@@ -15,6 +15,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
@@ -50,25 +51,21 @@ namespace Raven.Server.Rachis
             Committed
         }
 
-        private static long _lastTicks;
-        private static long GetUniqueTicks()
+        private long _lastTicks;
+        private long GetUniqueTicks(Transaction transaction)
         {
-            while (true)
+            if (transaction.IsWriteTransaction == false)
+                throw new InvalidOperationException("You can acquire unique tick only under write tx.");
+
+            var ticks = DateTime.UtcNow.Ticks;
+
+            if (ticks <= _lastTicks)
             {
-                var lastTicks = _lastTicks;
-                var ticks = DateTime.UtcNow.Ticks;
-
-                if (ticks <= lastTicks)
-                {
-                    ticks = lastTicks + 1;
-                }
-
-                var oldValue = Interlocked.CompareExchange(ref _lastTicks, ticks, lastTicks);
-                if (oldValue == lastTicks)
-                {
-                    return ticks;
-                }
+                ticks = _lastTicks + 1;
             }
+            _lastTicks = ticks;
+
+            return ticks;
         }
 
         static RachisLogHistory()
@@ -149,7 +146,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(GetUniqueTicks()));
+                tvb.Add(Bits.SwapBytes(GetUniqueTicks(context.Transaction.InnerTransaction)));
                 tvb.Add(term);
                 tvb.Add(0L);
                 tvb.Add(typeSlice);
@@ -202,7 +199,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(GetUniqueTicks()));
+                tvb.Add(Bits.SwapBytes(GetUniqueTicks(context.Transaction.InnerTransaction)));
                 tvb.Add(*(long*)reader.Read((int)(LogHistoryColumn.Term), out _));
                 tvb.Add(term);
                 tvb.Add(typeSlice);
