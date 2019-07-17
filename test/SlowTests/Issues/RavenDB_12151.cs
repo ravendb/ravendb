@@ -116,7 +116,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip ="Transaction size changed below 1MB")]
+        [Fact]
         public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
             string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
                 Path = NewDataPath(),
                 ModifyDatabaseRecord = r =>
                 {
-                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.EncryptedTransactionSizeLimit)] = "2";
+                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.EncryptedTransactionSizeLimit)] = "1";
                     r.Encrypted = true;
                 }
             }))
