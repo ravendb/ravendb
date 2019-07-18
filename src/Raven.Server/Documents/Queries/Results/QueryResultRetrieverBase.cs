@@ -151,6 +151,10 @@ namespace Raven.Server.Documents.Queries.Results
 
                         if (fieldVal is List<object> list)
                             fieldVal = new DynamicJsonArray(list);
+
+                        if (fieldVal is Document d2)
+                            fieldVal = d2.Data;
+
                         result[key] = fieldVal;
                     }
                 }
