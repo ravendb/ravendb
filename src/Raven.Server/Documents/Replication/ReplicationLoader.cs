@@ -1217,7 +1217,7 @@ namespace Raven.Server.Documents.Replication
                 }
             });
 
-            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait(TimeSpan.FromSeconds(15)));
+            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 
             ConflictResolver = null;
 
