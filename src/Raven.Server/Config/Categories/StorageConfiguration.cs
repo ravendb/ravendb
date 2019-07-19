@@ -13,7 +13,7 @@ namespace Raven.Server.Config.Categories
         public PathSetting TempPath { get; set; }
 
         [Description("Use the 32 bits memory mapped pager, even when running in 64 bits")]
-        [DefaultValue(false)]
+        [DefaultValue(true)]
         [ConfigurationEntry("Storage.ForceUsing32BitsPager", ConfigurationEntryScope.ServerWideOnly)]
         public bool ForceUsing32BitsPager { get; set; }
 

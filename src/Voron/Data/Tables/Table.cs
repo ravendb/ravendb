@@ -401,6 +401,9 @@ namespace Voron.Data.Tables
             }
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
+
+            // we need to update the new active section
+            _tableTree.Add(TableSchema.ActiveSectionSlice, ActiveDataSmallSection.PageNumber);
         }
 
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
