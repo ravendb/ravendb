@@ -401,9 +401,6 @@ namespace Voron.Data.Tables
             }
 
             ActiveDataSmallSection.DeleteSection(sectionPageNumber);
-
-            // we need to update the new active section
-            _tableTree.Add(TableSchema.ActiveSectionSlice, ActiveDataSmallSection.PageNumber);
         }
 
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
@@ -725,6 +722,11 @@ namespace Voron.Data.Tables
                             _activeDataSmallSection.DataMoved += OnDataMoved;
                             if (_activeDataSmallSection.TryAllocate(size, out id))
                             {
+                                var candidatePage = _activeDataSmallSection.PageNumber;
+                                using (Slice.External(_tx.Allocator, (byte*)&candidatePage, sizeof(long), out Slice pageNumber))
+                                {
+                                    _tableTree.Add(TableSchema.ActiveSectionSlice, pageNumber);
+                                }
                                 ActiveCandidateSection.Delete(sectionPageNumber);
                                 return id;
                             }
