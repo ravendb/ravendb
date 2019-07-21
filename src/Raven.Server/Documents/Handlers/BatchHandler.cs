@@ -1062,7 +1062,7 @@ namespace Raven.Server.Documents.Handlers
                                 {
                                     ["RevisionCreated"] = true,
                                     ["Type"] = nameof(CommandType.ForceRevisionCreation), 
-                                    [Constants.Documents.Metadata.Id] = existingDoc.Id,
+                                    [Constants.Documents.Metadata.Id] = existingDoc.Id.ToString(), //We must not return to handlers memory allocated by merger.
                                     [Constants.Documents.Metadata.ChangeVector] = existingDoc.ChangeVector,
                                     [Constants.Documents.Metadata.LastModified] = existingDoc.LastModified,
                                     [Constants.Documents.Metadata.Flags] = existingDoc.Flags
