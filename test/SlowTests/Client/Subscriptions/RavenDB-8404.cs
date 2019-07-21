@@ -94,7 +94,10 @@ namespace SlowTests.Client.Subscriptions
                 _ = subscription.Run(x =>
                 {
                     users.AddRange(x.Items.Select(i => i.Result));
-                    amre.Set();
+                    if (users.Count == 3)
+                    {
+                        amre.Set();
+                    }
                 });
 
                 Assert.True(await amre.WaitAsync(_reasonableWaitTime));
@@ -137,7 +140,10 @@ namespace SlowTests.Client.Subscriptions
                 _ = subscription.Run(x =>
                 {
                     users.AddRange(x.Items.Select(i => i.Result));
-                    amre.Set();
+                    if (users.Count == 3)
+                    {
+                        amre.Set();
+                    }
                 });
 
                 Assert.True(await amre.WaitAsync(_reasonableWaitTime));
