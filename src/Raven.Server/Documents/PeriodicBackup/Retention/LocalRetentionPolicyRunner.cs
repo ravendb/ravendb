@@ -35,16 +35,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return Path.GetFileName(folderPath);
         }
 
-        protected override Task<string> GetFirstFileInFolder(string folder)
+        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder)
         {
             try
             {
-                var firstFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().FirstOrDefault();
-                return Task.FromResult(firstFile);
+                var backupFiles = new GetBackupFolderFilesResult
+                {
+                    FirstFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().FirstOrDefault(),
+                    LastFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().LastOrDefault()
+                };
+                return Task.FromResult(backupFiles);
             }
             catch (DirectoryNotFoundException)
             {
-                return Task.FromResult((string)null);
+                return Task.FromResult((GetBackupFolderFilesResult)null);
             }
         }
 

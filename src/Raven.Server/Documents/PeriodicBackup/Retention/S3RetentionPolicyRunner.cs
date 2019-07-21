@@ -38,11 +38,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return folderPath.Substring(0, folderPath.Length - 1);
         }
 
-        protected override async Task<string> GetFirstFileInFolder(string folder)
+        protected override async Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder)
         {
+            var backupFiles = new GetBackupFolderFilesResult();
             // backups are ordered in lexicographical order
             var files = await _client.ListObjects(folder, null, false, 1);
-            return files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
+
+            backupFiles.FirstFile = files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
+            backupFiles.LastFile = files.FileInfoDetails?.Select(x => x.FullPath).LastOrDefault();
+
+            return backupFiles;
         }
 
         protected override async Task DeleteFolders(List<string> folders)

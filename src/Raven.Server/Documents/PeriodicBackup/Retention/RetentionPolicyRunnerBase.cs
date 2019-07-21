@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected abstract string GetFolderName(string folderPath);
 
-        protected abstract Task<string> GetFirstFileInFolder(string folder);
+        protected abstract Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder);
 
         protected abstract Task DeleteFolders(List<string> folders);
 
@@ -147,18 +148,34 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
                     continue; // a backup for a different database
 
-                var firstFile = await GetFirstFileInFolder(folder);
-                if (firstFile == null)
+                var backupFiles = await GetBackupFilesInFolder(folder);
+                if (backupFiles == null)
                     continue; // folder is empty
 
-                var hasFullBackupOrSnapshot = BackupUtils.IsFullBackupOrSnapshot(firstFile);
+                var hasFullBackupOrSnapshot = BackupUtils.IsFullBackupOrSnapshot(backupFiles.FirstFile);
                 if (hasFullBackupOrSnapshot == false)
                     continue; // no snapshot or full backup
+
+                if (GotFreshIncrementalBackup(backupFiles, now))
+                    continue;
 
                 foldersToDelete.Add(folder);
             }
 
             return true;
+        }
+
+        private bool GotFreshIncrementalBackup(GetBackupFolderFilesResult backupFiles, DateTime now)
+        {
+            if (backupFiles.FirstFile.Equals(backupFiles.LastFile))
+                return false;
+
+            if (RestorePointsBase.TryExtractDateFromFileName(backupFiles.LastFile, out var lastModified) == false)
+            {
+                lastModified = File.GetLastWriteTimeUtc(backupFiles.LastFile).ToLocalTime();
+            }
+
+            return now - lastModified < _retentionPolicy.MinimumBackupAgeToKeep;
         }
     }
 }
