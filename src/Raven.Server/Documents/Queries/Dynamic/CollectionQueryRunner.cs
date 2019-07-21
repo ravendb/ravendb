@@ -186,6 +186,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             resultToFill.TotalResults - (query.Offset ?? 0)
                         );    
                     }
+
+                    if (query.Offset.HasValue)
+                    {
+                        resultToFill.SkippedResults = query.Offset.GetValueOrDefault();
+                    }
                 }
             }
         }
