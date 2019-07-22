@@ -8,12 +8,40 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Voron;
 using Xunit;
 
 namespace SlowTests.Server.NotificationCenter
 {
     public class OutOfMemoryNotificationTests : RavenLowLevelTestBase
     {
+        [Fact]
+        public async Task Add_WhenCalled_ShouldNotPreventFromGarbageCollectorToCollectTheEnvironmentObject()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                WeakReference weakReference;
+                using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPath(RavenTestHelper.NewDataPath(nameof(OutOfMemoryNotificationTests), 0))))
+                {
+                    weakReference = new WeakReference(env);
+                    database.NotificationCenter.OutOfMemory.Add(env, new OutOfMemoryException());
+                    Assert.NotNull(weakReference.Target);
+                }
+
+                for (var i = 0; i < 20; i++)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    if (weakReference.Target == null)
+                        break;
+                }
+
+                Assert.Null(weakReference.Target);
+            }
+        }
+
         [Fact]
         public void Add_WhileAllHaveTheSameKey_ShouldRemindOnlyOne()
         {
