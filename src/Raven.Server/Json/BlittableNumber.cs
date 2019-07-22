@@ -37,6 +37,14 @@ namespace Raven.Server.Json
                 var d = (decimal)value;
                 if (DecimalHelper.Instance.IsDouble(ref d) || d > long.MaxValue || d < long.MinValue)
                 {
+                    if (d == 0)
+                    {
+                        // this is NOT superfluous code, we need 
+                        // to handle negative zeros
+                        //https://blogs.msdn.microsoft.com/bclteam/2006/10/12/decimal-negative-zero-representation-lakshan-fernando/
+                        d = decimal.Zero;
+                    }
+
                     doubleResult = (double)d;
                     longResult = long.MinValue;
 
