@@ -99,7 +99,10 @@
                     <div class="name">Single database size</div><div class="value"><i class="icon-infinity"></i></div>
                     <div class="name">Management Studio (GUI)</div><div class="value"><i class="icon-checkmark"></i></div>
                     <h4>Clustering</h4>
-                    <div class="name">Max cluster size</div><div class="value"><strong data-bind="text: maxClusterSize"></strong></div>
+                    <div class="name">Max cluster size</div><div class="value">
+                                                                 <strong data-bind="text: maxClusterSize, visible: maxClusterSize() > 0"></strong>
+                                                                 <i class="icon-infinity" data-bind="visible: maxClusterSize() === 0"></i>
+                                                            </div>
                     <div class="name">Max cores in cluster</div><div class="value"><strong data-bind="text: maxCores"></strong></div>
                     <div class="name">Max cluster memory usage</div><div class="value"><strong data-bind="text: maxMemory() + ' GB RAM'"></strong></div>
                     <div class="name">Highly available tasks</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasHighlyAvailableTasks') }"></i></div>
