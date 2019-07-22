@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         {
             var backupFiles = new GetBackupFolderFilesResult();
             // backups are ordered in lexicographical order
-            var files = await _client.ListObjects(folder, null, false, 1);
+            var files = await _client.ListObjects(folder, null, false);
 
             backupFiles.FirstFile = files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
             backupFiles.LastFile = files.FileInfoDetails?.Select(x => x.FullPath).LastOrDefault();

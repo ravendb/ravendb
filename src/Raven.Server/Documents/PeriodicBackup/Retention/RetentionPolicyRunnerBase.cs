@@ -167,6 +167,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private bool GotFreshIncrementalBackup(GetBackupFolderFilesResult backupFiles, DateTime now)
         {
+            if (backupFiles.LastFile == null)
+                return false;
+
             if (backupFiles.FirstFile.Equals(backupFiles.LastFile))
                 return false;
 
