@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected abstract string GetFolderName(string folderPath);
 
-        protected abstract Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder);
+        protected abstract Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime? date);
 
         protected abstract Task DeleteFolders(List<string> folders);
 
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
                     continue; // a backup for a different database
 
-                var backupFiles = await GetBackupFilesInFolder(folder);
+                var backupFiles = await GetBackupFilesInFolder(folder, now - _retentionPolicy.MinimumBackupAgeToKeep);
                 if (backupFiles == null)
                     continue; // folder is empty
 
@@ -180,5 +180,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
             return now - lastModified < _retentionPolicy.MinimumBackupAgeToKeep;
         }
+
     }
 }

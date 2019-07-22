@@ -1,9 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Server.Utils;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return Path.GetFileName(folderPath);
         }
 
-        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder)
+        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime? date)
         {
             try
             {

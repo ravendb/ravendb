@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -38,13 +39,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return folderPath.Substring(0, folderPath.Length - 1);
         }
 
-        protected override async Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder)
+        protected override async Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime? date)
         {
             var backupFiles = new GetBackupFolderFilesResult();
             // backups are ordered in lexicographical order
-            var files = await _client.ListObjects(folder, null, false);
-
+            var files = await _client.ListObjects(folder, null, false, 1);
             backupFiles.FirstFile = files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
+
+            var startAfter = $"{folder}{date.Value.ToString("yyyy-MM-dd-HH-mm-ss")}.ravendb-incremental-backup";
+            files = await _client.ListObjects(folder, null, false, take: 1, startAfter: startAfter);
+
             backupFiles.LastFile = files.FileInfoDetails?.Select(x => x.FullPath).LastOrDefault();
 
             return backupFiles;
