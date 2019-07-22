@@ -894,6 +894,12 @@ namespace Raven.Server.Rachis
 
                 if (maxIndex < minIndex)
                 {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{ToString()}: Got minIndex: {minIndex} bigger than maxIndex: {maxIndex} will request the entire snapshot. " +
+                                         $"midpointIndex: {midpointIndex}, midpointTerm: {midpointTerm}.");
+                    }
+
                     Debug.Assert(false, "This is a safeguard against any potential bug here, so in worst case we request the entire snapshot");
                     return false;
                 }
