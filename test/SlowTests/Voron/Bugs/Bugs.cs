@@ -16,6 +16,53 @@ namespace SlowTests.Voron.Bugs
         public const string Template = "000000000000000000000000000000000000000000000000000";
 
         [Fact]
+        public void RavenDB_13840()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                DocsSchema.Create(tx, "docs", 16);
+
+                tx.Commit();
+            }
+
+            var pagesInSection = sizeof(long) * 4 * 4;
+            var numberOfSections = 2;
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = tx.OpenTable(DocsSchema, "docs");
+                for (int j = 0; j < numberOfSections; j++)
+                {
+                    // fill section
+                    for (int i = 0; i < pagesInSection; i++)
+                    {
+                        // fill page
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 2L, new string('a', 1000));
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 1L, new string('a', 1000));
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 0L, new string('a', 1000));
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 0L, new string('a', 1000));
+
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 0L, new string('a', 1000));
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 0L, new string('a', 1000));
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 0L, new string('a', 1000));
+                        SetHelper(docs, "users/" + Guid.NewGuid(), "Users", 0L, new string('a', 1000));
+                    }
+                }
+
+                var toDelete = numberOfSections * pagesInSection * 8 - 7;
+
+                docs.DeleteForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys, false, toDelete);
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = tx.OpenTable(DocsSchema, "docs");
+                docs.DeleteForwardFrom(DocsSchema.Indexes[EtagsSlice], Slices.BeforeAllKeys, false, long.MaxValue);
+                tx.Commit();
+            }
+        }
+
+        [Fact]
         public void RepeatedInsertingInTheSameTransaction()
         {
             var schema = new TableSchema()
