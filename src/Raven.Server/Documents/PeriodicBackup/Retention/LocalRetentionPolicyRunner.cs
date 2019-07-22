@@ -39,10 +39,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         {
             try
             {
+                var orderedBackups = Directory.GetFiles(folder).AsEnumerable().OrderBackups();
                 var backupFiles = new GetBackupFolderFilesResult
                 {
-                    FirstFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().FirstOrDefault(),
-                    LastFile = Directory.GetFiles(folder).AsEnumerable().OrderBackups().LastOrDefault()
+                    FirstFile = orderedBackups.FirstOrDefault(),
+                    LastFile = orderedBackups.LastOrDefault()
                 };
                 return Task.FromResult(backupFiles);
             }
