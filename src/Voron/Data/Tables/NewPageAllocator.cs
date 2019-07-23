@@ -236,7 +236,7 @@ namespace Voron.Data.Tables
                 }
 
                 if (it.CurrentKey > pageNumber || 
-                    it.CurrentKey + NumberOfPagesInSection < pageNumber)
+                    it.CurrentKey + NumberOfPagesInSection <= pageNumber)
                     ThrowInvalidPageReleased(pageNumber);
 
                 var positionInBuffer = (int) (pageNumber - it.CurrentKey);

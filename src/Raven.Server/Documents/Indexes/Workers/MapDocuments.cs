@@ -147,11 +147,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                         }
                     }
 
-                    if (count == 0)
-                        continue;
+                    if (count > 0)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Executing map for '{_index.Name}'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name}'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                        moreWorkFound = true;
+                    }
 
                     if (_index.Type.IsMap())
                     {
@@ -162,8 +164,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     {
                         _mapReduceContext.ProcessedDocEtags[collection] = lastEtag;
                     }
-
-                    moreWorkFound = true;
                 }
             }
 
