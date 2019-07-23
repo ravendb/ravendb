@@ -36,7 +36,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return Path.GetFileName(folderPath);
         }
 
-        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime? date)
+        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
+        {
+            return GetBackupFilesInFolderInternal(folder);
+        }
+
+        private static Task<GetBackupFolderFilesResult> GetBackupFilesInFolderInternal(string folder)
         {
             try
             {
