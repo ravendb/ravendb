@@ -234,8 +234,10 @@ namespace Voron.Data.Tables
                         ThrowInvalidPageReleased(pageNumber);
                 }
 
+                var numberOfPagesActuallyAllocatedInSection = GetNumberOfPagesToAllocate();
+
                 if (it.CurrentKey > pageNumber ||
-                    it.CurrentKey + NumberOfPagesInSection <= pageNumber)
+                    it.CurrentKey + numberOfPagesActuallyAllocatedInSection <= pageNumber)
                     ThrowInvalidPageReleased(pageNumber);
 
                 var positionInBuffer = (int)(pageNumber - it.CurrentKey);
