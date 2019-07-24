@@ -1221,6 +1221,7 @@ more responsive application.
             DeferredCommandsDictionary.Clear();
             GetClusterSession()?.Clear();
             PendingLazyOperations.Clear();
+            EntityToBlittable.Clear();
         }
 
         /// <summary>
