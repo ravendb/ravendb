@@ -59,11 +59,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 var deletingAllFolders = true;
                 var hasMore = true;
 
+                _onProgress.Invoke("Starting retention policy check for backups.");
+
                 while (hasMore)
                 {
                     var foldersResult = await GetSortedFolders();
-
-                    _onProgress.Invoke($"Got {foldersResult.List.Count:#,#} potential backups, has more: {foldersResult.HasMore}");
+                    var resultType = hasMore ? "partial " : string.Empty;
+                    _onProgress.Invoke($"Got {resultType}{foldersResult.List.Count:#,#} potential backups to check.");
 
                     var canContinue = await UpdateFoldersToDelete(foldersResult, now, foldersToDelete);
 
@@ -78,7 +80,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 }
 
                 if (foldersToDelete.Count == 0)
+                {
+                    _onProgress.Invoke("No backups found that match retention policy.");
                     return;
+                }
 
                 if (deletingAllFolders)
                 {
