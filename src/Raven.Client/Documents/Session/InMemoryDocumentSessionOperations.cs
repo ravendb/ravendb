@@ -1203,6 +1203,7 @@ more responsive application.
             }
 
             DeletedEntities.Remove(entity);
+            EntityToBlittable.RemoveFromMissing(entity);
         }
 
         /// <summary>
