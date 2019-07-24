@@ -84,8 +84,11 @@ class editDocument extends viewModelBase {
     isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
-    userIdHasFocus = ko.observable<boolean>(false);   
+    
+    userIdHasFocus = ko.observable<boolean>(false);
     userSpecifiedId = ko.observable<string>("");
+    idLengthShown = 65;
+    userSpecifiedIdShown: KnockoutComputed<string>;
 
     globalValidationGroup = ko.validatedObservable({
         userDocumentId: this.userSpecifiedId,
@@ -472,6 +475,10 @@ class editDocument extends viewModelBase {
         
         this.canViewRelated = ko.pureComputed(() => {
             return !this.isDeleteRevision();
+        });
+
+        this.userSpecifiedIdShown = ko.pureComputed(() => {
+            return this.userSpecifiedId().length > this.idLengthShown ? `${ this.userSpecifiedId().substring(0, this.idLengthShown) }...` : this.userSpecifiedId();
         });
     }
 
