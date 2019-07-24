@@ -401,5 +401,15 @@ namespace Raven.Client.Documents.Session
             }
             return ConvertEntityToBlittable(value, documentInfo: null);
         }
+
+        internal void RemoveFromMissing(object entity)
+        {
+            _missingDictionary.Remove(entity);
+        }
+
+        internal void Clear()
+        {
+            _missingDictionary.Clear();
+        }
     }
 }
