@@ -278,10 +278,20 @@ namespace Raven.Server.Documents.Replication
                                 continue;
                             }
 
-                            if (item.Data != null)
-                                size += item.Data.Size;
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                                size += item.Stream.Length;
+                            switch (item.Type)
+                            {
+                                case ReplicationBatchItem.ReplicationItemType.Attachment:
+                                    size += item.Stream.Length;
+                                    break;
+
+                                case ReplicationBatchItem.ReplicationItemType.CounterGroup:
+                                    size += item.Values.Size;
+                                    break;
+
+                                default:
+                                    size += item.Data?.Size ?? 0;
+                                    break;
+                            }
 
                             numberOfItemsSent++;
                         }
