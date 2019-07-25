@@ -4,7 +4,8 @@ import generalUtils = require("common/generalUtils");
 class retentionPolicy {
     disabled = ko.observable<boolean>(false);
     minimumBackupAgeToKeep = ko.observable<number>();
-
+    oneDay = 86400; // seconds in a day
+    
     retentionPolicyEnabled = ko.observable<boolean>(false);
     humaneRetentionDescription: KnockoutComputed<string>;
     
@@ -12,7 +13,7 @@ class retentionPolicy {
     
     constructor(dto: Raven.Client.Documents.Operations.Backups.RetentionPolicy) {
         this.disabled(dto.Disabled);
-        this.minimumBackupAgeToKeep(dto.MinimumBackupAgeToKeep ? generalUtils.timeSpanToSeconds(dto.MinimumBackupAgeToKeep) : 0);
+        this.minimumBackupAgeToKeep(dto.MinimumBackupAgeToKeep ? generalUtils.timeSpanToSeconds(dto.MinimumBackupAgeToKeep) : this.oneDay);
         
         this.initObservables();
         this.initValidation();
@@ -39,7 +40,7 @@ class retentionPolicy {
     private initValidation() {
         this.minimumBackupAgeToKeep.extend({
             validation: [{
-                validator: (val: number) => val >= 86400, // 1 day === 86400 seconds
+                validator: (val: number) => val >= this.oneDay || !this.retentionPolicyEnabled(),
                 message: "Retention period must be greater than 1 day"
             }]
         });
@@ -48,7 +49,7 @@ class retentionPolicy {
     toDto(): Raven.Client.Documents.Operations.Backups.RetentionPolicy {
         return {
             Disabled: !this.retentionPolicyEnabled(),
-            MinimumBackupAgeToKeep: this.minimumBackupAgeToKeep() === 0 ? null : generalUtils.formatAsTimeSpan(this.minimumBackupAgeToKeep() * 1000)
+            MinimumBackupAgeToKeep: this.minimumBackupAgeToKeep() < this.oneDay ?  null : generalUtils.formatAsTimeSpan(this.minimumBackupAgeToKeep() * 1000)
         }
     }
 

@@ -168,7 +168,7 @@ class editPeriodicBackupTask extends viewModelBase {
             {
                 content:
                     "<ul>" +
-                    "<li>Mange the number of Backups (and Snapshots) kept in the system.<br>" +
+                    "<li>Manage the number of Backups (and Snapshots) kept in the system.<br>" +
                     "Define the minimum time to keep the backups.<br></li>" +
                     "<li>A <strong>Full Backup</strong> that is older than the specified retention time will be deleted by RavenDB server.<br>" + 
                     "If <strong>Incremental Backups</strong> exists, the Full Backup, and its incrementals, are removed only if the <em>last incremental</em> is older than the defined retention time.<br></li>"+

@@ -100,7 +100,7 @@
                             Minimum retention time <small><i id="backup-age-info" class="icon-info text-info"></i></small>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
-                            <input type="text" class="form-control" data-bind="durationPicker: minimumBackupAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                            <input type="text" class="form-control" data-bind="durationPicker: minimumBackupAgeToKeep, durationPickerOptions: { showDays: true }" />
                         </div>
                     </div>
                     <div class="row">
@@ -111,7 +111,7 @@
                         </div>
                     </div>
                     <div class="row" data-bind="if: !minimumBackupAgeToKeep.error()">
-                        <div class="col-sm-offset-4">
+                        <div class="col-sm-offset-2">
                             <div class="bg-info padding padding-sm small margin-top">
                                 <i class="icon-info"></i><span data-bind="html: humaneRetentionDescription"></span>
                             </div>

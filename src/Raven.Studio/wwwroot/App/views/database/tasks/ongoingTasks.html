@@ -267,7 +267,7 @@
                                             </div>
                                             <div  class="property-item">
                                                 <div class="property-name">Destinations:</div>
-                                                <div class="property-value"><span data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></span></div>
+                                                <div class="property-value"><span data-bind="text: backupDestinationsHumanized, attr: { class: textClass() }"></span></div>
                                             </div>
                                             <div class="property-item" data-bind="visible: lastFullBackupHumanized">
                                                 <div class="property-name" data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></div>
@@ -284,6 +284,10 @@
                                             <div class="property-item" data-bind="visible: onGoingBackup">
                                                 <div class="property-name">Backup Started:</div>
                                                 <div class="property-value"><span data-bind="text: onGoingBackupHumanized, attr: { class: textClass() }"></span></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Retention Policy:</div>
+                                                <div class="property-value text-details"><span data-bind="text: retentionPolicyHumanized"></span></div>
                                             </div>
                                         </div>
                                     </div>
