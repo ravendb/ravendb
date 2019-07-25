@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -31,8 +32,9 @@ namespace Raven.Server.Documents.Handlers
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                var revisionsConfig = databaseRecord?.Revisions;
+                RevisionsConfiguration revisionsConfig = null;
+                var rawDatabaseRecord = Server.ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
+                rawDatabaseRecord?.TryGet(nameof(DatabaseRecord.Revisions), out revisionsConfig);
                 if (revisionsConfig != null)
                 {
                     var revisionsCollection = new DynamicJsonValue();

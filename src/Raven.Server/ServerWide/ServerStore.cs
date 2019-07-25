@@ -16,13 +16,12 @@ using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -32,6 +31,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -42,10 +42,10 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
-using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -62,7 +62,6 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
@@ -71,6 +70,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.ServerWide
@@ -1385,12 +1385,12 @@ namespace Raven.Server.ServerWide
             }
 
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
-            var record = Cluster.ReadDatabase(context, name);
+            var rawRecord = Cluster.ReadRawDatabase(context, name, out _);
 
             if (overwrite == false && tree.Read(name) != null)
                 throw new InvalidOperationException($"Attempt to overwrite secret key {name}, which isn\'t permitted (you\'ll lose access to the encrypted db).");
 
-            if (record != null && record.Encrypted == false)
+            if (rawRecord != null && (rawRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted) == false || encrypted == false))
                 throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
 
             fixed (byte* pKey = key)
@@ -1429,8 +1429,9 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-            var record = Cluster.ReadDatabase(context, name, out _);
-            if (record != null && record.Encrypted && record.Topology.RelevantFor(NodeTag))
+            var rawRecord = Cluster.ReadRawDatabase(context, name, out _);
+            var topology = Cluster.ReadDatabaseTopology(rawRecord);
+            if (rawRecord != null && rawRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted) && encrypted && topology.RelevantFor(NodeTag))
             {
                 throw new InvalidOperationException(
                     $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
@@ -1595,7 +1596,7 @@ namespace Raven.Server.ServerWide
             string databaseName, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
         {
             UpdateDatabaseCommand command;
-            var databaseRecord = LoadDatabaseRecord(databaseName, out _);
+            var databaseRecord = LoadRawDatabaseRecord(databaseName, out _);
 
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
@@ -1713,26 +1714,33 @@ namespace Raven.Server.ServerWide
 
             UpdateDatabaseCommand command;
 
-            var databaseRecord = LoadDatabaseRecord(databaseName, out var _);
+            var databaseRecord = LoadRawDatabaseRecord(databaseName, out var _);
 
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
 
                     // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
-                    foreach (var ravenETlTask in databaseRecord.RavenEtls)
+                    if (databaseRecord.TryGet(nameof(DatabaseRecord.RavenEtls), out List<RavenEtlConfiguration> ravenEtls))
                     {
-                        if (ravenETlTask.ConnectionStringName == connectionStringName)
+                        foreach (var ravenETlTask in ravenEtls)
                         {
-                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
+                            if (ravenETlTask.ConnectionStringName == connectionStringName)
+                            {
+                                throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
+                            }
                         }
                     }
 
-                    foreach (var replicationTask in databaseRecord.ExternalReplications)
+                    if (databaseRecord.TryGet(nameof(DatabaseRecord.ExternalReplications), out List<ExternalReplication> externalReplications))
                     {
-                        if (replicationTask.ConnectionStringName == connectionStringName)
+                        foreach (var replicationTask in externalReplications)
                         {
-                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
+                            if (replicationTask.ConnectionStringName == connectionStringName)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
+                            }
                         }
                     }
 
@@ -1742,11 +1750,14 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Sql:
 
                     // Don't delete the connection string if used by tasks types: SQL Etl
-                    foreach (var sqlETlTask in databaseRecord.SqlEtls)
+                    if (databaseRecord.TryGet(nameof(DatabaseRecord.SqlEtls), out List<SqlEtlConfiguration> sqlEtls))
                     {
-                        if (sqlETlTask.ConnectionStringName == connectionStringName)
+                        foreach (var sqlETlTask in sqlEtls)
                         {
-                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
+                            if (sqlETlTask.ConnectionStringName == connectionStringName)
+                            {
+                                throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
+                            }
                         }
                     }
 
@@ -2269,6 +2280,15 @@ namespace Raven.Server.ServerWide
             using (context.OpenReadTransaction())
             {
                 return Cluster.ReadDatabase(context, databaseName, out etag);
+            }
+        }
+
+        public BlittableJsonReaderObject LoadRawDatabaseRecord(string databaseName, out long etag)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return Cluster.ReadRawDatabase(context, databaseName, out etag);
             }
         }
 

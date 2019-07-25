@@ -3,20 +3,19 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -125,8 +124,8 @@ namespace Raven.Server.Documents.Subscriptions
         public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
         {
             var subscription = GetSubscriptionFromServerStore(serverContext, name);
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(serverContext, _db.Name, out _);
-            return _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
+            var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
+            return _db.WhoseTaskIsIt(topology, subscription, subscription);
         }
 
         public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
@@ -137,8 +136,8 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
-                var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
+                var topology = _serverStore.Cluster.ReadDatabaseTopology(serverStoreContext, _db.Name);
+                var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")

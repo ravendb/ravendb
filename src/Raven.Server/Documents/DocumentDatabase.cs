@@ -117,13 +117,13 @@ namespace Raven.Server.Documents
                 {
                     MasterKey = serverStore.GetSecretKey(ctx, Name);
 
-                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
-                    if (databaseRecord != null)
+                    var databaseRecordRaw = _serverStore.Cluster.ReadRawDatabase(ctx, Name, out _);
+                    if (databaseRecordRaw != null && databaseRecordRaw.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted))
                     {
                         // can happen when we are in the process of restoring a database
-                        if (databaseRecord.Encrypted && MasterKey == null)
+                        if (encrypted && MasterKey == null)
                             throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                        if (databaseRecord.Encrypted == false && MasterKey != null)
+                        if (encrypted == false && MasterKey != null)
                             throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                     }
                 }
@@ -938,8 +938,8 @@ namespace Raven.Server.Documents
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var databaseRecord = _serverStore.LoadDatabaseRecord(Name, out _);
-                    Debug.Assert(databaseRecord != null);
+                    var rawRecord = _serverStore.LoadRawDatabaseRecord(Name, out _);
+                    Debug.Assert(rawRecord != null);
 
                     var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
                     using (var zipStream = zipArchiveEntry.Open())
@@ -978,8 +978,7 @@ namespace Raven.Server.Documents
 
                         // save the database record
                         writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
-                        var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, serverContext);
-                        serverContext.Write(writer, databaseRecordBlittable);
+                        serverContext.Write(writer, rawRecord);
 
                         // save the database values (subscriptions, periodic backups statuses, etl states...)
                         writer.WriteComma();
@@ -1448,6 +1447,15 @@ namespace Raven.Server.Documents
             using (context.OpenReadTransaction())
             {
                 return ServerStore.Cluster.ReadDatabase(context, Name);
+            }
+        }
+
+        public BlittableJsonReaderObject ReadRawDatabaseRecord()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return ServerStore.Cluster.ReadRawDatabase(context, Name, out _);
             }
         }
 

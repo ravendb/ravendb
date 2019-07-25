@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -26,13 +27,15 @@ namespace Raven.Server.Web.System
             using (context.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
-                var periodicBackup = databaseRecord.PeriodicBackups.FirstOrDefault(x => x.TaskId == taskId);
+                var rawRecord = ServerStore.Cluster.ReadRawDatabase(context, name, out _);
+                if (rawRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out List<PeriodicBackupConfiguration> periodicBackups) == false)
+                    throw new InvalidOperationException("Periodic backup tasks do not exist");
+
+                var periodicBackup = periodicBackups.FirstOrDefault(x => x.TaskId == taskId);
                 if (periodicBackup == null)
                     throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
 
-                var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(periodicBackup, context);
-                context.Write(writer, databaseRecordBlittable);
+                context.Write(writer, rawRecord);
                 writer.Flush();
             }
 

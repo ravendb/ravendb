@@ -7,6 +7,7 @@ using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -454,8 +455,9 @@ namespace Raven.Server.Documents.Handlers
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                var solverConfig = databaseRecord?.ConflictSolverConfig;
+                ConflictSolver solverConfig = null;
+                var rawDatabaseRecord = Server.ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
+                rawDatabaseRecord?.TryGet(nameof(DatabaseRecord.ConflictSolverConfig), out solverConfig);
                 if (solverConfig != null)
                 {
                     var resolveByCollection = new DynamicJsonValue();
