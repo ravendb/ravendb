@@ -366,13 +366,19 @@ namespace Raven.Server.Documents.Replication
 
         private void DisposeReplicationItem(ReplicationBatchItem item)
         {
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+            switch (item.Type)
             {
-                item.Stream.Dispose();
-            }
-            else
-            {
-                item.Data?.Dispose(); //item.Value.Data is null if tombstone
+                case ReplicationBatchItem.ReplicationItemType.Attachment:
+                    item.Stream.Dispose();
+                    break;
+
+                case ReplicationBatchItem.ReplicationItemType.CounterGroup:
+                    item.Values.Dispose();
+                    break;
+
+                default:
+                    item.Data?.Dispose();
+                    break;
             }
         }
 
