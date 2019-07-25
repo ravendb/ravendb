@@ -591,10 +591,10 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                DatabaseRecord record;
+                BlittableJsonReaderObject rawRecord;
                 using (context.OpenReadTransaction())
                 {
-                    record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                    rawRecord = ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
                 }
 
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
@@ -608,12 +608,12 @@ namespace Raven.Server.Web.System
                     if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                         throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
-                    (ravenConnectionStrings, sqlConnectionStrings) = GetConnectionString(record, connectionStringName, connectionStringType);
+                    (ravenConnectionStrings, sqlConnectionStrings) = GetConnectionString(rawRecord, connectionStringName, connectionStringType);
                 }
                 else
                 {
-                    ravenConnectionStrings = record.RavenConnectionStrings;
-                    sqlConnectionStrings = record.SqlConnectionStrings;
+                    rawRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out ravenConnectionStrings);
+                    rawRecord.TryGet(nameof(DatabaseRecord.SqlConnectionStrings), out sqlConnectionStrings);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -632,7 +632,7 @@ namespace Raven.Server.Web.System
         }
 
         private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>)
-            GetConnectionString(DatabaseRecord record, string connectionStringName, ConnectionStringType connectionStringType)
+            GetConnectionString(BlittableJsonReaderObject rawRecord, string connectionStringName, ConnectionStringType connectionStringType)
         {
             var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
             var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
@@ -640,7 +640,8 @@ namespace Raven.Server.Web.System
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    if (record.RavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
+                    if (rawRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out Dictionary<string, RavenConnectionString> recordRavenConnectionStrings) 
+                        && recordRavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
                     {
                         ravenConnectionStrings.TryAdd(connectionStringName, ravenConnectionString);
                     }
@@ -648,7 +649,8 @@ namespace Raven.Server.Web.System
                     break;
 
                 case ConnectionStringType.Sql:
-                    if (record.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
+                    if (rawRecord.TryGet(nameof(DatabaseRecord.SqlConnectionStrings), out Dictionary<string, SqlConnectionString> recordSqlConnectionStrings)
+                        && recordSqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
                     {
                         sqlConnectionStrings.TryAdd(connectionStringName, sqlConnectionString);
                     }
@@ -1052,11 +1054,14 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = ServerStore.GetClusterTopology(context);
-                    var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                    if (record == null)
+                    var rawRecord = ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
+                    if (rawRecord == null)
                         throw new DatabaseDoesNotExistException(Database.Name);
 
-                    var hubReplicationDefinition = record.HubPullReplications?.FirstOrDefault(x => x.TaskId == key);
+                    if (rawRecord.TryGet(nameof(DatabaseRecord.HubPullReplications), out List<PullReplicationDefinition> hubPullReplications) == false || hubPullReplications == null)
+                        throw new InvalidOperationException($"{Database.Name} does not have {nameof(DatabaseRecord.HubPullReplications)}");
+
+                    var hubReplicationDefinition = hubPullReplications.FirstOrDefault(x => x.TaskId == key);
 
                     if (hubReplicationDefinition == null)
                     {
@@ -1169,9 +1174,9 @@ namespace Raven.Server.Web.System
                     {
                         using (context.OpenReadTransaction())
                         {
-                            var databaseRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                            var topology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
                             var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
-                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(databaseRecord.Topology, watcher, taskStatus);
+                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(topology, watcher, taskStatus);
                         }
 
                         json[nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId;
@@ -1266,24 +1271,33 @@ namespace Raven.Server.Web.System
                 {
                     case OngoingTaskType.RavenEtl:
                     case OngoingTaskType.SqlEtl:
-                        DatabaseRecord record;
+                        BlittableJsonReaderObject rawRecord;
 
                         using (context.Transaction == null ? context.OpenReadTransaction() : null)
                         {
-                            record = _serverStore.Cluster.ReadDatabase(context, database.Name);
+                            rawRecord = _serverStore.Cluster.ReadRawDatabase(context, database.Name, out _);
                         }
+
+                        if (rawRecord == null)
+                            break;
 
                         if (type == OngoingTaskType.RavenEtl)
                         {
-                            var ravenEtl = record.RavenEtls?.Find(x => x.TaskId == id);
-                            if (ravenEtl != null)
-                                _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            if (rawRecord.TryGet(nameof(DatabaseRecord.RavenEtls), out List<RavenEtlConfiguration> ravenEtls))
+                            {
+                                var ravenEtl = ravenEtls?.Find(x => x.TaskId == id);
+                                if (ravenEtl != null)
+                                    _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            }
                         }
                         else
                         {
-                            var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == id);
-                            if (sqlEtl != null)
-                                _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            if (rawRecord.TryGet(nameof(DatabaseRecord.SqlEtls), out List<SqlEtlConfiguration> sqlEtls))
+                            {
+                                var sqlEtl = sqlEtls?.Find(x => x.TaskId == id);
+                                if (sqlEtl != null)
+                                    _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                            }
                         }
                         break;
                 }

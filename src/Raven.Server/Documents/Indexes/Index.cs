@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (environment.NextWriteTransactionId == 2 && TryFindIndexDefinition(name, documentDatabase.ReadDatabaseRecord(), out var staticDef, out var autoDef))
+                    if (environment.NextWriteTransactionId == 2 && TryFindIndexDefinition(name, documentDatabase.ReadRawDatabaseRecord(), out var staticDef, out var autoDef))
                     {
                         // initial transaction creating the schema hasn't completed
                         // let's try to create it again
@@ -3726,25 +3726,31 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool TryFindIndexDefinition(string directoryName, DatabaseRecord record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)
+        private static bool TryFindIndexDefinition(string directoryName, BlittableJsonReaderObject record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)
         {
-            foreach (var index in record.Indexes)
+            if (record.TryGet(nameof(DatabaseRecord.Indexes), out Dictionary<string, IndexDefinition> indexes))
             {
-                if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                foreach (var index in indexes)
                 {
-                    staticDef = index.Value;
-                    autoDef = null;
-                    return true;
+                    if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                    {
+                        staticDef = index.Value;
+                        autoDef = null;
+                        return true;
+                    }
                 }
             }
 
-            foreach (var index in record.AutoIndexes)
+            if (record.TryGet(nameof(DatabaseRecord.AutoIndexes), out Dictionary<string, AutoIndexDefinition> autoIndexes))
             {
-                if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                foreach (var index in autoIndexes)
                 {
-                    autoDef = index.Value;
-                    staticDef = null;
-                    return true;
+                    if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                    {
+                        autoDef = index.Value;
+                        staticDef = null;
+                        return true;
+                    }
                 }
             }
 

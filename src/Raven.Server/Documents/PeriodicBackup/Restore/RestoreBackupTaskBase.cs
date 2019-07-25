@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (_serverStore.Cluster.ReadDatabase(context, RestoreFromConfiguration.DatabaseName) != null)
+                if (_serverStore.Cluster.ReadRawDatabase(context, RestoreFromConfiguration.DatabaseName, out _) != null)
                     throw new ArgumentException($"Cannot restore data to an existing database named {RestoreFromConfiguration.DatabaseName}");
 
                 var clusterTopology = _serverStore.GetClusterTopology(context);
@@ -302,8 +302,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     details: new ExceptionDetails(e));
                 _serverStore.NotificationCenter.Add(alert);
 
-                var databaseRecord = _serverStore.LoadDatabaseRecord(RestoreFromConfiguration.DatabaseName, out _);
-
+                var databaseRecord = _serverStore.LoadRawDatabaseRecord(RestoreFromConfiguration.DatabaseName, out _);
                 if (databaseRecord == null)
                 {
                     // delete any files that we already created during the restore
@@ -311,8 +310,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
                 else
                 {
-                    databaseRecord.Disabled = false;
-                    databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
+                    // TODO : decide on remove or commit the record changes
+                    //databaseRecord.Disabled = false;
+                    //databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
 
                     var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);

@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus)
         {
-            var taskStatus = GetTaskStatus(databaseRecord, configuration, skipErrorLog: true);
+            var taskStatus = GetTaskStatus(databaseRecord.Topology, configuration, skipErrorLog: true);
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
@@ -361,9 +361,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
             }
 
-            var databaseRecord = GetDatabaseRecord();
+            var databaseRecord = _serverStore.LoadRawDatabaseRecord(_database.Name, out _);
+            var topology = _serverStore.Cluster.ReadDatabaseTopology(databaseRecord);
             var backupStatus = GetBackupStatus(taskId);
-            return _database.WhoseTaskIsIt(databaseRecord.Topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            return _database.WhoseTaskIsIt(topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -528,15 +529,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             return isFullBackup ? "Snapshot" : "Incremental Snapshot";
         }
 
-        private DatabaseRecord GetDatabaseRecord()
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return _serverStore.Cluster.ReadDatabase(context, _database.Name);
-            }
-        }
-
         private bool ShouldRunBackupAfterTimerCallback(BackupTaskDetails backupInfo, out PeriodicBackup periodicBackup)
         {
             if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
@@ -545,11 +537,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return false;
             }
 
-            var databaseRecord = GetDatabaseRecord();
+            var databaseRecord = _serverStore.LoadRawDatabaseRecord(_database.Name, out _);
+            var topology = _serverStore.Cluster.ReadDatabaseTopology(databaseRecord);
             if (databaseRecord == null)
                 return false;
 
-            var taskStatus = GetTaskStatus(databaseRecord, periodicBackup.Configuration);
+            var taskStatus = GetTaskStatus(topology, periodicBackup.Configuration);
             return taskStatus == TaskStatus.ActiveByCurrentNode;
         }
 
@@ -619,7 +612,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var newBackupTaskId = periodicBackupConfiguration.TaskId;
                 allBackupTaskIds.Add(newBackupTaskId);
 
-                var taskState = GetTaskStatus(databaseRecord, periodicBackupConfiguration);
+                var taskState = GetTaskStatus(databaseRecord.Topology, periodicBackupConfiguration);
 
                 UpdatePeriodicBackup(newBackupTaskId, periodicBackupConfiguration, taskState);
             }
@@ -698,7 +691,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private TaskStatus GetTaskStatus(
-            DatabaseRecord databaseRecord,
+            DatabaseTopology topology,
             PeriodicBackupConfiguration configuration,
             bool skipErrorLog = false)
         {
@@ -722,7 +715,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var backupStatus = GetBackupStatus(configuration.TaskId);
-            var whoseTaskIsIt = _database.WhoseTaskIsIt(databaseRecord.Topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            var whoseTaskIsIt = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
                 return TaskStatus.Disabled;
 

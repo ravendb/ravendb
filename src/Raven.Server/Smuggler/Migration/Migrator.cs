@@ -327,10 +327,11 @@ namespace Raven.Server.Smuggler.Migration
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var record = _serverStore.Cluster.ReadDatabase(context, databaseName);
-                if (record != null)
+                var rawRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
+                if (rawRecord != null)
                 {
-                    if (record.Topology.AllNodes.Contains(_serverStore.NodeTag) == false)
+                    var topology = _serverStore.Cluster.ReadDatabaseTopology(rawRecord);
+                    if (topology.AllNodes.Contains(_serverStore.NodeTag) == false)
                         throw new InvalidOperationException(
                             "Cannot migrate database because " +
                             $"database doesn't exist on the current node ({_serverStore.NodeTag})");

@@ -15,13 +15,14 @@ namespace Raven.Server.Documents.Handlers
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                DatabaseRecord record;
-                using (context.OpenReadTransaction())
-                {
-                    record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                }
+                Dictionary<string, SorterDefinition> sorters = null;
+                var rawDatabaseRecord = Server.ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
+                rawDatabaseRecord?.TryGet(nameof(DatabaseRecord.Sorters), out sorters);
 
-                var sorters = record.Sorters ?? new Dictionary<string, SorterDefinition>();
+                if (sorters == null)
+                {
+                    sorters = new Dictionary<string, SorterDefinition>();
+                }
                 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
