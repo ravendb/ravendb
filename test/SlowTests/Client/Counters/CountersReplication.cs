@@ -534,6 +534,37 @@ namespace SlowTests.Client.Counters
             }
         }
 
+        [Fact]
+        public async Task RespectTxBoundaries()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var database1 = await GetDocumentDatabaseInstanceFor(storeA);
+                database1.Configuration.Replication.MaxItemsCount = 1;
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+                    session.CountersFor("users/2").Increment("downloads", 500);
+                    await session.SaveChangesAsync();
+                }
+
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
+                await SetupReplicationAsync(storeA, storeB);
+
+                WaitForDocument(storeB, "users/1");
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    Assert.NotNull(await session.LoadAsync<User>("users/2"));
+                }
+            }
+        }
+
         private static async Task Backup(string backupPath, DocumentStore backupStore)
         {
             var config = new PeriodicBackupConfiguration
