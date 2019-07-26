@@ -215,7 +215,7 @@ namespace Raven.Client.UniqueConstraints
 
         public static async Task<T> LoadByUniqueConstraintAsync<T>(this IAsyncDocumentSession session, Expression<Func<T, object>> keySelector, object value)
         {
-            var documentStoreListeners = ((AsyncDocumentSession)session).Listeners.StoreListeners;
+            var documentStoreListeners = session.Advanced.DocumentStore.Listeners.StoreListeners;
             var uniqueConstraintsStoreListener = documentStoreListeners.OfType<UniqueConstraintsStoreListener>().FirstOrDefault();
             if (uniqueConstraintsStoreListener == null)
                 throw new InvalidOperationException("Could not find UniqueConstraintsStoreListener in the session listeners, did you forget to register it?");
