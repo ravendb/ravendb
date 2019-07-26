@@ -606,7 +606,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -639,7 +639,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)
