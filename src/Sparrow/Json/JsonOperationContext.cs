@@ -325,6 +325,7 @@ namespace Sparrow.Json
                 TryDispose(_documentBuilder);
                 TryDispose(_arenaAllocator);
                 TryDispose(_arenaAllocatorForLongLivedValues);
+                TryExecute(_allocateStringValues.Clear);
 
                 if (_managedBuffers != null)
                 {
