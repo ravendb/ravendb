@@ -388,10 +388,10 @@ namespace Raven.Server.Documents.Handlers
         {
             return new DynamicJsonValue()
             {
-                [nameof(SubscriptionConnectionStats.AckRate)] = x.AckRate.CreateMeterData(),
-                [nameof(SubscriptionConnectionStats.BytesRate)] = x.BytesRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.AckRate)] = x.AckRate?.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.BytesRate)] = x.BytesRate?.CreateMeterData(),
                 [nameof(SubscriptionConnectionStats.ConnectedAt)] = x.ConnectedAt,
-                [nameof(SubscriptionConnectionStats.DocsRate)] = x.DocsRate.CreateMeterData(),
+                [nameof(SubscriptionConnectionStats.DocsRate)] = x.DocsRate?.CreateMeterData(),
                 [nameof(SubscriptionConnectionStats.LastAckReceivedAt)] = x.LastAckReceivedAt,
                 [nameof(SubscriptionConnectionStats.LastMessageSentAt)] = x.LastMessageSentAt,
             };

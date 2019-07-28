@@ -16,11 +16,12 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Subscriptions
 {
 
-    public class SubscriptionStorage : IDisposable
+    public class SubscriptionStorage : IDisposable, ILowMemoryHandler
     {
         private readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Subscriptions
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
 
             _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public void Dispose()
@@ -343,8 +345,8 @@ namespace Raven.Server.Documents.Subscriptions
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
             public SubscriptionConnection Connection;
-            public SubscriptionConnection[] RecentConnections;
-            public SubscriptionConnection[] RecentRejectedConnections;
+            public IEnumerable<SubscriptionConnection> RecentConnections;
+            public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
 
             public SubscriptionGeneralDataAndStats() { }
 
@@ -458,6 +460,41 @@ namespace Raven.Server.Documents.Subscriptions
         public void ReleaseSubscriptionsSemaphore()
         {
             _concurrentConnectionsSemiSemaphore.Release();
+        }
+
+        internal void CleanupSubscriptions()
+        {
+            var twoDaysAgo = SystemTime.UtcNow.AddDays(-2);
+            foreach (var state in _subscriptionConnectionStates)
+            {
+                if (state.Value.Connection != null)
+                    continue;
+
+                var recentConnection = state.Value.MostRecentEndedConnection();
+                if (recentConnection == null)
+                    return;
+
+                if (recentConnection.Stats.LastMessageSentAt < twoDaysAgo)
+                {
+                    _subscriptionConnectionStates.Remove(state.Key, out _);
+                }
+            }
+        }
+
+        public void LowMemory()
+        {
+            foreach (var state in _subscriptionConnectionStates)
+            {
+                if (state.Value.Connection != null)
+                    continue;
+
+                state.Value.CleanupRecentAndRejectedConnections();                
+            }
+        }
+
+        public void LowMemoryOver()
+        {
+            // nothing to do here
         }
     }
 }
