@@ -328,7 +328,14 @@ namespace Raven.Server
             public double MaxCredits;
             public double BackgroundTasksThreshold;
             public double FailoverThreshold;
-            public double RemainingCpuCredits;
+            private double _remainingCpuCredits;
+
+            public double RemainingCpuCredits
+            {
+                get => Interlocked.CompareExchange(ref _remainingCpuCredits, 0, 0); //atomic read of double
+                set => Interlocked.Exchange(ref _remainingCpuCredits, value);
+            }
+
             public double BackgroundTasksThresholdReleaseValue;
             public double FailoverThresholdReleaseValue;
             public double CreditsGainedPerSecond;
