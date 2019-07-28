@@ -71,6 +71,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide
 {
@@ -138,7 +139,10 @@ namespace Raven.Server.ServerWide
 
             _operationsStorage = new OperationsStorage();
 
-            Operations = new Operations(null, _operationsStorage, NotificationCenter, null);
+            Operations = new Operations(null, _operationsStorage, NotificationCenter, null,
+                (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
+                        ? TimeSpan.FromHours(12)
+                        : TimeSpan.FromDays(2)));
 
             LicenseManager = new LicenseManager(this);
 

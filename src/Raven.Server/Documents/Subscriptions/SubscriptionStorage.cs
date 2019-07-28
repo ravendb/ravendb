@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -464,7 +465,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         internal void CleanupSubscriptions()
         {
-            var twoDaysAgo = SystemTime.UtcNow.AddDays(-2);
+            var maxTaskLifeTime = (PlatformDetails.Is32Bits || this._db.Configuration.Storage.ForceUsing32BitsPager
+                        ? TimeSpan.FromHours(12)
+                        : TimeSpan.FromDays(2));
+            var oldestPossibleIdleSubscription = SystemTime.UtcNow - maxTaskLifeTime;
             foreach (var state in _subscriptionConnectionStates)
             {
                 if (state.Value.Connection != null)
@@ -474,7 +478,7 @@ namespace Raven.Server.Documents.Subscriptions
                 if (recentConnection == null)
                     return;
 
-                if (recentConnection.Stats.LastMessageSentAt < twoDaysAgo)
+                if (recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
                     _subscriptionConnectionStates.Remove(state.Key, out _);
                 }

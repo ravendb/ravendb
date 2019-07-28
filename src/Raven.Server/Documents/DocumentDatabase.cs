@@ -42,6 +42,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
@@ -147,7 +148,10 @@ namespace Raven.Server.Documents
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
+                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes, 
+                    (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
+                        ? TimeSpan.FromHours(12)
+                        : TimeSpan.FromDays(2)));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>

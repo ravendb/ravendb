@@ -29,17 +29,19 @@ namespace Raven.Server.Documents.Operations
         private readonly OperationsStorage _operationsStorage;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private readonly DocumentsChanges _changes;
+        private readonly TimeSpan _maxCompletedTaskLifeTime;
 
         public Operations(string name,
             OperationsStorage operationsStorage,
             NotificationCenter.NotificationCenter notificationCenter,
-            DocumentsChanges changes)
+            DocumentsChanges changes,
+            TimeSpan maxCompletedTaskLifeTime)
         {
             _name = name;
             _operationsStorage = operationsStorage;
             _notificationCenter = notificationCenter;
             _changes = changes;
-
+            _maxCompletedTaskLifeTime = maxCompletedTaskLifeTime;
             _logger = LoggingSource.Instance.GetLogger<Operations>(name ?? "Server");
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
@@ -47,13 +49,13 @@ namespace Raven.Server.Documents.Operations
 
         internal void CleanupOperations()
         {
-            var twoDaysAgo = SystemTime.UtcNow.AddDays(-2);
+            var oldestPossibleCompletedOperation = SystemTime.UtcNow - _maxCompletedTaskLifeTime;
 
             foreach (var taskAndState in _completed)
             {
                 var state = taskAndState.Value;
 
-                if (state.Description.EndTime.HasValue && state.Description.EndTime < twoDaysAgo)
+                if (state.Description.EndTime.HasValue && state.Description.EndTime < oldestPossibleCompletedOperation)
                 {
                     _completed.TryRemove(taskAndState.Key, out Operation _);
                 }
