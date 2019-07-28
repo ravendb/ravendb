@@ -58,14 +58,7 @@ namespace Raven.Server.Documents.Operations
                 if (state.Description.EndTime.HasValue && state.Description.EndTime < oldestPossibleCompletedOperation)
                 {
                     _completed.TryRemove(taskAndState.Key, out Operation _);
-                }
-
-                var task = state.Task;
-                if (task.Exception != null)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to execute background task {taskAndState.Key}", task.Exception);
-                }
+                }                
             }
         }
 
@@ -74,7 +67,7 @@ namespace Raven.Server.Documents.Operations
             if (_active.TryGetValue(id, out Operation operation) == false)
                 throw new ArgumentException($"Operation {id} was not registered");
 
-            if (operation?.Token != null && operation.Task.IsCompleted == false)
+            if (operation?.Token != null && operation.IsCompleted() == false)
             {
                 operation.Token.Cancel();
             }
@@ -181,6 +174,7 @@ namespace Raven.Server.Documents.Operations
 
                 if (_active.TryGetValue(id, out Operation completed))
                 {
+                    completed.SetCompleted();
                     // add to completed items before removing from active ones to ensure an operation status is accessible all the time
                     _completed.TryAdd(id, completed);
                     _active.TryRemove(id, out completed);
@@ -201,19 +195,7 @@ namespace Raven.Server.Documents.Operations
             operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 
             _changes?.RaiseNotifications(change);
-        }
-
-        public void KillRunningOperation(long id)
-        {
-            if (_active.TryGetValue(id, out Operation value) && value.Task.IsCompleted == false)
-            {
-                value.Token?.Cancel();
-
-                // add to completed items before removing from active ones to ensure an operation status is accessible all the time
-                _completed.TryAdd(id, value);
-                _active.TryRemove(id, out value);
-            }
-        }
+        }        
 
         public long GetNextOperationId()
         {
@@ -231,7 +213,7 @@ namespace Raven.Server.Documents.Operations
                         if (active.Killable)
                             active.Token.Cancel();
 
-                        active.Task.Wait();
+                        active.Task?.Wait();
                     }
                     catch (Exception)
                     {
@@ -282,7 +264,7 @@ namespace Raven.Server.Documents.Operations
             public DocumentDatabase Database;
 
             public bool Killable => Token != null;
-
+            
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
@@ -339,6 +321,17 @@ namespace Raven.Server.Documents.Operations
                 }
                 
                 return true;
+            }
+
+            internal void SetCompleted()
+            {
+                this.Task = null;
+            }
+
+            internal bool IsCompleted()
+            {
+                var task = this.Task;
+                return task == null || task.IsCompleted;
             }
 
             private class ThrottledNotification
