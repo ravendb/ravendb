@@ -16,10 +16,11 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class Operations
+    public class Operations: ILowMemoryHandler
     {
         private readonly Logger _logger;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
@@ -40,6 +41,8 @@ namespace Raven.Server.Documents.Operations
             _changes = changes;
 
             _logger = LoggingSource.Instance.GetLogger<Operations>(name ?? "Server");
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+
         }
 
         internal void CleanupOperations()
@@ -242,6 +245,16 @@ namespace Raven.Server.Documents.Operations
         public IEnumerable<Operation> GetAll() => _active.Values.Union(_completed.Values);
 
         public ICollection<Operation> GetActive() => _active.Values;
+
+        public void LowMemory()
+        {
+            _completed.Clear();
+        }
+
+        public void LowMemoryOver()
+        {
+            // nothing to do here
+        }
 
         public bool HasActive => _active.Count > 0;
 
