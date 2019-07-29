@@ -221,6 +221,9 @@ namespace Raven.Server.Rachis
                 {
                     try
                     {
+                        timeoutCtx.Reset();
+                    	timeoutCtx.Renew();
+
                         await TimeoutManager.WaitFor(timeToWait, cts.Token);
                         if (cts.IsCancellationRequested)
                             break;

@@ -222,6 +222,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             while (_token.IsCancellationRequested == false)
                             {
+                                context.Reset();
+                                context.Renew();
                                 BlittableJsonReaderObject rawReport;
                                 try
                                 {
@@ -249,7 +251,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                     break;
                                 }
-                                
+
                                 var nodeReport = BuildReport(rawReport, connection.SupportedFeatures);
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
 
@@ -257,6 +259,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 unchangedReports.Clear();
 
                                 ReceivedReport = _lastSuccessfulReceivedReport = nodeReport;
+                                
                             }
                         }
                     }
