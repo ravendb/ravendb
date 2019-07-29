@@ -554,6 +554,9 @@ namespace Raven.Client.Documents.Changes
             {
                 while (_cts.IsCancellationRequested == false)
                 {
+                    context.Reset();
+                    context.Renew();
+
                     var state = new JsonParserState();
 
                     using (var stream = new WebSocketStream(_client, _cts.Token))
@@ -576,6 +579,7 @@ namespace Raven.Client.Documents.Changes
                             if (state.CurrentTokenType == JsonParserToken.EndArray)
                                 break;
 
+                            context.Reset();
                             builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
 
                             await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
@@ -623,7 +627,7 @@ namespace Raven.Client.Documents.Changes
                         }
                     }
                 }
-            }
+            }            
         }
 
         private void NotifySubscribers(string type, BlittableJsonReaderObject value, List<DatabaseConnectionState> states)
