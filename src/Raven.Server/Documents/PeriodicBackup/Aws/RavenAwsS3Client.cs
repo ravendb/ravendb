@@ -504,7 +504,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public async Task<ListObjectsResult> ListObjects(string prefix, string delimiter, bool listFolders, int? take = null, string continuationToken = null)
+        public async Task<ListObjectsResult> ListObjects(string prefix, string delimiter, bool listFolders, int? take = null, string continuationToken = null, string startAfter = null)
         {
             var url = $"{GetUrl()}/?list-type=2";
             if (prefix != null)
@@ -518,6 +518,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             if (continuationToken != null)
                 url += $"&continuation-token={Uri.EscapeDataString(continuationToken)}";
+
+            if (startAfter != null)
+                url += $"&start-after={Uri.EscapeDataString(startAfter)}";
 
             var now = SystemTime.UtcNow;
 

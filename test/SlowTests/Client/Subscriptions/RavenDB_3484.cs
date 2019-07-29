@@ -178,6 +178,7 @@ namespace SlowTests.Client.Subscriptions
 
                 foreach (var activeClientStrategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver})
                 {
+                    var processedUsers = 0;
                     var activeSubscriptionMre = new AsyncManualResetEvent();
                     var activeSubscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
@@ -193,7 +194,13 @@ namespace SlowTests.Client.Subscriptions
                     var pendingBatchAcknowledgedMre = new AsyncManualResetEvent();
                     pendingSubscription.AfterAcknowledgment += x =>
                     {
-                        pendingBatchAcknowledgedMre.Set();
+                        processedUsers += x.Items.Count;
+                        if (processedUsers == 2)
+                        {
+                            processedUsers = 0;
+                            pendingBatchAcknowledgedMre.Set();
+                        }
+
                         return Task.CompletedTask;
                     };
 
@@ -209,7 +216,12 @@ namespace SlowTests.Client.Subscriptions
 
                     activeSubscription.AfterAcknowledgment += x =>
                     {
-                        activeSubscriptionMre.Set();
+                        processedUsers += x.Items.Count;
+                        if (processedUsers == 2)
+                        {
+                            processedUsers = 0;
+                            activeSubscriptionMre.Set();
+                        }
                         return Task.CompletedTask;
                     };
 

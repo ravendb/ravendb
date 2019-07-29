@@ -2,6 +2,7 @@
 html {
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 
 #applicationHost {
@@ -13,7 +14,7 @@ html {
     height: 100%;
     flex-grow: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: column;    
 }
 
 .no-transition {
@@ -36,7 +37,7 @@ html {
         left: 50%;
         transform: translateX(-50%) translateY(-50%);
         background-color: fadeout(@gray-lighter,10%);
-        color: @gray-dark;
+        color: @gray-darker;
         z-index: 9999;
         text-align: center;
         padding: @grid-gutter-width;
@@ -915,7 +916,7 @@ body {
                 z-index: 22;
                 position: absolute;
                 font-size: 22px;
-                color: @gray-lighter;
+                color: @text-color;
                 top: 7px;
                 left: 12px;
             }

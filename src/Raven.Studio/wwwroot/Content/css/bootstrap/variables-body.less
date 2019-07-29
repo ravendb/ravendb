@@ -453,6 +453,11 @@
 @bg-warning-color: @brand-warning-light;
 @bg-danger-color: @brand-danger-light;
 
+@bg-success-color: darken(@brand-success-dark, 20%);
+@bg-info-color: darken(@brand-info-dark, 20%);
+@bg-warning-color: darken(@brand-warning-dark, 20%);
+@bg-danger-color: darken(@brand-danger-dark, 20%);
+
 @state-success-text: @brand-success;
 @state-success-bg: #3b583e;
 @state-success-border: darken(spin(@state-success-bg, -10), 5%);
@@ -513,7 +518,7 @@
 //
 //##
 //** Default label background color
-@label-default-bg: @gray-base;
+@label-default-bg: @body-bg;
 //** Primary label background color
 @label-primary-bg: @brand-primary-dark;
 //** Success label background color
@@ -643,27 +648,27 @@
 @panel-default-border: @panel-bg;
 @panel-default-heading-bg: @gray-dark;
 
-@panel-primary-text: #fff;
+@panel-primary-text: @text-emphasis;
 @panel-primary-bg: @brand-primary-dark;
 @panel-primary-border: transparent;
 @panel-primary-heading-bg: @brand-primary-dark;
 
-@panel-success-text: #fff;
+@panel-success-text: @text-emphasis;
 @panel-success-bg: @brand-success-dark;
 @panel-success-border: transparent;
 @panel-success-heading-bg: @brand-success-dark;
 
-@panel-info-text: #fff;
+@panel-info-text: @text-emphasis;
 @panel-info-bg: @brand-info-dark;
 @panel-info-border: transparent;
 @panel-info-heading-bg: @brand-info-dark;
 
-@panel-warning-text: #fff;
+@panel-warning-text: @text-emphasis;
 @panel-warning-bg: @brand-warning-dark;
 @panel-warning-border: transparent;
 @panel-warning-heading-bg: @brand-warning-dark;
 
-@panel-danger-text: #fff;
+@panel-danger-text: @text-emphasis;
 @panel-danger-bg: @brand-danger-dark;
 @panel-danger-border: transparent;
 @panel-danger-heading-bg: @brand-danger-dark;

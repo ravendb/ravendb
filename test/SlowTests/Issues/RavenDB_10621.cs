@@ -9,7 +9,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10621 : RavenTestBase
     {
-        [Fact]
+        [Fact(Skip = "Waiting for RavenDB-13830 to be resolved")]
         public void ShouldNotErrorIndexOnInvalidProgramException()
         {
             // if this test fails it's very likely the following issue got fixed: https://github.com/dotnet/coreclr/issues/14672
@@ -17,7 +17,6 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 new BigIndexOutput().Execute(store);
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new ErroringDocument

@@ -320,7 +320,6 @@
             background-color: lighten(@main-menu-hover, 8%);
         }
     }
-
     // STYLE OPEN SUBMENU (LEVEL 1 OR 2)
     &[data-level="1"] {
         .level-0 {
@@ -335,17 +334,13 @@
     }
 
     .collection-count {
-        width: 60px;
-        border-radius: 1px;
-        font-size: 75%;
+        width: 60px;        
         display: flex;
-        color: @text-emphasis;
-        background-color: @panel-bg-2;
         flex-shrink: 0;
 
         .value {
             flex-grow: 1;
-            text-align: center;
+            text-align: center;            
         }
 
         .kilo, .mega {
@@ -355,7 +350,7 @@
         }
 
         .kilo {
-            background-color: fadeout(@gray-lighter,70%);
+            background-color: fadeout(@label-default-bg,70%);
 
             &::before {
                 content: 'K';
@@ -363,7 +358,7 @@
         }
 
         .mega {
-            background-color: fadeout(@gray-darker,70%);
+            background-color: fadeout(@label-default-bg,70%);
 
             &::before {
                 content: 'M';

@@ -10,19 +10,15 @@
             <div>
                 <span>Deleting </span>
                 <strong data-bind="text: collectionName"></strong>
-
                 <strong data-bind="text: '(' + pluralize(itemsToDelete, 'document', 'documents') + ')'"></strong>.
             </div>
-            
             <div class="padding">
                 <div data-bind="visible: isAllDocuments && hasHiloDocuments" class="bg-warning padding">
-                    <small>* Note that @hilo documents won't be deleted.<br />
-                        In order to do that, go to the @hilo section.</small>
+                    <small><i class="icon-warning"></i> Note: @hilo documents won't be deleted.<br />
+                        In order delete @hilo documents, go to the @hilo collection.</small>
                 </div>
             </div>
-           
         </div>
-
         <div class="modal-footer">
             <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
             <button type="button" class="btn btn-primary" data-bind="click: deleteCollection">Delete</button>

@@ -328,7 +328,14 @@ namespace Raven.Server
             public double MaxCredits;
             public double BackgroundTasksThreshold;
             public double FailoverThreshold;
-            public double RemainingCpuCredits;
+            private double _remainingCpuCredits;
+
+            public double RemainingCpuCredits
+            {
+                get => Interlocked.CompareExchange(ref _remainingCpuCredits, 0, 0); //atomic read of double
+                set => Interlocked.Exchange(ref _remainingCpuCredits, value);
+            }
+
             public double BackgroundTasksThresholdReleaseValue;
             public double FailoverThresholdReleaseValue;
             public double CreditsGainedPerSecond;
@@ -967,9 +974,15 @@ namespace Raven.Server
                                                     "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
             var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
+
+            // cloud: *.free.iftah.ravendb.cloud => we extract the domain free.iftah
+            // normal: *.iftah.development.run => we extract the domain iftah
+
+            // remove the root domain
             var substring = hosts[0].Substring(0, hosts[0].Length - usedRootDomain.Length - 1);
-            var domainEnd = substring.LastIndexOf('.');
-            var domain = substring.Substring(domainEnd + 1);
+            var firstDot = substring.IndexOf('.');
+            // remove the *. 
+            var domain = substring.Substring(firstDot + 1);
 
             if (userDomainsResult.Domains.Any(userDomain => string.Equals(userDomain.Key, domain, StringComparison.OrdinalIgnoreCase)) == false)
                 throw new InvalidOperationException("The license provided does not have access to the domain: " + domain);

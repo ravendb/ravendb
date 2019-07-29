@@ -223,6 +223,11 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
+        protected virtual void RemoveIndexFromCache()
+        {
+
+        }
+
         protected virtual void DisposeIndex()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
@@ -262,6 +267,8 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+                exceptionAggregator.Execute(RemoveIndexFromCache);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -1536,32 +1543,18 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error, ignoreWriteError: true);
         }
 
-        private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope)
+        private void HandleOutOfMemoryException(Exception exception, IndexingStatsScope scope)
         {
             try
             {
-                scope.AddMemoryError(oome);
+                scope.AddMemoryError(exception);
                 Interlocked.Add(ref _lowMemoryPressure, LowMemoryPressure);
                 _lowMemoryFlag.Raise();
 
-                var title = $"Out of memory occurred for '{Name}'";
                 if (_logger.IsInfoEnabled)
-                    _logger.Info(title, oome);
+                    _logger.Info($"Out of memory occurred for '{Name}'", exception);
 
-                var message = $"Error message: {oome.Message}";
-                var alert = AlertRaised.Create(
-                    null,
-                    title,
-                    message,
-                    AlertType.OutOfMemoryException,
-                    NotificationSeverity.Error,
-                    key: message,
-                    details: new MessageDetails
-                    {
-                        Message = OutOfMemoryDetails(oome)
-                    });
-
-                DocumentDatabase.NotificationCenter.Add(alert);
+                DocumentDatabase.NotificationCenter.OutOfMemory.Add(_environment, exception);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {
@@ -1572,20 +1565,6 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed out of memory exception handling for index '{Name}'", e);
             }
-        }
-
-        private static string OutOfMemoryDetails(Exception oome)
-        {
-            var memoryInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
-
-            return $"Managed memory: {new Size(AbstractLowMemoryMonitor.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
-                   $"Unmanaged allocations: {new Size(AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
-                   $"Shared clean: {memoryInfo.SharedCleanMemory}, " +
-                   $"Working set: {memoryInfo.WorkingSet}, " +
-                   $"Available memory: {memoryInfo.AvailableMemory}, " +
-                   $"Calculated Available memory: {memoryInfo.AvailableWithoutTotalCleanMemory}, " +
-                   $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
-                   $"Error: {oome}";
         }
 
         private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)
@@ -2822,7 +2801,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {
-            DocumentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+            DocumentDatabase?.DatabaseShutdown.ThrowIfCancellationRequested();
 
             if (assertState && _isCompactionInProgress)
                 ThrowCompactionInProgress();
@@ -3268,6 +3247,9 @@ namespace Raven.Server.Documents.Indexes
             int count)
         {
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
+
+            //We need to take the read transaction encryption size into account as we might read alot of document and produce very little indexing output.
+            txAllocationsInBytes += documentsOperationContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
 
             if (_indexDisabled)
             {

@@ -16,27 +16,52 @@ namespace Raven.Server.Json
                 return NumberParseResult.Long;
             }
 
-            if (value is double)
+            if (value is double dbl)
             {
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                if (dbl == 0.0)
+                {
+                    // this is NOT superfluous code, we need 
+                    // to handle negative zeros
+                    //https://blogs.msdn.microsoft.com/bclteam/2006/10/12/decimal-negative-zero-representation-lakshan-fernando/
+                    dbl = 0.0D;
+                }
+
                 longResult = long.MinValue;
-                doubleResult = (double)value;
+                doubleResult = dbl;
 
                 return NumberParseResult.Double;
             }
 
-            if (value is float)
+            if (value is float f)
             {
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
+                if (f == 0.0)
+                {
+                    // this is NOT superfluous code, we need 
+                    // to handle negative zeros
+                    //https://blogs.msdn.microsoft.com/bclteam/2006/10/12/decimal-negative-zero-representation-lakshan-fernando/
+                    f = 0.0F;
+                }
+
                 longResult = long.MinValue;
-                doubleResult = (double)(decimal)(float)value;
+                doubleResult = (double)(decimal)f;
 
                 return NumberParseResult.Double;
             }
 
-            if (value is decimal)
+            if (value is decimal d)
             {
-                var d = (decimal)value;
                 if (DecimalHelper.Instance.IsDouble(ref d) || d > long.MaxValue || d < long.MinValue)
                 {
+                    if (d == 0)
+                    {
+                        // this is NOT superfluous code, we need 
+                        // to handle negative zeros
+                        //https://blogs.msdn.microsoft.com/bclteam/2006/10/12/decimal-negative-zero-representation-lakshan-fernando/
+                        d = decimal.Zero;
+                    }
+
                     doubleResult = (double)d;
                     longResult = long.MinValue;
 
@@ -49,8 +74,7 @@ namespace Raven.Server.Json
                 return NumberParseResult.Long;
             }
 
-            var lazyDouble = value as LazyNumberValue;
-            if (lazyDouble != null)
+            if (value is LazyNumberValue lazyDouble)
             {
                 doubleResult = lazyDouble;
                 longResult = long.MinValue;

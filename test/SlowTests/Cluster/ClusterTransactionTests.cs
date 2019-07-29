@@ -32,17 +32,21 @@ namespace SlowTests.Cluster
 {
     public class ClusterTransactionTests : ReplicationTestBase
     {
-        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
-            string customConfigPath = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
-            if (customSettings == null)
-                customSettings = new Dictionary<string, string>();
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
 
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
 
-            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
+
+            return base.GetNewServer(options);
         }
 
         [Fact]
@@ -1045,11 +1049,16 @@ namespace SlowTests.Cluster
                 }
 
                 // revive the SUT node
-                var revived = Servers[1] = GetNewServer(new Dictionary<string, string>
+                var revived = Servers[1] = GetNewServer(new ServerCreationOptions{ CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url,
                     [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                },
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    PartialPath = dataDir,
+                    RegisterForDisposal = false
+                });
                 using (var revivedStore = new DocumentStore()
                 {
                     Urls = new[] { revived.WebUrl },
@@ -1075,11 +1084,11 @@ namespace SlowTests.Cluster
                         Assert.Equal(2, count);
 
                         // revive another node so we should have a functional cluster now
-                        Servers[2] = GetNewServer(new Dictionary<string, string>
+                        Servers[2] = GetNewServer(new ServerCreationOptions { CustomSettings = new Dictionary<string, string>
                         {
                             [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
                             [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
-                        }, runInMemory: false, deletePrevious: false, partialPath: dataDir2);
+                        }, RunInMemory = false, DeletePrevious =  false, PartialPath = dataDir2});
 
                         // wait for the log to apply on the SUT node
                         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))

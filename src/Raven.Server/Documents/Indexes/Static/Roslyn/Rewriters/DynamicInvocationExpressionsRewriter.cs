@@ -19,11 +19,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 case "Enumerable.Range":
                     return HandleEnumerableRange(node);
-                case "Enumerable.ToDictionary":
-                    return HandleEnumerableToDictionary(node);
                 case "Enumerable.Distinct":
                     return HandleEnumerableDistinct(node);
-
             }
 
             return base.VisitInvocationExpression(node);
@@ -45,11 +42,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
 
             return base.VisitInvocationExpression(node);
-        }
-
-        private SyntaxNode HandleEnumerableToDictionary(InvocationExpressionSyntax node)
-        {
-            return SyntaxFactory.ParseExpression($"((IDictionary<dynamic, dynamic>){node})");
         }
 
         private static string GetParentMethod(InvocationExpressionSyntax currentInvocation)

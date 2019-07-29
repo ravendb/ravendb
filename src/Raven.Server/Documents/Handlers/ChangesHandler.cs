@@ -190,6 +190,9 @@ namespace Raven.Server.Documents.Handlers
                     Database.Changes.Disconnect(connection.Id);
                 }
             }
+
+            Database.DatabaseShutdown.ThrowIfCancellationRequested();
+
             await sendTask;
         }
 

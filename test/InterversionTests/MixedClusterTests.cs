@@ -15,20 +15,169 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Cluster;
+using Sparrow.Json;
 using Sparrow.Server;
+using Tests.Infrastructure.InterversionTest;
 using Xunit;
 
 namespace InterversionTests
 {
     public class MixedClusterTests : MixedClusterTestBase
     {
+        [Theory]
+        [InlineData("4.1.7", "4.1.7", "4.1.7")]
+        [InlineData("4.1.6", "4.1.6", "4.1.6")]
+        [InlineData("4.1.5", "4.1.5", "4.1.5")]
+        public async Task UpgradeDirectlyFrom41X(params string[] initialVersions)
+        {
+            var upgradeTo = new List<string>
+            {
+                "current"
+            };
+            var suit = new Version41X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
+        }
+
+        [Theory]
+        [InlineData("4.1.4", "4.1.4", "4.1.4")]
+        [InlineData("4.1.3", "4.1.3", "4.1.3")]
+        [InlineData("4.1.2", "4.1.2", "4.1.2")]
+        [InlineData("4.1.1", "4.1.1", "4.1.1")]
+        [InlineData("4.1.0", "4.1.0", "4.1.0")]
+        public async Task UpgradeFromEarly41(params string[] initialVersions)
+        {
+            var upgradeTo = new List<string>
+            {
+                "4.1.7",
+                "current"
+            };
+
+            var v411 = new Version411(this);
+            var v41X = new Version41X(this);
+
+            UpgradeTestSuit before = v41X;
+            if (initialVersions[0] == "4.1.1" || initialVersions[0] == "4.1.0")
+            {
+                before = v411;
+            }
+
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, v41X);
+        }
+
         [Fact]
+        public async Task IncrementalUpgrade()
+        {
+            var initialVersions = new[] {"4.0.11", "4.0.11", "4.0.11"};
+            var v40 = new Version40X(this);
+            var v41 = new Version41X(this);
+
+            var upgradeTo41X = new List<string>
+            {
+                "4.1.7",
+                "4.2.1",
+                "current"
+            };
+            await ExecuteUpgradeTest(initialVersions, upgradeTo41X, v40, v40, v41);
+        }
+
+        [Fact]
+        public async Task UpgradeFromLatest40()
+        {
+            var initialVersions = new[] {"4.0.11", "4.0.11", "4.0.11"};
+            var upgradeTo = new List<string>
+            {
+                "4.1.7",
+                "current"
+            };
+            var before = new Version40X(this);
+            var after = new Version41X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, before, before, after);
+        }
+
+        [Theory]
+        [InlineData("4.2.0", "4.2.0", "4.2.0")]
+        [InlineData("4.2.1", "4.2.1", "4.2.1")]
+        public async Task UpgradeDirectlyFrom42X(params string[] initialVersions)
+        {
+            var upgradeTo = new List<string>
+            {
+                "current"
+            };
+            var suit = new Version41X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
+        }
+        private async Task ExecuteUpgradeTest(
+            string[] initialVersions, 
+            List<string> upgradeTo, 
+            UpgradeTestSuit before, 
+            UpgradeTestSuit during, 
+            UpgradeTestSuit after)
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var nodes = await CreateCluster(initialVersions);
+            var database = GetDatabaseName();
+            var result = await GetStores(database, nodes);
+
+            using (result.Disposable)
+            {
+                try
+                {
+                    var stores = result.Stores;
+                    await CreateDatabase(stores, database, nodes.Count);
+                    await before.TestClustering(stores, "before");
+                    await before.TestReplication(stores);
+
+                    foreach (var nextVersion in upgradeTo)
+                    {
+                        foreach (var node in nodes)
+                        {
+                            await UpgradeServerAsync(nextVersion, node);
+                            await during.TestClustering(stores, $"during/{nextVersion}/{node.Url}");
+                            await during.TestReplication(stores);
+                        }
+                    }
+
+                    await after.TestClustering(stores, $"after");
+                    await after.TestReplication(stores);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
+        }
+
+        private static async Task CreateDatabase(List<DocumentStore> stores, string database, int size)
+        {
+            try
+            {
+                var result = await stores[0].Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database), size));
+                foreach (var store in stores)
+                {
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        await store.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(result.RaftCommandIndex), context);
+                    }
+                }
+            }
+            catch (ConcurrencyException)
+            {
+                // database already exists
+            }
+        }
+
+
+        [Fact(Skip = "WIP")]
         public async Task ReplicationInMixedCluster_40Leader_with_two_41_nodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -90,7 +239,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task ReplicationInMixedCluster_40Leader_with_one_41_node_and_two_40_nodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -128,7 +278,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task ReplicationInMixedCluster_41Leader_with_two_406()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -164,7 +315,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task MixedCluster_OutgoingReplicationFrom41To40_ShouldStopAfterUsingCounters()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -260,7 +412,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task ClientFailoverInMixedCluster_V41Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -319,7 +472,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task ClientFailoverInMixedCluster_V40Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -379,7 +533,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task SubscriptionsInMixedCluster_FailoverFrom41To40()
         {
             var batchSize = 5;
@@ -427,7 +582,8 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task SubscriptionsInMixedCluster_FailoverFrom410To41()
         {
             var batchSize = 5;
@@ -479,23 +635,23 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_BasicReplication()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.7");
-            (var urlB, var serverB) = await GetServerAsync("4.0.7");
-            (var urlc, var serverC) = await GetServerAsync("4.0.7");
+            var nodeA = await GetServerAsync("4.0.7");
+            var nodeB = await GetServerAsync("4.0.7");
+            var nodeC = await GetServerAsync("4.0.7");
 
-            using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
+            using (var storeA = await GetStore(nodeA.Url, nodeA.Process, null, new InterversionTestOptions
             {
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
             }))
-            using (var storeB = await GetStore(urlB, serverB, null, new InterversionTestOptions
+            using (var storeB = await GetStore(nodeB.Url, nodeB.Process, null, new InterversionTestOptions
             {
                 CreateDatabase = false,
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
             }))
-            using (var storeC = await GetStore(urlc, serverC, null, new InterversionTestOptions
+            using (var storeC = await GetStore(nodeC.Url, nodeC.Process, null, new InterversionTestOptions
             {
                 CreateDatabase = false,
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
@@ -534,23 +690,23 @@ namespace InterversionTests
         
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_Counters()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.7");
-            (var urlB, var serverB) = await GetServerAsync("4.0.7");
-            (var urlc, var serverC) = await GetServerAsync("4.0.7");
+            var nodeA = await GetServerAsync("4.0.7");
+            var nodeB = await GetServerAsync("4.0.7");
+            var nodeC = await GetServerAsync("4.0.7");
 
-            using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
+            using (var storeA = await GetStore(nodeA.Url, nodeA.Process, null, new InterversionTestOptions
             {
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
             }))
-            using (var storeB = await GetStore(urlB, serverB, null, new InterversionTestOptions
+            using (var storeB = await GetStore(nodeB.Url, nodeB.Process, null, new InterversionTestOptions
             {
                 CreateDatabase = false,
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
             }))
-            using (var storeC = await GetStore(urlc, serverC, null, new InterversionTestOptions
+            using (var storeC = await GetStore(nodeC.Url, nodeC.Process, null, new InterversionTestOptions
             {
                 CreateDatabase = false,
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
@@ -605,23 +761,23 @@ namespace InterversionTests
 
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_ClusterTransactions()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.7");
-            (var urlB, var serverB) = await GetServerAsync("4.0.7");
-            (var urlc, var serverC) = await GetServerAsync("4.0.7");
+            var nodeA = await GetServerAsync("4.0.7");
+            var nodeB = await GetServerAsync("4.0.7");
+            var nodeC = await GetServerAsync("4.0.7");
 
-            using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
+            using (var storeA = await GetStore(nodeA.Url, nodeA.Process, null, new InterversionTestOptions
             {
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
             }))
-            using (var storeB = await GetStore(urlB, serverB, null, new InterversionTestOptions
+            using (var storeB = await GetStore(nodeB.Url, nodeB.Process, null, new InterversionTestOptions
             {
                 CreateDatabase = false,
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
             }))
-            using (var storeC = await GetStore(urlc, serverC, null, new InterversionTestOptions
+            using (var storeC = await GetStore(nodeC.Url, nodeC.Process, null, new InterversionTestOptions
             {
                 CreateDatabase = false,
                 ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
@@ -663,7 +819,7 @@ namespace InterversionTests
 
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task RevisionsInMixedCluster()
         {
             var company = new Company { Name = "Company Name" };
@@ -719,7 +875,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task MixedCluster_ClusterWideIdentity()
         {
 
@@ -755,7 +911,7 @@ namespace InterversionTests
             }
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
         public async Task MixedCluster_CanReorderDatabaseNodes()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
@@ -779,7 +935,8 @@ namespace InterversionTests
 
         }
 
-        [Fact]
+        [Fact(Skip = "WIP")]
+
         public async Task MixedCluster_DistributedRevisionsSubscription()
         {
             var uniqueRevisions = new HashSet<string>();

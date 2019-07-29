@@ -8,36 +8,52 @@ namespace StressTests.Server.Documents.PeriodicBackup
     public class Retention : RavenTestBase
     {
         [NightlyBuildTheory]
-        [InlineData(20, 5)]
-        [InlineData(20, 20)]
-        [InlineData(25, 10)]
-        [InlineData(30, 3)]
-        [InlineData(40, 20)]
-        [InlineData(45, 1)]
-        [InlineData(50, 50)]
-        [InlineData(70, 13)]
-        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate)
+        [InlineData(20, 5, false)]
+        [InlineData(20, 20, false)]
+        [InlineData(25, 10, false)]
+        [InlineData(30, 3, false)]
+        [InlineData(40, 20, false)]
+        [InlineData(45, 1, false)]
+        [InlineData(50, 50, false)]
+        [InlineData(70, 13, false)]
+        [InlineData(20, 5, true)]
+        [InlineData(20, 20, true)]
+        [InlineData(25, 10, true)]
+        [InlineData(30, 3, true)]
+        [InlineData(40, 20, true)]
+        [InlineData(45, 1, true)]
+        [InlineData(50, 50, true)]
+        [InlineData(70, 13, true)]
+        public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention())
             {
-                await test.can_delete_backups_by_date(backupAgeInSeconds, numberOfBackupsToCreate);
+                await test.can_delete_backups_by_date(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
             }
         }
 
         [NightlyBuildTheory(Skip = "Requires Amazon AWS Credentials")]
-        [InlineData(20, 5)]
-        [InlineData(20, 20)]
-        [InlineData(25, 10)]
-        [InlineData(30, 3)]
-        [InlineData(40, 20)]
-        [InlineData(45, 1)]
-        [InlineData(50, 50)]
-        [InlineData(70, 13)]
-        public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate)
+        [InlineData(20, 5, false)]
+        [InlineData(20, 20, false)]
+        [InlineData(25, 10, false)]
+        [InlineData(30, 3, false)]
+        [InlineData(40, 20, false)]
+        [InlineData(45, 1, false)]
+        [InlineData(50, 50, false)]
+        [InlineData(70, 13, false)]
+        [InlineData(20, 5, true)]
+        [InlineData(20, 20, true)]
+        [InlineData(25, 10, true)]
+        [InlineData(30, 3, true)]
+        [InlineData(40, 20, true)]
+        [InlineData(45, 1, true)]
+        [InlineData(50, 50, true)]
+        [InlineData(70, 13, true)]
+        public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
             using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention())
             {
-                await test.can_delete_backups_by_date_s3(backupAgeInSeconds, numberOfBackupsToCreate);
+                await test.can_delete_backups_by_date_s3(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
             }
         }
     }

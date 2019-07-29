@@ -14,7 +14,7 @@
                                 <small><i class="icon-info text-info"></i></small>
                             </label>
                             <div class="flex-grow has-feedback">
-                                <input data-bind="textInput: migratorFullPath" id="migratorFullPath" type="text" class="form-control" placeholder="Full path to the migrator tool" />
+                                <input data-bind="textInput: migratorFullPath" id="migratorFullPath" type="text" class="form-control" placeholder="Enter the full path of the directory containing the Raven.Migrator executable" />
                                 <span class="glyphicon glyphicon-ok text-success form-control-feedback" title="Raven.Migrator was found under specified path" data-bind="visible: migratorFullPath() && migratorFullPath.isValid() && !migratorFullPath.isValidating()"></span>
                                 <ul class="dropdown-menu" role="menu"
                                     data-bind="autoComplete: '#migratorFullPath', foreach: $root.migratorPathAutocomplete.createCompleter()">

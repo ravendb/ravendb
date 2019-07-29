@@ -58,6 +58,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _isSideBySide = null;
         }
 
+        protected override void RemoveIndexFromCache()
+        {
+            _compiled.RemoveIndexFromCache();
+        }
+
         protected override void HandleDocumentChange(DocumentChange change)
         {
             if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false &&

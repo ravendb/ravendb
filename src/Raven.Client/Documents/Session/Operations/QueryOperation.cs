@@ -268,11 +268,29 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void EnsureIsAcceptableAndSaveResult(QueryResult result)
         {
+            if (_sp == null)
+            {
+                EnsureIsAcceptableAndSaveResult(result, duration: null);
+            }
+            else
+            {
+                _sp.Stop();
+                EnsureIsAcceptableAndSaveResult(result, _sp.Elapsed);
+            }
+        }
+
+        internal void EnsureIsAcceptableAndSaveResult(QueryResult result, TimeSpan? duration)
+        {
             if (result == null)
                 throw new IndexDoesNotExistException("Could not find index " + _indexName);
 
-            EnsureIsAcceptable(result, _indexQuery.WaitForNonStaleResults, _sp, _session);
+            EnsureIsAcceptable(result, _indexQuery.WaitForNonStaleResults, duration, _session);
 
+            SaveQueryResult(result);
+        }
+
+        private void SaveQueryResult(QueryResult result)
+        {
             _currentQueryResults = result;
 
             if (Logger.IsInfoEnabled)
@@ -310,23 +328,24 @@ namespace Raven.Client.Documents.Session.Operations
 
         public static void EnsureIsAcceptable(QueryResult result, bool waitForNonStaleResults, Stopwatch duration, InMemoryDocumentSessionOperations session)
         {
+            if (duration == null)
+            {
+                EnsureIsAcceptable(result, waitForNonStaleResults, (TimeSpan?)null, session);
+            }
+            else
+            {
+                duration.Stop();
+                EnsureIsAcceptable(result, waitForNonStaleResults, duration.Elapsed, session);
+            }
+        }
+
+        public static void EnsureIsAcceptable(QueryResult result, bool waitForNonStaleResults, TimeSpan? duration, InMemoryDocumentSessionOperations session)
+        {
             if (waitForNonStaleResults && result.IsStale)
             {
-                duration?.Stop();
-                var msg = $"Waited for {duration?.ElapsedMilliseconds:#,#;;0} ms for the query to return non stale result.";
+                var elapsed = duration == null ? "" : $" {duration.Value.Milliseconds:#,#;;0} ms";
+                var msg = $"Waited{elapsed} for the query to return non stale result.";
 
-#if TESTING_HANGS
-// this code is here because slow tests sometimes how impossible situation
-// with thread pauses that are very long, likely because of so much work
-// on the system
-
-                Console.WriteLine(msg);
-                Console.WriteLine(session.DocumentStore.Database);
-
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{session.DocumentStore.Urls[0]}\"")); // Works ok on windows
-
-                Console.ReadLine();
-#endif
                 throw new TimeoutException(msg);
             }
         }

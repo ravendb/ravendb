@@ -58,8 +58,9 @@ namespace Tests.Infrastructure.InterversionTest
                 {
                     locator.CommandArguments,
                     $"-c {CommandLineArgumentEscaper.EscapeSingleArg(EmptySettingsFile.FullName)}",
-                    "--ServerUrl=http://127.0.0.1:0",
-                    "--RunInMemory=true",
+                    $"--ServerUrl={locator.ServerUrl}",
+                    $"--DataDir={locator.DataDir}",
+                    "--RunInMemory=false",
                     "--Testing.ParentProcessId=" + currentProcess.Id,
                     "--Setup.Mode=None",
                     "--License.Eula.Accepted=true"

@@ -161,7 +161,7 @@ namespace Sparrow.Json
         protected JsonContextPoolBase()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
-            _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(()=> EnumerateAllThreadContexts().ToList(),
+            _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(this, s => ((JsonContextPoolBase<T>)s).EnumerateAllThreadContexts().ToList(),
                 LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
@@ -169,8 +169,7 @@ namespace Sparrow.Json
         private ContextStack MaybeGetCurrentContextStack()
         {
             ContextStack x = null;
-            if (_contextStacksByThreadId != null)
-                _contextStacksByThreadId.TryGetValue(NativeMemory.CurrentThreadStats.InternalId, out x);
+            _contextStacksByThreadId?.TryGetValue(NativeMemory.CurrentThreadStats.InternalId, out x);
             return x;
         }
 
@@ -272,7 +271,8 @@ namespace Sparrow.Json
                 if (id == -1)
                     continue;
 
-                if (_contextStacksByThreadId != null && _contextStacksByThreadId.TryGetValue(id, out var ctx))
+                var contextStacksByThreadId = _contextStacksByThreadId;
+                if (contextStacksByThreadId != null && contextStacksByThreadId.TryGetValue(id, out var ctx))
                     yield return ctx;
             }
         }
@@ -369,6 +369,8 @@ namespace Sparrow.Json
             try
             {
                 threadHeader = GetCurrentContextStack();
+                if (threadHeader == null) // the parent was already disposed
+                    return;
             }
             catch (ObjectDisposedException)
             {

@@ -263,10 +263,12 @@ namespace RachisTests.DatabaseCluster
             {
                 await cluster.Leader.ServerStore.RemoveFromClusterAsync("B");
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
-                cluster.Leader = GetNewServer(deletePrevious: false, runInMemory: false, partialPath: result.DataDir, customSettings: new Dictionary<string, string>
+                cluster.Leader = GetNewServer(new ServerCreationOptions
+                {
+                    DeletePrevious = false, RunInMemory = false, PartialPath = result.DataDir, CustomSettings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url
-                });
+                }});
 
                 await cluster.Leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
                 Assert.NotNull(await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName)));

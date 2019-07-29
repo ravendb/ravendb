@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -12,6 +15,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         protected override string Name => "S3";
 
         private const string Delimiter = "/";
+
         private string _folderContinuationToken = null;
 
         public S3RetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAwsS3Client client)
@@ -38,11 +42,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return folderPath.Substring(0, folderPath.Length - 1);
         }
 
-        protected override async Task<string> GetFirstFileInFolder(string folder)
+        protected override async Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
+            var backupFiles = new GetBackupFolderFilesResult();
             // backups are ordered in lexicographical order
             var files = await _client.ListObjects(folder, null, false, 1);
-            return files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
+            backupFiles.FirstFile = files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
+            
+            var startAfter = $"{folder}{startDateOfRetentionRange.ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}{Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";
+            files = await _client.ListObjects(folder, null, false, take: 1, startAfter: startAfter);
+
+            backupFiles.LastFile = files.FileInfoDetails?.Select(x => x.FullPath).LastOrDefault();
+
+            return backupFiles;
         }
 
         protected override async Task DeleteFolders(List<string> folders)

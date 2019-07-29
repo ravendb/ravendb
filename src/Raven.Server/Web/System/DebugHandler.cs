@@ -8,18 +8,6 @@ namespace Raven.Server.Web.System
 {
     public sealed class DebugHandler : RequestHandler
     {
-        [RavenAction("/debug/cpu-credits", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint =true)]
-        public Task CpuCredits()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var json = Server.CpuCreditsBalance.ToJson();
-                writer.WriteObject(context.ReadObject(json, "cpu/credits"));
-                return Task.CompletedTask;
-            }
-        }
-
         [RavenAction("/debug/routes", "GET", AuthorizationStatus.ValidUser)]
         public Task Routes()
         {

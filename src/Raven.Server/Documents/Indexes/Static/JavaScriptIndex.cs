@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptIndex : StaticIndexBase
     {
+
         private const string GlobalDefinitions = "globalDefinition";
         private const string MapsProperty = "maps";
         private const string CollectionProperty = "collection";
@@ -61,6 +62,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 ProcessFields(definition, collectionFunctions);
             }
+        }
+
+        public Action TryRemoveFromCache { get; set; }
+
+        public override void RemoveIndexFromCache()
+        {
+            TryRemoveFromCache?.Invoke();
         }
 
         private void ProcessFields(IndexDefinition definition, Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
