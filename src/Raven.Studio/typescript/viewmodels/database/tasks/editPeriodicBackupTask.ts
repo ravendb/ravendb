@@ -139,29 +139,40 @@ class editPeriodicBackupTask extends viewModelBase {
                     "Differences between Backup and Snapshot:" +
                     "<ul>" +
                         "<li>Data" +
-                            "<ul>" +
-                                "<li>Backup includes documents, indexes and identities <br> " +
-                                    "but doesn't include index data, indexes will be rebuilt after restore based on exported definitions</li>" +
-                                "<li>Snapshot contains the raw data including the indexes - definitions and data</li>" +
-                            "</ul>" +
+                            "<small><ul>" +
+                                "<li><strong>Backup</strong> includes documents, indexes definitions and identities.<br> " +
+                                    "It doesn't include the index data itself, the indexes will be rebuilt after Restore, based on exported definitions.</li>" +
+                                "<li><strong>Snapshot</strong> contains the raw data including the indexes (definitions and data).</li>" +
+                            "</ul></small>" +
                         "</li>" +
                         "<li>Speed" +
-                            "<ul>" +
-                                "<li>Backup is usually much faster than a Snapshot</li>" +
-                            "</ul>" +
+                            "<small><ul>" +
+                                "<li><strong>Backup</strong> is usually much faster than a <strong>Snapshot</strong></li>" +
+                            "</ul></small>" +
                         "</li>" +
                         "<li>Size" +
-                            "<ul>" +
-                                "<li>Backup is much smaller than Snapshot</li>" +
-                            "</ul>" +
+                            "<small><ul>" +
+                                "<li><strong>Backup</strong> is much smaller than <strong>Snapshot</strong></li>" +
+                            "</ul></small>" +
                         "</li>" +
                         "<li>Restore" +
-                            "<ul>" +
-                                "<li>Restore of a Snapshot is faster than of a Backup</li>" +
-                            "</ul>" +
+                            "<small><ul>" +
+                                "<li>Restore of a <strong>Snapshot</strong> is faster than of a <strong>Backup</strong></li>" +
+                            "</ul></small>" +
                         "</li>" +
-                    "</ul>" +
-                    "* An incremental Snapshot is the same as an incremental Backup"
+                    "</ul></>" +
+                    "Note: An incremental Snapshot is the same as an incremental Backup"
+            });
+
+        popoverUtils.longWithHover($("#backup-age-info"),
+            {
+                content:
+                    "<ul>" +
+                    "<li>Define the minimum time to keep the Backups (and Snapshots) in the system.<br></li>" +
+                    "<li>A <strong>Full Backup</strong> that is older than the specified retention time will be deleted by RavenDB server.<br>" +
+                    "If <strong>Incremental Backups</strong> exists, the Full Backup, and its incrementals, are removed only if the <em>last incremental</em> is older than the defined retention time.<br></li>"+
+                    "<li>The deletion occurs when the backup task is triggered on its schedule.</li>" +
+                    "</ul>"
             });
 
         popoverUtils.longWithHover($("#bucket-info"),

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             throw new NotSupportedException();
         }
 
-        protected override Task<string> GetFirstFileInFolder(string folder)
+        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
             throw new NotSupportedException();
         }

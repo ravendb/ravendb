@@ -31,11 +31,18 @@ namespace Raven.Server.Background
                 }
                 catch (ObjectDisposedException)
                 {
-                    //we are disposed, so return "null" token                   
-                    return CancellationToken.None;
+                    //we are disposed, so return a Canceled token ( CancellationToken.None isn't canceled and causes task to freeze)               
+                    return CanceledToken.Value;
                 }
             }
         }
+
+        private static Lazy<CancellationToken> CanceledToken => new Lazy<CancellationToken>(() =>
+           {
+               var cts = new CancellationTokenSource();
+               cts.Cancel();
+               return cts.Token;
+           });
 
         public void Start()
         {
@@ -84,6 +91,10 @@ namespace Raven.Server.Background
 
                 // if cancellation requested then it will throw TaskCancelledException and we stop the work
                 await TimeoutManager.WaitFor(time, CancellationToken).ConfigureAwait(false); 
+                if(CancellationToken.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException(); //If we are disposed we need to throw OCE because this is the expected behavior
+                }
             }
             catch (Exception e) when (e is OperationCanceledException == false)
             {
@@ -134,7 +145,7 @@ namespace Raven.Server.Background
 
         protected abstract Task DoWork();
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             try
             {

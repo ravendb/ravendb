@@ -1248,11 +1248,17 @@ namespace Raven.Server.Documents.Replication
                     var operationsCount = 0;
 
                     var database = _replicationInfo.DocumentDatabase;
+                    var lastTransactionMarker = 0;
 
                     context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
-                        context.TransactionMarkerOffset = item.TransactionMarker;
+                        if (lastTransactionMarker != item.TransactionMarker)
+                        {
+                            context.TransactionMarkerOffset++;
+                            lastTransactionMarker = item.TransactionMarker;
+                        }
+
                         ++operationsCount;
                         using (item)
                         {

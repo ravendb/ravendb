@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Replication
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
 
-        public readonly DocumentDatabase Database;
+        public DocumentDatabase Database;
         private SingleUseFlag _isInitialized = new SingleUseFlag();
 
         private readonly Timer _reconnectAttemptTimer;
@@ -1219,6 +1219,8 @@ namespace Raven.Server.Documents.Replication
 
             ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 
+            ConflictResolver = null;
+
             if (_log.IsInfoEnabled)
                 _log.Info("Closing and disposing document replication connections.");
 
@@ -1230,6 +1232,7 @@ namespace Raven.Server.Documents.Replication
 
             Database.TombstoneCleaner?.Unsubscribe(this);
 
+            Database = null;
             ea.ThrowIfNeeded();
         }
 

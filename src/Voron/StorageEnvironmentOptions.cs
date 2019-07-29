@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -206,14 +207,22 @@ namespace Voron
 
             ShouldUseKeyPrefix = name => false;
 
-            MaxLogFileSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
+            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
+            
+            bool result;
+            if (bool.TryParse(shouldForceEnvVar, out result))
+                ForceUsing32BitsPager = result;
+
+
+            bool shouldConfigPagersRunInlimitedMemoryEnvironment = (sizeof(int) == IntPtr.Size || ForceUsing32BitsPager);
+            MaxLogFileSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = ((sizeof(int) == IntPtr.Size ? 32 : 256) * Constants.Size.Megabyte);
+            MaxScratchBufferSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 32 : 256) * Constants.Size.Megabyte);
 
             MaxNumberOfPagesInJournalBeforeFlush =
-                ((sizeof(int) == IntPtr.Size ? 4 : 32) * Constants.Size.Megabyte) / Constants.Storage.PageSize;
+                ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 32) * Constants.Size.Megabyte) / Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
@@ -231,14 +240,11 @@ namespace Voron
                     _log.Operations($"Catastrophic failure in {this}, StackTrace:'{stacktrace}'", e);
             });
 
-            var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
 
-            bool result;
-            if (bool.TryParse(shouldForceEnvVar, out result))
-                ForceUsing32BitsPager = result;
+            
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
-            PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
+            PrefetchResetThreshold = shouldConfigPagersRunInlimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
@@ -1091,6 +1097,8 @@ namespace Voron
 
         public unsafe void Dispose()
         {
+            NullifyHandlers();
+
             var copy = MasterKey;
             if (copy != null)
             {
@@ -1104,6 +1112,13 @@ namespace Voron
             ScratchSpaceUsage?.Dispose();
 
             Disposing();
+        }
+
+        public void NullifyHandlers()
+        {
+            SchemaUpgrader = null;
+            OnRecoveryError = null;
+            OnNonDurableFileSystemError = null;
         }
 
         protected abstract void Disposing();

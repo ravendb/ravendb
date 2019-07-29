@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -18,18 +18,21 @@ namespace StressTests.Cluster
     public class ClusterStressTests : ReplicationTestBase
     {
         // the values are lower to make the cluster less stable
-        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
-            string customConfigPath = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
-            if (customSettings == null)
-                customSettings = new Dictionary<string, string>();
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
 
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "10";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "3000";
-            customSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "10";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "3000";
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "50";
 
-            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+            return base.GetNewServer(options);
         }
 
         [Fact]
@@ -97,22 +100,35 @@ namespace StressTests.Cluster
                     }
                 }
 
-                var compareExchangeCount = new HashSet<long>();
-                var lastLog = 0L;
-
-                await ActionWithLeader((leader) =>
+                var maxTerm = cluster.Nodes.Select(x => x.ServerStore.Engine.CurrentTerm).Max();
+                long maxTermOld;
+                var attempts = 3 * numberOfNodes;
+                do
                 {
-                    using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    maxTermOld = maxTerm;
+                    await Task.Delay(TimeSpan.FromSeconds(3) * numberOfNodes);
+                    maxTerm = cluster.Nodes.Select(x => x.ServerStore.Engine.CurrentTerm).Max();
+
+                    attempts--; // cluster couldn't stabilize
+                } while (maxTerm != maxTermOld && attempts > 0);
+
+                var compareExchangeCount = new HashSet<long>();
+                var maxLog = 0L;
+
+                foreach (var n in cluster.Nodes.Where(x => x.ServerStore.Engine.CurrentTerm >= maxTerm))
+                {
+                    using (n.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        lastLog = leader.ServerStore.Engine.GetLastEntryIndex(ctx);
+                        var currentLog = n.ServerStore.Engine.GetLastEntryIndex(ctx);
+                        if (maxLog < currentLog)
+                            maxLog = currentLog;
                     }
-                    return Task.CompletedTask;
-                });
+                }
 
                 foreach (var node in cluster.Nodes)
                 {
-                    await node.ServerStore.Cluster.WaitForIndexNotification(lastLog);
+                    await node.ServerStore.Cluster.WaitForIndexNotification(maxLog, TimeSpan.FromMinutes(1));
 
                     using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())

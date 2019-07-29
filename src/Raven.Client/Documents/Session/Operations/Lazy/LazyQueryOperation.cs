@@ -56,12 +56,12 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                     queryResult.DurationInMs = -1; // taken from cache
             }
 
-            HandleResponse(queryResult);
+            HandleResponse(queryResult, response.Elapsed);
         }
 
-        private void HandleResponse(QueryResult queryResult)
+        private void HandleResponse(QueryResult queryResult, TimeSpan duration)
         {
-            _queryOperation.EnsureIsAcceptableAndSaveResult(queryResult);
+            _queryOperation.EnsureIsAcceptableAndSaveResult(queryResult, duration);
 
             _afterQueryExecuted?.Invoke(queryResult);
             Result = _queryOperation.Complete<T>();

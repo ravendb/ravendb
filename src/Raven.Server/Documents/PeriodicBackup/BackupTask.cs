@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 {
     public class BackupTask
     {
-        private const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
+        public const string DateTimeFormat = "yyyy-MM-dd-HH-mm-ss";
         private const string LegacyDateTimeFormat = "yyyy-MM-dd-HH-mm";
         private const string InProgressExtension = ".in-progress";
 

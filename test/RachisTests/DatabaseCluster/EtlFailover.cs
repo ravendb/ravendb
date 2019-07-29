@@ -328,10 +328,13 @@ namespace RachisTests.DatabaseCluster
                 var currentTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == currentNodeNodeTag);
 
                 // start server which originally was handling ETL task
-                GetNewServer(new Dictionary<string, string>()
-                {
-                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
-                }, runInMemory: false, deletePrevious: false, partialPath: originalServerDataDir);
+                GetNewServer(new ServerCreationOptions
+                    {
+                        CustomSettings = new Dictionary<string, string>
+                        {
+                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalServerUrl}
+                        }, RunInMemory = false, DeletePrevious = false, PartialPath = originalServerDataDir
+                    });
 
                 using (var store = new DocumentStore
                 {

@@ -447,7 +447,9 @@ namespace Raven.Server.Documents
                         var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
                         try
                         {
-                            await TxMerger.Enqueue(mergedCommands).WithCancellation(DatabaseShutdown);
+                            //If we get a database shutdown while we process a cluster tx command this
+                            //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
+                            await TxMerger.Enqueue(mergedCommands);
                         }
                         catch (Exception e)
                         {
@@ -485,7 +487,7 @@ namespace Raven.Server.Documents
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
-                    await TxMerger.Enqueue(mergedCommand).WithCancellation(DatabaseShutdown);
+                    await TxMerger.Enqueue(mergedCommand);
                     OnClusterTransactionCompletion(command, mergedCommand);
 
                     _clusterTransactionDelayOnFailure = 1000;
@@ -645,7 +647,7 @@ namespace Raven.Server.Documents
                         connection.Dispose();
                     });
                 }
-                
+
                 exceptionAggregator.Execute(() =>
                 {
                     TxMerger?.Dispose();

@@ -475,6 +475,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (value is DynamicBlittableJson)
                 return ValueType.DynamicJsonObject;
 
+            if (value is DynamicDictionary)
+                return ValueType.ConvertToJson;
+
             if (value is IEnumerable)
                 return ValueType.Enumerable;
 

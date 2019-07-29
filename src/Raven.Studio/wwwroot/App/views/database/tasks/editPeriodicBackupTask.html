@@ -8,7 +8,7 @@
         </button>
     </div>
     <div class="panel">
-        <div class="padding">           
+        <div class="padding">
             <h3 data-bind="text: $parent.isAddingNewBackupTask() ? `New Backup` : `Edit Backup`"></h3>
             <div class="row flex-row margin-bottom" data-bind="validationElement: name">
                 <label class="control-label col-sm-4 col-lg-2">Task name</label>
@@ -68,7 +68,6 @@
                         <input id="fullBackupToggle" type="checkbox" data-bind="checked: fullBackupEnabled">
                         <label for="fullBackupToggle">Enable full backup</label>
                     </div>
-
                     <div data-bind="compose: $root.fullBackupCronEditor, visible: fullBackupEnabled"></div>
                 </div>
             </div>
@@ -79,19 +78,50 @@
                         <input id="incrementalBackupToggle" type="checkbox" data-bind="checked: incrementalBackupEnabled">
                         <label for="incrementalBackupToggle">Enable incremental backup</label>
                     </div>
-
                     <div data-bind="validationElement: incrementalBackupEnabled">
                         <div class="help-block" data-bind="validationMessage: incrementalBackupEnabled"></div>
                     </div>
-                    
                     <div data-bind="compose: $root.incrementalBackupCronEditor, visible: incrementalBackupEnabled"></div>
                 </div>
             </div>
         </div>
     </div>
-    
+    <h3>Retention Policy</h3>
+    <div class="panel" data-bind="with: retentionPolicy">
+        <div class="padding">
+            <div class="toggle">
+                <input id="limit-backups-by-age" type="checkbox" data-bind="checked: retentionPolicyEnabled">
+                <label for="limit-backups-by-age">Limit # of backups by age</label>
+            </div>
+            <div class="row collapse" data-bind="collapse: retentionPolicyEnabled">
+                <div class="col-sm-8 col-lg-6 margin-top margin-bottom">
+                    <div class="row" data-bind="validationElement: minimumBackupAgeToKeep">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                            Minimum retention time <small><i id="backup-age-info" class="icon-info text-info"></i></small>
+                        </label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8">
+                            <input type="text" class="form-control" data-bind="durationPicker: minimumBackupAgeToKeep, durationPickerOptions: { showDays: true }" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-offset-4">
+                            <span data-bind="validationElement: minimumBackupAgeToKeep">
+                                <span class="help-block" data-bind="validationMessage: minimumBackupAgeToKeep"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row" data-bind="if: !minimumBackupAgeToKeep.error()">
+                        <div class="col-sm-offset-2">
+                            <div class="bg-info padding padding-sm small margin-top">
+                                <i class="icon-info"></i><span data-bind="html: humaneRetentionDescription"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <h3>Encryption</h3>
-    
     <div class="panel" data-bind="with: encryptionSettings">
         <div class="padding">
             <div class="flex-horizontal" data-bind="validationElement: enabled">
@@ -101,7 +131,6 @@
                 </div>
                 <span class="help-block" data-bind="validationMessage: enabled"></span>
             </div>
-
             <div data-bind="collapse: needExplicitConsent">
                 <div class="flex-horizontal" data-bind="validationElement: allowUnencryptedBackupForEncryptedDatabase">
                     <div class="toggle margin-right" data-bind="validationOptions: { insertMessages: false }">
@@ -109,10 +138,8 @@
                         <label for="toggle-unencrypted-backup">Allow unencrypted backup for encrypted database</label>
                     </div>
                     <span class="help-block" data-bind="validationMessage: allowUnencryptedBackupForEncryptedDatabase"></span>
-                </div>    
+                </div>
             </div>
-            
-            
             <div data-bind="collapse: showKeySourceDropdown()">
                 <div class="row flex-row margin-bottom" data-bind="validationElement: mode">
                     <label class="control-label col-sm-4 col-lg-2">Encryption Mode<i class="required"></i></label>
@@ -142,9 +169,7 @@
             </div>
         </div>
     </div>
-    
     <h3>Destination</h3>
-
     <div class="panel" data-bind="with: localSettings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -156,7 +181,6 @@
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>
-            
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: folderPath">
@@ -177,7 +201,6 @@
                             <span class="help-block" data-bind="validationMessage: folderPath"></span>
                         </div>
                     </div>
-
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="visible: $parent.backupLocationInfo().length">
@@ -221,7 +244,6 @@
             </div>
         </div>
     </div>
-
     <div class="panel" data-bind="with: s3Settings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -233,7 +255,6 @@
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>
-
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: bucketName">
@@ -292,7 +313,6 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-
     <div class="panel" data-bind="with: azureSettings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -304,7 +324,6 @@
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>
-
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: storageContainer">
@@ -345,7 +364,6 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    
     <div class="panel" data-bind="with: googleCloudSettings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -357,7 +375,6 @@
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>
-
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: bucket">
@@ -406,7 +423,6 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    
     <div class="panel" data-bind="with: glacierSettings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -418,7 +434,6 @@
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>
-            
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: vaultName">
@@ -477,7 +492,6 @@
         <div class="panel-addon" data-bind="template: { name: 'test-connection-results-template' }">
         </div>
     </div>
-    
     <div class="panel" data-bind="with: ftpSettings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -489,7 +503,6 @@
                     <small><i class="icon-info"></i></small>
                 </div>
             </div>
-
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom" data-bind="validationElement: url">
@@ -534,7 +547,6 @@
                             </div>
                         </div>
                     </div>  
-
                     <div class="text-right">
                         <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                             <i class="icon-rocket"></i>
@@ -548,8 +560,6 @@
         </div>
     </div>
 </form>
-
-
 
 <script type="text/html" id="test-connection-results-template">
     <div data-bind="with: testConnectionResult">

@@ -266,9 +266,7 @@ namespace FastTests
                                     {
                                         using (var adminStore = new DocumentStore
                                         {
-                                            Urls = UseFiddler(serverToUse.WebUrl),
-                                            Database = name,
-                                            Certificate = options.AdminCertificate
+                                            Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate
                                         }.Initialize())
                                         {
                                             result = adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
@@ -278,6 +276,18 @@ namespace FastTests
                                     {
                                         result = store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                                     }
+
+                                    AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(5)));
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    //failed to delete in time
+                                    continue;
+                                }
+                                catch (TimeoutException)
+                                {
+                                    //failed to delete in time
+                                    continue;
                                 }
                                 catch (DatabaseDoesNotExistException)
                                 {
@@ -286,8 +296,8 @@ namespace FastTests
                                 catch (NoLeaderException)
                                 {
                                     continue;
-                                }
-                             }
+                                }                                
+                            }
                         }
                     };
                     CreatedStores.Add(store);

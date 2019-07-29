@@ -96,7 +96,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public AllocatedMemoryData Allocate(int size)
         {
-            if (_isDisposed)
+            if (_isDisposed ?? true)
                 goto ErrorDisposed;
 
             if (_ptrStart == null)
@@ -315,7 +315,7 @@ namespace Sparrow.Json
         }
         public void Dispose(bool disposing)
         {
-            if (!_isDisposed.Raise())
+            if (!_isDisposed?.Raise() ?? true)
                 return;
 
             if (disposing)
@@ -349,7 +349,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Return(AllocatedMemoryData allocation)
         {
-            if (_isDisposed)
+            if (_isDisposed ?? true)
                 return;
 
 

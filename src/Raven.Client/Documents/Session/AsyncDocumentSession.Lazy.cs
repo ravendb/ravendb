@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Session
 
                 var responseTimeDuration = new ResponseTimeInformation();
 
-                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, token).ConfigureAwait(false))
+                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, sw, token).ConfigureAwait(false))
                 {
                     await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
                 }
@@ -98,6 +98,8 @@ namespace Raven.Client.Documents.Session
                     if (OnEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
                         value(pendingLazyOperation.Result);
                 }
+
+                sw.Stop();
                 responseTimeDuration.TotalClientDuration = sw.Elapsed;
                 return responseTimeDuration;
             }
@@ -107,7 +109,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests, CancellationToken token = default)
+        private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation, List<GetRequest> requests, Stopwatch sw, CancellationToken token = default)
         {
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
@@ -119,6 +121,7 @@ namespace Raven.Client.Documents.Session
                 var response = responses[i];
 
                 response.Headers.TryGetValue(Constants.Headers.RequestTime, out string tempReqTime);
+                response.Elapsed = sw.Elapsed;
 
                 long.TryParse(tempReqTime, out long totalTime);
 

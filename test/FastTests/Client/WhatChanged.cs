@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -317,6 +319,126 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public void RemovingAndAddingSameAmountOfFieldsToObjectShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docID = "d/1";
+                using (var session = store.OpenSession())
+                {
+                    var d = new Doc();
+                    session.Store(d, docID);
+                    var meta = session.Advanced.GetMetadataFor(d);
+
+                    meta["Test-A"] = new[] { "a", "a", "a" };
+                    meta["Test-C"] = new[] { "c", "c", "c" };
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var d = session.Load<Doc>(docID);
+                    var meta = session.Advanced.GetMetadataFor(d);
+
+                    meta["Test-A"] = new[] { "b", "a", "c" };
+
+                    var changes = session.Advanced.WhatChanged();
+                    Assert.True(changes.Count == 1);
+                    Assert.True(changes[docID].Length == 5);
+                    Assert.True(changes[docID][3].Change == DocumentsChanges.ChangeType.ArrayValueChanged);
+                    Assert.True(changes[docID][3].FieldName == "Test-A");
+                    Assert.True(changes[docID][4].Change == DocumentsChanges.ChangeType.ArrayValueChanged);
+                    Assert.True(changes[docID][4].FieldName == "Test-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var d = session.Load<Doc>(docID);
+                    var meta = session.Advanced.GetMetadataFor(d);
+
+                    meta.Remove("Test-A");
+
+                    var changes = session.Advanced.WhatChanged();
+                    Assert.True(changes.Count == 1 && changes.Values.First()[0].Change == DocumentsChanges.ChangeType.RemovedField);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var d = session.Load<Doc>(docID);
+                    var meta = session.Advanced.GetMetadataFor(d);
+
+                    meta.Remove("Test-A");
+                    meta.Remove("Test-C");
+                    meta["Test-B"] = new[] { "b", "b", "b" };
+                    meta["Test-D"] = new[] { "d", "d", "d" };
+
+                    var changes = session.Advanced.WhatChanged();
+                    Assert.True(changes.Count == 1);
+                    Assert.True(changes[docID].Length == 7);
+                    Assert.True(changes[docID][0].Change == DocumentsChanges.ChangeType.RemovedField);
+                    Assert.True(changes[docID][0].FieldName == "Test-A");
+                    Assert.True(changes[docID][1].Change == DocumentsChanges.ChangeType.RemovedField);
+                    Assert.True(changes[docID][1].FieldName == "Test-C");
+                    Assert.True(changes[docID][5].Change == DocumentsChanges.ChangeType.NewField);
+                    Assert.True(changes[docID][5].FieldName == "Test-B");
+                    Assert.True(changes[docID][6].Change == DocumentsChanges.ChangeType.NewField);
+                    Assert.True(changes[docID][6].FieldName == "Test-D");
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var d = session.Load<Doc>(docID);
+                    var meta = session.Advanced.GetMetadataFor(d);
+
+
+                    meta.Remove("Test-A");
+                    meta["Test-B"] = new[] { "b", "b", "b" };
+
+                    var changes = session.Advanced.WhatChanged();
+                    Assert.True(changes.Count == 1);
+                    Assert.True(changes[docID][0].Change == DocumentsChanges.ChangeType.RemovedField);
+                    Assert.True(changes[docID][0].FieldName == "Test-A");
+                    Assert.True(changes[docID][4].Change == DocumentsChanges.ChangeType.NewField);
+                    Assert.True(changes[docID][4].FieldName == "Test-B");
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSeeChangesWhenAddingGuidsToArray()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var d = new Doc();
+                    d.SomeGuids.Add(Guid.NewGuid());
+                    session.Store(d, "d/1");
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var d = session.Load<Doc>("d/1");
+                    d.SomeGuids.Add(Guid.NewGuid());
+
+                    var changes = session.Advanced.WhatChanged();
+                    Assert.True(changes.Count == 1 && changes.Values.First()[0].Change == DocumentsChanges.ChangeType.ArrayValueAdded);
+                }
+            }
+        }
+    }
+
+    public class Doc
+    {
+        public Doc()
+        {
+            SomeGuids = new List<Guid>();
+        }
+
+        public List<Guid> SomeGuids { get; set; }
     }
 
     public class BasicName

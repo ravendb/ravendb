@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -14,6 +15,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 
 namespace Raven.Server.Rachis
 {
@@ -47,6 +49,23 @@ namespace Raven.Server.Rachis
             None,
             Appended,
             Committed
+        }
+
+        private long _lastTicks;
+        private long GetUniqueTicks(Transaction transaction)
+        {
+            if (transaction.IsWriteTransaction == false)
+                throw new InvalidOperationException("You can acquire unique tick only under write tx.");
+
+            var ticks = DateTime.UtcNow.Ticks;
+
+            if (ticks <= _lastTicks)
+            {
+                ticks = _lastTicks + 1;
+            }
+            _lastTicks = ticks;
+
+            return ticks;
         }
 
         static RachisLogHistory()
@@ -127,7 +146,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
+                tvb.Add(Bits.SwapBytes(GetUniqueTicks(context.Transaction.InnerTransaction)));
                 tvb.Add(term);
                 tvb.Add(0L);
                 tvb.Add(typeSlice);
@@ -180,7 +199,7 @@ namespace Raven.Server.Rachis
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(DateTime.UtcNow.Ticks));
+                tvb.Add(Bits.SwapBytes(GetUniqueTicks(context.Transaction.InnerTransaction)));
                 tvb.Add(*(long*)reader.Read((int)(LogHistoryColumn.Term), out _));
                 tvb.Add(term);
                 tvb.Add(typeSlice);

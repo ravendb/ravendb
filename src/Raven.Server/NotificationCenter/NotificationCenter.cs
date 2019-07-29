@@ -32,7 +32,9 @@ namespace Raven.Server.NotificationCenter
             RequestLatency = new RequestLatency(this, _notificationsStorage, database);
             EtlNotifications = new EtlNotifications(this, _notificationsStorage, _database);
             SlowWrites = new SlowWriteNotifications(this, _notificationsStorage, _database);
+            OutOfMemory = new OutOfMemoryNotifications(this);
         }
+
 
         public bool IsInitialized { get; set; }
 
@@ -51,7 +53,8 @@ namespace Raven.Server.NotificationCenter
         public readonly RequestLatency RequestLatency;
         public readonly EtlNotifications EtlNotifications;
         public readonly SlowWriteNotifications SlowWrites;
-
+        public readonly OutOfMemoryNotifications OutOfMemory;
+        
         public readonly NotificationCenterOptions Options;
         private readonly RavenConfiguration _config;
 
