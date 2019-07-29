@@ -1646,6 +1646,8 @@ namespace Raven.Server
                 int supported;
                 while (true)
                 {
+                    context.Reset();
+                    context.Renew();
                     using (var headerJson = await context.ParseToMemoryAsync(
                         stream,
                         "tcp-header",

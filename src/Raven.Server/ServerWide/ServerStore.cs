@@ -269,6 +269,9 @@ namespace Raven.Server.ServerWide
                                     while (cancelTask.IsCompleted == false && 
                                            (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent))
                                     {
+                                        context.Reset();
+					                    context.Renew();
+
                                         var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)
                                         {
