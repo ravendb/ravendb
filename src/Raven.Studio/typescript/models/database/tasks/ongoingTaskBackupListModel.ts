@@ -183,8 +183,10 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         this.lastIncrementalBackup(dto.LastIncrementalBackup);
         this.nextBackup(dto.NextBackup);
         this.onGoingBackup(dto.OnGoingBackup);
-        this.retentionPolicyDisabled(dto.RetentionPolicy.Disabled);
-        this.retentionPolicyPeriod(dto.RetentionPolicy.MinimumBackupAgeToKeep);
+        
+        // Check backward compatibility
+        this.retentionPolicyDisabled(dto.RetentionPolicy ? dto.RetentionPolicy.Disabled : true);
+        this.retentionPolicyPeriod(dto.RetentionPolicy ? dto.RetentionPolicy.MinimumBackupAgeToKeep : "0.0:00:00");
         
         if (this.onGoingBackup()) {
             this.watchProvider(this);
