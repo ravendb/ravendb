@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (notification.CollectionName.Equals(Subscription.Collection, StringComparison.InvariantCultureIgnoreCase))
+                if (notification.CollectionName.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
