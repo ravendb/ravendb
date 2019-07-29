@@ -1142,7 +1142,7 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     if (ShouldReplace())
                                     {
-                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.InvariantCultureIgnoreCase);
+                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty, StringComparison.OrdinalIgnoreCase);
                                         _isReplacing = true;
 
                                         if (batchCompleted)
