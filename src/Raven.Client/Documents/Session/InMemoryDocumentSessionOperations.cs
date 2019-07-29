@@ -467,7 +467,7 @@ more responsive application.
 
             if (string.IsNullOrEmpty(id))
             {
-                return DeserializeFromTransformer(entityType, null, document);
+                return DeserializeFromTransformer(entityType, null, document,false);
             }
 
             if (DocumentsById.TryGetValue(id, out var docInfo))
@@ -475,7 +475,7 @@ more responsive application.
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
                 if (docInfo.Entity == null)
-                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document);
+                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity: !noTracking);
 
                 if (noTracking == false)
                 {
@@ -489,7 +489,7 @@ more responsive application.
             if (IncludedDocumentsById.TryGetValue(id, out docInfo))
             {
                 if (docInfo.Entity == null)
-                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document);
+                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity: !noTracking);
 
                 if (noTracking == false)
                 {
@@ -501,7 +501,7 @@ more responsive application.
                 return docInfo.Entity;
             }
 
-            var entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document);
+            var entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity: !noTracking);
 
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 throw new InvalidOperationException("Document " + id + " must have Change Vector");
@@ -1634,10 +1634,10 @@ more responsive application.
             }
         }
 
-        private object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
+        private object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document, bool trackEntity)
         {
             HandleInternalMetadata(document);
-            return EntityToBlittable.ConvertToEntity(entityType, id, ref document);
+            return EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity);
         }
 
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -1692,7 +1692,10 @@ more responsive application.
                 documentInfo.ChangeVector = (LazyStringValue)changeVector;
             }
 
-            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document);
+            if (documentInfo.Entity != null && NoTracking == false)
+                EntityToBlittable.RemoveFromMissing(documentInfo.Entity);
+
+            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document,!NoTracking);
             documentInfo.Document = document;
 
             var type = entity.GetType();
