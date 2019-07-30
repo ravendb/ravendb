@@ -12,11 +12,11 @@ using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using static Raven.Server.Documents.DocumentsStorage;
-using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -232,9 +232,9 @@ namespace Raven.Server.Documents
             var data = GetCounterValuesData(context, ref tvh.Reader);
             var docId = ExtractDocId(context, ref tvh.Reader);
 
-            return new ReplicationBatchItem
+            return new CounterReplicationItem
             {
-                Type = ReplicationItemType.CounterGroup,
+                Type = ReplicationBatchItem.ReplicationItemType.CounterGroup,
                 Id = docId,
                 ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
                 Values = data,

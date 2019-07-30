@@ -93,6 +93,9 @@ namespace Sparrow.Json
             }
         }
 
+        public unsafe LazyStringValue Empty => _empty ?? (_empty = GetLazyString(string.Empty));
+        private LazyStringValue _empty;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
         {

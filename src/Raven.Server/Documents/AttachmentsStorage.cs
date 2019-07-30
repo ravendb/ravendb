@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents
 
                 attachment.Stream = stream;
 
-                yield return ReplicationBatchItem.From(attachment);
+                yield return AttachmentReplicationItem.From(context, attachment);
             }
         }
 

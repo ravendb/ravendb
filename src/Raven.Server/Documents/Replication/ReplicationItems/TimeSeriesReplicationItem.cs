@@ -1,0 +1,99 @@
+﻿using System.Diagnostics;
+using System.IO;
+using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Json;
+using Sparrow.Server;
+using Voron;
+
+namespace Raven.Server.Documents.Replication.ReplicationItems
+{
+    public class TimeSeriesReplicationItem : ReplicationBatchItem
+    {
+        public Slice Key;
+        public LazyStringValue Collection;
+        public TimeSeriesValuesSegment Segment;
+        public override long AssertChangeVectorSize()
+        {
+            return sizeof(byte) + // type
+
+                   sizeof(int) + // change vector size
+                   Encodings.Utf8.GetByteCount(ChangeVector) + // change vector
+
+                   sizeof(short) + // transaction marker
+
+                   sizeof(int) + // segment key size
+                   Key.Size + // segment key
+
+                   sizeof(int) + // size of the segment
+                   Segment.NumberOfBytes + // data
+
+                   sizeof(int) + // size of doc collection
+                   Collection.Size; // doc collection;
+        }
+
+        public override long Size => Segment.NumberOfBytes;
+
+        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
+        {
+            fixed (byte* pTemp = tempBuffer)
+            {
+                if (AssertChangeVectorSize() > tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(this, Key.ToString());
+
+                var tempBufferPos = WriteCommon(changeVector, pTemp);
+
+                *(int*)(pTemp + tempBufferPos) = Key.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, Key.Content.Ptr, Key.Size);
+                tempBufferPos += Key.Size;
+
+                *(int*)(pTemp + tempBufferPos) = Segment.NumberOfBytes;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, Segment.Ptr, Segment.NumberOfBytes);
+                tempBufferPos += Segment.NumberOfBytes;
+
+                *(int*)(pTemp + tempBufferPos) = Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, Collection.Buffer, Collection.Size);
+                tempBufferPos += Collection.Size;
+
+                stream.Write(tempBuffer, 0, tempBufferPos);
+
+                stats.RecordTimeSeriesOutput(Segment.NumberOfBytes);
+            }
+        }
+
+        public override unsafe void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats)
+        {
+            // TODO: add stats
+            var keySize = *(int*)Reader.ReadExactly(sizeof(int));
+            var key = Reader.ReadExactly(keySize);
+            ToDispose(Slice.From(context.Allocator, key, keySize, ByteStringType.Immutable, out Key));
+
+            var segmentSize = *(int*)Reader.ReadExactly(sizeof(int));
+            var mem = Reader.AllocateMemory(segmentSize);
+            Memory.Copy(mem, Reader.ReadExactly(segmentSize), segmentSize);
+            Segment = new TimeSeriesValuesSegment(mem, segmentSize);
+
+            SetLazyStringValueFromString(context, out Collection);
+            Debug.Assert(Collection != null);
+
+        }
+
+        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
+        {
+            return new TimeSeriesReplicationItem
+            {
+                Collection = Collection,
+                Segment = Segment,
+                Key = Key
+            };
+        }
+
+        public override void InnerDispose()
+        {
+        }
+    }
+}

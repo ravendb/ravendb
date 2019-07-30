@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -31,6 +32,9 @@ using Raven.Server.ServerWide;
 using Sparrow.Server;
 using Size = Sparrow.Size;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
+using Sparrow.Binary;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -424,96 +428,6 @@ namespace Raven.Server.Documents.Replication
             OnDocumentsReceived(this);
         }
 
-        private void ReadExactly(long size, Stream file)
-        {
-            while (size > 0)
-            {
-                var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
-                if (available == 0)
-                {
-                    var read = _connectionOptions.Stream.Read(_copiedBuffer.Buffer.Buffer.Array,
-                      _copiedBuffer.Buffer.Buffer.Offset,
-                      _copiedBuffer.Buffer.Buffer.Count);
-                    if (read == 0)
-                        throw new EndOfStreamException();
-
-                    _copiedBuffer.Buffer.Valid = read;
-                    _copiedBuffer.Buffer.Used = 0;
-                    continue;
-                }
-                var min = (int)Math.Min(size, available);
-                file.Write(_copiedBuffer.Buffer.Buffer.Array,
-                    _copiedBuffer.Buffer.Buffer.Offset + _copiedBuffer.Buffer.Used,
-                    min);
-                _copiedBuffer.Buffer.Used += min;
-                size -= min;
-            }
-        }
-
-        private unsafe void ReadExactly(byte* ptr, int size)
-        {
-            var written = 0;
-
-            while (size > 0)
-            {
-                var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
-                if (available == 0)
-                {
-                    var read = _connectionOptions.Stream.Read(_copiedBuffer.Buffer.Buffer.Array,
-                      _copiedBuffer.Buffer.Buffer.Offset,
-                      _copiedBuffer.Buffer.Buffer.Count);
-                    if (read == 0)
-                        throw new EndOfStreamException();
-
-                    _copiedBuffer.Buffer.Valid = read;
-                    _copiedBuffer.Buffer.Used = 0;
-                    continue;
-                }
-
-                var min = Math.Min(size, available);
-                var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
-                Memory.Copy(ptr + written, result, (uint)min);
-                written += min;
-                _copiedBuffer.Buffer.Used += min;
-                size -= min;
-            }
-        }
-
-        private unsafe byte* ReadExactly(int size)
-        {
-            var diff = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
-            if (diff >= size)
-            {
-                var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
-                _copiedBuffer.Buffer.Used += size;
-                return result;
-            }
-            return ReadExactlyUnlikely(size, diff);
-        }
-
-        private unsafe byte* ReadExactlyUnlikely(int size, int diff)
-        {
-            Memory.Move(
-                _copiedBuffer.Buffer.Pointer,
-                _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used,
-                diff);
-            _copiedBuffer.Buffer.Valid = diff;
-            _copiedBuffer.Buffer.Used = 0;
-            while (diff < size)
-            {
-                var read = _connectionOptions.Stream.Read(_copiedBuffer.Buffer.Buffer.Array,
-                    _copiedBuffer.Buffer.Buffer.Offset + diff,
-                    _copiedBuffer.Buffer.Buffer.Count - diff);
-                if (read == 0)
-                    throw new EndOfStreamException();
-
-                _copiedBuffer.Buffer.Valid += read;
-                diff += read;
-            }
-            var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
-            _copiedBuffer.Buffer.Used += size;
-            return result;
-        }
 
         public class DataForReplicationCommand : IDisposable
         {
@@ -523,11 +437,9 @@ namespace Raven.Server.Documents.Replication
 
             internal string SourceDatabaseId { get; set; }
 
-            internal ArraySegment<ReplicationItem> ReplicatedItems { get; set; }
+            internal ReplicationBatchItem[] ReplicatedItems { get; set; }
 
-            internal ArraySegment<ReplicationAttachmentStream> AttachmentStreams { get; set; }
-
-            internal Dictionary<Slice, ReplicationAttachmentStream> ReplicatedAttachmentStreams { get; set; }
+            internal Dictionary<Slice, AttachmentReplicationItem> ReplicatedAttachmentStreams { get; set; }
 
             public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
@@ -535,26 +447,25 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
-                if (ReplicatedItems.Array != null)
+                if (ReplicatedAttachmentStreams != null)
+                {
+                    foreach (var item in ReplicatedAttachmentStreams.Values)
+                    {
+                        item.Dispose();
+                    }
+
+                    ReplicatedAttachmentStreams?.Clear();
+                }
+
+                if (ReplicatedItems != null)
                 {
                     foreach (var item in ReplicatedItems)
                     {
-                        item.Document?.Dispose();
-                        item.CounterValues?.Dispose();
+                        item.Dispose();
                     }
-
-                    ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
                 }
 
-                if (AttachmentStreams.Array != null)
-                {
-                    foreach (var attachmentStream in AttachmentStreams)
-                    {
-                        attachmentStream.Dispose();
-                    }
-
-                    ArrayPool<ReplicationAttachmentStream>.Shared.Return(AttachmentStreams.Array, clearArray: true);
-                }
+                ReplicatedItems = null;
             }
         }
 
@@ -584,12 +495,10 @@ namespace Raven.Server.Documents.Replication
                     {
                         // this will read the documents to memory from the network
                         // without holding the write tx open
-                        dataForReplicationCommand.ReplicatedItems = ReadItemsFromSource(replicatedItemsCount, documentsContext, incomingReplicationAllocator, networkStats);
+                        var reader = new Reader(_stream, _copiedBuffer, incomingReplicationAllocator);
 
-                        using (networkStats.For(ReplicationOperation.Incoming.AttachmentRead))
-                        {
-                            ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand);
-                        }
+                        ReadItemsFromSource(replicatedItemsCount, documentsContext, dataForReplicationCommand, reader, networkStats);
+                        ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
                     }
 
                     if (_log.IsInfoEnabled)
@@ -723,228 +632,24 @@ namespace Raven.Server.Documents.Replication
         private IDisposable _connectionOptionsDisposable;
         private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
-
-        public struct ReplicationItem : IDisposable
+        
+        private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader, IncomingReplicationStatsScope stats)
         {
-            public short TransactionMarker;
-            public ReplicationBatchItem.ReplicationItemType Type;
-
-            #region Document
-
-            public string Id;
-            public string ChangeVector;
-            public int DocumentSize;
-            public string Collection;
-            public long LastModifiedTicks;
-            public DocumentFlags Flags;
-            public BlittableJsonReaderObject Document;
-
-            #endregion
-
-            #region Counter
-
-            public long CounterValue;
-
-            public BlittableJsonReaderObject CounterValues;
-
-            #endregion
-
-            #region Attachment
-
-            public Slice Key;
-            public ByteStringContext.InternalScope KeyDispose;
-
-            public Slice Name;
-            public ByteStringContext.InternalScope NameDispose;
-
-            public Slice ContentType;
-            public ByteStringContext.InternalScope ContentTypeDispose;
-
-            public Slice Base64Hash;
-            public ByteStringContext.InternalScope Base64HashDispose;
-
-
-            #endregion
-
-            public void Dispose()
-            {
-                if (Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                {
-                    KeyDispose.Dispose();
-                    NameDispose.Dispose();
-                    ContentTypeDispose.Dispose();
-                    Base64HashDispose.Dispose();
-                }
-                else if (Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone ||
-                         Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
-                {
-                    KeyDispose.Dispose();
-                }
-            }
-        }
-
-        internal struct ReplicationAttachmentStream : IDisposable
-        {
-            public Slice Base64Hash;
-            public ByteStringContext.InternalScope Base64HashDispose;
-
-            public Stream Stream;
-
-            public void Dispose()
-            {
-                Base64HashDispose.Dispose();
-                Stream.Dispose();
-            }
-        }
-
-        private unsafe ArraySegment<ReplicationItem> ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context,
-            IncomingReplicationAllocator incomingReplicationAllocator, IncomingReplicationStatsScope stats)
-        {
-            var items = ArrayPool<ReplicationItem>.Shared.Rent(replicatedDocs);
-
-            var documentRead = stats.For(ReplicationOperation.Incoming.DocumentRead, start: false);
-            var attachmentRead = stats.For(ReplicationOperation.Incoming.AttachmentRead, start: false);
-            var tombstoneRead = stats.For(ReplicationOperation.Incoming.TombstoneRead, start: false);
+            if (data.ReplicatedItems == null)
+                data.ReplicatedItems = new ReplicationBatchItem[replicatedDocs];
 
             for (var i = 0; i < replicatedDocs; i++)
             {
                 stats.RecordInputAttempt();
 
-                ref ReplicationItem item = ref items[i];
-                item.Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
-
-                var changeVectorSize = *(int*)ReadExactly(sizeof(int));
-
-                if (changeVectorSize != 0)
-                    item.ChangeVector = Encoding.UTF8.GetString(ReadExactly(changeVectorSize), changeVectorSize);
-
-                item.TransactionMarker = *(short*)ReadExactly(sizeof(short));
-
-                if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                {
-                    stats.RecordAttachmentRead();
-
-                    using (attachmentRead.Start())
-                    {
-                        var loweredKeySize = *(int*)ReadExactly(sizeof(int));
-                        item.KeyDispose = Slice.From(context.Allocator, ReadExactly(loweredKeySize), loweredKeySize, out item.Key);
-
-                        var nameSize = *(int*)ReadExactly(sizeof(int));
-                        var name = Encoding.UTF8.GetString(ReadExactly(nameSize), nameSize);
-                        item.NameDispose = DocumentIdWorker.GetStringPreserveCase(context, name, out item.Name);
-
-                        var contentTypeSize = *(int*)ReadExactly(sizeof(int));
-                        var contentType = Encoding.UTF8.GetString(ReadExactly(contentTypeSize), contentTypeSize);
-                        item.ContentTypeDispose = DocumentIdWorker.GetStringPreserveCase(context, contentType, out item.ContentType);
-
-                        var base64HashSize = *ReadExactly(sizeof(byte));
-                        item.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out item.Base64Hash);
-                    }
-                }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
-                {
-                    stats.RecordAttachmentTombstoneRead();
-
-                    using (tombstoneRead.Start())
-                    {
-                        item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
-
-                        var keySize = *(int*)ReadExactly(sizeof(int));
-                        item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
-                    }
-                }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
-                {
-                    stats.RecordRevisionTombstoneRead();
-
-                    using (tombstoneRead.Start())
-                    {
-                        item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
-
-                        var keySize = *(int*)ReadExactly(sizeof(int));
-                        item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
-
-                        var collectionSize = *(int*)ReadExactly(sizeof(int));
-                        Debug.Assert(collectionSize > 0);
-                        item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
-                    }
-                }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
-                {
-                    var keySize = *(int*)ReadExactly(sizeof(int));
-                    item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
-
-                    var collectionSize = *(int*)ReadExactly(sizeof(int));
-                    Debug.Assert(collectionSize > 0);
-                    item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
-
-                    var sizeOfData = *(int*)ReadExactly(sizeof(int));
-                    item.DocumentSize = sizeOfData;
-
-                    var mem = incomingReplicationAllocator.AllocateMemoryForDocument(sizeOfData);
-                    ReadExactly(mem, sizeOfData);
-
-                    item.CounterValues = new BlittableJsonReaderObject(mem, sizeOfData, context);
-                    item.CounterValues.BlittableValidation();
-                }
-                else if (item.Type == ReplicationBatchItem.ReplicationItemType.LegacyCounter ||
-#pragma warning disable 618
-                         item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone)
-#pragma warning restore 618
-                {
-                    throw new InvalidOperationException($"Received an item of type '{item.Type}'. Replication of counters and counter tombstones " +
-                                                        $"between 4.1.x and {ServerVersion.Version} is not supported.");
-                }
-                else
-                {
-                    IncomingReplicationStatsScope scope;
-
-                    if (item.Type != ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
-                    {
-                        scope = documentRead;
-                        stats.RecordDocumentRead();
-                    }
-                    else
-                    {
-                        scope = tombstoneRead;
-                        stats.RecordDocumentTombstoneRead();
-                    }
-
-                    using (scope.Start())
-                    {
-                        item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
-
-                        item.Flags = *(DocumentFlags*)ReadExactly(sizeof(DocumentFlags)) | DocumentFlags.FromReplication;
-
-                        var keySize = *(int*)ReadExactly(sizeof(int));
-                        item.Id = Encoding.UTF8.GetString(ReadExactly(keySize), keySize);
-
-                        var documentSize = item.DocumentSize = *(int*)ReadExactly(sizeof(int));
-                        if (documentSize != -1) //if -1, then this is a tombstone
-                        {
-                            var mem = incomingReplicationAllocator.AllocateMemoryForDocument(documentSize);
-                            ReadExactly(mem, documentSize);
-
-                            item.Document = new BlittableJsonReaderObject(mem, documentSize, context);
-                            item.Document.BlittableValidation();
-                        }
-                        else
-                        {
-                            // read the collection
-                            var collectionSize = *(int*)ReadExactly(sizeof(int));
-                            if (collectionSize != -1)
-                            {
-                                item.Collection = Encoding.UTF8.GetString(ReadExactly(collectionSize), collectionSize);
-                            }
-                        }
-                    }
-                }
+                var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
+                item.ReadChangeVectorAndMarker();
+                item.Read(context, stats);
+                data.ReplicatedItems[i] = item;
             }
-
-            return new ArraySegment<ReplicationItem>(items, 0, replicatedDocs);
         }
 
-        private unsafe class IncomingReplicationAllocator : IDisposable
+        public unsafe class IncomingReplicationAllocator : IDisposable
         {
             private readonly DocumentsOperationContext _context;
             private readonly long _maxSizeForContextUseInBytes;
@@ -966,7 +671,7 @@ namespace Raven.Server.Documents.Replication
                 _minSizeToAllocateNonContextUseInBytes = new Size(minSizeToNonContextAllocationInMb, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
             }
 
-            public byte* AllocateMemoryForDocument(int size)
+            public byte* AllocateMemory(int size)
             {
                 TotalDocumentsSizeInBytes += size;
                 if (TotalDocumentsSizeInBytes <= _maxSizeForContextUseInBytes)
@@ -1045,33 +750,26 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void ReadAttachmentStreamsFromSource(int attachmentStreamCount,
-            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand)
+        private void ReadAttachmentStreamsFromSource(int attachmentStreamCount,
+            DocumentsOperationContext context, DataForReplicationCommand dataForReplicationCommand, Reader reader, IncomingReplicationStatsScope stats)
         {
             if (attachmentStreamCount == 0)
                 return;
 
-            var items = ArrayPool<ReplicationAttachmentStream>.Shared.Rent(attachmentStreamCount);
-            var replicatedAttachmentStreams = new Dictionary<Slice, ReplicationAttachmentStream>(SliceComparer.Instance);
+            var replicatedAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
 
             for (var i = 0; i < attachmentStreamCount; i++)
             {
-                var type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte));
-                Debug.Assert(type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
+                var attachment = (AttachmentReplicationItem)ReplicationBatchItem.ReadTypeAndInstantiate(reader);
+                Debug.Assert(attachment.Type == ReplicationBatchItem.ReplicationItemType.AttachmentStream);
 
-                ref ReplicationAttachmentStream attachment = ref items[i];
-
-                var base64HashSize = *ReadExactly(sizeof(byte));
-                attachment.Base64HashDispose = Slice.From(context.Allocator, ReadExactly(base64HashSize), base64HashSize, out attachment.Base64Hash);
-
-                var streamLength = *(long*)ReadExactly(sizeof(long));
-                attachment.Stream = _attachmentStreamsTempFile.StartNewStream();
-                ReadExactly(streamLength, attachment.Stream);
-                attachment.Stream.Flush();
-                replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
+                using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
+                {
+                    attachment.ReadStream(context, _attachmentStreamsTempFile);
+                    replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
+                }
             }
 
-            dataForReplicationCommand.AttachmentStreams = new ArraySegment<ReplicationAttachmentStream>(items, 0, attachmentStreamCount);
             dataForReplicationCommand.ReplicatedAttachmentStreams = replicatedAttachmentStreams;
         }
 
@@ -1228,7 +926,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly long _lastEtag;
             private readonly DataForReplicationCommand _replicationInfo;
@@ -1259,54 +957,65 @@ namespace Raven.Server.Documents.Replication
                             lastTransactionMarker = item.TransactionMarker;
                         }
 
-                        ++operationsCount;
-                        using (item)
+                        operationsCount++;
+                        var rcvdChangeVector = item.ChangeVector;
+                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
+
+                        switch (item)
                         {
-                            Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
+                            case AttachmentReplicationItem attachment:
+                                item.ToDispose(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name,out _, out Slice attachmentName));
+                                item.ToDispose(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                            var rcvdChangeVector = item.ChangeVector;
+                                database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName, contentType, attachment.Base64Hash,
+                                    attachment.ChangeVector);
 
-                            context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
-                            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
-                            {
-                                database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
-                                    item.ContentType, item.Base64Hash, item.ChangeVector);
-
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out var attachmentStream))
+                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentWithStream))
                                 {
-                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash,
-                                        attachmentStream.Stream);
-                                    _replicationInfo.ReplicatedAttachmentStreams.Remove(item.Base64Hash);
+                                    Debug.Assert(SliceComparer.Compare(attachmentWithStream.Base64Hash, attachment.Base64Hash) == 0);
+                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentWithStream.Base64Hash,
+                                        attachmentWithStream.Stream);
+                                    _replicationInfo.ReplicatedAttachmentStreams.Remove(attachment.Base64Hash);
                                 }
-                            }
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
-                            {
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector,
-                                    item.LastModifiedTicks);
-                            }
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
-                            {
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector, item.LastModifiedTicks);
-                            }
-                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
-                            {
-                                database.DocumentsStorage.CountersStorage.PutCounters(context, item.Id, item.Collection, item.ChangeVector, item.CounterValues);
-                            }
-                            else
-                            {
-                                BlittableJsonReaderObject document = null;
 
-                                // no need to load document data for tombstones
-                                // document size == -1 --> doc is a tombstone
-                                if (item.DocumentSize >= 0)
+                                break;
+                            case AttachmentTombstoneReplicationItem attachmentTombstone:
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                    rcvdChangeVector,
+                                    attachmentTombstone.LastModifiedTicks);
+                                break;
+
+                            case RevisionTombstoneReplicationItem revisionTombstone:
+                                item.ToDispose(Slice.From(context.Allocator, revisionTombstone.Id, out var id)); // TODO: From not required
+
+                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
+                                    rcvdChangeVector, revisionTombstone.LastModifiedTicks);
+                                break;
+                            case CounterReplicationItem counter:
+                                database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector, counter.Values);
+                                break;
+                            case TimeSeriesReplicationItem segment:
+                                var tss = database.DocumentsStorage.TimeSeriesStorage;
+                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, out var docId, out var name, out var baseline);
+
+                                foreach (var result in segment.Segment.YieldAllValues(context, baseline))
+                                {
+                                    tss.AppendTimestamp(context, docId, segment.Collection, name, result.TimeStamp, result.Values.Span, result.Tag, fromReplication: true);
+                                }
+
+                                break;
+                            case DocumentReplicationItem doc:
+                                Debug.Assert(doc.Flags.Contain(DocumentFlags.Artificial) == false);
+
+                                BlittableJsonReaderObject document = doc.Data;
+
+                                if (doc.Data != null)
                                 {
                                     // if something throws at this point, this means something is really wrong and we should stop receiving documents.
                                     // the other side will receive negative ack and will retry sending again.
-                                    document = item.Document;
-
                                     try
                                     {
-                                        AssertAttachmentsFromReplication(context, item.Id, document);
+                                        AssertAttachmentsFromReplication(context, doc.Id, document);
                                     }
                                     catch (MissingAttachmentException)
                                     {
@@ -1318,44 +1027,44 @@ namespace Raven.Server.Documents.Replication
                                         database.NotificationCenter.Add(AlertRaised.Create(
                                             database.Name,
                                             "Incoming Replication",
-                                            $"Detected missing attachments for document '{item.Id}'. Existing attachments in metadata:" +
+                                            $"Detected missing attachments for document '{doc.Id}'. Existing attachments in metadata:" +
                                             $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
-                                                AlertType.ReplicationMissingAttachments,
-                                                NotificationSeverity.Warning));
+                                            AlertType.ReplicationMissingAttachments,
+                                            NotificationSeverity.Warning));
                                     }
                                 }
 
-                                if (item.Flags.Contain(DocumentFlags.Revision))
+                                if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
                                     database.DocumentsStorage.RevisionsStorage.Put(
                                         context,
-                                        item.Id,
+                                        doc.Id,
                                         document,
-                                        item.Flags,
+                                        doc.Flags,
                                         NonPersistentDocumentFlags.FromReplication,
                                         rcvdChangeVector,
-                                        item.LastModifiedTicks);
+                                        doc.LastModifiedTicks);
                                     continue;
                                 }
 
-                                if (item.Flags.Contain(DocumentFlags.DeleteRevision))
+                                if (doc.Flags.Contain(DocumentFlags.DeleteRevision))
                                 {
                                     database.DocumentsStorage.RevisionsStorage.Delete(
                                         context,
-                                        item.Id,
+                                        doc.Id,
                                         document,
-                                        item.Flags,
+                                        doc.Flags,
                                         NonPersistentDocumentFlags.FromReplication,
                                         rcvdChangeVector,
-                                        item.LastModifiedTicks);
+                                        doc.LastModifiedTicks);
                                     continue;
                                 }
 
-                                var hasRemoteClusterTx = item.Flags.Contain(DocumentFlags.FromClusterTransaction);
-                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, item.ChangeVector, out var conflictingVector,
+                                var hasRemoteClusterTx = doc.Flags.Contain(DocumentFlags.FromClusterTransaction);
+                                var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var conflictingVector,
                                     out var hasLocalClusterTx);
 
-                                var flags = item.Flags;
+                                var flags = doc.Flags;
                                 var resolvedDocument = document;
                                 switch (conflictStatus)
                                 {
@@ -1363,20 +1072,20 @@ namespace Raven.Server.Documents.Replication
 
                                         if (resolvedDocument != null)
                                         {
-                                            AttachmentsStorage.AssertAttachments(document, item.Flags);
+                                            AttachmentsStorage.AssertAttachments(document, doc.Flags);
 
-                                            database.DocumentsStorage.Put(context, item.Id, null, resolvedDocument, item.LastModifiedTicks,
+                                            database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
                                                 rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
                                         }
                                         else
                                         {
-                                            using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
+                                            using (DocumentIdWorker.GetSliceFromId(context, doc.Id, out Slice keySlice))
                                             {
                                                 database.DocumentsStorage.Delete(
-                                                    context, keySlice, item.Id, null,
-                                                    item.LastModifiedTicks,
+                                                    context, keySlice, doc.Id, null,
+                                                    doc.LastModifiedTicks,
                                                     rcvdChangeVector,
-                                                    new CollectionName(item.Collection),
+                                                    new CollectionName(doc.Collection),
                                                     NonPersistentDocumentFlags.FromReplication,
                                                     flags);
                                             }
@@ -1386,14 +1095,14 @@ namespace Raven.Server.Documents.Replication
                                     case ConflictStatus.Conflict:
                                         if (_replicationInfo.Logger.IsInfoEnabled)
                                             _replicationInfo.Logger.Info(
-                                                $"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
+                                                $"Conflict check resolved to Conflict operation, resolving conflict for doc = {doc.Id}, with change vector = {doc.ChangeVector}");
 
                                         // we will always prefer the local
                                         if (hasLocalClusterTx)
                                         {
                                             // we have to strip the cluster tx flag from the local document
-                                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, item.Id, throwOnConflict: false);
-                                            flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                                            var local = database.DocumentsStorage.GetDocumentOrTombstone(context, doc.Id, throwOnConflict: false);
+                                            flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction);
                                             if (local.Document != null)
                                             {
                                                 rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
@@ -1406,7 +1115,7 @@ namespace Raven.Server.Documents.Replication
                                             }
                                             else
                                             {
-                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + item.Id +
+                                                throw new InvalidOperationException("Local cluster tx but no matching document / tombstone for: " + doc.Id +
                                                                                     ", this should not be possible");
                                             }
 
@@ -1424,9 +1133,9 @@ namespace Raven.Server.Documents.Replication
                                             // if the conflict is going to be resolved locally, that means that we have local work to do
                                             // that we need to distribute to our siblings
                                             IsIncomingReplication = false;
-                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks,
+                                            _replicationInfo.ConflictManager.HandleConflictForDocument(context, doc.Id, doc.Collection, doc.LastModifiedTicks,
                                                 document,
-                                                    rcvdChangeVector, conflictingVector, item.Flags);
+                                                rcvdChangeVector, conflictingVector, doc.Flags);
                                         }
 
                                         break;
@@ -1437,7 +1146,10 @@ namespace Raven.Server.Documents.Replication
                                         throw new ArgumentOutOfRangeException(nameof(conflictStatus),
                                             "Invalid ConflictStatus: " + conflictStatus);
                                 }
-                            }
+
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(item.GetType().ToString());
                         }
                     }
 
@@ -1506,9 +1218,9 @@ namespace Raven.Server.Documents.Replication
                     foreach (BlittableJsonReaderObject attachment in attachments)
                     {
                         yield return attachment;
-                        }
                     }
                 }
+            }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
@@ -1520,38 +1232,10 @@ namespace Raven.Server.Documents.Replication
                 {
                     LastEtag = _lastEtag,
                     SupportedFeatures = _replicationInfo.SupportedFeatures,
-                    ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => ReplicationItemToDto(context, i)).ToArray(),
+                    ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => i.Clone(context)).ToArray(),
                     SourceDatabaseId = _replicationInfo.SourceDatabaseId,
                     ReplicatedAttachmentStreams = replicatedAttachmentStreams
                 };
-            }
-
-            private static ReplicationItemDto ReplicationItemToDto(JsonOperationContext context, ReplicationItem item)
-            {
-                var dto = new ReplicationItemDto
-                {
-                    TransactionMarker = item.TransactionMarker,
-                    Type = item.Type,
-                    Id = item.Id,
-                    ChangeVector = item.ChangeVector,
-                    Document = item.Document?.Clone(context),
-                    DocumentSize = item.DocumentSize,
-                    Collection = item.Collection,
-                    LastModifiedTicks = item.LastModifiedTicks,
-                    Flags = item.Flags,
-                    Key = item.Key.ToString(),
-                    Base64Hash = item.Base64Hash.ToString()
-                };
-
-                dto.Name = item.Name.Content.HasValue
-                    ? context.GetLazyStringValue(item.Name.Content.Ptr)
-                    : null;
-
-                dto.ContentType = item.Name.Content.HasValue
-                    ? context.GetLazyStringValue(item.ContentType.Content.Ptr)
-                    : null;
-
-                return dto;
             }
         }
     }
@@ -1571,7 +1255,7 @@ namespace Raven.Server.Documents.Replication
 
     internal class MergedDocumentReplicationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedDocumentReplicationCommand>
     {
-        public ReplicationItemDto[] ReplicatedItemDtos;
+        public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         public string SourceDatabaseId;
@@ -1580,26 +1264,23 @@ namespace Raven.Server.Documents.Replication
         public IncomingReplicationHandler.MergedDocumentReplicationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var replicatedItemsCount = ReplicatedItemDtos.Length;
-            var replicationItems = ArrayPool<IncomingReplicationHandler.ReplicationItem>.Shared.Rent(replicatedItemsCount);
+            var replicationItems = new ReplicationBatchItem[replicatedItemsCount];
             for (var i = 0; i < replicatedItemsCount; i++)
             {
-                replicationItems[i] = ReplicatedItemDtos[i].ToItem(context);
+                replicationItems[i] = ReplicatedItemDtos[i].Clone(context);
             }
 
-            ArraySegment<IncomingReplicationHandler.ReplicationAttachmentStream> attachmentStreams = null;
-            Dictionary<Slice, IncomingReplicationHandler.ReplicationAttachmentStream> replicatedAttachmentStreams = null;
+            Dictionary<Slice, AttachmentReplicationItem> replicatedAttachmentStreams = null;
             if (ReplicatedAttachmentStreams != null)
             {
+                replicatedAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
                 var attachmentStreamsCount = ReplicatedAttachmentStreams.Length;
-                var replicationAttachmentStreams = ArrayPool<IncomingReplicationHandler.ReplicationAttachmentStream>.Shared.Rent(attachmentStreamsCount);
                 for (var i = 0; i < attachmentStreamsCount; i++)
                 {
                     var replicationAttachmentStream = ReplicatedAttachmentStreams[i];
-                    replicationAttachmentStreams[i] = CreateReplicationAttachmentStream(context, replicationAttachmentStream);
+                    var item = CreateReplicationAttachmentStream(context, replicationAttachmentStream);
+                    replicatedAttachmentStreams[item.Base64Hash] = item;
                 }
-
-                attachmentStreams = new ArraySegment<IncomingReplicationHandler.ReplicationAttachmentStream>(replicationAttachmentStreams, 0, attachmentStreamsCount);
-                replicatedAttachmentStreams = attachmentStreams.ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
             }
 
             var dataForReplicationCommand = new IncomingReplicationHandler.DataForReplicationCommand
@@ -1607,8 +1288,7 @@ namespace Raven.Server.Documents.Replication
                 DocumentDatabase = database,
                 ConflictManager = new ConflictManager(database, database.ReplicationLoader.ConflictResolver),
                 SourceDatabaseId = SourceDatabaseId,
-                ReplicatedItems = new ArraySegment<IncomingReplicationHandler.ReplicationItem>(replicationItems, 0, replicatedItemsCount),
-                AttachmentStreams = attachmentStreams,
+                ReplicatedItems = replicationItems,
                 ReplicatedAttachmentStreams = replicatedAttachmentStreams,
                 SupportedFeatures = SupportedFeatures,
                 Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
@@ -1617,71 +1297,15 @@ namespace Raven.Server.Documents.Replication
             return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);
         }
 
-        private IncomingReplicationHandler.ReplicationAttachmentStream CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
+        private AttachmentReplicationItem CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
         {
-            var attachmentStream = new IncomingReplicationHandler.ReplicationAttachmentStream();
-            attachmentStream.Stream = arg.Value;
-            attachmentStream.Base64HashDispose = Slice.From(context.Allocator, arg.Key, ByteStringType.Immutable, out attachmentStream.Base64Hash);
-            return attachmentStream;
-        }
-    }
-
-    internal class ReplicationItemDto
-    {
-        public short TransactionMarker;
-        public ReplicationBatchItem.ReplicationItemType Type;
-
-        #region Document
-
-        public string Id;
-        public int Position;
-        public string ChangeVector;
-        public BlittableJsonReaderObject Document;
-        public int DocumentSize;
-        public string Collection;
-        public long LastModifiedTicks;
-        public DocumentFlags Flags;
-
-        #endregion
-
-        #region Attachment
-
-        public string Key;
-        public string Name;
-        public string ContentType;
-        public string Base64Hash;
-
-        #endregion
-
-        public IncomingReplicationHandler.ReplicationItem ToItem(DocumentsOperationContext context)
-        {
-            var item = new IncomingReplicationHandler.ReplicationItem
+            var attachmentStream = new AttachmentReplicationItem
             {
-                TransactionMarker = TransactionMarker,
-                Type = Type,
-                Id = Id,
-                Document = Document,
-                ChangeVector = ChangeVector,
-                DocumentSize = DocumentSize,
-                Collection = Collection,
-                LastModifiedTicks = LastModifiedTicks,
-                Flags = Flags
+                Type = ReplicationBatchItem.ReplicationItemType.AttachmentStream,
+                Stream = arg.Value
             };
-
-            if (Name != null)
-            {
-                item.NameDispose = DocumentIdWorker.GetStringPreserveCase(context, Name, out item.Name);
-            }
-
-            if (ContentType != null)
-            {
-                item.ContentTypeDispose = DocumentIdWorker.GetStringPreserveCase(context, ContentType, out item.ContentType);
-            }
-
-            item.KeyDispose = Slice.From(context.Allocator, Key, ByteStringType.Immutable, out item.Key);
-            item.Base64HashDispose = Slice.From(context.Allocator, Base64Hash, ByteStringType.Immutable, out item.Base64Hash);
-
-            return item;
+            attachmentStream.ToDispose(Slice.From(context.Allocator, arg.Key, ByteStringType.Immutable, out attachmentStream.Base64Hash));
+            return attachmentStream;
         }
     }
 }
