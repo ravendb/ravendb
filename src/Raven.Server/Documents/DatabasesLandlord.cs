@@ -82,7 +82,7 @@ namespace Raven.Server.Documents
                         return;
 
                     topology = rawRecord.GetTopology();
-                    if (topology != null && topology.RelevantFor(_serverStore.NodeTag) == false)
+                    if (topology.RelevantFor(_serverStore.NodeTag) == false)
                         return;
 
                     if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
@@ -271,8 +271,7 @@ namespace Raven.Server.Documents
             if (directDelete == false)
                 return false;
 
-            var topology = rawRecord.GetTopology();
-            if (topology.Rehabs.Contains(_serverStore.NodeTag))
+            if (rawRecord.GetTopology().Rehabs.Contains(_serverStore.NodeTag))
                 // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;

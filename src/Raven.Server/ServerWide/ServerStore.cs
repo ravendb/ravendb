@@ -1430,8 +1430,7 @@ namespace Raven.Server.ServerWide
             Debug.Assert(context.Transaction != null);
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                var topology = rawRecord.GetTopology();
-                if (rawRecord.IsEncrypted() && topology.RelevantFor(NodeTag))
+                if (rawRecord.IsNull() == false && rawRecord.IsEncrypted() && rawRecord.GetTopology().RelevantFor(NodeTag))
                 {
                     throw new InvalidOperationException(
                         $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
