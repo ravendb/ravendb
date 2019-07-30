@@ -327,7 +327,8 @@ namespace Raven.Database.Bundles.Replication.Controllers
         {
             const int BatchSize = 512;
             var topologyId = Request.Headers.GetFirstValue("Topology-Id");
-            if (!string.IsNullOrEmpty(topologyId) && Database.ClusterManager?.Value?.Engine.CurrentTopology.ToString() != Topology.EmptyTopology && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            
+            if (IsFromDifferentCluster(topologyId))
             {
                 return GetMessageWithString("Refusing to accept data outside of my topology", HttpStatusCode.Forbidden);
             }
@@ -369,7 +370,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
                             {
                                 for (var j = 0; j < BatchSize && docIndex < array.Length; j++, docIndex++)
                                 {
-                                    var document = (RavenJObject) array[docIndex];
+                                    var document = (RavenJObject)array[docIndex];
                                     var metadata = document.Value<RavenJObject>("@metadata");
                                     if (metadata[Constants.RavenReplicationSource] == null)
                                     {
@@ -411,6 +412,32 @@ namespace Raven.Database.Bundles.Replication.Controllers
                     ReplicationTask.IsThreadProcessingReplication.Value = false;
             }
             return GetEmptyMessage();
+        }
+
+        private bool IsFromDifferentCluster(string topologyId)
+        {
+            Guid topologyIdGuid = Guid.Empty;
+
+            if (string.IsNullOrEmpty(topologyId))
+                return false;
+
+            if (Guid.TryParse(topologyId, out topologyIdGuid) == false)
+                return false;
+
+            if (topologyIdGuid == Guid.Empty)
+                return false;
+
+            if (Database.ClusterManager?.Value?.Engine.CurrentTopology.ToString() == Topology.EmptyTopology)
+                return false;
+
+            if (Database.ClusterManager?.Value?.Engine?.CurrentTopology?.TopologyId == Guid.Empty)
+                return false;
+
+            if (Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId == topologyIdGuid)
+                return false;
+
+            return true;                           
+                        
         }
 
         private void SaveReplicationSource(string src, string lastEtag, int batchSize, DateTime lastModified, string collections = null)
@@ -458,7 +485,7 @@ namespace Raven.Database.Bundles.Replication.Controllers
         public async Task<HttpResponseMessage> AttachmentReplicatePost()
         {
             var topologyId = Request.Headers.GetFirstValue("Topology-Id");
-            if (!string.IsNullOrEmpty(topologyId) && Database.ClusterManager?.Value?.Engine.CurrentTopology.ToString() != Topology.EmptyTopology && topologyId != Database.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString())
+            if (IsFromDifferentCluster(topologyId))
             {
                 return GetMessageWithString("Refusing to accept data outside of my topology", HttpStatusCode.Forbidden);
             }
