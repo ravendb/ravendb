@@ -1,10 +1,18 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using NCrontab.Advanced;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter.Notifications;
@@ -12,16 +20,8 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Logging;
-using System.Collections.Concurrent;
-using System.Linq;
-using NCrontab.Advanced;
-using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Sparrow.Collections;
+using Sparrow.Logging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -361,8 +361,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
             }
 
-            var databaseRecord = _serverStore.LoadRawDatabaseRecord(_database.Name, out _);
-            var topology = _serverStore.Cluster.ReadDatabaseTopology(databaseRecord);
+            var topology = _serverStore.LoadDatabaseTopology(_database.Name);
             var backupStatus = GetBackupStatus(taskId);
             return _database.WhoseTaskIsIt(topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
@@ -537,10 +536,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return false;
             }
 
-            var databaseRecord = _serverStore.LoadRawDatabaseRecord(_database.Name, out _);
-            var topology = _serverStore.Cluster.ReadDatabaseTopology(databaseRecord);
-            if (databaseRecord == null)
-                return false;
+            DatabaseTopology topology;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name))
+            {
+                if (rawRecord.IsNull())
+                    return false;
+
+                topology = rawRecord.GetTopology();
+            }
 
             var taskStatus = GetTaskStatus(topology, periodicBackup.Configuration);
             return taskStatus == TaskStatus.ActiveByCurrentNode;

@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -67,26 +66,30 @@ namespace Raven.Server.Documents
 
                 // response to changed database.
                 // if disabled, unload
-
-                var rawRecord = _serverStore.LoadRawDatabaseRecord(databaseName, out long _);
-                if (rawRecord == null)
+                DatabaseTopology topology;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 {
-                    // was removed, need to make sure that it isn't loaded
-                    UnloadDatabase(databaseName, dbRecordIsNull: true);
-                    return;
-                }
+                    if (rawRecord.IsNull())
+                    {
+                        // was removed, need to make sure that it isn't loaded
+                        UnloadDatabase(databaseName, dbRecordIsNull: true);
+                        return;
+                    }
 
-                if (ShouldDeleteDatabase(databaseName, rawRecord))
-                    return;
+                    if (ShouldDeleteDatabase(databaseName, rawRecord))
+                        return;
 
-                if (rawRecord.TryGet(nameof(DatabaseRecord.Topology), out DatabaseTopology topology) && topology.RelevantFor(_serverStore.NodeTag) == false)
-                    return;
-                
-                if ((rawRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) && disabled) || 
-                    (rawRecord.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus databaseStateStatus) && databaseStateStatus == DatabaseStateStatus.RestoreInProgress))
-                {
-                    UnloadDatabase(databaseName);
-                    return;
+                    topology = rawRecord.GetTopology();
+                    if (topology != null && topology.RelevantFor(_serverStore.NodeTag) == false)
+                        return;
+
+                    if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+                    {
+                        UnloadDatabase(databaseName);
+                        return;
+                    }
                 }
 
                 if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
@@ -210,10 +213,10 @@ namespace Raven.Server.Documents
                         using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            var databaseRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
+                            var rawRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
 
                             // unload only if DB is still disabled
-                            if (IsDatabaseDisabled(databaseRecord))
+                            if (IsDatabaseDisabled(rawRecord))
                                 UnloadDatabaseInternal(databaseName);
                         }
                     }
@@ -259,24 +262,23 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool ShouldDeleteDatabase(string dbName, BlittableJsonReaderObject rawRecord)
+        public bool ShouldDeleteDatabase(string dbName, RawDatabaseRecord rawRecord)
         {
-            var delInProgress = DeletionInProgressStatus.No;
-
-            var directDelete = rawRecord.TryGet(nameof(DatabaseRecord.DeletionInProgress), out Dictionary<string, DeletionInProgressStatus> deletionInProgress) &&
-                               deletionInProgress?.TryGetValue(_serverStore.NodeTag, out delInProgress) == true &&
-                               delInProgress != DeletionInProgressStatus.No;
+            var deletionInProgress = DeletionInProgressStatus.No;
+            var directDelete = rawRecord.GetDeletionInProgressStatus()?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
+                               deletionInProgress != DeletionInProgressStatus.No;
 
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.TryGet(nameof(DatabaseRecord.Topology), out DatabaseTopology topology) && topology.Rehabs.Contains(_serverStore.NodeTag))
+            var topology = rawRecord.GetTopology();
+            if (topology.Rehabs.Contains(_serverStore.NodeTag))
                 // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
                 // that all the documents were replicated from this node, therefor the deletion will be called from the replication code.
                 return false;
 
-            var record = JsonDeserializationCluster.DatabaseRecord(rawRecord);
-            DeleteDatabase(dbName, delInProgress, record);
+            var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+            DeleteDatabase(dbName, deletionInProgress, record);
             return true;
         }
 
@@ -653,11 +655,15 @@ namespace Raven.Server.Documents
                 // This is in case when an deletion request was issued prior to the actual loading of the database.
                 try
                 {
-                    var rawRecord = _serverStore.LoadRawDatabaseRecord(databaseName.Value, out _);
-                    if (rawRecord == null)
-                        return;
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
+                    {
+                        if (rawRecord.IsNull())
+                            return;
 
-                    ShouldDeleteDatabase(databaseName.Value, rawRecord);
+                        ShouldDeleteDatabase(databaseName.Value, rawRecord);
+                    }
                 }
                 catch
                 {

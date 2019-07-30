@@ -314,14 +314,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(transactionOperationContext))
                 {
-                    var rawRecord = ServerStore.Cluster.ReadRawDatabase(transactionOperationContext, databaseName, out _);
+                    using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
+                    {
+                        if (rawRecord.IsNull())
+                            continue;
 
-                    if (rawRecord == null ||
-                        (rawRecord.TryGet(nameof(DatabaseRecord.Topology), out DatabaseTopology topology) && topology.RelevantFor(ServerStore.NodeTag) == false) ||
-                        (rawRecord.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) && disabled) ||
-                        (rawRecord.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus databaseStateStatus) && databaseStateStatus == DatabaseStateStatus.RestoreInProgress) ||
-                        IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
-                        continue;
+                        if (rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||
+                            rawRecord.IsDisabled() ||
+                            rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress ||
+                            IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
+                            continue;
+                    }
 
                     var path = !string.IsNullOrWhiteSpace(prefix) ? Path.Combine(prefix, databaseName) : databaseName;
                     await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName, path);
@@ -329,14 +332,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static bool IsDatabaseBeingDeleted(string tag, BlittableJsonReaderObject databaseRecord)
+        private static bool IsDatabaseBeingDeleted(string tag, RawDatabaseRecord databaseRecord)
         {
-            if (databaseRecord == null)
+            if (databaseRecord.IsNull())
                 return false;
 
-            return (databaseRecord.TryGet(nameof(DatabaseRecord.DeletionInProgress), out Dictionary<string, DeletionInProgressStatus> deletionInProgress) && deletionInProgress != null) &&
-                   deletionInProgress.TryGetValue(tag, out var delInProgress) &&
-                   delInProgress != DeletionInProgressStatus.No;
+            var deletionInProgress = databaseRecord.GetDeletionInProgressStatus();
+
+            return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }
 
         private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string databaseName, string path = null)

@@ -323,31 +323,34 @@ namespace Raven.Server.Dashboard
             DrivesUsage existingDrivesUsage,
             bool disabled)
         {
-            var databaseRecord = serverStore.Cluster.ReadRawDatabase(context, databaseName, out var _);
-            if (databaseRecord == null)
+            using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                // database doesn't exist
-                return;
+                if (rawRecord.IsNull())
+                {
+                    // database doesn't exist
+                    return;
+                }
+
+                var databaseTopology = rawRecord.GetTopology();
+
+                var irrelevant = databaseTopology == null ||
+                                 databaseTopology.AllNodes.Contains(serverStore.NodeTag) == false;
+                var databaseInfoItem = new DatabaseInfoItem
+                {
+                    Database = databaseName,
+                    Online = false,
+                    Disabled = disabled,
+                    Irrelevant = irrelevant
+                };
+
+                if (irrelevant == false)
+                {
+                    // nothing to fetch if irrelevant on this node
+                    UpdateDatabaseInfo(rawRecord.GetRecord(), serverStore, databaseName, existingDrivesUsage, databaseInfoItem);
+                }
+
+                existingDatabasesInfo.Items.Add(databaseInfoItem);
             }
-
-            var databaseTopology = serverStore.Cluster.ReadDatabaseTopology(databaseRecord);
-            var irrelevant = databaseTopology == null ||
-                             databaseTopology.AllNodes.Contains(serverStore.NodeTag) == false;
-            var databaseInfoItem = new DatabaseInfoItem
-            {
-                Database = databaseName,
-                Online = false,
-                Disabled = disabled,
-                Irrelevant = irrelevant
-            };
-
-            if (irrelevant == false)
-            {
-                // nothing to fetch if irrelevant on this node
-                UpdateDatabaseInfo(databaseRecord, serverStore, databaseName, existingDrivesUsage, databaseInfoItem);
-            }
-
-            existingDatabasesInfo.Items.Add(databaseInfoItem);
         }
 
         private static void UpdateDatabaseInfo(BlittableJsonReaderObject databaseRecord, ServerStore serverStore, string databaseName, DrivesUsage existingDrivesUsage,

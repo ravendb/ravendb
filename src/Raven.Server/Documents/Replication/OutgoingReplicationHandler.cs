@@ -168,13 +168,12 @@ namespace Raven.Server.Documents.Replication
             using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var record = _parent._server.Cluster.ReadRawDatabase(context, _parent.Database.Name, out _);
-                if (record == null)
-                    throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
-
-                if (record.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted))
+                using (var rawRecord = _parent._server.Cluster.ReadRawDatabaseRecord(context, _parent.Database.Name))
                 {
-                    if (encrypted && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                    if (rawRecord.IsNull())
+                        throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
+
+                    if (rawRecord.IsEncrypted() && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         throw new InvalidOperationException(
                             $"{_parent.Database.Name} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }

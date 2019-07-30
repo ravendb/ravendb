@@ -628,26 +628,25 @@ namespace Raven.Server.ServerWide
                 var affectedDatabases = cleanCommand.Clean(context, index);
                 foreach (var tuple in affectedDatabases)
                 {
-                    var database = tuple.Key;
                     var commandsCount = tuple.Value;
-                    var rawRecord = ReadRawDatabase(context, database, out _);
-                    if (rawRecord == null)
-                        continue;
-
                     var dbKey = $"db/{tuple.Key}";
-                    rawRecord.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = commandsCount };
 
-                    using (var old = rawRecord)
+                    using (Slice.From(context.Allocator, dbKey, out Slice key))
+                    using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice keyLowered))
                     {
-                        rawRecord = context.ReadObject(rawRecord, dbKey);
-                    }
+                        var rawRecord = ReadInternal(context, out _, key);
+                        if (rawRecord == null)
+                            continue;
 
-                    using (Slice.From(context.Allocator, dbKey, out Slice valueName))
-                    using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
-                    {
-                        UpdateValue(index, items, valueNameLowered, valueName, rawRecord);
-                    }
+                        rawRecord.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = commandsCount };
 
+                        using (var old = rawRecord)
+                        {
+                            rawRecord = context.ReadObject(rawRecord, dbKey);
+                        }
+
+                        UpdateValue(index, items, keyLowered, key, rawRecord);
+                    }
                     // we simply update the value without invoking the OnChange function
                 }
 
@@ -703,24 +702,24 @@ namespace Raven.Server.ServerWide
 
         private void UpdateDatabaseRecordId(TransactionOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
         {
-            var rawRecord = ReadRawDatabase(context, clusterTransaction.DatabaseName, out _);
-            var topology = ReadDatabaseTopology(rawRecord);
-            if (topology.DatabaseTopologyIdBase64 == null)
+            var dbKey = $"db/{clusterTransaction.DatabaseName}";
+            using (Slice.From(context.Allocator, dbKey, out var key))
+            using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out var keyLowered))
             {
-                topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
-                var dbKey = $"db/{clusterTransaction.DatabaseName}";
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                rawRecord.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.Topology)] = topology };
-
-                using (var old = rawRecord)
+                var rawRecord = ReadInternal(context, out _, key);
+                var topology = ReadDatabaseTopology(rawRecord);
+                if (topology.DatabaseTopologyIdBase64 == null)
                 {
-                    rawRecord = context.ReadObject(rawRecord, dbKey);
-                }
+                    topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
+                    var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                    rawRecord.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.Topology)] = topology };
 
-                using (Slice.From(context.Allocator, dbKey, out var valueName))
-                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out var valueNameLowered))
-                {
-                    UpdateValue(index, items, valueNameLowered, valueName, rawRecord);
+                    using (var old = rawRecord)
+                    {
+                        rawRecord = context.ReadObject(rawRecord, dbKey);
+                    }
+
+                    UpdateValue(index, items, keyLowered, key, rawRecord);
                 }
             }
         }
@@ -1993,22 +1992,23 @@ namespace Raven.Server.ServerWide
 
             foreach (var name in GetDatabaseNames(context))
             {
-                var blittableRecord = ReadRawDatabase(context, name, out _);
-                var topology = ReadDatabaseTopology(blittableRecord);
-
-                if (topology.RelevantFor(oldTag) == false)
+                using (var rawRecord = ReadRawDatabaseRecord(context, name))
                 {
-                    toDelete.Add(name);
-                }
-                else
-                {
-                    if (topology.RelevantFor(newTag) && topology.Count == 1)
-                        continue;
+                    var topology = rawRecord.GetTopology();
+                    if (topology.RelevantFor(oldTag) == false)
+                    {
+                        toDelete.Add(name);
+                    }
+                    else
+                    {
+                        if (topology.RelevantFor(newTag) && topology.Count == 1)
+                            continue;
 
-                    var record = JsonDeserializationCluster.DatabaseRecord(blittableRecord);
-                    record.Topology = new DatabaseTopology();
-                    record.Topology.Members.Add(newTag);
-                    toShrink.Add(record);
+                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+                        record.Topology = new DatabaseTopology();
+                        record.Topology.Members.Add(newTag);
+                        toShrink.Add(record);
+                    }
                 }
             }
 
@@ -2482,7 +2482,19 @@ namespace Raven.Server.ServerWide
             return ReadDatabase(context, name, out long _);
         }
 
-        private bool DatabaseExists(TransactionOperationContext context, string name)
+        public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name, out long etag)
+        {
+            var rawRecord = ReadRawDatabase(context, name, out etag);
+
+            return new RawDatabaseRecord(rawRecord);
+        }
+
+        public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name)
+        {
+            return ReadRawDatabaseRecord(context, name, out _);
+        }
+
+        public bool DatabaseExists(TransactionOperationContext context, string name)
         {
             var dbKey = "db/" + name.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -2490,7 +2502,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, dbKey, out var key))
                 return items.VerifyKeyExists(key);
         }
-
+         
         public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
@@ -2533,6 +2545,7 @@ namespace Raven.Server.ServerWide
 
         public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
         {
+            BlittableJsonReaderArray pullReplicationDefinitions;
             using (var databaseRecord = ReadRawDatabase(context, database, out _))
             {
                 if (databaseRecord == null)
@@ -2540,20 +2553,20 @@ namespace Raven.Server.ServerWide
                     throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
                 }
 
-                if (databaseRecord.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray pullReplicationDefinitions) == false)
+                if (databaseRecord.TryGet(nameof(DatabaseRecord.HubPullReplications), out pullReplicationDefinitions) == false)
                 {
                     throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
                 }
-
-                var definition = pullReplicationDefinitions.FirstOrDefault(x =>
-                    x is BlittableJsonReaderObject obj && obj.TryGetMember(nameof(PullReplicationDefinition.Name), out var name) && name.Equals(definitionName)) as BlittableJsonReaderObject;
-                if (definition == null)
-                {
-                    throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
-                }
-
-                return JsonDeserializationCluster.PullReplicationDefinition(definition);
             }
+
+            var definition = pullReplicationDefinitions.FirstOrDefault(x =>
+                    x is BlittableJsonReaderObject obj && obj.TryGetMember(nameof(PullReplicationDefinition.Name), out var name) && name.Equals(definitionName)) as BlittableJsonReaderObject;
+            if (definition == null)
+            {
+                throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
+            }
+
+            return JsonDeserializationCluster.PullReplicationDefinition(definition);
         }
 
         public DatabaseTopology ReadDatabaseTopology(BlittableJsonReaderObject rawDatabaseRecord)

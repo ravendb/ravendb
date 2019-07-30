@@ -306,15 +306,15 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Index type")]
                 public const string Type = "5.2.{0}.4.{{0}}.16";
 
-                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, DatabaseRecord record, long databaseIndex)
+                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
                 {
-                    var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.DatabaseName);
+                    var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.GetDatabaseName());
 
                     var djv = new DynamicJsonValue();
                     if (mapping.Count == 0)
                         return djv;
 
-                    foreach (var indexName in record.Indexes.Keys)
+                    foreach (var indexName in record.GetIndexes().Keys)
                     {
                         if (mapping.TryGetValue(indexName, out var index) == false)
                             continue;
@@ -372,8 +372,9 @@ namespace Raven.Server.Monitoring.Snmp
 
                 foreach (var kvp in mapping)
                 {
-                    var record = serverStore.LoadDatabaseRecord(kvp.Key, out _);
-                    if (record == null)
+
+                    var record = serverStore.Cluster.ReadRawDatabaseRecord(context, kvp.Key);
+                    if (record.IsNull())
                         continue;
 
                     var array = new DynamicJsonArray();

@@ -930,8 +930,15 @@ namespace Raven.Server.Documents.ETL
                     }
                     else
                     {
-                        if (serverStore.LoadRawDatabaseRecord(database.Name, out _).TryGet(nameof(DatabaseRecord.SqlConnectionStrings), out Dictionary<string, SqlConnectionString> sqlConnectionStrings) == false)
-                            throw new InvalidOperationException($"{nameof(DatabaseRecord.SqlConnectionStrings)} was not found in the database record");
+                        Dictionary<string, SqlConnectionString> sqlConnectionStrings;
+                        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
+                        {
+                            sqlConnectionStrings = rawRecord.GetSqlConnectionStrings();
+                            if (sqlConnectionStrings == null)
+                                throw new InvalidOperationException($"{nameof(DatabaseRecord.SqlConnectionStrings)} was not found in the database record");
+                        }
 
                         if (sqlConnectionStrings.TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
                         {

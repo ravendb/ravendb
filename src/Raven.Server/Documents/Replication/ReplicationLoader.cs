@@ -722,13 +722,12 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var rawRecord = _server.Cluster.ReadRawDatabase(ctx, Database.Name, out _);
-                if (rawRecord != null &&
-                    rawRecord.TryGet(nameof(DatabaseRecord.DeletionInProgress), out Dictionary<string, DeletionInProgressStatus> deletionInProgress) &&
-                    deletionInProgress.ContainsKey(node))
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
-                    throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, " +
-                                                         "so it will not handle replications.");
+                    if (rawRecord.IsNull() == false && rawRecord.GetDeletionInProgressStatus().ContainsKey(node))
+                    {
+                        throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, so it will not handle replications.");
+                    }
                 }
             }
         }
@@ -738,30 +737,32 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var rawRecord = _server.Cluster.ReadRawDatabase(ctx, Database.Name, out var _);
-                if (rawRecord == null ||
-                    rawRecord.TryGet(nameof(DatabaseRecord.DeletionInProgress), out Dictionary<string, DeletionInProgressStatus> deletionInProgress) == false ||
-                    deletionInProgress.ContainsKey(_server.NodeTag) == false)
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
-                    return;
-                }
+                    if (rawRecord.IsNull())
+                        return;
 
-                try
-                {
-                    cts.Cancel();
-                }
-                catch
-                {
-                    // nothing that we can do about it.
-                    // probably the database is being deleted.
-                }
-                finally
-                {
-                    var record = JsonDeserializationCluster.DatabaseRecord(rawRecord);
-                    TaskExecutor.Execute(state =>
+                    var deletionInProgress = rawRecord.GetDeletionInProgressStatus();
+                    if (deletionInProgress.ContainsKey(_server.NodeTag) == false)
+                        return;
+
+                    try
                     {
-                        _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record);
-                    }, null);
+                        cts.Cancel();
+                    }
+                    catch
+                    {
+                        // nothing that we can do about it.
+                        // probably the database is being deleted.
+                    }
+                    finally
+                    {
+                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+                        TaskExecutor.Execute(state =>
+                        {
+                            _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record);
+                        }, null);
+                    }
                 }
             }
         }
