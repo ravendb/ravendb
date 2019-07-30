@@ -7,7 +7,6 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Expiration;
-using Raven.Client.ServerWide;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -22,9 +21,12 @@ namespace Raven.Server.Documents.Handlers
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                ExpirationConfiguration expirationConfig = null;
-                var dbRecordRaw = Server.ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
-                dbRecordRaw?.TryGet(nameof(DatabaseRecord.Expiration), out expirationConfig);
+                ExpirationConfiguration expirationConfig;
+                using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
+                {
+                    expirationConfig = recordRaw?.GetExpirationConfiguration();
+                }
+
                 if (expirationConfig != null)
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

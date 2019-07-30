@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -117,14 +116,16 @@ namespace Raven.Server.Documents
                 {
                     MasterKey = serverStore.GetSecretKey(ctx, Name);
 
-                    var databaseRecordRaw = _serverStore.Cluster.ReadRawDatabase(ctx, Name, out _);
-                    if (databaseRecordRaw != null && databaseRecordRaw.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted))
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, Name))
                     {
-                        // can happen when we are in the process of restoring a database
-                        if (encrypted && MasterKey == null)
-                            throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                        if (encrypted == false && MasterKey != null)
-                            throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                        if (rawRecord.IsNull() == false)
+                        {
+                            // can happen when we are in the process of restoring a database
+                            if (rawRecord.IsEncrypted() && MasterKey == null)
+                                throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                            if (rawRecord.IsEncrypted() == false && MasterKey != null)
+                                throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                        }
                     }
                 }
 
@@ -938,9 +939,6 @@ namespace Raven.Server.Documents
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var rawRecord = _serverStore.LoadRawDatabaseRecord(Name, out _);
-                    Debug.Assert(rawRecord != null);
-
                     var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
@@ -976,9 +974,13 @@ namespace Raven.Server.Documents
                     {
                         writer.WriteStartObject();
 
-                        // save the database record
+                        // read and save the database record
                         writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
-                        serverContext.Write(writer, rawRecord);
+                        using (serverContext.OpenReadTransaction())
+                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabase(serverContext, Name, out _))
+                        {
+                            serverContext.Write(writer, rawRecord);
+                        }
 
                         // save the database values (subscriptions, periodic backups statuses, etl states...)
                         writer.WriteComma();
@@ -1447,15 +1449,6 @@ namespace Raven.Server.Documents
             using (context.OpenReadTransaction())
             {
                 return ServerStore.Cluster.ReadDatabase(context, Name);
-            }
-        }
-
-        public BlittableJsonReaderObject ReadRawDatabaseRecord()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return ServerStore.Cluster.ReadRawDatabase(context, Name, out _);
             }
         }
 

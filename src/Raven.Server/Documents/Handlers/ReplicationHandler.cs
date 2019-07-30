@@ -455,9 +455,12 @@ namespace Raven.Server.Documents.Handlers
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                ConflictSolver solverConfig = null;
-                var rawDatabaseRecord = Server.ServerStore.Cluster.ReadRawDatabase(context, Database.Name, out _);
-                rawDatabaseRecord?.TryGet(nameof(DatabaseRecord.ConflictSolverConfig), out solverConfig);
+                ConflictSolver solverConfig;
+                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
+                {
+                    solverConfig = rawRecord?.GetConflictSolverConfiguration();
+                }
+
                 if (solverConfig != null)
                 {
                     var resolveByCollection = new DynamicJsonValue();

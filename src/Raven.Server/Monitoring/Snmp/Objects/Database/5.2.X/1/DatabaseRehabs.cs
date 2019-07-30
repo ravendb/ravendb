@@ -12,8 +12,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override Integer32 GetData(DocumentDatabase database)
         {
-            var rawRecord = database.ServerStore.LoadRawDatabaseRecord(database.Name, out _);
-            var topology = database.ServerStore.Cluster.ReadDatabaseTopology(rawRecord);
+            var topology = database.ServerStore.LoadDatabaseTopology(database.Name);
             return new Integer32(topology?.Rehabs?.Count ?? 0);
         }
     }

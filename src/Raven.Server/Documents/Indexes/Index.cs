@@ -15,7 +15,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -48,20 +47,20 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Json;
-using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Size = Sparrow.Size;
+using Voron;
 using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -308,7 +307,18 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (environment.NextWriteTransactionId == 2 && TryFindIndexDefinition(name, documentDatabase.ReadRawDatabaseRecord(), out var staticDef, out var autoDef))
+                    bool tryFindIndexDefinition;
+                    AutoIndexDefinition autoDef;
+                    IndexDefinition staticDef;
+
+                    using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    using (var rawRecord = documentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(ctx, documentDatabase.Name))
+                    {
+                        tryFindIndexDefinition = TryFindIndexDefinition(name, rawRecord, out staticDef, out autoDef);
+                    }
+
+                    if (environment.NextWriteTransactionId == 2 && tryFindIndexDefinition)
                     {
                         // initial transaction creating the schema hasn't completed
                         // let's try to create it again
@@ -3726,9 +3736,12 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private static bool TryFindIndexDefinition(string directoryName, BlittableJsonReaderObject record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)
+        private static bool TryFindIndexDefinition(string directoryName, RawDatabaseRecord record, out IndexDefinition staticDef, out AutoIndexDefinition autoDef)
         {
-            if (record.TryGet(nameof(DatabaseRecord.Indexes), out Dictionary<string, IndexDefinition> indexes))
+            var indexes = record.GetIndexes();
+            var autoIndexes = record.GetAutoIndexes();
+
+            if (indexes != null)
             {
                 foreach (var index in indexes)
                 {
@@ -3741,7 +3754,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (record.TryGet(nameof(DatabaseRecord.AutoIndexes), out Dictionary<string, AutoIndexDefinition> autoIndexes))
+            if (autoIndexes != null)
             {
                 foreach (var index in autoIndexes)
                 {

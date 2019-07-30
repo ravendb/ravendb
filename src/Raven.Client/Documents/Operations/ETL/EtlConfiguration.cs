@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -139,18 +138,12 @@ namespace Raven.Client.Documents.Operations.ETL
                    config.Disabled == Disabled;
         }
 
-        public bool ValidateConnectionString(BlittableJsonReaderObject databaseRecord)
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
+        public bool ValidateConnectionString(DatabaseRecord databaseRecord)
         {
-            if (EtlType == EtlType.Raven)
-            {
-                return (databaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out Dictionary<string, RavenConnectionString> ravenConnectionStrings) &&
-                        ravenConnectionStrings.TryGetValue(ConnectionStringName, out _));
-            }
-            else
-            {
-                return (databaseRecord.TryGet(nameof(DatabaseRecord.SqlConnectionStrings), out Dictionary<string, SqlConnectionString> sqlConnectionString) &&
-                        sqlConnectionString.TryGetValue(ConnectionStringName, out _));
-            }
+            return EtlType == EtlType.Raven
+                ? databaseRecord.RavenConnectionStrings.TryGetValue(ConnectionStringName, out _)
+                : databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out _);
         }
 
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
