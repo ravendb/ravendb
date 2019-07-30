@@ -1023,12 +1023,12 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
                 var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
 
+                var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetRaftRequestIdFromQuery());
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
-                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetRaftRequestIdFromQuery());
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                     var conflictSolverConfig = rawRecord.GetConflictSolverConfiguration();
                     if (conflictSolverConfig == null)

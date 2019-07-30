@@ -316,10 +316,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
                     {
-                        if (rawRecord.IsNull())
-                            continue;
-
-                        if (rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||
+                        if (rawRecord.IsNull() ||
+                            rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||
                             rawRecord.IsDisabled() ||
                             rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress ||
                             IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))

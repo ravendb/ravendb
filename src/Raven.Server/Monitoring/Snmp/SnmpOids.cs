@@ -372,24 +372,25 @@ namespace Raven.Server.Monitoring.Snmp
 
                 foreach (var kvp in mapping)
                 {
-
-                    var record = serverStore.Cluster.ReadRawDatabaseRecord(context, kvp.Key);
-                    if (record.IsNull())
-                        continue;
-
-                    var array = new DynamicJsonArray();
-                    foreach (var field in typeof(Databases).GetFields())
+                    using (var record = serverStore.Cluster.ReadRawDatabaseRecord(context, kvp.Key))
                     {
-                        var fieldValue = GetFieldValue(field);
-                        var oid = string.Format(fieldValue.Oid, kvp.Value);
-                        array.Add(CreateJsonItem(Root + oid, fieldValue.Description));
+                        if (record.IsNull())
+                            continue;
+
+                        var array = new DynamicJsonArray();
+                        foreach (var field in typeof(Databases).GetFields())
+                        {
+                            var fieldValue = GetFieldValue(field);
+                            var oid = string.Format(fieldValue.Oid, kvp.Value);
+                            array.Add(CreateJsonItem(Root + oid, fieldValue.Description));
+                        }
+
+                        djv[kvp.Key] = new DynamicJsonValue
+                        {
+                            [$"@{nameof(General)}"] = array,
+                            [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value)
+                        };
                     }
-
-                    djv[kvp.Key] = new DynamicJsonValue
-                    {
-                        [$"@{nameof(General)}"] = array,
-                        [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value) 
-                    };
                 }
 
                 return djv;
