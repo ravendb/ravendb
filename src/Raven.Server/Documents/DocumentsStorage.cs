@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -656,14 +657,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<DocumentReplicationItem> GetDocumentsFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToDocument(context, ref result.Reader));
+                yield return DocumentReplicationItem.From(TableValueToDocument(context, ref result.Reader));
             }
         }
 
@@ -971,7 +972,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
-                yield return ReplicationBatchItem.From(TableValueToTombstone(context, ref result.Reader));
+                yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
             }
         }
 

@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Raven.Client;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -210,7 +213,7 @@ namespace Raven.Server.Documents.TimeSeries
                             tvb.Add(cv);
                             tvb.Add(filteredSegment.Ptr, filteredSegment.NumberOfBytes);
                             tvb.Add(collectionSlice);
-                            tvb.Add(context.TransactionMarkerOffset);
+                            tvb.Add(context.GetTransactionMarker());
 
                             table.Set(tvb);
                         }
@@ -790,7 +793,7 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(cv);
                     tvb.Add(buffer.Ptr, newSegment.NumberOfBytes);
                     tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    tvb.Add(context.GetTransactionMarker());
 
                     table.Insert(tvb);
                 }
@@ -814,7 +817,7 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(cv);
                     tvb.Add(segment.Ptr, segment.NumberOfBytes);
                     tvb.Add(collectionSlice);
-                    tvb.Add(context.TransactionMarkerOffset);
+                    tvb.Add(context.GetTransactionMarker());
 
                     table.Set(tvb);
                 }
@@ -907,6 +910,38 @@ namespace Raven.Server.Documents.TimeSeries
                     _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags);
                 }
             }
+        }
+
+        public IEnumerable<ReplicationBatchItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
+            {
+                yield return CreateTimeSeriesSegmentItem(context, result.Reader);
+            }
+        }
+
+        private static ReplicationBatchItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, TableValueReader reader)
+        {
+            var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
+            var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
+            var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
+
+            var item = new TimeSeriesReplicationItem
+            {
+                Type = ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment,
+                ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
+                Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
+                Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                Etag = Bits.SwapBytes(etag),
+                TransactionMarker = DocumentsStorage.TableValueToShort((int)TimeSeriesTable.TransactionMarker, nameof(TimeSeriesTable.TransactionMarker), ref reader)
+            };
+
+            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+            item.ToDispose(Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out item.Key));
+            return item;
         }
 
         internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)

@@ -1,10 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
+using System.Text;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -357,6 +363,84 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);
+
+
+        private LazyStringValue SetTimestampTag(JsonOperationContext context, TagPointer tagPointer)
+        {
+            if (tagPointer.Pointer == null)
+                return null;
+
+            return context.GetLazyStringValue(tagPointer.Pointer);
+        }
+
+        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(DocumentsOperationContext context, DateTime baseline)
+        {
+            var result = new TimeSeriesStorage.Reader.SingleResult();
+            var values = new double[NumberOfValues];
+            var states = new TimeStampState[NumberOfValues];
+
+            var tagPointer = new TagPointer();
+            using (var enumerator = GetEnumerator(context.Allocator))
+            {
+                while (enumerator.MoveNext(out int ts, values, states, ref tagPointer))
+                {
+                    var cur = baseline.AddMilliseconds(ts);
+
+                    var tag = SetTimestampTag(context, tagPointer);
+
+                    var end = values.Length;
+                    while (end >= 0 && double.IsNaN(values[end - 1]))
+                    {
+                        end--;
+                    }
+                    result.TimeStamp = cur;
+                    result.Tag = tag;
+                    result.Values = new Memory<double>(values, 0, end);
+
+                    yield return result;
+                }
+            }
+        }
+
+        private enum ParsingOrder
+        {
+            Id,
+            Name,
+            BaseLine
+        }
+        public static void ParseTimeSeriesKey(Slice key, out string docId, out string name, out DateTime baseLine)
+        {
+            docId = null;
+            name = null;
+
+            var bytes = new Span<byte>(key.Content.Ptr, key.Size);
+            var order = ParsingOrder.Id;
+            var next = -1;
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                var val = bytes[i];
+                if (val != SpecialChars.RecordSeparator)
+                    continue;
+
+                switch (order)
+                {
+                    case ParsingOrder.Id:
+                        docId = Encoding.UTF8.GetString(bytes.Slice(0, i));
+                        break;
+
+                    case ParsingOrder.Name:
+                        name = Encoding.UTF8.GetString(bytes.Slice(next, i - next));
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+                next = i + 1;
+                order++;
+            }
+
+            var ticks = MemoryMarshal.Read<long>(bytes.Slice(next, bytes.Length - next));
+            baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
+        }
 
         public struct TagPointer
         {
