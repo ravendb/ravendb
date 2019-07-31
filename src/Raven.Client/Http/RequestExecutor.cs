@@ -1029,7 +1029,7 @@ namespace Raven.Client.Http
 
         public static readonly string ClientVersion = RavenVersionAttribute.Instance.AssemblyVersion;
 
-        private HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
+        internal HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
         {
             var request = command.CreateRequest(ctx, node, out url);
 
