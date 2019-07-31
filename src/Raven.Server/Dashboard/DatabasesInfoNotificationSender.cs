@@ -21,6 +21,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server.Utils;
+using Voron;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Dashboard
@@ -97,6 +98,15 @@ namespace Raven.Server.Dashboard
             public DateTime NextDiskSpaceCheck;
         }
 
+        private static readonly SystemInfoCache CachedSystemInfo = new SystemInfoCache();
+
+        private class SystemInfoCache
+        {
+            public long Hash;
+            public List<Client.ServerWide.Operations.MountPointUsage> MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
+            public DateTime NextDiskSpaceCheck;
+        }
+        
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, Func<string, bool> isValidFor, CancellationTokenSource cts)
         {
             var databasesInfo = new DatabasesInfo();
@@ -109,6 +119,7 @@ namespace Raven.Server.Dashboard
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
             using (transactionContext.OpenReadTransaction())
             {
+                // 1. Add databases info
                 foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
                 {
                     var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
@@ -209,6 +220,37 @@ namespace Raven.Server.Dashboard
                     catch (Exception)
                     {
                         SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: false);
+                    }
+                }
+                
+                // 2. Add <system> info 
+                if (isValidFor == null) 
+                {
+                    var currentSystemHash = serverStore._env.CurrentReadTransactionId;
+                    if (currentSystemHash != CachedSystemInfo.Hash || CachedSystemInfo.NextDiskSpaceCheck <  SystemTime.UtcNow)
+                    {
+                        // Update cached value
+                        CachedSystemInfo.Hash = currentSystemHash;
+                        CachedSystemInfo.NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30);
+                        CachedSystemInfo.MountPoints.Clear();
+                    
+                        // Add new data
+                        var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
+                        var systemMountPoints = StorageEnvironment.GetMountPointUsageDetailsFor(systemEnv);
+                    
+                        foreach (var systemPoint in systemMountPoints)
+                        {
+                            UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
+                            CachedSystemInfo.MountPoints.Add(systemPoint);
+                        }
+                    }
+                    else
+                    {
+                        // Add existing data
+                        foreach (var systemPoint in CachedSystemInfo.MountPoints)
+                        {
+                            UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
+                        }
                     }
                 }
             }

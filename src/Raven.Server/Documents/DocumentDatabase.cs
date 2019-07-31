@@ -1365,80 +1365,10 @@ namespace Raven.Server.Documents
 
             foreach (var environment in storageEnvironments)
             {
-                if (environment == null)
-                    continue;
-
-                var fullPath = environment.Environment.Options.BasePath.FullPath;
-                if (fullPath == null)
-                    continue;
-
-                var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-                var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
-                if (diskSpaceResult == null)
-                    continue;
-
-                var sizeOnDisk = environment.Environment.GenerateSizeReport();
-                var usage = new MountPointUsage
+                foreach (var mountPoint in StorageEnvironment.GetMountPointUsageDetailsFor(environment))
                 {
-                    UsedSpace = sizeOnDisk.DataFileInBytes,
-                    DiskSpaceResult = new DiskSpaceResult
-                    {
-                        DriveName = diskSpaceResult.DriveName,
-                        VolumeLabel = diskSpaceResult.VolumeLabel,
-                        TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                        TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                    },
-                    UsedSpaceByTempBuffers = 0
-                };
-
-                var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
-                if (journalPathUsage != null)
-                {
-                    if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
-                    {
-                        usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
-                    }
-                    else
-                    {
-                        yield return new MountPointUsage
-                        {
-                            DiskSpaceResult = new DiskSpaceResult
-                            {
-                                DriveName = journalPathUsage.DriveName,
-                                VolumeLabel = journalPathUsage.VolumeLabel,
-                                TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
-                            },
-                            UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
-                        };
-                    }
+                    yield return mountPoint;
                 }
-
-                var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-                if (tempBuffersDiskSpaceResult != null)
-                {
-                    if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
-                    {
-                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                    }
-                    else
-                    {
-                        yield return new MountPointUsage
-                        {
-                            UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                            DiskSpaceResult = new DiskSpaceResult
-                            {
-                                DriveName = tempBuffersDiskSpaceResult.DriveName,
-                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                            }
-                        };
-                    }
-                }
-
-                yield return usage;
             }
         }
 
@@ -1546,29 +1476,6 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
-        }
-    }
-
-    public class StorageEnvironmentWithType
-    {
-        public string Name { get; set; }
-        public StorageEnvironmentType Type { get; set; }
-        public StorageEnvironment Environment { get; set; }
-        public DateTime? LastIndexQueryTime;
-
-        public StorageEnvironmentWithType(string name, StorageEnvironmentType type, StorageEnvironment environment)
-        {
-            Name = name;
-            Type = type;
-            Environment = environment;
-        }
-
-        public enum StorageEnvironmentType
-        {
-            Documents,
-            Index,
-            Configuration,
-            System
         }
     }
 }

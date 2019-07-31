@@ -117,7 +117,7 @@ class storagePieChart {
         
         paths
             .append("title")
-            .html(d => d.data.Database);
+            .html(d => d.data.Database === '<System>' ? '&ltSystem&gt' : d.data.Database);
 
         if (withTween) {
             const arcTween = function (a: d3.layout.pie.Arc<{ Database: string, Size: number }>) {
