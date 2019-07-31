@@ -46,7 +46,10 @@ namespace Raven.Client.Documents.Session.Operations
 
             _entities = result.Entities;
 
-            return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options, _session.TransactionMode);
+            if (_session.TransactionMode == TransactionMode.ClusterWide)
+                return new ClusterWideBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
+
+            return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
         }
 
         public void SetResult(BatchCommandResult result)

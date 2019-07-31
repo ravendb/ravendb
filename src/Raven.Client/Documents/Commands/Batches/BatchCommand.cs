@@ -13,7 +13,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class BatchCommand : RavenCommand<BatchCommandResult>, IRaftCommand, IDisposable
+    public class ClusterWideBatchCommand : BatchCommand, IRaftCommand
+    {
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+
+        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
+        {
+        }
+    }
+
+    public class BatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly List<Stream> _attachmentStreams;
@@ -162,7 +171,5 @@ namespace Raven.Client.Documents.Commands.Batches
 
             Result?.Results?.Dispose();
         }
-
-        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
 }
