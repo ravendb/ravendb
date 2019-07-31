@@ -164,7 +164,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     DatabaseTopology topology;
                     using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
                     {
-                        if (rawRecord.IsNull())
+                        if (rawRecord == null)
                         {
                             continue; // Database does not exists in this server
                         }

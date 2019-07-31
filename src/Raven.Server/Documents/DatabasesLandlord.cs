@@ -71,14 +71,14 @@ namespace Raven.Server.Documents
                 using (context.OpenReadTransaction())
                 using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 {
-                    if (rawRecord.IsNull())
+                    if (rawRecord == null)
                     {
                         // was removed, need to make sure that it isn't loaded
                         UnloadDatabase(databaseName, dbRecordIsNull: true);
                         return;
                     }
 
-                    if (ShouldDeleteDatabase(databaseName, rawRecord))
+                    if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                         return;
 
                     topology = rawRecord.GetTopology();
@@ -262,7 +262,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool ShouldDeleteDatabase(string dbName, RawDatabaseRecord rawRecord)
+        public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
             var directDelete = rawRecord.GetDeletionInProgressStatus()?.TryGetValue(_serverStore.NodeTag, out deletionInProgress) == true &&
@@ -277,6 +277,8 @@ namespace Raven.Server.Documents
                 return false;
 
             var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+            context.CloseTransaction();
+
             DeleteDatabase(dbName, deletionInProgress, record);
             return true;
         }
@@ -658,10 +660,10 @@ namespace Raven.Server.Documents
                     using (context.OpenReadTransaction())
                     using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
                     {
-                        if (rawRecord.IsNull())
+                        if (rawRecord == null)
                             return;
 
-                        ShouldDeleteDatabase(databaseName.Value, rawRecord);
+                        ShouldDeleteDatabase(context, databaseName.Value, rawRecord);
                     }
                 }
                 catch

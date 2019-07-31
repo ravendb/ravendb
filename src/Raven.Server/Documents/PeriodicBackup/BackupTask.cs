@@ -389,8 +389,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var rawRecord = _serverStore.Cluster.ReadRawDatabase(context, _database.Name, out _);
-                return rawRecord.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackup) ? etagForBackup : 0;
+                var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name);
+
+                return rawRecord.GetEtagForBackup();
             }
         }
 

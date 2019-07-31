@@ -1389,7 +1389,7 @@ namespace Raven.Server.ServerWide
 
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                if (rawRecord.IsNull() == false && rawRecord.IsEncrypted() == false)
+                if (rawRecord != null && rawRecord.IsEncrypted() == false)
                     throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
             }
 
@@ -1430,7 +1430,7 @@ namespace Raven.Server.ServerWide
             Debug.Assert(context.Transaction != null);
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                if (rawRecord.IsNull() == false && rawRecord.IsEncrypted() && rawRecord.GetTopology().RelevantFor(NodeTag))
+                if (rawRecord != null && rawRecord.IsEncrypted() && rawRecord.GetTopology().RelevantFor(NodeTag))
                 {
                     throw new InvalidOperationException(
                         $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");

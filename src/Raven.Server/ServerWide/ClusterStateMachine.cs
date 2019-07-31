@@ -628,20 +628,21 @@ namespace Raven.Server.ServerWide
                 var affectedDatabases = cleanCommand.Clean(context, index);
                 foreach (var tuple in affectedDatabases)
                 {
-                    var database = tuple.Key;
-                    var commandsCount = tuple.Value;
-                    var record = ReadDatabase(context, database);
-                    if (record == null)
-                        continue;
-
-                    record.TruncatedClusterTransactionCommandsCount = commandsCount;
-
-                    var dbKey = "db/" + tuple.Key;
+                    var dbKey = $"db/{tuple.Key}";
                     using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                     using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                     {
-                        var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
-                        UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                        var databaseRecordJson = ReadRawDatabase(context, tuple.Key, out _);
+                        if (databaseRecordJson == null)
+                            continue;
+
+                        databaseRecordJson.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount)] = tuple.Value };
+                        using (var old = databaseRecordJson)
+                        {
+                            databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
+                        }
+
+                        UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
                     }
 
                     // we simply update the value without invoking the OnChange function
@@ -699,17 +700,24 @@ namespace Raven.Server.ServerWide
 
         private void UpdateDatabaseRecordId(TransactionOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
         {
-            var record = ReadDatabase(context, clusterTransaction.DatabaseName);
-            if (record.Topology.DatabaseTopologyIdBase64 == null)
+            var rawRecord = ReadRawDatabaseRecord(context, clusterTransaction.DatabaseName);
+            var topology = rawRecord.GetTopology();
+            if (topology.DatabaseTopologyIdBase64 == null)
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                record.Topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
-                var dbKey = "db/" + clusterTransaction.DatabaseName;
+                var databaseRecordJson = rawRecord.GetRecord();
+                topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
+                var dbKey = $"db/{clusterTransaction.DatabaseName}";
                 using (Slice.From(context.Allocator, dbKey, out var valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out var valueNameLowered))
                 {
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
-                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                    databaseRecordJson.Modifications = new DynamicJsonValue { [nameof(DatabaseRecord.Topology)] = topology };
+                    using (var old = databaseRecordJson)
+                    {
+                        databaseRecordJson = context.ReadObject(databaseRecordJson, dbKey);
+                    }
+
+                    UpdateValue(index, items, valueNameLowered, valueName, databaseRecordJson);
                 }
             }
         }
@@ -1113,7 +1121,6 @@ namespace Raven.Server.ServerWide
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
 
                     var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
                     if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
                     {
@@ -1123,6 +1130,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
                     remove.UpdateDatabaseRecord(databaseRecord, index);
 
                     if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
@@ -1153,7 +1161,7 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
+        private static void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
         {
             // delete database record
             items.DeleteByKey(lowerKey);
@@ -1746,11 +1754,11 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
-
                     if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
                         throw new RachisConcurrencyException(
-                            $"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}");
+                            $"Concurrency violation at executing {type} command, the database {databaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}");
+
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
 
                     updateCommand.Initialize(serverStore, context);
                     string relatedRecordIdToDelete;
@@ -2476,6 +2484,8 @@ namespace Raven.Server.ServerWide
         public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name, out long etag)
         {
             var rawRecord = ReadRawDatabase(context, name, out etag);
+            if (rawRecord == null)
+                return null;
 
             return new RawDatabaseRecord(rawRecord);
         }

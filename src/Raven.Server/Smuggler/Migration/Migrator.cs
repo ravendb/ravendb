@@ -328,7 +328,7 @@ namespace Raven.Server.Smuggler.Migration
             using (context.OpenReadTransaction())
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                if (rawRecord.IsNull() == false)
+                if (rawRecord != null)
                 {
                     if (rawRecord.GetTopology().AllNodes.Contains(_serverStore.NodeTag) == false)
                         throw new InvalidOperationException(

@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
                     {
-                        if (rawRecord.IsNull() ||
+                        if (rawRecord == null ||
                             rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||
                             rawRecord.IsDisabled() ||
                             rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress ||
@@ -332,7 +332,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static bool IsDatabaseBeingDeleted(string tag, RawDatabaseRecord databaseRecord)
         {
-            if (databaseRecord.IsNull())
+            if (databaseRecord == null)
                 return false;
 
             var deletionInProgress = databaseRecord.GetDeletionInProgressStatus();

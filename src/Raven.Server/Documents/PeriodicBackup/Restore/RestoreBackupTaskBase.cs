@@ -304,9 +304,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 _serverStore.NotificationCenter.Add(alert);
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
                 {
-                    if (_serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName) == false)
+                    bool databaseExists;
+                    using (context.OpenReadTransaction())
+                    {
+                        databaseExists = _serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName);
+                    }
+
+                    if (databaseExists == false)
                     {
                         // delete any files that we already created during the restore
                         IOExtensions.DeleteDirectory(RestoreFromConfiguration.DataDirectory);

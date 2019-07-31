@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Replication
             {
                 using (var rawRecord = _parent._server.Cluster.ReadRawDatabaseRecord(context, _parent.Database.Name))
                 {
-                    if (rawRecord.IsNull())
+                    if (rawRecord == null)
                         throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
 
                     if (rawRecord.IsEncrypted() && Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)

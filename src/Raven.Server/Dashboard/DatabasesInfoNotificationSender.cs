@@ -325,7 +325,7 @@ namespace Raven.Server.Dashboard
         {
             using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                if (rawRecord.IsNull())
+                if (rawRecord == null)
                 {
                     // database doesn't exist
                     return;
