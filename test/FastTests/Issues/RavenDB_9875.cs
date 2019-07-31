@@ -21,6 +21,8 @@ namespace FastTests.Issues
                 typeof(GetRevisionsBinEntryCommand),
                 typeof(GetRevisionsCommand),
                 typeof(BatchCommand),
+                typeof(SingleNodeBatchCommand),
+                typeof(ClusterWideBatchCommand),
                 typeof(PatchOperation.PatchCommand)
             };
 

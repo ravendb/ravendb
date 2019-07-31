@@ -240,7 +240,7 @@ namespace FastTests
 
             public async Task BatchAsync(List<ICommandData> commands)
             {
-                var command = new BatchCommand(_store.Conventions, Context, commands);
+                var command = new SingleNodeBatchCommand(_store.Conventions, Context, commands);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
             }
