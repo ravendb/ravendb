@@ -84,10 +84,9 @@ namespace Raven.Server.Smuggler.Documents
                 _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
                 _disposeServerTransaction = _serverContext.OpenReadTransaction();
 
-                using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabase(_serverContext, _database.Name, out _))
+                using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(_serverContext, _database.Name))
                 {
-                    rawRecord.TryGet(nameof(DatabaseRecord.EtagForBackup), out long raftIndexForBackup);
-                    LastRaftIndex = raftIndexForBackup;
+                    LastRaftIndex = rawRecord.GetEtagForBackup();
                 }
             }
 

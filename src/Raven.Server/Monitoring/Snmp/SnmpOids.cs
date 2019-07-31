@@ -374,7 +374,7 @@ namespace Raven.Server.Monitoring.Snmp
                 {
                     using (var record = serverStore.Cluster.ReadRawDatabaseRecord(context, kvp.Key))
                     {
-                        if (record.IsNull())
+                        if (record == null)
                             continue;
 
                         var array = new DynamicJsonArray();

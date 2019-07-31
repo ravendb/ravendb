@@ -27,11 +27,6 @@ namespace Raven.Server.ServerWide
             return _record;
         }
 
-        public bool IsNull()
-        {
-            return _record == null;
-        }
-
         public bool IsDisabled()
         {
             if (_record.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false)
@@ -46,6 +41,14 @@ namespace Raven.Server.ServerWide
                 return false;
 
             return encrypted;
+        }
+
+        public long GetEtagForBackup()
+        {
+            if (_record.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackup) == false)
+                return 0;
+
+            return etagForBackup;
         }
 
         public string GetDatabaseName()

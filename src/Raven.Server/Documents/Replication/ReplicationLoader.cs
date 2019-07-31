@@ -724,7 +724,7 @@ namespace Raven.Server.Documents.Replication
             {
                 using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
-                    if (rawRecord.IsNull() == false && rawRecord.GetDeletionInProgressStatus().ContainsKey(node))
+                    if (rawRecord != null && rawRecord.GetDeletionInProgressStatus().ContainsKey(node))
                     {
                         throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, so it will not handle replications.");
                     }
@@ -739,7 +739,7 @@ namespace Raven.Server.Documents.Replication
             {
                 using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
-                    if (rawRecord.IsNull())
+                    if (rawRecord == null)
                         return;
 
                     var deletionInProgress = rawRecord.GetDeletionInProgressStatus();

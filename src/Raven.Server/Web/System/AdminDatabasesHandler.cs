@@ -440,7 +440,7 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
-                    if (rawRecord.IsNull())
+                    if (rawRecord == null)
                         DatabaseDoesNotExistException.Throw(name);
 
                     topology = rawRecord.GetTopology();
@@ -705,7 +705,7 @@ namespace Raven.Server.Web.System
                             DatabaseTopology topology;
                             using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                             {
-                                if (rawRecord.IsNull())
+                                if (rawRecord == null)
                                     continue;
 
                                 topology = rawRecord.GetTopology();
@@ -1066,7 +1066,7 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, compactSettings.DatabaseName))
                 {
-                    if (rawRecord.IsNull())
+                    if (rawRecord == null)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName}, it doesn't exist.");
 
                     if (rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false)

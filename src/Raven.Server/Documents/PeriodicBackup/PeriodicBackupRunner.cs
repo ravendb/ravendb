@@ -541,7 +541,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (context.OpenReadTransaction())
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name))
             {
-                if (rawRecord.IsNull())
+                if (rawRecord == null)
                     return false;
 
                 topology = rawRecord.GetTopology();

@@ -137,7 +137,7 @@ namespace Raven.Server.Web.Studio
             using (context.OpenReadTransaction())
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                if (rawRecord.IsNull())
+                if (rawRecord == null)
                     return new List<string>();
 
                 var databaseTopology = rawRecord.GetTopology();

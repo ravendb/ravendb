@@ -1051,7 +1051,7 @@ namespace Raven.Server.Web.System
                     List<PullReplicationDefinition> hubPullReplications;
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                     {
-                        if (rawRecord.IsNull())
+                        if (rawRecord == null)
                             throw new DatabaseDoesNotExistException(Database.Name);
 
                         hubPullReplications = rawRecord.GetHubPullReplications();
@@ -1272,7 +1272,7 @@ namespace Raven.Server.Web.System
                         using (context.Transaction == null ? context.OpenReadTransaction() : null)
                         using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, database.Name))
                         {
-                            if (rawRecord.IsNull())
+                            if (rawRecord == null)
                                 break;
 
                             if (type == OngoingTaskType.RavenEtl)

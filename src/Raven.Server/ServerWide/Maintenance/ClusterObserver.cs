@@ -191,7 +191,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         using (var rawRecord = _engine.StateMachine.ReadRawDatabaseRecord(context, database, out long etag))
                         {
-                            if (rawRecord.IsNull())
+                            if (rawRecord == null)
                             {
                                 LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
                                 continue;

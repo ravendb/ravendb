@@ -118,12 +118,13 @@ namespace Raven.Server.Documents
 
                     using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, Name))
                     {
-                        if (rawRecord.IsNull() == false)
+                        if (rawRecord != null)
                         {
+                            var isEncrypted = rawRecord.IsEncrypted();
                             // can happen when we are in the process of restoring a database
-                            if (rawRecord.IsEncrypted() && MasterKey == null)
+                            if (isEncrypted && MasterKey == null)
                                 throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                            if (rawRecord.IsEncrypted() == false && MasterKey != null)
+                            if (isEncrypted == false && MasterKey != null)
                                 throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                         }
                     }
