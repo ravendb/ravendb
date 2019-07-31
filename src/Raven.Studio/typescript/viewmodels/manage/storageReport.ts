@@ -237,8 +237,6 @@ class storageReport extends viewModelBase {
         });
 
         return new storageReportItem("Temporary Files", "tempFiles", false, mappedTemps.reduce((p, c) => p + c.size, 0), mappedTemps);
-        
-        
     }
 
     private initGraph() {
@@ -492,9 +490,8 @@ class storageReport extends viewModelBase {
     private onMouseOut(d: storageReportItem) {
         this.tooltip.transition()
             .duration(500)
-            .style("opacity", 0);	
+            .style("opacity", 0);
     }
-   
 }
 
 export = storageReport;    
