@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private Dictionary<LazyStringValue, DocumentInfo> _modifications;
 
-        public BatchCommand CreateRequest()
+        public SingleNodeBatchCommand CreateRequest()
         {
             var result = _session.PrepareForSaveChanges();
 
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_session.TransactionMode == TransactionMode.ClusterWide)
                 return new ClusterWideBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
 
-            return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
+            return new SingleNodeBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
         }
 
         public void SetResult(BatchCommandResult result)
