@@ -24,7 +24,8 @@ namespace SlowTests.Issues
                         ServerRole = ServerNode.Role.Member,
                         Url = "http://dummy:1234"
                     };
-                    var batchCommand = new BatchCommand(store.Conventions, context, new List<ICommandData>());
+
+                    var batchCommand = new SingleNodeBatchCommand(store.Conventions, context, new List<ICommandData>());
                     var uri = requestExecutor.CreateRequest(context, dummy, batchCommand, out _);
                     Assert.DoesNotContain("raft", uri.RequestUri.ToString());
 
