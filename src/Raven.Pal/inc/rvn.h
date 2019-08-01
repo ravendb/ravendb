@@ -59,6 +59,9 @@ EXPORT int32_t
 rvn_memory_sync(void *address, int64_t size, int32_t *detailed_error_code);
 
 EXPORT int32_t
+rvn_file_sync(void *handle, int32_t *detailed_error_code);
+
+EXPORT int32_t
 rvn_mmap_dispose_handle(void *handle, int32_t *detailed_error_code);
 
 EXPORT int32_t
@@ -71,7 +74,7 @@ EXPORT int32_t
 rvn_protect_range(void *start_address, int64_t size, int32_t protection, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_allocate_more_space(int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
+rvn_allocate_more_space(int32_t map_after_allocation_flag, int64_t new_length_after_adjustment, void *handle, void **new_address, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int64_t initial_file_size, int32_t durability_support, void **handle, int64_t *actual_size, int32_t *detailed_error_code);
@@ -99,6 +102,18 @@ rvn_test_storage_durability(const char *temp_file_name, int32_t *detailed_error_
 
 EXPORT int32_t
 rvn_get_path_disk_space(const char * path, uint64_t* total_free_bytes, uint64_t* total_size_bytes, int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_remap(void *base_address, void **new_address, void *handle, int64_t size, int32_t flags, int64_t offset, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_mmap_file(int64_t sz, int64_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_create_file(const char *path, int64_t initial_file_size, int32_t flags, void **handle, int64_t *actual_file_size, int32_t *detailed_error_code);
+
+EXPORT int32_t
+rvn_flush_file(void *handle, int32_t *detailed_error_code);
 
 /* For internal use: */
 PRIVATE int64_t
