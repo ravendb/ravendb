@@ -439,7 +439,6 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-
         public bool HasFixedPort { get; internal set; }
 
         public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
@@ -1408,7 +1407,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-
         public byte[] GetSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
@@ -2341,7 +2339,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-
         private static void ThrowInvalidEngineState(CommandBase cmd)
         {
             throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
@@ -2677,6 +2674,81 @@ namespace Raven.Server.ServerWide
                 [nameof(LogSummary.Entries)] = entries
             };
             return json;
+        }
+        
+        public static IEnumerable<Raven.Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment)
+        {
+            var fullPath = environment?.Environment.Options.BasePath.FullPath;
+            if (fullPath == null)
+                yield break;
+                
+            var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
+            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
+            if (diskSpaceResult == null)
+                yield break;
+            
+            var sizeOnDisk = environment.Environment.GenerateSizeReport();
+            var usage = new Raven.Client.ServerWide.Operations.MountPointUsage
+            {
+                UsedSpace = sizeOnDisk.DataFileInBytes,
+                DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                {
+                    DriveName = diskSpaceResult.DriveName,
+                    VolumeLabel = diskSpaceResult.VolumeLabel,
+                    TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                    TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                },
+                UsedSpaceByTempBuffers = 0
+            };
+
+            var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+            if (journalPathUsage != null)
+            {
+                if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
+                {
+                    usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
+                }
+                else
+                {
+                    yield return new Raven.Client.ServerWide.Operations.MountPointUsage
+                    {
+                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        {
+                            DriveName = journalPathUsage.DriveName,
+                            VolumeLabel = journalPathUsage.VolumeLabel,
+                            TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                            TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
+                        },
+                        UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
+                    };
+                }
+            }
+
+            var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+            if (tempBuffersDiskSpaceResult != null)
+            {
+                if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
+                {
+                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
+                }
+                else
+                {
+                    yield return new Raven.Client.ServerWide.Operations.MountPointUsage
+                    {
+                        UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
+                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        {
+                            DriveName = tempBuffersDiskSpaceResult.DriveName,
+                            VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
+                            TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                            TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                        }
+                    };
+                }
+            }
+
+            yield return usage;
         }
     }
 }

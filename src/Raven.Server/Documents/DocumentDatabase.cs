@@ -1365,7 +1365,7 @@ namespace Raven.Server.Documents
 
             foreach (var environment in storageEnvironments)
             {
-                foreach (var mountPoint in StorageEnvironment.GetMountPointUsageDetailsFor(environment))
+                foreach (var mountPoint in ServerStore.GetMountPointUsageDetailsFor(environment))
                 {
                     yield return mountPoint;
                 }

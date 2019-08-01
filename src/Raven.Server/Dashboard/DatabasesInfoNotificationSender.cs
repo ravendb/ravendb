@@ -240,7 +240,7 @@ namespace Raven.Server.Dashboard
                     
                         // Get new data 
                         var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
-                        var systemMountPoints = StorageEnvironment.GetMountPointUsageDetailsFor(systemEnv);
+                        var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv);
                     
                         foreach (var systemPoint in systemMountPoints)
                         {

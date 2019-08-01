@@ -9,7 +9,6 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.Operations;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Exceptions;
@@ -1283,81 +1282,6 @@ namespace Voron
         private static void ThrowSimulateFailureOnDbCreation()
         {
             throw new InvalidOperationException("Simulation of db creation failure");
-        }
-
-        public static IEnumerable<MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment)
-        {
-            var fullPath = environment?.Environment.Options.BasePath.FullPath;
-            if (fullPath == null)
-                yield break;
-                
-            var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
-            if (diskSpaceResult == null)
-                yield break;
-            
-            var sizeOnDisk = environment.Environment.GenerateSizeReport();
-            var usage = new MountPointUsage
-            {
-                UsedSpace = sizeOnDisk.DataFileInBytes,
-                DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
-                {
-                    DriveName = diskSpaceResult.DriveName,
-                    VolumeLabel = diskSpaceResult.VolumeLabel,
-                    TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                    TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                },
-                UsedSpaceByTempBuffers = 0
-            };
-
-            var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
-            if (journalPathUsage != null)
-            {
-                if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
-                {
-                    usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
-                }
-                else
-                {
-                    yield return new MountPointUsage
-                    {
-                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
-                        {
-                            DriveName = journalPathUsage.DriveName,
-                            VolumeLabel = journalPathUsage.VolumeLabel,
-                            TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
-                        },
-                        UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
-                    };
-                }
-            }
-
-            var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-            if (tempBuffersDiskSpaceResult != null)
-            {
-                if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
-                {
-                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                }
-                else
-                {
-                    yield return new MountPointUsage
-                    {
-                        UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
-                        {
-                            DriveName = tempBuffersDiskSpaceResult.DriveName,
-                            VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                            TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                        }
-                    };
-                }
-            }
-
-            yield return usage;
         }
     }
     
