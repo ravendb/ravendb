@@ -3,83 +3,87 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow;
 using Sparrow.Collections;
+using Sparrow.Logging;
+using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
-using Sparrow.Server.Platform.Posix;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
-using Voron.Impl;
-using Voron.Impl.Paging;
 using Voron.Util.Settings;
-
-namespace Voron.Platform.Posix
+using static Sparrow.Server.Platform.Pal;
+using static Sparrow.Server.Platform.PalDefinitions;
+using static Sparrow.Server.Platform.PalFlags;
+namespace Voron.Impl.Paging
 {
-    public sealed unsafe class Posix32BitsMemoryMapPager : PosixAbstractPager
+    public sealed unsafe class Rvn32BitsMemoryMapPager : AbstractPager
     {
-        private readonly StorageEnvironmentOptions _options;
-        private readonly bool _isSyncDirAllowed;
+        private long _totalAllocationSize;
+        public override long TotalAllocationSize => _totalAllocationSize;
         private readonly bool _copyOnWriteMode;
-
-        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.BoxedInstanceInt64);
-        private long _totalMapped;
+        private readonly SafeMmapHandle _handle;
         private int _concurrentTransactions;
         private readonly ReaderWriterLockSlim _globalMemory = new ReaderWriterLockSlim();
-
-        private long _totalAllocationSize;
-        public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
+        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.BoxedInstanceInt64);
+        private long _totalMapped;
+        private readonly string _instanceGuid = Guid.NewGuid().ToString();
         private const int NumberOfPagesInAllocationGranularity = AllocationGranularity / Constants.Storage.PageSize;
-        public override long TotalAllocationSize => _totalAllocationSize;
 
-        public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
-            bool usePageProtection = false) : base(options, canPrefetchAhead: false, usePageProtection: usePageProtection, supportsUnmapping: false)
+        public Rvn32BitsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
+            bool usePageProtection = false) : base(options, canPrefetchAhead: false, usePageProtection: usePageProtection)
         {
-            _options = options;
+            _copyOnWriteMode = options.CopyOnWriteMode && file.FullPath.EndsWith(Constants.DatabaseFilename);
             FileName = file;
 
             if (Options.CopyOnWriteMode)
                 ThrowNotSupportedOption(file.FullPath);
 
-            _copyOnWriteMode = options.CopyOnWriteMode && file.FullPath.EndsWith(Constants.DatabaseFilename);
-            _isSyncDirAllowed = Syscall.CheckSyncDirectoryAllowed(FileName.FullPath);
 
-            PosixHelper.EnsurePathExists(FileName.FullPath);
+//            _totalAllocationSize = GetFileSize();
+//
+//            if (_totalAllocationSize == 0 && initialFileSize.HasValue)
+//            {
+//                _totalAllocationSize = NearestSizeToAllocationGranularity(initialFileSize.Value);
+//            }
+//            if (_totalAllocationSize == 0 || _totalAllocationSize % AllocationGranularity != 0 ||
+//                _totalAllocationSize != GetFileSize())
+//            {
+//                _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
+//            }
 
-            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.OSX) == false); // O_LARGEFILE not exists in mac and supported by default (however we do not run on mac 32bit..)
+            var mmapOptions = _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None;
+            if (DeleteOnClose)
+                mmapOptions |= MmapOptions.DeleteOnClose;
 
-            _fd = Syscall.open(file.FullPath, OpenFlags.O_RDWR | PerPlatformValues.OpenFlags.O_CREAT | PerPlatformValues.OpenFlags.O_LARGEFILE,
-                              FilePermissions.S_IWUSR | FilePermissions.S_IRUSR);
-            if (_fd == -1)
+            if (initialFileSize.HasValue == false)
+                initialFileSize = AllocationGranularity;
+
+            var rc = rvn_create_file(
+                file.FullPath,
+                initialFileSize.Value,
+                mmapOptions,
+                out _handle,
+                out _totalAllocationSize,
+                out var errorCode);
+
+            if (rc != FailCodes.Success)
             {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "when opening " + file);
-            }
-
-            _totalAllocationSize = GetFileSize();
-
-            if (_totalAllocationSize == 0 && initialFileSize.HasValue)
-            {
-                _totalAllocationSize = NearestSizeToAllocationGranularity(initialFileSize.Value);
-            }
-            if (_totalAllocationSize == 0 || _totalAllocationSize % AllocationGranularity != 0 ||
-                _totalAllocationSize != GetFileSize())
-            {
-                _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-                PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize, file.FullPath);
-            }
-
-            if (_isSyncDirAllowed && Syscall.SyncDirectory(file.FullPath) == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "sync dir for " + file);
+                try
+                {
+                    PalHelper.ThrowLastError(rc, errorCode, $"rvn_create_file failed on {rc} for '{file.FullPath}'");
+                }
+                catch (DiskFullException dfEx)
+                {
+                    var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(file.FullPath);
+                    throw new DiskFullException(file.FullPath, initialFileSize.Value, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                }
             }
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
             SetPagerState(new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold));
         }
 
@@ -99,12 +103,6 @@ namespace Voron.Platform.Posix
             return (size / AllocationGranularity + 1) * AllocationGranularity;
         }
 
-        private long GetFileSize()
-        {
-            FileInfo fi = new FileInfo(FileName.FullPath);
-            return fi.Length;
-        }
-
         public override bool EnsureMapped(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages)
         {
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
@@ -119,33 +117,43 @@ namespace Voron.Platform.Posix
                     return false; // already mapped large enough here
             }
 
-            var ammountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
-            MapPages(state, allocationStartPosition, ammountToMapInBytes);
+            var amountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
+            MapPages(state, allocationStartPosition, amountToMapInBytes);
             return true;
         }
 
         public override int CopyPage(I4KbBatchWrites destI4KbBatchWrites, long pageNumber, PagerState pagerState)
         {
-            long sizeToMap = AllocationGranularity;
             var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
             var allocationStartPosition = pageNumber - distanceFromStart;
-
             var offset = allocationStartPosition * Constants.Storage.PageSize;
-            var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
+            var mmapOptions = _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None;
 
-            var result = Syscall.mmap64(IntPtr.Zero, (UIntPtr)sizeToMap,
-                                                      MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                                                      mmflags, _fd, offset);
+            var rc = rvn_mmap_file(
+                AllocationGranularity,
+                mmapOptions,
+                _handle,
+                offset,
+                out var baseAddress,
+                out var errorCode);
+
+            if (rc != FailCodes.Success)
+            {
+                try
+                {
+                    PalHelper.ThrowLastError(rc, errorCode, $"rvn_mmap_file failed on {rc} for '{FileName.FullPath}' - Unable to map (default view size) {AllocationGranularity / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition}");
+                }
+                catch (DiskFullException dfEx)
+                {
+                    var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(FileName.FullPath);
+                    throw new DiskFullException(FileName.FullPath, AllocationGranularity, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                }
+            }
+
+            void* newAddress = new IntPtr(-1).ToPointer();
             try
             {
-                if (result.ToInt64() == -1) //system didn't succeed in mapping the address where we wanted
-                {
-                    var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err,
-                        $"Unable to map (default view size) {sizeToMap / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
-                }
-
-                var pageHeader = (PageHeader*)(result.ToInt64() + distanceFromStart * Constants.Storage.PageSize);
+                var pageHeader = (PageHeader*)((byte *)baseAddress + distanceFromStart * Constants.Storage.PageSize);
 
                 int numberOfPages = 1;
                 if ((pageHeader->Flags & PageFlags.Overflow) == PageFlags.Overflow)
@@ -156,21 +164,21 @@ namespace Voron.Platform.Posix
 
                 if (numberOfPages + distanceFromStart > NumberOfPagesInAllocationGranularity)
                 {
-                    Syscall.munmap(result, (UIntPtr)sizeToMap);
-                    result = new IntPtr(-1);
-                    sizeToMap = NearestSizeToAllocationGranularity((numberOfPages + distanceFromStart) *
-                                                           Constants.Storage.PageSize);
-                    result = Syscall.mmap64(IntPtr.Zero, (UIntPtr)sizeToMap, MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                        mmflags, _fd, offset);
-
-                    if (result.ToInt64() == -1)
+                    var sizeToMap = (numberOfPages + distanceFromStart) * Constants.Storage.PageSize;
+                    rc = rvn_remap(baseAddress, out newAddress, _handle, sizeToMap, mmapOptions, offset, out var errorCodeRemap);
+                    if (rc != FailCodes.Success)
                     {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err,
-                            $"Unable to map {sizeToMap / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
+                        try
+                        {
+                            PalHelper.ThrowLastError(rc, errorCodeRemap, $"Unable to re-map [32 Bits] {sizeToMap / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {new IntPtr(baseAddress).ToInt64():X} on {FileName}");
+                        }
+                        catch (DiskFullException dfEx)
+                        {
+                            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(FileName.FullPath);
+                            throw new DiskFullException(FileName.FullPath, AllocationGranularity, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                        }
                     }
-
-                    pageHeader = (PageHeader*)(result.ToInt64() + (distanceFromStart * Constants.Storage.PageSize));
+                    pageHeader = (PageHeader*)((byte *)newAddress + (distanceFromStart * Constants.Storage.PageSize));
                 }
                 const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
 
@@ -181,15 +189,28 @@ namespace Voron.Platform.Posix
             }
             finally
             {
-                if (result.ToInt64() != -1)
-                    Syscall.munmap(result, (UIntPtr)sizeToMap);
-
+                if (new IntPtr(newAddress).ToInt64() != -1)
+                {
+                    rc = rvn_unmap(MmapOptions.None, newAddress, AllocationGranularity, out var errorCodeUnmap);
+                    if (rc != FailCodes.Success)
+                    {
+                        try
+                        {
+                            PalHelper.ThrowLastError(rc, errorCodeUnmap, $"Unable to unmap [32 Bits] {AllocationGranularity / Constants.Size.Kilobyte:#,#0} kb for page {pageNumber} starting at {allocationStartPosition} on {FileName}");
+                        }
+                        catch (DiskFullException dfEx)
+                        {
+                            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(FileName.FullPath);
+                            throw new DiskFullException(FileName.FullPath, AllocationGranularity, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                        }
+                    }
+                }
             }
         }
 
         public override I4KbBatchWrites BatchWriter()
         {
-            return new Posix32Bit4KbBatchWrites(this);
+            return new Rvn32Bit4KbBatchWrites(this);
         }
 
         public override void DiscardPages(long pageNumber, int numberOfPages)
@@ -247,29 +268,39 @@ namespace Voron.Platform.Posix
 
                 if (offset + size > _totalAllocationSize)
                 {
-                    ThrowInvalidMappingRequested(startPage, size);
+                    throw new InvalidOperationException(
+                        $"Was asked to map page {startPage} + {size / 1024:#,#0} kb, but the file size is only {_totalAllocationSize}, can't do that.");
                 }
-                var mmflags = _copyOnWriteMode ? MmapFlags.MAP_PRIVATE : MmapFlags.MAP_SHARED;
 
-                var startingBaseAddressPtr = Syscall.mmap64(IntPtr.Zero, (UIntPtr)size,
-                    MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                    mmflags, _fd, offset);
 
-                if (startingBaseAddressPtr.ToInt64() == -1)
-                //system didn't succeed in mapping the address where we wanted
+                var rc = rvn_mmap_file(size, _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None, _handle, offset, out var startingBaseAddressPtr,
+                    out var errorCode);
+
+                if (rc != FailCodes.Success)
                 {
-                    var err = Marshal.GetLastWin32Error();
-
-                    Syscall.ThrowLastError(err,
-                        $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}");
+                    try
+                    {
+                        PalHelper.ThrowLastError(rc, errorCode, $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}");
+                    }
+                    catch (DiskFullException dfEx)
+                    {
+                        var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(FileName.FullPath);
+                        throw new DiskFullException(FileName.FullPath, size, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes), dfEx.Message);
+                    }
                 }
 
-                NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, size, GetAllocatedInBytes);
+
+                var startingBaseAddressIntPtr = new IntPtr(startingBaseAddressPtr);
+                NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressIntPtr, size, GetAllocatedInBytes);
+                if (File.Exists("/tmp/debug.tmp"))
+                {
+                    Console.WriteLine(Environment.StackTrace);
+                }
 
                 Interlocked.Add(ref _totalMapped, size);
                 var mappedAddresses = new MappedAddresses
                 {
-                    Address = startingBaseAddressPtr,
+                    Address = startingBaseAddressIntPtr,
                     File = FileName.FullPath,
                     Size = size,
                     StartPage = startPage,
@@ -296,12 +327,6 @@ namespace Voron.Platform.Posix
             };
             state.LoadedPages[startPage] = loadedPage;
             return loadedPage;
-        }
-
-        private void ThrowInvalidMappingRequested(long startPage, long size)
-        {
-            throw new InvalidOperationException(
-                $"Was asked to map page {startPage} + {size / 1024:#,#0} kb, but the file size is only {_totalAllocationSize}, can't do that.");
         }
 
         private TransactionState GetTransactionState(IPagerLevelTransactionState tx)
@@ -370,7 +395,14 @@ namespace Voron.Platform.Posix
                         continue;
 
                     Interlocked.Add(ref _totalMapped, -addr.Size);
-                    Syscall.munmap(addr.Address, (UIntPtr)addr.Size);
+                    var flags = DeleteOnClose ? MmapOptions.DeleteOnClose : MmapOptions.None;
+
+                    var rc = rvn_unmap(flags, addr.Address.ToPointer(), addr.Size, out var errorCode);
+                    if (rc != FailCodes.Success)
+                    {
+                        PalHelper.ThrowLastError(rc, errorCode, $"rvn_unmap failed on {rc} for '{FileName.FullPath}' at {addr.Address}");
+                    }
+
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
 
                     if (set.Count == 0)
@@ -385,12 +417,12 @@ namespace Voron.Platform.Posix
             }
         }
 
-        private class Posix32Bit4KbBatchWrites : I4KbBatchWrites
+        private class Rvn32Bit4KbBatchWrites : I4KbBatchWrites
         {
-            private readonly Posix32BitsMemoryMapPager _parent;
+            private readonly Rvn32BitsMemoryMapPager _parent;
             private readonly TransactionState _state = new TransactionState();
 
-            public Posix32Bit4KbBatchWrites(Posix32BitsMemoryMapPager parent)
+            public Rvn32Bit4KbBatchWrites(Rvn32BitsMemoryMapPager parent)
             {
                 _parent = parent;
             }
@@ -410,20 +442,20 @@ namespace Voron.Platform.Posix
                 var distanceFromStart = (pageNumber % NumberOfPagesInAllocationGranularity);
                 var allocationStartPosition = pageNumber - distanceFromStart;
 
-                var ammountToMapInBytes = _parent.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
+                var amountToMapInBytes = _parent.NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
 
                 if (_state.LoadedPages.TryGetValue(allocationStartPosition, out var page))
                 {
                     if (page.NumberOfPages < distanceFromStart + numberOfPages)
-                        page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
+                        page = _parent.MapPages(_state, allocationStartPosition, amountToMapInBytes);
                 }
                 else
-                    page = _parent.MapPages(_state, allocationStartPosition, ammountToMapInBytes);
+                    page = _parent.MapPages(_state, allocationStartPosition, amountToMapInBytes);
 
                 var toWrite = numberOf4Kbs * 4 * Constants.Size.Kilobyte;
                 byte* destination = page.Pointer +
-                                   (distanceFromStart * Constants.Storage.PageSize) +
-                                   offsetBy4Kb * (4 * Constants.Size.Kilobyte);
+                                    (distanceFromStart * Constants.Storage.PageSize) +
+                                    offsetBy4Kb * (4 * Constants.Size.Kilobyte);
 
                 _parent.UnprotectPageRange(destination, (ulong)toWrite);
 
@@ -439,11 +471,10 @@ namespace Voron.Platform.Posix
                     var loadedPage = page.Value;
                     // we have to do this here because we need to verify that this is actually written to disk
                     // afterward, we can call flush on this
-                    var result = Syscall.msync(new IntPtr(loadedPage.Pointer), (UIntPtr)(loadedPage.NumberOfPages * Constants.Storage.PageSize), MsyncFlags.MS_SYNC);
-                    if (result == -1)
+                    var rc = rvn_memory_sync(loadedPage.Pointer, (loadedPage.NumberOfPages * Constants.Storage.PageSize), out var errorCode);
+                    if (rc != FailCodes.Success)
                     {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err, "msync on " + loadedPage);
+                        PalHelper.ThrowLastError(rc, errorCode, $"Failed to msync on {loadedPage}");
                     }
                 }
 
@@ -464,17 +495,17 @@ namespace Voron.Platform.Posix
                 metric.IncrementSize(totalUnsynced);
                 metric.IncrementFileSize(_totalAllocationSize);
 
-                if (Syscall.FSync(_fd) == -1)
+                var rc = rvn_flush_file(_handle, out var errorCode);
+                if (rc != FailCodes.Success)
                 {
-                    var err = Marshal.GetLastWin32Error();
-                    Syscall.ThrowLastError(err, "FSync " + FileName);
+                    PalHelper.ThrowLastError(rc, errorCode, $"Unable to sync (flush file) {FileName}");
                 }
             }
         }
 
         protected override string GetSourceName()
         {
-            return "mmap: " + _fd + " " + FileName;
+            return "mmap: " +  _instanceGuid + " " + FileName;
         }
 
         protected internal override PagerState AllocateMorePages(long newLength)
@@ -486,13 +517,12 @@ namespace Voron.Platform.Posix
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            PosixHelper.AllocateFileSpace(_options, _fd, _totalAllocationSize + allocationSize, FileName.FullPath);
-
-            if (_isSyncDirAllowed && Syscall.SyncDirectory(FileName.FullPath) == -1)
+            var rc = rvn_allocate_more_space(mapAfterAllocationFlag: 0, _totalAllocationSize + allocationSize, _handle, out var _, out var errorCode);
+            if (rc != FailCodes.Success)
             {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err);
+                PalHelper.ThrowLastError(rc, errorCode, $"Unable to rvn_allocate_more_space {FileName}, new size after adjustment: {_totalAllocationSize + allocationSize}");
             }
+
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
@@ -509,6 +539,16 @@ namespace Voron.Platform.Posix
         {
             // explicitly disable prefetch
             return false;
+        }
+
+        // public override void ReleaseAllocationInfo(byte* baseAddress, long size) - use base class method (32 bits is not (supporting) unmapping here
+
+        protected override void DisposeInternal()
+        {
+            if (_handle.IsInvalid == false) // TODO: correct usage ?
+            {
+                _handle.Dispose();
+            }
         }
     }
 }

@@ -51,7 +51,7 @@ namespace SlowTests.Voron.PalTest
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
 
-            ret = Pal.rvn_allocate_more_space(initFileSize, handle, out var newAddress, out errorCode);
+            ret = Pal.rvn_allocate_more_space(mapAfterAllocationFlag: 1, initFileSize, handle, out var newAddress, out errorCode);
             if (ret != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(ret, errorCode, "");
             

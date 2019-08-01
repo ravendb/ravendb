@@ -804,7 +804,7 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                     {
-                        return new Posix32BitsMemoryMapPager(options, file, initialSize,
+                        return new Rvn32BitsMemoryMapPager(options, file, initialSize,
                             usePageProtection: usePageProtection)
                         {
                             DeleteOnClose = deleteOnClose
@@ -840,7 +840,7 @@ namespace Voron
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
-                        return new Posix32BitsMemoryMapPager(this, path);
+                        return new Rvn32BitsMemoryMapPager(this, path);
                     return new RvnMemoryMapPager(this, path);
                 }
 
@@ -1073,7 +1073,7 @@ namespace Voron
                 if (RunningOnPosix)
                 {
                     if (RunningOn32Bits)
-                        return new Posix32BitsMemoryMapPager(this, filename);
+                        return new Rvn32BitsMemoryMapPager(this, filename);
                     return new RvnMemoryMapPager(this, filename);
                 }
 
