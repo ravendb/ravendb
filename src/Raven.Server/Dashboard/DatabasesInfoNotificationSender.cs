@@ -98,7 +98,7 @@ namespace Raven.Server.Dashboard
             public DateTime NextDiskSpaceCheck;
         }
 
-        private static readonly SystemInfoCache CachedSystemInfo = new SystemInfoCache();
+        private static SystemInfoCache CachedSystemInfo = new SystemInfoCache();
 
         private class SystemInfoCache
         {
@@ -119,7 +119,7 @@ namespace Raven.Server.Dashboard
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
             using (transactionContext.OpenReadTransaction())
             {
-                // 1. Add databases info
+                // 1. Fetch databases info
                 foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
                 {
                     var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
@@ -223,31 +223,38 @@ namespace Raven.Server.Dashboard
                     }
                 }
                 
-                // 2. Add <system> info 
+                // 2. Fetch <system> info 
                 if (isValidFor == null) 
                 {
                     var currentSystemHash = serverStore._env.CurrentReadTransactionId;
-                    if (currentSystemHash != CachedSystemInfo.Hash || CachedSystemInfo.NextDiskSpaceCheck <  SystemTime.UtcNow)
-                    {
-                        // Update cached value
-                        CachedSystemInfo.Hash = currentSystemHash;
-                        CachedSystemInfo.NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30);
-                        CachedSystemInfo.MountPoints.Clear();
+                    var cachedSystemInfoCopy = CachedSystemInfo;
                     
-                        // Add new data
+                    if (currentSystemHash != cachedSystemInfoCopy.Hash || cachedSystemInfoCopy.NextDiskSpaceCheck <  SystemTime.UtcNow)
+                    {
+                        var systemInfo = new SystemInfoCache()
+                        {
+                            Hash = currentSystemHash,
+                            NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30),
+                            MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>()
+                        };
+                    
+                        // Get new data 
                         var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
                         var systemMountPoints = StorageEnvironment.GetMountPointUsageDetailsFor(systemEnv);
                     
                         foreach (var systemPoint in systemMountPoints)
                         {
                             UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
-                            CachedSystemInfo.MountPoints.Add(systemPoint);
+                            systemInfo.MountPoints.Add(systemPoint);
                         }
+
+                        // Update the cache
+                        Interlocked.Exchange(ref CachedSystemInfo, systemInfo);
                     }
                     else
                     {
-                        // Add existing data
-                        foreach (var systemPoint in CachedSystemInfo.MountPoints)
+                        // Use existing data
+                        foreach (var systemPoint in cachedSystemInfoCopy.MountPoints)
                         {
                             UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
                         }
