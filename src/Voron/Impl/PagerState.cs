@@ -121,8 +121,11 @@ namespace Voron.Impl
             if (AllocationInfos != null)
             {
                 foreach (var allocationInfo in AllocationInfos)
+                {
                     _pager.ReleaseAllocationInfo(allocationInfo.BaseAddress, allocationInfo.Size);
-                AllocationInfos = null;            
+                }
+
+                AllocationInfos = null;
             }
 
             if (File != null && DisposeFileOnDispose)

@@ -82,7 +82,7 @@ namespace Voron.Impl.Journal
             if (PlatformDetails.RunningOnPosix)
             {
                 if (_options.RunningOn32Bits)
-                    return new Posix32BitsMemoryMapPager(_options, FileName);
+                    return new Rvn32BitsMemoryMapPager(_options, FileName);
 
                 return new RvnMemoryMapPager(_options, FileName);
             }
