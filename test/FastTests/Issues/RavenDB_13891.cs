@@ -58,7 +58,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string Text { get; set; }
