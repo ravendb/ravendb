@@ -329,18 +329,7 @@ namespace Raven.Client.Documents.Session.Operations
                     }
 
                     if (documentInfo.Entity != null)
-                    {
-                        var old = _session.JsonSerializer.ObjectCreationHandling;
-                        _session.JsonSerializer.ObjectCreationHandling = ObjectCreationHandling.Replace;
-                        try
-                        {
-                            _session.EntityToBlittable.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
-                        }
-                        finally
-                        {
-                            _session.JsonSerializer.ObjectCreationHandling = old;
-                        }
-                    }
+                        _session.EntityToBlittable.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
 
                     break;
             }
