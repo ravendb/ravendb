@@ -69,7 +69,7 @@ namespace Raven.Server.TrafficWatch
                     while (_messages.TryDequeue(out var message))
                     {
                         _context.Reset();
-                    	_context.Renew();
+                        _context.Renew();
                         if (IsAlive == false)
                             return;
 
