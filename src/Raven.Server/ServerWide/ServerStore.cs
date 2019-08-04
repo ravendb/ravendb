@@ -270,7 +270,7 @@ namespace Raven.Server.ServerWide
                                            (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent))
                                     {
                                         context.Reset();
-					                    context.Renew();
+                                        context.Renew();
 
                                         var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)

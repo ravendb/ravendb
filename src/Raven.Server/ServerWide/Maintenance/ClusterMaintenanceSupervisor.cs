@@ -259,7 +259,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 unchangedReports.Clear();
 
                                 ReceivedReport = _lastSuccessfulReceivedReport = nodeReport;
-                                
+
                             }
                         }
                     }
