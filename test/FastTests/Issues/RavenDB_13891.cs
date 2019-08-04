@@ -46,14 +46,15 @@ namespace FastTests.Issues
                             },
                             null));
 
-                    var person = await s.LoadAsync<Person>(personId);
-                    Assert.True(string.IsNullOrEmpty(person.Text));
-                    Assert.Equal(1, person.Modifications.Count);
+                    var person1 = await s.LoadAsync<Person>(personId);
+                    Assert.True(string.IsNullOrEmpty(person1.Text));
+                    Assert.Equal(1, person1.Modifications.Count);
                     await s.SaveChangesAsync();
 
-                    person = await s.LoadAsync<Person>(personId);
-                    Assert.Equal("aaa", person.Text);
-                    Assert.Equal(1, person.Modifications.Count);
+                    var person2 = await s.LoadAsync<Person>(personId);
+                    Assert.Equal(person1, person2);
+                    Assert.Equal("aaa", person2.Text);
+                    Assert.Equal(1, person2.Modifications.Count);
                 }
             }
         }
