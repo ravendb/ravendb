@@ -573,14 +573,14 @@ namespace Raven.Client.Documents.Changes
 
                         while (true)
                         {
+                            builder.Reset();
+                            builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
+
                             if (await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
                                 continue;
 
-                            if (state.CurrentTokenType == JsonParserToken.EndArray)
+                            if (state.CurrentTokenType == JsonParserToken.EndArray)                             
                                 break;
-
-                            context.Reset();
-                            builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
 
                             await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
