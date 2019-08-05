@@ -506,10 +506,13 @@ namespace Voron
                 var reusedCount = 0;
                 try
                 {
+                    var oldFileName = Path.GetFileName(filename.FullPath);
+                    _journals.TryRemove(oldFileName, out _);
+
                     var fileModifiedDate = new FileInfo(filename.FullPath).LastWriteTimeUtc;
                     var counter = Interlocked.Increment(ref _reuseCounter);
                     var newName = Path.Combine(Path.GetDirectoryName(filename.FullPath), RecyclableJournalName(counter));
-
+                    
                     File.Move(filename.FullPath, newName);
                     lock (_journalsForReuse)
                     {
@@ -528,6 +531,7 @@ namespace Voron
                             ticks++;
 
                         _journalsForReuse[ticks] = newName;
+                        
                     }
                 }
                 catch (Exception ex)
