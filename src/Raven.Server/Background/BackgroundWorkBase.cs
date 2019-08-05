@@ -87,14 +87,15 @@ namespace Raven.Server.Background
             try
             {
                 if (time < TimeSpan.Zero)
+                {
+                    ThrowOperationCanceledExceptionIfNeeded();
                     return;
+                }
 
                 // if cancellation requested then it will throw TaskCancelledException and we stop the work
-                await TimeoutManager.WaitFor(time, CancellationToken).ConfigureAwait(false); 
-                if(CancellationToken.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException(); //If we are disposed we need to throw OCE because this is the expected behavior
-                }
+                await TimeoutManager.WaitFor(time, CancellationToken).ConfigureAwait(false);
+
+                ThrowOperationCanceledExceptionIfNeeded();
             }
             catch (Exception e) when (e is OperationCanceledException == false)
             {
@@ -104,6 +105,12 @@ namespace Raven.Server.Background
                     Logger.Operations($"Error in the background worker when {nameof(WaitOrThrowOperationCanceled)} was called", e);
 
                 throw new OperationCanceledException(); // throw OperationCanceled so we stop the work
+            }
+
+            void ThrowOperationCanceledExceptionIfNeeded()
+            {
+                if (CancellationToken.IsCancellationRequested)
+                    throw new OperationCanceledException(); //If we are disposed we need to throw OCE because this is the expected behavior
             }
         }
 
