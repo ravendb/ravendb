@@ -491,7 +491,7 @@ namespace Raven.Server.Documents.Subscriptions
                 if (state.Value.Connection != null)
                     continue;
 
-                state.Value.CleanupRecentAndRejectedConnections();
+                _subscriptionConnectionStates.Remove(state.Key, out _);
             }
         }
 
