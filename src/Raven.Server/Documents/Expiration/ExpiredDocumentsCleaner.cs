@@ -23,6 +23,8 @@ namespace Raven.Server.Documents.Expiration
     public class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
         private readonly DocumentDatabase _database;
+        private readonly TimeSpan _refreshPeriod;
+        private readonly TimeSpan _expirationPeriod;
 
         public ExpirationConfiguration ExpirationConfiguration { get; }
         public RefreshConfiguration RefreshConfiguration { get; }
@@ -32,6 +34,8 @@ namespace Raven.Server.Documents.Expiration
             ExpirationConfiguration = expirationConfiguration;
             RefreshConfiguration = refreshConfiguration;
             _database = database;
+            _expirationPeriod = TimeSpan.FromSeconds(ExpirationConfiguration?.DeleteFrequencyInSec ?? 60);
+            _refreshPeriod = TimeSpan.FromSeconds(RefreshConfiguration?.RefreshFrequencyInSec ?? 60);
         }
 
         public static ExpiredDocumentsCleaner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, ExpiredDocumentsCleaner expiredDocumentsCleaner)
@@ -47,8 +51,8 @@ namespace Raven.Server.Documents.Expiration
                 if (expiredDocumentsCleaner != null)
                 {
                     // no changes
-                    if (object.Equals(expiredDocumentsCleaner.ExpirationConfiguration, dbRecord.Expiration) &&
-                        object.Equals(expiredDocumentsCleaner.RefreshConfiguration, dbRecord.Refresh))
+                    if (Equals(expiredDocumentsCleaner.ExpirationConfiguration, dbRecord.Expiration) &&
+                        Equals(expiredDocumentsCleaner.RefreshConfiguration, dbRecord.Refresh))
                         return expiredDocumentsCleaner;
                 }
 
@@ -76,22 +80,20 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        private DateTime _nextRefresh, _nextExpiration;
-
         protected override Task DoWork()
         {
-            var expr = DoExpirationWork();
+            var expiration = DoExpirationWork();
             var refresh = DoRefreshWork();
 
-            return Task.WhenAll(expr, refresh);
+            return Task.WhenAll(expiration, refresh);
         }
 
         private async Task DoRefreshWork()
         {
             while (RefreshConfiguration?.Disabled == false)
             {
-                await WaitOrThrowOperationCanceled(_nextRefresh - DateTime.UtcNow);
-                _nextRefresh = DateTime.UtcNow.AddSeconds(RefreshConfiguration?.RefreshFrequencyInSec ?? 60);
+                await WaitOrThrowOperationCanceled(_refreshPeriod);
+
                 await RefreshDocs();
             }
         }
@@ -100,8 +102,8 @@ namespace Raven.Server.Documents.Expiration
         {
             while (ExpirationConfiguration?.Disabled == false)
             {
-                await WaitOrThrowOperationCanceled(_nextExpiration - DateTime.UtcNow);
-                _nextExpiration = DateTime.UtcNow.AddSeconds(ExpirationConfiguration?.DeleteFrequencyInSec ?? 60);
+                await WaitOrThrowOperationCanceled(_expirationPeriod);
+
                 await CleanupExpiredDocs();
             }
         }
@@ -151,6 +153,11 @@ namespace Raven.Server.Documents.Expiration
                             Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // this will stop processing
+                throw;
             }
             catch (Exception e)
             {
