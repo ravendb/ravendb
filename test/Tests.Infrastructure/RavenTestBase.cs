@@ -612,9 +612,6 @@ namespace FastTests
 
             try
             {
-                if (debug && Debugger.IsAttached == false)
-                    return;
-
                 var urls = documentStore.Urls;
                 if (clientCert != null)
                     Console.WriteLine($"Using certificate with serial: {clientCert.SerialNumber}");
@@ -627,7 +624,7 @@ namespace FastTests
                 do
                 {
                     Thread.Sleep(500);
-                } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+                } while (documentStore.Commands(database).Head("Debug/Done") == null);
 
                 documentStore.Commands(database).Delete("Debug/Done", null);
             }

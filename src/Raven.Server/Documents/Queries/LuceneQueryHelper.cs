@@ -8,6 +8,7 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -20,9 +21,9 @@ namespace Raven.Server.Documents.Queries
 
         public const string Null = "NULL";
 
-        public static Query Equal(string fieldName, LuceneTermType termType, string value, bool exact)
+        public static Query Equal(string fieldName, LuceneTermType termType, string value, bool exact, bool lightWeight)
         {
-            return Term(fieldName, value, termType, exact: exact);
+            return Term(fieldName, value, termType, exact: exact, lightWeight:lightWeight);
         }
 
         public static Query Equal(string fieldName, LuceneTermType termType, long value)
@@ -35,12 +36,12 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, true, value, true);
         }
 
-        public static Query NotEqual(string fieldName, LuceneTermType termType, string value, bool exact)
+        public static Query NotEqual(string fieldName, LuceneTermType termType, string value, bool exact, bool lightWeight)
         {
             return new BooleanQuery
             {
                 { new MatchAllDocsQuery(), Occur.MUST },
-                { Term(fieldName, value, termType, exact: exact), Occur.MUST_NOT }
+                { Term(fieldName, value, termType, exact: exact, lightWeight:lightWeight), Occur.MUST_NOT }
             };
         }
 
@@ -137,7 +138,7 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, fromValue, true, toValue, true);
         }
 
-        public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null, bool exact = false)
+        public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null, bool exact = false, bool lightWeight = false)
         {
             if (boost.HasValue == false)
                 boost = 1;
@@ -161,10 +162,13 @@ namespace Raven.Server.Documents.Queries
                 return new PrefixQuery(new Term(fieldName, actualTerm)) { Boost = boost.Value };
             }
 
+            if(lightWeight)
+                return new LightWeightTermQuery(new Term(fieldName, term)) { Boost = boost.Value };
+
             return new TermQuery(new Term(fieldName, term)) { Boost = boost.Value };
         }
 
-        public static Query AnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, float? boost = null, float? similarity = null)
+        public static Query AnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, float? boost = null, float? similarity = null, bool lightWeight = false)
         {
             if (type != LuceneTermType.String && type != LuceneTermType.Prefix && type != LuceneTermType.WildCard)
                 throw new InvalidOperationException("Analyzed terms can be only created from string values.");
@@ -215,6 +219,14 @@ namespace Raven.Server.Documents.Queries
 
             if (terms.Count == 1)
             {
+                if (lightWeight)
+                {
+                    return new LightWeightTermQuery(new Term(fieldName, terms[0]))
+                    {
+                        Boost = boost.Value
+                    };
+                }
+
                 return new TermQuery(new Term(fieldName, terms[0]))
                 {
                     Boost = boost.Value

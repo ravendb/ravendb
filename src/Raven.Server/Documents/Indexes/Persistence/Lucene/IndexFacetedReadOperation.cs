@@ -279,9 +279,83 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        public class NoWeightQuery : Query
+        {
+            private readonly Query _query;
+            private float boost = 1.0f;
+
+            public NoWeightQuery(Query q)
+            {
+                this._query = q;
+            }
+
+            public override float Boost
+            {
+                get => _query.Boost;
+                set => _query.Boost = value;
+            }
+            public override string ToString(string field)
+            {
+                return _query.ToString(field);
+            }
+
+            public override Weight CreateWeight(Searcher searcher, IState state)
+            {
+                return _query.CreateWeight(searcher, state);
+            }
+
+            public override Weight Weight(Searcher searcher, IState state)
+            {
+                return _query.CreateWeight(searcher, state);
+            }
+
+            public override Query Rewrite(IndexReader reader, IState state)
+            {
+                return this;
+            }
+
+            public override Query Combine(Query[] queries)
+            {
+                return _query.Combine(queries);
+            }
+
+            public override void ExtractTerms(System.Collections.Generic.ISet<Term> terms)
+            {
+                _query.ExtractTerms(terms);
+            }
+
+            public override Similarity GetSimilarity(Searcher searcher)
+            {
+                return _query.GetSimilarity(searcher);
+            }
+
+            public override System.Object Clone()
+            {
+                return new NoWeightQuery((Query)_query.Clone());
+            }
+
+            public override int GetHashCode()
+            {
+                return _query.GetHashCode();
+            }
+
+            public override bool Equals(System.Object obj)
+            {
+                if (this == obj)
+                    return true;
+                if (obj == null)
+                    return false;
+                if (GetType() != obj.GetType())
+                    return false;
+                NoWeightQuery other = (NoWeightQuery)obj;
+                return other._query.Equals(_query);
+            }
+        }
         private static List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery, IState state)
         {
             var gatherAllCollector = new GatherAllCollectorByReader();
+            //var noWeightQuery = new NoWeightQuery(baseQuery);
+            //var query = new ConstantScoreQuery(new QueryWrapperFilter(baseQuery));
             currentIndexSearcher.Search(baseQuery, gatherAllCollector, state);
 
             foreach (var readerFacetInfo in gatherAllCollector.Results)
