@@ -22,18 +22,10 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsDistinct;
 
-
         public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
-            : this(query.Metadata.SelectFields, indexDefinition)
         {
-            IsDistinct = query.Metadata.IsDistinct && IsProjection;
-        }
-
-        public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition)
-        {
-            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias);
+            Fields = GetFieldsToFetch(query.Metadata, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias);
             IsProjection = Fields != null && Fields.Count > 0;
-            IsDistinct = false;
 
             if (extractAllStoredFields)
             {
@@ -41,14 +33,16 @@ namespace Raven.Server.Documents.Queries
                 ExtractAllFromIndex = true; // we want to add dynamic fields also to the result (stored only)
                 IsProjection = true;
             }
+
+            IsDistinct = query.Metadata.IsDistinct && IsProjection;
         }
 
         private static FieldToFetch GetFieldToFetch(
-            IndexDefinitionBase indexDefinition, 
+            IndexDefinitionBase indexDefinition,
             SelectField selectField,
             Dictionary<string, FieldToFetch> results,
             out string selectFieldKey,
-            ref bool anyExtractableFromIndex, 
+            ref bool anyExtractableFromIndex,
             ref bool extractAllStoredFields)
         {
             selectFieldKey = selectField.Alias ?? selectField.Name;
@@ -152,7 +146,7 @@ namespace Raven.Server.Documents.Queries
                     ? selectField.SourceAlias
                     : selectFieldName;
 
-            var extract = indexDefinition.MapFields.TryGetValue(key, out var value) && 
+            var extract = indexDefinition.MapFields.TryGetValue(key, out var value) &&
                           value.Storage == FieldStorage.Yes;
 
             if (extract)
@@ -179,9 +173,9 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(
-            SelectField[] selectFields, 
-            IndexDefinitionBase indexDefinition, 
-            out bool anyExtractableFromIndex, 
+            QueryMetadata metadata,
+            IndexDefinitionBase indexDefinition,
+            out bool anyExtractableFromIndex,
             out bool extractAllStoredFields,
             out bool singleFieldNoAlias)
         {
@@ -189,20 +183,23 @@ namespace Raven.Server.Documents.Queries
             extractAllStoredFields = false;
             singleFieldNoAlias = false;
 
-            if (selectFields == null || selectFields.Length == 0)
+            if (metadata.SelectFields == null || metadata.SelectFields.Length == 0)
                 return null;
 
-            var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
-            singleFieldNoAlias = selectFields.Length == 1 &&
-                                 ((selectFields[0].Alias == null &&
-                                   selectFields[0].Function != null) ||
-                                  (selectFields[0].Name == string.Empty &&
-                                   selectFields[0].Function == null)
-                                 );
-            for (var i = 0; i < selectFields.Length; i++)
+            if (metadata.SelectFields.Length == 1)
             {
-                var selectField = selectFields[i];
-                var val = GetFieldToFetch(indexDefinition, selectField, result, 
+                var selectField = metadata.SelectFields[0];
+                singleFieldNoAlias = ((selectField.Alias == null && selectField.Function != null) || (selectField.Name == string.Empty && selectField.Function == null));
+                if (singleFieldNoAlias && metadata.Query.From.Alias != null && metadata.Query.From.Alias == selectField.Alias)
+                    return null; // from 'Index' as doc select doc -> we do not want to treat this as a projection
+            }
+
+            var result = new Dictionary<string, FieldToFetch>(StringComparer.Ordinal);
+
+            for (var i = 0; i < metadata.SelectFields.Length; i++)
+            {
+                var selectField = metadata.SelectFields[i];
+                var val = GetFieldToFetch(indexDefinition, selectField, result,
                     out var key, ref anyExtractableFromIndex, ref extractAllStoredFields);
                 if (extractAllStoredFields)
                     return result;
