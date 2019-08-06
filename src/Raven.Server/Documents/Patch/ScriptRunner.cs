@@ -102,7 +102,6 @@ namespace Raven.Server.Documents.Patch
             private readonly DocumentDatabase _database;
             private readonly RavenConfiguration _configuration;
 
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
             private DocumentsOperationContext _docsCtx;
@@ -1095,13 +1094,6 @@ namespace Raven.Server.Documents.Patch
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
-            public void DisposeClonedDocuments()
-            {
-                foreach (var disposable in _disposables)
-                    disposable.Dispose();
-                _disposables.Clear();
-            }
-
             private JsValue[] _args = Array.Empty<JsValue>();
             private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
@@ -1130,12 +1122,12 @@ namespace Raven.Server.Documents.Patch
                 catch (JavaScriptException e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposible but it is not created (the clones did)
-                    DisposeClonedDocuments();
+                    JavaScriptUtils.DisposeClonedDocuments();
                     throw CreateFullError(e);
                 }
                 catch (Exception)
                 {
-                    DisposeClonedDocuments();
+                    JavaScriptUtils.DisposeClonedDocuments();
                     throw;
                 }
                 finally
@@ -1260,7 +1252,6 @@ namespace Raven.Server.Documents.Patch
                 _run.RefreshOriginalDocument = false;
 
                 _run.UpdatedDocumentCounterIds?.Clear();
-                _run.JavaScriptUtils?.DisposeClonedDocuments();
 
                 _parent._cache.Enqueue(_run);
                 _run = null;
