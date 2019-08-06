@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Patch
 
                 });
 
-                JavaScriptUtils = new JavaScriptUtils(_jsonCtx, _runner, ScriptEngine, ReadOnly);
+                JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine, ReadOnly);
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, "getMetadata", JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
 
@@ -1106,7 +1106,7 @@ namespace Raven.Server.Documents.Patch
             {
                 _docsCtx = docCtx;
                 _jsonCtx = jsonCtx ?? ThrowArgumentNull();
-                JavaScriptUtils.SetContext(_jsonCtx);
+                JavaScriptUtils.Reset(_jsonCtx);
 
                 Reset();
                 OriginalDocumentId = documentId;
@@ -1122,12 +1122,12 @@ namespace Raven.Server.Documents.Patch
                 catch (JavaScriptException e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposible but it is not created (the clones did)
-                    JavaScriptUtils.DisposeClonedDocuments();
+                    JavaScriptUtils.Clear();
                     throw CreateFullError(e);
                 }
                 catch (Exception)
                 {
-                    JavaScriptUtils.DisposeClonedDocuments();
+                    JavaScriptUtils.Clear();
                     throw;
                 }
                 finally
