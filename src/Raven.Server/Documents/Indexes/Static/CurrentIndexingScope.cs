@@ -140,6 +140,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void Dispose()
         {
+            if (Current.Index is MapIndex mapIndex)
+                mapIndex.JavaScriptUtils?.DisposeClonedDocuments();
+
             Current = null;
         }
 

@@ -19,7 +19,6 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptIndex : StaticIndexBase
     {
-
         private const string GlobalDefinitions = "globalDefinition";
         private const string MapsProperty = "maps";
         private const string CollectionProperty = "collection";
@@ -28,6 +27,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string ReduceProperty = "reduce";
         private const string AggregateByProperty = "aggregateBy";
         private const string KeyProperty = "key";
+
+        public JavaScriptUtils JavaScriptUtils;
 
         public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
@@ -49,6 +50,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     .AddObjectConverter(new JintTimeSpanConverter())
                     .LocalTimeZone(TimeZoneInfo.Utc);
             });
+
+            JavaScriptUtils = new JavaScriptUtils(null, null, _engine);
 
             using (_engine.DisableMaxStatements())
             {
@@ -209,7 +212,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private (List<string> Maps, List<HashSet<CollectionName>> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
-
+            _engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", JavaScriptUtils.GetMetadata));
+            _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", JavaScriptUtils.GetDocumentId));
             _engine.ExecuteWithReset(Code);
 
             if (definition.AdditionalSources != null)

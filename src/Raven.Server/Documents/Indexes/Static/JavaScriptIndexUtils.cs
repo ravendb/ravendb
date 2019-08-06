@@ -4,6 +4,7 @@ using System.Linq;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
+using Raven.Client;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 
@@ -87,10 +88,12 @@ namespace Raven.Server.Documents.Indexes.Static
         public static bool GetValue(Engine engine, object item, out JsValue jsItem, bool isMapReduce = false)
         {
             jsItem = null;
+            string changeVector = null;
+            DateTime? lastModified = null;
             if (!(item is DynamicBlittableJson dbj))
             {
                 //This is the case for map-reduce
-                if(item is BlittableJsonReaderObject bjr)
+                if (item is BlittableJsonReaderObject bjr)
                 {
                     jsItem = new BlittableObjectInstance(engine, null, bjr, null, null);
                     return true;
@@ -100,7 +103,16 @@ namespace Raven.Server.Documents.Indexes.Static
             var id = dbj.GetId();
             if (isMapReduce == false && id == DynamicNullObject.Null)
                 return false;
-            jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
+
+            dbj.EnsureMetadata();
+
+            if (dbj[Constants.Documents.Metadata.LastModified] is DateTime lm)
+                lastModified = lm;
+
+            if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
+                changeVector = cv;
+
+            jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, lastModified, changeVector);
             return true;
         }
 
