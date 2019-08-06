@@ -27,13 +27,13 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunner _runner;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         private readonly Engine _scriptEngine;
-        private readonly bool _readOnly;
 
-        public JavaScriptUtils(ScriptRunner runner, Engine engine, bool readOnly = false)
+        public bool ReadOnly;
+
+        public JavaScriptUtils(ScriptRunner runner, Engine engine)
         {
             _runner = runner;
             _scriptEngine = engine;
-            _readOnly = readOnly;
         }
 
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Patch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin, JsonOperationContext context)
         {
-            if (_readOnly)
+            if (ReadOnly)
                 return origin;
 
             var noCache = origin.NoCache;
