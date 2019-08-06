@@ -20,7 +20,9 @@ namespace FastTests.Issues
                 typeof(QueryCommand),
                 typeof(GetRevisionsBinEntryCommand),
                 typeof(GetRevisionsCommand),
+#pragma warning disable 618
                 typeof(BatchCommand),
+#pragma warning restore 618
                 typeof(SingleNodeBatchCommand),
                 typeof(ClusterWideBatchCommand),
                 typeof(PatchOperation.PatchCommand)
@@ -48,18 +50,18 @@ namespace FastTests.Issues
             foreach (var type in commandTypes)
             {
                 var t = type;
-                while(t.BaseType.IsGenericType == false)
+                while (t.BaseType.IsGenericType == false)
                 {
                     t = t.BaseType;
                 }
                 var arg = t.BaseType.GetGenericArguments()[0];
                 foreach (var item in arg.GetProperties())
                 {
-                    if(item.PropertyType == typeof(BlittableJsonReaderObject) ||
+                    if (item.PropertyType == typeof(BlittableJsonReaderObject) ||
                         item.PropertyType == typeof(BlittableJsonReaderArray)
                         )
                     {
-                        if(_willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat.Contains(type) == false)
+                        if (_willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat.Contains(type) == false)
                         {
                             sb.AppendLine("The type " + type.FullName + " has property " + item.Name + " of type " + item.PropertyType.FullName + " and didn't validate that is isn't copying the cached value correctly");
                         }

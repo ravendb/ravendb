@@ -36,14 +36,14 @@ namespace SlowTests.Issues
                 {
                     MaxDocsPerBatch = 1
                 });
-                
+
                 var amre = new AsyncManualResetEvent();
                 subsWorker.AfterAcknowledgment += batch =>
-                {                
+                {
                     amre.Set();
                     return Task.CompletedTask;
                 };
-                subsWorker.Run(x => { });
+                GC.KeepAlive(subsWorker.Run(x => { }));
                 Assert.True(await amre.WaitAsync(_reasonableWaitTime));
                 amre.Reset();
                 for (int i = 0; i < 9; i++)
@@ -62,5 +62,5 @@ namespace SlowTests.Issues
             }
         }
     }
-    
+
 }
