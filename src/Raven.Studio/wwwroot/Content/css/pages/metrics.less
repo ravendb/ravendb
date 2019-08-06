@@ -132,11 +132,11 @@ rect.pane {
     .main-colors {
         .color-definitions {
             .axis {
-                color: @layout-border;
+                color: fadeout(@layout-border, 50%);
             }
 
             .gaps {
-                color: @brand-primary;
+                color: fadeout(@brand-primary, 50%);
             }
 
             .trackBackground {
@@ -160,7 +160,7 @@ rect.pane {
             }
 
             .text {
-                color: @text-color;
+                color: @gray-lighter;
             }
         }
     }
@@ -169,41 +169,41 @@ rect.pane {
         .color-definitions {
             .compression {
                 .low {
-                    color: darken(@color-5, 15%);
+                    color: darken(@color-5, 20%);
                 }
 
                 .high {
-                    color: lighten(@color-5-2, 15%);
+                    color: lighten(@color-5-2, 5%);
                 }
             }
 
             .dataFlush {
                 .low {
-                    color: darken(@color-3-2, 15%);
+                    color: darken(@color-3-2, 20%);
                 }
 
                 .high {
-                    color: lighten(@color-3, 15%);
+                    color: lighten(@color-3, 5%);
                 }
             }
 
             .dataSync {
                 .low {
-                    color: darken(@color-1, 15%);
+                    color: darken(@color-1, 20%);
                 }
 
                 .high {
-                    color: lighten(@color-1-2, 15%);
+                    color: lighten(@color-1-2, 5%);
                 }
             }
 
             .journalWrite {
                 .low {
-                    color: darken(@color-4-2, 15%);
+                    color: darken(@color-4-2, 20%);
                 }
 
                 .high {
-                    color: lighten(@color-4, 15%);
+                    color: lighten(@color-4, 5%);
                 }
             }
         }
