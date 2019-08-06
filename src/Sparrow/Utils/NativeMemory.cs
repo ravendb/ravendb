@@ -47,9 +47,9 @@ namespace Sparrow.Utils
                 {
                     if (_threadInstance.TryGetTarget(out var thread))
                     {
-                        return thread?.Name;
+                        return thread?.Name??_lastName;
                     }
-                    return null;
+                    return _lastName;
                 }
             }
             public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
