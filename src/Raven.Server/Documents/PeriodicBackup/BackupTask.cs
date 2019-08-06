@@ -957,9 +957,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 });
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info(string.Format($"Successfully uploaded backup file '{fileName}' " +
+                    _logger.Info($"Successfully uploaded backup file '{fileName}' " +
                                                $"to S3 bucket named: {settings.BucketName}, " +
-                                               $"with key: {key}"));
+                                               $"with key: {key}");
 
                 var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
                 await runner.Execute();
