@@ -60,6 +60,9 @@ namespace Sparrow.Utils
 
             public bool IsThreadAlive()
             {
+                if (_threadInstance == null)
+                    return false;
+
                 if (_threadInstance.TryGetTarget(out var copy) == false)
                     return false;
                 
