@@ -112,7 +112,13 @@ namespace Raven.Server.Documents.Patch
             public bool PutOrDeleteCalled;
             public HashSet<string> Includes;
             private HashSet<string> _documentIds;
-            public bool ReadOnly;
+
+            public bool ReadOnly
+            {
+                get => JavaScriptUtils.ReadOnly;
+                set => JavaScriptUtils.ReadOnly = value;
+            }
+
             public string OriginalDocumentId;
             public bool RefreshOriginalDocument;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
@@ -139,7 +145,7 @@ namespace Raven.Server.Documents.Patch
 
                 });
 
-                JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine, ReadOnly);
+                JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, "getMetadata", JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
 
