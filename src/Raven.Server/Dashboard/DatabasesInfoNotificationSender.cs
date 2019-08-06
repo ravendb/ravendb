@@ -21,6 +21,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Server.Utils;
+using Voron;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Dashboard
@@ -97,6 +98,15 @@ namespace Raven.Server.Dashboard
             public DateTime NextDiskSpaceCheck;
         }
 
+        private static SystemInfoCache CachedSystemInfo = new SystemInfoCache();
+
+        private class SystemInfoCache
+        {
+            public long Hash;
+            public List<Client.ServerWide.Operations.MountPointUsage> MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
+            public DateTime NextDiskSpaceCheck;
+        }
+        
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, Func<string, bool> isValidFor, CancellationTokenSource cts)
         {
             var databasesInfo = new DatabasesInfo();
@@ -109,6 +119,7 @@ namespace Raven.Server.Dashboard
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
             using (transactionContext.OpenReadTransaction())
             {
+                // 1. Fetch databases info
                 foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(transactionContext, Constants.Documents.Prefix, 0, int.MaxValue))
                 {
                     var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
@@ -211,6 +222,44 @@ namespace Raven.Server.Dashboard
                         SetOfflineDatabaseInfo(serverStore, transactionContext, databaseName, databasesInfo, drivesUsage, disabled: false);
                     }
                 }
+                
+                // 2. Fetch <system> info 
+                if (isValidFor == null) 
+                {
+                    var currentSystemHash = serverStore._env.CurrentReadTransactionId;
+                    var cachedSystemInfoCopy = CachedSystemInfo;
+                    
+                    if (currentSystemHash != cachedSystemInfoCopy.Hash || cachedSystemInfoCopy.NextDiskSpaceCheck <  SystemTime.UtcNow)
+                    {
+                        var systemInfo = new SystemInfoCache()
+                        {
+                            Hash = currentSystemHash,
+                            NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30),
+                            MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>()
+                        };
+                    
+                        // Get new data 
+                        var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
+                        var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv);
+                    
+                        foreach (var systemPoint in systemMountPoints)
+                        {
+                            UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
+                            systemInfo.MountPoints.Add(systemPoint);
+                        }
+
+                        // Update the cache
+                        Interlocked.Exchange(ref CachedSystemInfo, systemInfo);
+                    }
+                    else
+                    {
+                        // Use existing data
+                        foreach (var systemPoint in cachedSystemInfoCopy.MountPoints)
+                        {
+                            UpdateMountPoint(serverStore.Configuration.Storage, systemPoint, "<System>", drivesUsage);
+                        }
+                    }
+                }
             }
 
             yield return databasesInfo;
@@ -274,31 +323,34 @@ namespace Raven.Server.Dashboard
             DrivesUsage existingDrivesUsage,
             bool disabled)
         {
-            var databaseRecord = serverStore.Cluster.ReadRawDatabase(context, databaseName, out var _);
-            if (databaseRecord == null)
+            using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                // database doesn't exist
-                return;
+                if (rawRecord == null)
+                {
+                    // database doesn't exist
+                    return;
+                }
+
+                var databaseTopology = rawRecord.GetTopology();
+
+                var irrelevant = databaseTopology == null ||
+                                 databaseTopology.AllNodes.Contains(serverStore.NodeTag) == false;
+                var databaseInfoItem = new DatabaseInfoItem
+                {
+                    Database = databaseName,
+                    Online = false,
+                    Disabled = disabled,
+                    Irrelevant = irrelevant
+                };
+
+                if (irrelevant == false)
+                {
+                    // nothing to fetch if irrelevant on this node
+                    UpdateDatabaseInfo(rawRecord.GetRecord(), serverStore, databaseName, existingDrivesUsage, databaseInfoItem);
+                }
+
+                existingDatabasesInfo.Items.Add(databaseInfoItem);
             }
-
-            var databaseTopology = serverStore.Cluster.ReadDatabaseTopology(databaseRecord);
-            var irrelevant = databaseTopology == null ||
-                             databaseTopology.AllNodes.Contains(serverStore.NodeTag) == false;
-            var databaseInfoItem = new DatabaseInfoItem
-            {
-                Database = databaseName,
-                Online = false,
-                Disabled = disabled,
-                Irrelevant = irrelevant
-            };
-
-            if (irrelevant == false)
-            {
-                // nothing to fetch if irrelevant on this node
-                UpdateDatabaseInfo(databaseRecord, serverStore, databaseName, existingDrivesUsage, databaseInfoItem);
-            }
-
-            existingDatabasesInfo.Items.Add(databaseInfoItem);
         }
 
         private static void UpdateDatabaseInfo(BlittableJsonReaderObject databaseRecord, ServerStore serverStore, string databaseName, DrivesUsage existingDrivesUsage,

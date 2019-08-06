@@ -3,7 +3,7 @@ using Raven.Server.Utils.Metrics;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionConnectionStats
+    public class SubscriptionConnectionStats:IDisposable
     {
         public SubscriptionConnectionStats()
         {
@@ -18,8 +18,15 @@ namespace Raven.Server.Documents.Subscriptions
 
         public DateTime LastAckReceivedAt;
 
-        internal readonly MeterMetric DocsRate;
+        internal MeterMetric DocsRate;
         public MeterMetric BytesRate;
         public MeterMetric AckRate;
+
+        public void Dispose()
+        {
+            DocsRate = null;
+            BytesRate = null;
+            AckRate = null;
+        }
     }
 }

@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Changes
 
         private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
 
-        private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>(DatabaseChangesOptionsComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>();
         private int _immediateConnection;
 
         private ServerNode _serverNode;
@@ -554,6 +554,9 @@ namespace Raven.Client.Documents.Changes
             {
                 while (_cts.IsCancellationRequested == false)
                 {
+                    context.Reset();
+                    context.Renew();
+
                     var state = new JsonParserState();
 
                     using (var stream = new WebSocketStream(_client, _cts.Token))
@@ -570,13 +573,14 @@ namespace Raven.Client.Documents.Changes
 
                         while (true)
                         {
+                            builder.Reset();
+                            builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
+
                             if (await UnmanagedJsonParserHelper.ReadAsync(peepingTomStream, parser, state, buffer).ConfigureAwait(false) == false)
                                 continue;
 
-                            if (state.CurrentTokenType == JsonParserToken.EndArray)
+                            if (state.CurrentTokenType == JsonParserToken.EndArray)                             
                                 break;
-
-                            builder.Renew("changes/receive", BlittableJsonDocumentBuilder.UsageMode.None);
 
                             await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
@@ -623,7 +627,7 @@ namespace Raven.Client.Documents.Changes
                         }
                     }
                 }
-            }
+            }            
         }
 
         private void NotifySubscribers(string type, BlittableJsonReaderObject value, List<DatabaseConnectionState> states)

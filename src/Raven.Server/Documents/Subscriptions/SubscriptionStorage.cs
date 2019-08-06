@@ -3,25 +3,26 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Raven.Client.Documents.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Logging;
+using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Subscriptions
 {
 
-    public class SubscriptionStorage : IDisposable
+    public class SubscriptionStorage : IDisposable, ILowMemoryHandler
     {
         private readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
@@ -36,6 +37,7 @@ namespace Raven.Server.Documents.Subscriptions
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
 
             _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.MaxNumberOfConcurrentConnections);
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public void Dispose()
@@ -125,8 +127,8 @@ namespace Raven.Server.Documents.Subscriptions
         public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
         {
             var subscription = GetSubscriptionFromServerStore(serverContext, name);
-            var databaseRecord = _serverStore.Cluster.ReadDatabase(serverContext, _db.Name, out _);
-            return _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
+            var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
+            return _db.WhoseTaskIsIt(topology, subscription, subscription);
         }
 
         public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
@@ -137,8 +139,8 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
-                var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
+                var topology = _serverStore.Cluster.ReadDatabaseTopology(serverStoreContext, _db.Name);
+                var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
@@ -344,8 +346,8 @@ namespace Raven.Server.Documents.Subscriptions
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
             public SubscriptionConnection Connection;
-            public SubscriptionConnection[] RecentConnections;
-            public SubscriptionConnection[] RecentRejectedConnections;
+            public IEnumerable<SubscriptionConnection> RecentConnections;
+            public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
 
             public SubscriptionGeneralDataAndStats() { }
 
@@ -459,6 +461,43 @@ namespace Raven.Server.Documents.Subscriptions
         public void ReleaseSubscriptionsSemaphore()
         {
             _concurrentConnectionsSemiSemaphore.Release();
+        }
+
+        internal void CleanupSubscriptions()
+        {
+            var maxTaskLifeTime = (PlatformDetails.Is32Bits || this._db.Configuration.Storage.ForceUsing32BitsPager
+                        ? TimeSpan.FromHours(12)
+                        : TimeSpan.FromDays(2));
+            var oldestPossibleIdleSubscription = SystemTime.UtcNow - maxTaskLifeTime;
+            foreach (var state in _subscriptionConnectionStates)
+            {
+                if (state.Value.Connection != null)
+                    continue;
+
+                var recentConnection = state.Value.MostRecentEndedConnection();
+
+                while (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
+                {
+                    _subscriptionConnectionStates.Remove(state.Key, out _);
+                    recentConnection = state.Value.MostRecentEndedConnection();
+                }
+            }
+        }
+
+        public void LowMemory()
+        {
+            foreach (var state in _subscriptionConnectionStates)
+            {
+                if (state.Value.Connection != null)
+                    continue;
+
+                state.Value.CleanupRecentAndRejectedConnections();
+            }
+        }
+
+        public void LowMemoryOver()
+        {
+            // nothing to do here
         }
     }
 }

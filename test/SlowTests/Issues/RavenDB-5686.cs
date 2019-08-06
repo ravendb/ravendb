@@ -17,7 +17,9 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var json = EntityToBlittable.ConvertCommandToBlittable(meter, session.Advanced.Context);
+#pragma warning disable 618
                     var parsed = (MeterValue)session.Advanced.EntityToBlittable.ConvertToEntity(typeof(MeterValue), "meter", ref json);
+#pragma warning restore 618
 
                     Assert.Equal(meter.Name, parsed.Name);
 

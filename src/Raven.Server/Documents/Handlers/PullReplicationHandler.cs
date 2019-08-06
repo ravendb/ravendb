@@ -63,8 +63,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         using (context.OpenReadTransaction())
                         {
-                            var databaseRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(databaseRecord.Topology, pullReplication, null);
+                            var topology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
+                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(topology, pullReplication, null);
                         }
 
                         json[nameof(ModifyOngoingTaskResult.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;

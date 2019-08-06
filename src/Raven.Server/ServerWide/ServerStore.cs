@@ -20,9 +20,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -32,6 +30,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -42,10 +41,10 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
-using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -62,7 +61,6 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server;
@@ -71,7 +69,9 @@ using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron;
 using Constants = Raven.Client.Constants;
+using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide
 {
@@ -139,7 +139,10 @@ namespace Raven.Server.ServerWide
 
             _operationsStorage = new OperationsStorage();
 
-            Operations = new Operations(null, _operationsStorage, NotificationCenter, null);
+            Operations = new Operations(null, _operationsStorage, NotificationCenter, null,
+                (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
+                        ? TimeSpan.FromHours(12)
+                        : TimeSpan.FromDays(2)));
 
             LicenseManager = new LicenseManager(this);
 
@@ -266,6 +269,9 @@ namespace Raven.Server.ServerWide
                                     while (cancelTask.IsCompleted == false && 
                                            (ws.State == WebSocketState.Open || ws.State == WebSocketState.CloseSent))
                                     {
+                                        context.Reset();
+                                        context.Renew();
+
                                         var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)
                                         {
@@ -438,7 +444,6 @@ namespace Raven.Server.ServerWide
         {
             return _engine.GetTopology(context);
         }
-
 
         public bool HasFixedPort { get; internal set; }
 
@@ -1385,13 +1390,15 @@ namespace Raven.Server.ServerWide
             }
 
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
-            var record = Cluster.ReadDatabase(context, name);
 
             if (overwrite == false && tree.Read(name) != null)
                 throw new InvalidOperationException($"Attempt to overwrite secret key {name}, which isn\'t permitted (you\'ll lose access to the encrypted db).");
 
-            if (record != null && record.Encrypted == false)
-                throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
+            {
+                if (rawRecord != null && rawRecord.IsEncrypted() == false)
+                    throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
+            }
 
             fixed (byte* pKey = key)
             {
@@ -1407,7 +1414,6 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
 
         public byte[] GetSecretKey(TransactionOperationContext context, string name)
         {
@@ -1429,11 +1435,13 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
-            var record = Cluster.ReadDatabase(context, name, out _);
-            if (record != null && record.Encrypted && record.Topology.RelevantFor(NodeTag))
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                throw new InvalidOperationException(
-                    $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
+                if (rawRecord != null && rawRecord.IsEncrypted() && rawRecord.GetTopology().RelevantFor(NodeTag))
+                {
+                    throw new InvalidOperationException(
+                        $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
+                }
             }
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
@@ -1595,32 +1603,36 @@ namespace Raven.Server.ServerWide
             string databaseName, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
         {
             UpdateDatabaseCommand command;
-            var databaseRecord = LoadDatabaseRecord(databaseName, out _);
 
-            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
             {
-                case EtlType.Raven:
-                    var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
-                    rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
-                    if (rvnEtl.ValidateConnectionString(databaseRecord) == false)
-                        rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
+                {
+                    case EtlType.Raven:
+                        var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
+                        rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, rvnEtl.ConnectionStringName, rvnEtl.EtlType) == false)
+                            rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                    ThrowInvalidConfigurationIfNecessary(rvnEtlErr);
+                        ThrowInvalidConfigurationIfNecessary(rvnEtlErr);
 
-                    command = new AddRavenEtlCommand(rvnEtl, databaseName, raftRequestId);
-                    break;
-                case EtlType.Sql:
-                    var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
-                    sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
-                    if (sqlEtl.ValidateConnectionString(databaseRecord) == false)
-                        sqlEtlErr.Add($"Could not find connection string named '{sqlEtl.ConnectionStringName}'. Please supply an existing connection string.");
+                        command = new AddRavenEtlCommand(rvnEtl, databaseName, raftRequestId);
+                        break;
+                    case EtlType.Sql:
+                        var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
+                        sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, sqlEtl.ConnectionStringName, sqlEtl.EtlType) == false)
+                            sqlEtlErr.Add($"Could not find connection string named '{sqlEtl.ConnectionStringName}'. Please supply an existing connection string.");
 
-                    ThrowInvalidConfigurationIfNecessary(sqlEtlErr);
+                        ThrowInvalidConfigurationIfNecessary(sqlEtlErr);
 
-                    command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
-                    break;
-                default:
-                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+                        command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+                }
             }
 
             return await SendToLeaderAsync(command);
@@ -1646,6 +1658,18 @@ namespace Raven.Server.ServerWide
                 sb.AppendLine(etlConfiguration.ToString());
 
                 throw new InvalidOperationException(sb.ToString());
+            }
+
+            bool ValidateConnectionString(RawDatabaseRecord databaseRecord, string connectionStringName, EtlType etlType)
+            {
+                if (etlType == EtlType.Raven)
+                {
+                    var ravenConnectionStrings = databaseRecord.GetRavenConnectionStrings();
+                    return ravenConnectionStrings != null && ravenConnectionStrings.TryGetValue(connectionStringName, out _);
+                }
+
+                var sqlConnectionString = databaseRecord.GetSqlConnectionStrings();
+                return sqlConnectionString != null && sqlConnectionString.TryGetValue(connectionStringName, out _);
             }
         }
 
@@ -1712,49 +1736,67 @@ namespace Raven.Server.ServerWide
                 throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
             UpdateDatabaseCommand command;
-
-            var databaseRecord = LoadDatabaseRecord(databaseName, out var _);
-
-            switch (connectionStringType)
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
             {
-                case ConnectionStringType.Raven:
+                switch (connectionStringType)
+                {
+                    case ConnectionStringType.Raven:
 
-                    // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
-                    foreach (var ravenETlTask in databaseRecord.RavenEtls)
-                    {
-                        if (ravenETlTask.ConnectionStringName == connectionStringName)
+                        // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
+
+                        var ravenEtls = rawRecord.GetRavenEtls();
+                        if (ravenEtls != null)
                         {
-                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
+                            foreach (var ravenETlTask in ravenEtls)
+                            {
+                                if (ravenETlTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
+                                }
+                            }
                         }
-                    }
 
-                    foreach (var replicationTask in databaseRecord.ExternalReplications)
-                    {
-                        if (replicationTask.ConnectionStringName == connectionStringName)
+                        var externalReplications = rawRecord.GetExternalReplications();
+                        if (externalReplications != null)
                         {
-                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
+                            foreach (var replicationTask in externalReplications)
+                            {
+                                if (replicationTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
+                                }
+                            }
                         }
-                    }
 
-                    command = new RemoveRavenConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                    break;
+                        command = new RemoveRavenConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
+                        break;
 
-                case ConnectionStringType.Sql:
+                    case ConnectionStringType.Sql:
 
-                    // Don't delete the connection string if used by tasks types: SQL Etl
-                    foreach (var sqlETlTask in databaseRecord.SqlEtls)
-                    {
-                        if (sqlETlTask.ConnectionStringName == connectionStringName)
+                        var sqlEtls = rawRecord.GetSqlEtls();
+
+                        // Don't delete the connection string if used by tasks types: SQL Etl
+                        if (sqlEtls != null)
                         {
-                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
+                            foreach (var sqlETlTask in sqlEtls)
+                            {
+                                if (sqlETlTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
+                                }
+                            }
                         }
-                    }
 
-                    command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
-                    break;
+                        command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName, raftRequestId);
+                        break;
 
-                default:
-                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+                    default:
+                        throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+                }
             }
 
             return await SendToLeaderAsync(command);
@@ -2263,12 +2305,12 @@ namespace Raven.Server.ServerWide
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }
 
-        public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
+        public DatabaseTopology LoadDatabaseTopology(string databaseName)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return Cluster.ReadDatabase(context, databaseName, out etag);
+                return Cluster.ReadDatabaseTopology(context, databaseName);
             }
         }
 
@@ -2340,7 +2382,6 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
 
         private static void ThrowInvalidEngineState(CommandBase cmd)
         {
@@ -2677,6 +2718,81 @@ namespace Raven.Server.ServerWide
                 [nameof(LogSummary.Entries)] = entries
             };
             return json;
+        }
+        
+        public static IEnumerable<Raven.Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment)
+        {
+            var fullPath = environment?.Environment.Options.BasePath.FullPath;
+            if (fullPath == null)
+                yield break;
+                
+            var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
+            var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
+            if (diskSpaceResult == null)
+                yield break;
+            
+            var sizeOnDisk = environment.Environment.GenerateSizeReport();
+            var usage = new Raven.Client.ServerWide.Operations.MountPointUsage
+            {
+                UsedSpace = sizeOnDisk.DataFileInBytes,
+                DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                {
+                    DriveName = diskSpaceResult.DriveName,
+                    VolumeLabel = diskSpaceResult.VolumeLabel,
+                    TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                    TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                },
+                UsedSpaceByTempBuffers = 0
+            };
+
+            var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
+            if (journalPathUsage != null)
+            {
+                if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
+                {
+                    usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
+                }
+                else
+                {
+                    yield return new Raven.Client.ServerWide.Operations.MountPointUsage
+                    {
+                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        {
+                            DriveName = journalPathUsage.DriveName,
+                            VolumeLabel = journalPathUsage.VolumeLabel,
+                            TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                            TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
+                        },
+                        UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
+                    };
+                }
+            }
+
+            var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+            if (tempBuffersDiskSpaceResult != null)
+            {
+                if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
+                {
+                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
+                }
+                else
+                {
+                    yield return new Raven.Client.ServerWide.Operations.MountPointUsage
+                    {
+                        UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
+                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        {
+                            DriveName = tempBuffersDiskSpaceResult.DriveName,
+                            VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
+                            TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                            TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                        }
+                    };
+                }
+            }
+
+            yield return usage;
         }
     }
 }

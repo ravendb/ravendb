@@ -68,6 +68,9 @@ namespace Raven.Server.NotificationCenter
 
         public Task WriteToWebSocket<TNotification>(TNotification notification)
         {
+            _context.Reset();
+            _context.Renew();
+
             _ms.SetLength(0);
 
             using (var writer = new BlittableJsonTextWriter(_context, _ms))

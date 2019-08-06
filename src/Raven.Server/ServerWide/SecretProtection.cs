@@ -383,9 +383,9 @@ namespace Raven.Server.ServerWide
             if (Logger.IsOperationsEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations(string.Format($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms"));
+                Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
                 if (!string.IsNullOrWhiteSpace(errors))
-                    Logger.Operations(string.Format($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}"));
+                    Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
             }
 
             if (process.ExitCode != 0)
@@ -479,9 +479,9 @@ namespace Raven.Server.ServerWide
             if (Logger.IsOperationsEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations(string.Format($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms"));
+                Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
                 if (!string.IsNullOrWhiteSpace(errors))
-                    Logger.Operations(string.Format($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}"));
+                    Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
             }
 
             if (process.ExitCode != 0)
@@ -551,7 +551,7 @@ namespace Raven.Server.ServerWide
             if (Logger.IsOperationsEnabled)
             {
                 var errors = GetStdError();
-                Logger.Operations(string.Format($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stderr: {errors}"));
+                Logger.Operations($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stderr: {errors}");
             }
 
             if (process.ExitCode != 0)

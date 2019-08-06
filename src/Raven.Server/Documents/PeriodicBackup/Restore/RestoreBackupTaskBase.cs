@@ -10,7 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -65,24 +65,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             _serverStore.EnsureNotPassive();
 
+            ClusterTopology clusterTopology;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (_serverStore.Cluster.ReadDatabase(context, RestoreFromConfiguration.DatabaseName) != null)
+                if (_serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName))
                     throw new ArgumentException($"Cannot restore data to an existing database named {RestoreFromConfiguration.DatabaseName}");
 
-                var clusterTopology = _serverStore.GetClusterTopology(context);
+                clusterTopology = _serverStore.GetClusterTopology(context);
+            }
 
-                _hasEncryptionKey = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
-                if (_hasEncryptionKey)
-                {
-                    var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
-                    if (key.Length != 256 / 8)
-                        throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
+            _hasEncryptionKey = string.IsNullOrWhiteSpace(RestoreFromConfiguration.EncryptionKey) == false;
+            if (_hasEncryptionKey)
+            {
+                var key = Convert.FromBase64String(RestoreFromConfiguration.EncryptionKey);
+                if (key.Length != 256 / 8)
+                    throw new InvalidOperationException($"The size of the key must be 256 bits, but was {key.Length * 8} bits.");
 
-                    if (AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
-                        throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
-                }
+                if (AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(_serverStore.NodeTag)))
+                    throw new InvalidOperationException("Cannot restore an encrypted database to a node which doesn't support SSL!");
             }
 
             var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) == false;
@@ -302,20 +303,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     details: new ExceptionDetails(e));
                 _serverStore.NotificationCenter.Add(alert);
 
-                var databaseRecord = _serverStore.LoadDatabaseRecord(RestoreFromConfiguration.DatabaseName, out _);
-
-                if (databaseRecord == null)
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    // delete any files that we already created during the restore
-                    IOExtensions.DeleteDirectory(RestoreFromConfiguration.DataDirectory);
-                }
-                else
-                {
-                    databaseRecord.Disabled = false;
-                    databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
+                    bool databaseExists;
+                    using (context.OpenReadTransaction())
+                    {
+                        databaseExists = _serverStore.Cluster.DatabaseExists(context, RestoreFromConfiguration.DatabaseName);
+                    }
 
-                    var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
-                    await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
+                    if (databaseExists == false)
+                    {
+                        // delete any files that we already created during the restore
+                        IOExtensions.DeleteDirectory(RestoreFromConfiguration.DataDirectory);
+                    }
+                    else
+                    {
+                        var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
+                        await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
+                    }
                 }
 
                 result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e.Message}");

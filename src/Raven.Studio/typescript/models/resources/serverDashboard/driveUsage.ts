@@ -37,7 +37,6 @@ class legendColumn<T> implements virtualColumn {
     toDto(): virtualColumnDto {
         throw new Error("Legend column does not support serialization");
     }
-
 }
 
 class driveUsage {
@@ -120,7 +119,9 @@ class driveUsage {
                 if (this.includeTemp()) {
                     return [
                         new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
-                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "42%", {
+                        new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(),  
+                                                                     x => (x.database().toString() === '<System>') ? appUrl.forSystemStorageReport() : appUrl.forStatusStorageReport(x.database()), 
+                                                                     "Database", "42%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : "",
                             sortable: "string",
                             customComparator: generalUtils.sortAlphaNumeric

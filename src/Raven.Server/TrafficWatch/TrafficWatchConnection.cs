@@ -51,6 +51,9 @@ namespace Raven.Server.TrafficWatch
             {
                 while (_cancellationTokenSource.IsCancellationRequested == false)
                 {
+                    _context.Reset();
+                    _context.Renew();
+
                     var result = await _manualResetEvent.WaitAsync(TimeSpan.FromMilliseconds(5000)).ConfigureAwait(false);
                     if (IsAlive == false)
                         return;
@@ -65,6 +68,8 @@ namespace Raven.Server.TrafficWatch
 
                     while (_messages.TryDequeue(out var message))
                     {
+                        _context.Reset();
+                        _context.Renew();
                         if (IsAlive == false)
                             return;
 

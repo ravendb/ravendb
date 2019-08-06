@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -43,6 +42,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
@@ -117,14 +117,17 @@ namespace Raven.Server.Documents
                 {
                     MasterKey = serverStore.GetSecretKey(ctx, Name);
 
-                    var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
-                    if (databaseRecord != null)
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, Name))
                     {
-                        // can happen when we are in the process of restoring a database
-                        if (databaseRecord.Encrypted && MasterKey == null)
-                            throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
-                        if (databaseRecord.Encrypted == false && MasterKey != null)
-                            throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                        if (rawRecord != null)
+                        {
+                            var isEncrypted = rawRecord.IsEncrypted();
+                            // can happen when we are in the process of restoring a database
+                            if (isEncrypted && MasterKey == null)
+                                throw new InvalidOperationException($"Attempt to create encrypted db {Name} without supplying the secret key");
+                            if (isEncrypted == false && MasterKey != null)
+                                throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
+                        }
                     }
                 }
 
@@ -145,7 +148,10 @@ namespace Raven.Server.Documents
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
-                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
+                Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes, 
+                    (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
+                        ? TimeSpan.FromHours(12)
+                        : TimeSpan.FromDays(2)));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
@@ -853,6 +859,7 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
+                SubscriptionStorage?.CleanupSubscriptions();
 
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
@@ -938,9 +945,6 @@ namespace Raven.Server.Documents
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var databaseRecord = _serverStore.LoadDatabaseRecord(Name, out _);
-                    Debug.Assert(databaseRecord != null);
-
                     var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
@@ -976,10 +980,13 @@ namespace Raven.Server.Documents
                     {
                         writer.WriteStartObject();
 
-                        // save the database record
+                        // read and save the database record
                         writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
-                        var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, serverContext);
-                        serverContext.Write(writer, databaseRecordBlittable);
+                        using (serverContext.OpenReadTransaction())
+                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabase(serverContext, Name, out _))
+                        {
+                            serverContext.Write(writer, rawRecord);
+                        }
 
                         // save the database values (subscriptions, periodic backups statuses, etl states...)
                         writer.WriteComma();
@@ -1365,80 +1372,10 @@ namespace Raven.Server.Documents
 
             foreach (var environment in storageEnvironments)
             {
-                if (environment == null)
-                    continue;
-
-                var fullPath = environment.Environment.Options.BasePath.FullPath;
-                if (fullPath == null)
-                    continue;
-
-                var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
-                var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
-                if (diskSpaceResult == null)
-                    continue;
-
-                var sizeOnDisk = environment.Environment.GenerateSizeReport();
-                var usage = new MountPointUsage
+                foreach (var mountPoint in ServerStore.GetMountPointUsageDetailsFor(environment))
                 {
-                    UsedSpace = sizeOnDisk.DataFileInBytes,
-                    DiskSpaceResult = new DiskSpaceResult
-                    {
-                        DriveName = diskSpaceResult.DriveName,
-                        VolumeLabel = diskSpaceResult.VolumeLabel,
-                        TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                        TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                    },
-                    UsedSpaceByTempBuffers = 0
-                };
-
-                var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
-                if (journalPathUsage != null)
-                {
-                    if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
-                    {
-                        usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
-                    }
-                    else
-                    {
-                        yield return new MountPointUsage
-                        {
-                            DiskSpaceResult = new DiskSpaceResult
-                            {
-                                DriveName = journalPathUsage.DriveName,
-                                VolumeLabel = journalPathUsage.VolumeLabel,
-                                TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
-                            },
-                            UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
-                        };
-                    }
+                    yield return mountPoint;
                 }
-
-                var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-                if (tempBuffersDiskSpaceResult != null)
-                {
-                    if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
-                    {
-                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                    }
-                    else
-                    {
-                        yield return new MountPointUsage
-                        {
-                            UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                            DiskSpaceResult = new DiskSpaceResult
-                            {
-                                DriveName = tempBuffersDiskSpaceResult.DriveName,
-                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                            }
-                        };
-                    }
-                }
-
-                yield return usage;
             }
         }
 
@@ -1546,29 +1483,6 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
-        }
-    }
-
-    public class StorageEnvironmentWithType
-    {
-        public string Name { get; set; }
-        public StorageEnvironmentType Type { get; set; }
-        public StorageEnvironment Environment { get; set; }
-        public DateTime? LastIndexQueryTime;
-
-        public StorageEnvironmentWithType(string name, StorageEnvironmentType type, StorageEnvironment environment)
-        {
-            Name = name;
-            Type = type;
-            Environment = environment;
-        }
-
-        public enum StorageEnvironmentType
-        {
-            Documents,
-            Index,
-            Configuration,
-            System
         }
     }
 }

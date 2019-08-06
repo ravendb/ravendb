@@ -107,14 +107,19 @@ namespace Raven.Server.Documents.Handlers
         public Task GetIndexHistory()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var record = Database.ReadDatabaseRecord();
-            List<IndexHistoryEntry> history = null;
-            if (record?.IndexesHistory.TryGetValue(name, out history) == false)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
 
+            List<IndexHistoryEntry> history;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
+            {
+                var indexesHistory = rawRecord.GetIndexesHistory();
+                if (indexesHistory.TryGetValue(name, out history) == false)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+            }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

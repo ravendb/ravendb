@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.TcpHandlers
     {
         private static long _sequence;
 
-        private readonly MeterMetric _bytesReceivedMetric;
-        private readonly MeterMetric _bytesSentMetric;
+        private MeterMetric _bytesReceivedMetric;
+        private MeterMetric _bytesSentMetric;
         private readonly DateTime _connectedAt;
 
         private bool _isDisposed;
@@ -80,6 +80,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 Stream = null;
                 TcpClient = null;
+                _bytesReceivedMetric = null;
+                _bytesSentMetric = null;
             }
             finally
             {
@@ -96,7 +98,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void RegisterBytesReceived(long bytesAmount)
         {
-            _bytesReceivedMetric.Mark(bytesAmount);
+            _bytesReceivedMetric?.Mark(bytesAmount);
         }
 
         public bool CheckMatch(long? minSecondsDuration, long? maxSecondsDuration, string ip,
@@ -137,11 +139,11 @@ namespace Raven.Server.Documents.TcpHandlers
             };
 
 
-            _bytesReceivedMetric.SetMinimalHumaneMeterData("Received", stats);
-            _bytesSentMetric.SetMinimalHumaneMeterData("Sent", stats);
+            _bytesReceivedMetric?.SetMinimalHumaneMeterData("Received", stats);
+            _bytesSentMetric?.SetMinimalHumaneMeterData("Sent", stats);
 
-            _bytesReceivedMetric.SetMinimalMeterData("Received", stats);
-            _bytesSentMetric.SetMinimalMeterData("Sent", stats);
+            _bytesReceivedMetric?.SetMinimalMeterData("Received", stats);
+            _bytesSentMetric?.SetMinimalMeterData("Sent", stats);
                         
             return stats;
         }

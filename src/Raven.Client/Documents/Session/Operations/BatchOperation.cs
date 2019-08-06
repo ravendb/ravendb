@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -27,7 +28,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         private Dictionary<LazyStringValue, DocumentInfo> _modifications;
 
-        public BatchCommand CreateRequest()
+        public SingleNodeBatchCommand CreateRequest()
         {
             var result = _session.PrepareForSaveChanges();
 
@@ -46,7 +47,10 @@ namespace Raven.Client.Documents.Session.Operations
 
             _entities = result.Entities;
 
-            return new BatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options, _session.TransactionMode);
+            if (_session.TransactionMode == TransactionMode.ClusterWide)
+                return new ClusterWideBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
+
+            return new SingleNodeBatchCommand(_session.Conventions, _session.Context, result.SessionCommands, result.Options);
         }
 
         public void SetResult(BatchCommandResult result)

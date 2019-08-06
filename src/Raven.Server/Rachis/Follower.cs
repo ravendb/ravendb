@@ -221,6 +221,9 @@ namespace Raven.Server.Rachis
                 {
                     try
                     {
+                        timeoutCtx.Reset();
+                        timeoutCtx.Renew();
+
                         await TimeoutManager.WaitFor(timeToWait, cts.Token);
                         if (cts.IsCancellationRequested)
                             break;
@@ -496,7 +499,7 @@ namespace Raven.Server.Rachis
 
             var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
 
-            
+
                 while (task.Wait(timeToWait) == false)
                 {
                     using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))

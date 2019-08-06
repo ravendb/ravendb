@@ -314,14 +314,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(transactionOperationContext))
                 {
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);
-
-                    if (databaseRecord == null ||
-                        databaseRecord.Topology.RelevantFor(ServerStore.NodeTag) == false ||
-                        databaseRecord.Disabled ||
-                        databaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
-                        IsDatabaseBeingDeleted(ServerStore.NodeTag, databaseRecord))
-                        continue;
+                    using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(transactionOperationContext, databaseName))
+                    {
+                        if (rawRecord == null ||
+                            rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false ||
+                            rawRecord.IsDisabled() ||
+                            rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress ||
+                            IsDatabaseBeingDeleted(ServerStore.NodeTag, rawRecord))
+                            continue;
+                    }
 
                     var path = !string.IsNullOrWhiteSpace(prefix) ? Path.Combine(prefix, databaseName) : databaseName;
                     await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName, path);
@@ -329,11 +330,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static bool IsDatabaseBeingDeleted(string tag, DatabaseRecord databaseRecord)
+        private static bool IsDatabaseBeingDeleted(string tag, RawDatabaseRecord databaseRecord)
         {
-            return databaseRecord?.DeletionInProgress != null &&
-                                         databaseRecord.DeletionInProgress.TryGetValue(tag, out DeletionInProgressStatus deletionInProgress) &&
-                                         deletionInProgress != DeletionInProgressStatus.No;
+            if (databaseRecord == null)
+                return false;
+
+            var deletionInProgress = databaseRecord.GetDeletionInProgressStatus();
+
+            return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }
 
         private static async Task WriteForDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string databaseName, string path = null)
@@ -374,9 +378,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var clusterTopology = ServerStore.GetClusterTopology(transactionOperationContext);
             foreach (var databaseName in databaseNames)
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);
-
-                var nodeUrlsAndTags = databaseRecord.Topology.AllNodes.Select(tag => (clusterTopology.GetUrlFromTag(tag), tag));
+                var topology = ServerStore.Cluster.ReadDatabaseTopology(transactionOperationContext, databaseName);
+                var nodeUrlsAndTags = topology.AllNodes.Select(tag => (clusterTopology.GetUrlFromTag(tag), tag));
                 foreach (var urlAndTag in nodeUrlsAndTags)
                 {
                     if (nodeUrlToDatabaseNames.TryGetValue(urlAndTag.Item1, out (HashSet<string>, string) databaseNamesWithNodeTag))

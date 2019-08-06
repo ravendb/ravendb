@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -160,13 +161,17 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
-                    var record = _server.Cluster.ReadRawDatabase(ctx, dbName, out _);
-                    if (record == null)
+                    DatabaseTopology topology;
+                    using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
                     {
-                        continue; // Database does not exists in this server
+                        if (rawRecord == null)
+                        {
+                            continue; // Database does not exists in this server
+                        }
+
+                        topology = rawRecord.GetTopology();
                     }
 
-                    var topology = _server.Cluster.ReadDatabaseTopology(record);
                     if (topology == null)
                     {
                         continue;

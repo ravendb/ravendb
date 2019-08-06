@@ -953,13 +953,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var now = database.Time.GetUtcNow();
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState
                     {
-                        RawDatabase = raw,
+                        RawDatabase = rawRecord,
                         Name = database.Name,
-                        DatabaseTopology = database.ServerStore.Cluster.ReadDatabaseTopology(raw),
+                        DatabaseTopology = rawRecord.GetTopology(),
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
                             {
@@ -1013,12 +1013,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
-                        RawDatabase = raw,
-                        DatabaseTopology = database.ServerStore.Cluster.ReadDatabaseTopology(raw),
+                        RawDatabase = rawRecord,
+                        DatabaseTopology = rawRecord.GetTopology(),
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
@@ -1073,12 +1073,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
-                        RawDatabase = raw,
-                        DatabaseTopology = database.ServerStore.Cluster.ReadDatabaseTopology(raw),
+                        RawDatabase = rawRecord,
+                        DatabaseTopology = rawRecord.GetTopology(),
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
@@ -1133,12 +1133,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
-                        RawDatabase = raw,
-                        DatabaseTopology = database.ServerStore.Cluster.ReadDatabaseTopology(raw),
+                        RawDatabase = rawRecord,
+                        DatabaseTopology = rawRecord.GetTopology(),
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {
@@ -1193,12 +1193,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var rawRecord = database.ServerStore.Cluster.ReadRawDatabaseRecord(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
-                        RawDatabase = raw,
-                        DatabaseTopology = database.ServerStore.Cluster.ReadDatabaseTopology(raw),
+                        RawDatabase = rawRecord,
+                        DatabaseTopology = rawRecord.GetTopology(),
                         Name = database.Name,
                         Current = new Dictionary<string, ClusterNodeStatusReport>
                         {

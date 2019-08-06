@@ -138,6 +138,7 @@ namespace Raven.Client.Documents.Operations.ETL
                    config.Disabled == Disabled;
         }
 
+        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
         public bool ValidateConnectionString(DatabaseRecord databaseRecord)
         {
             return EtlType == EtlType.Raven

@@ -13,8 +13,8 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -31,12 +31,10 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Voron.Impl;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
@@ -932,8 +930,17 @@ namespace Raven.Server.Documents.ETL
                     }
                     else
                     {
-                        if (serverStore.LoadDatabaseRecord(database.Name, out _).SqlConnectionStrings
-                                .TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
+                        Dictionary<string, SqlConnectionString> sqlConnectionStrings;
+                        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
+                        {
+                            sqlConnectionStrings = rawRecord.GetSqlConnectionStrings();
+                            if (sqlConnectionStrings == null)
+                                throw new InvalidOperationException($"{nameof(DatabaseRecord.SqlConnectionStrings)} was not found in the database record");
+                        }
+
+                        if (sqlConnectionStrings.TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
                         {
                             throw new InvalidOperationException(
                                 $"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");

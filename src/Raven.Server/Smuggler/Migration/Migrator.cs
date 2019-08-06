@@ -331,11 +331,11 @@ namespace Raven.Server.Smuggler.Migration
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                var record = _serverStore.Cluster.ReadDatabase(context, databaseName);
-                if (record != null)
+                if (rawRecord != null)
                 {
-                    if (record.Topology.AllNodes.Contains(_serverStore.NodeTag) == false)
+                    if (rawRecord.GetTopology().AllNodes.Contains(_serverStore.NodeTag) == false)
                         throw new InvalidOperationException(
                             "Cannot migrate database because " +
                             $"database doesn't exist on the current node ({_serverStore.NodeTag})");
@@ -343,21 +343,21 @@ namespace Raven.Server.Smuggler.Migration
                     // database already exists
                     return;
                 }
+            }
 
-                var databaseRecord = new DatabaseRecord(databaseName)
+            var databaseRecord = new DatabaseRecord(databaseName)
+            {
+                Topology = new DatabaseTopology
                 {
-                    Topology = new DatabaseTopology
-                    {
-                        Members =
+                    Members =
                         {
                             _serverStore.NodeTag
                         }
-                    }
-                };
+                }
+            };
 
-                var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId());
-                await _serverStore.Cluster.WaitForIndexNotification(index);
-            }
+            var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId());
+            await _serverStore.Cluster.WaitForIndexNotification(index);
         }
 
         private async Task<DocumentDatabase> GetDatabase(string databaseName)
