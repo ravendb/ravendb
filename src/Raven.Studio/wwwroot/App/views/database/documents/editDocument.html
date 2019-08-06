@@ -1,8 +1,8 @@
 <form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="editDocument" autocomplete="off">
     <div class="docEditor flex-window flex-grow content-margin">
         <div class="flex-window-head">
-            <div class="row">
-                <div class="col-md-6">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
                             <div class="input-group" data-bind="validationElement: userSpecifiedId">
@@ -28,7 +28,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6" data-bind="visible: !inDiffMode()">
+                <div class="flex-noshrink" data-bind="visible: !inDiffMode()">
                     <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
