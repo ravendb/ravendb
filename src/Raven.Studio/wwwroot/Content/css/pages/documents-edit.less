@@ -14,42 +14,41 @@
     .docEditor {
         flex-grow: 1;
     }
-    
+
     .differences_summary {
         position: absolute;
         bottom: -34px;
     }
-    
+
     .editors-container {
         .left-editor {
-            left:0; 
-            top: 0; 
-            bottom: 0; 
-            right: 0; 
+            left: 0;
+            top: 0;
+            bottom: 0;
+            right: 0;
             position: absolute;
-            
             transition: right .2s ease;
         }
+
         .right-editor {
             left: 50%;
             right: 0;
             top: 0;
             bottom: 0;
             position: absolute;
-            
             transform: translateX(100%);
             opacity: 0;
             transition: transform .2s ease, opacity .2s ease;
         }
     }
-    
+
     overflow: hidden;
-    
+
     #right-options-panel {
         transform: translateX(0);
         transition: transform .2s ease, opacity .2s ease, flex-basis .2s ease;
-        
-        
+
+
         .deleted-revision-compare {
             display: none;
         }
@@ -59,18 +58,19 @@
         .left-editor {
             right: 50%;
         }
+
         .right-editor {
             opacity: 1;
             transform: translateX(0);
         }
-        
+
         #right-options-panel {
             transform: translateX(100%);
             opacity: 0;
             overflow: hidden;
             flex-basis: 0;
         }
-        
+
         overflow-x: hidden;
     }
 
@@ -86,8 +86,10 @@
 
         span.obj-name {
             flex-shrink: 1;
+            flex-grow: 1;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100px;
         }
 
         @obj-name-placeholder-color: darken(@gray,10%);
@@ -211,7 +213,7 @@
         align-self: baseline;
     }
 
-    .tooltip {  
+    .tooltip {
         .tooltip-inner {
             max-width: 100%;
         }
