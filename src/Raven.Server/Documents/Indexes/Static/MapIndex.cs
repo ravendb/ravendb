@@ -25,17 +25,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private HandleReferences _handleReferences;
         //private HandleSuggestions _handleSuggestions;
 
-        public JavaScriptUtils JavaScriptUtils;
-
         protected MapIndex(MapIndexDefinition definition, StaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition)
         {
             _compiled = compiled;
-
-            if (compiled is JavaScriptIndex javaScriptIndex)
-            {
-                JavaScriptUtils = javaScriptIndex.JavaScriptUtils;
-            }
 
             foreach (var field in definition.IndexDefinition.Fields)
             {

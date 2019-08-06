@@ -1,34 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Lucene.Net.Store;
 using Raven.Client;
-using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Patch
 {
     public class JavaScriptUtils
     {
-        private JsonOperationContext _jsonCtx;
+        private JsonOperationContext Context
+        {
+            get
+            {
+                Debug.Assert(_context != null, "_context != null");
+                return _context;
+            }
+        }
+
+        private JsonOperationContext _context;
         private readonly ScriptRunner _runner;
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
-        public readonly Engine ScriptEngine;
-        public bool ReadOnly;
+        private readonly Engine _scriptEngine;
+        private readonly bool _readOnly;
 
-        private JsonOperationContext Context => _jsonCtx ?? CurrentIndexingScope.Current.IndexContext;
-
-        public JavaScriptUtils(JsonOperationContext ctx, ScriptRunner runner, Engine engine, bool readOnly = false)
+        public JavaScriptUtils(ScriptRunner runner, Engine engine, bool readOnly = false)
         {
-            _jsonCtx = ctx;
             _runner = runner;
-            ScriptEngine = engine;
-            ReadOnly = readOnly;
+            _scriptEngine = engine;
+            _readOnly = readOnly;
         }
 
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
@@ -47,7 +52,7 @@ namespace Raven.Server.Documents
             };
 
             metadata = Context.ReadObject(metadata, boi.DocumentId);
-            return TranslateToJs(ScriptEngine, Context, metadata);
+            return TranslateToJs(_scriptEngine, Context, metadata);
         }
 
         internal JsValue GetDocumentId(JsValue self, JsValue[] args)
@@ -180,7 +185,7 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin, JsonOperationContext context)
         {
-            if (ReadOnly)
+            if (_readOnly)
                 return origin;
 
             var noCache = origin.NoCache;
@@ -199,16 +204,17 @@ namespace Raven.Server.Documents
             return cloned;
         }
 
-        public void DisposeClonedDocuments()
+        public void Clear()
         {
             foreach (var disposable in _disposables)
                 disposable.Dispose();
             _disposables.Clear();
+            _context = null;
         }
 
-        public void SetContext(JsonOperationContext ctx)
+        public void Reset(JsonOperationContext ctx)
         {
-            _jsonCtx = ctx;
+            _context = ctx;
         }
     }
 }
