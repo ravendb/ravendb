@@ -286,6 +286,9 @@ namespace Raven.Client.Documents.Session
             if (serializer == null)
                 throw new ArgumentNullException(nameof(serializer));
 
+            var old = serializer.ObjectCreationHandling;
+            serializer.ObjectCreationHandling = ObjectCreationHandling.Replace;
+
             try
             {
                 using (var reader = new BlittableJsonReader())
@@ -300,6 +303,10 @@ namespace Raven.Client.Documents.Session
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Could not populate entity {id}", ex);
+            }
+            finally
+            {
+                serializer.ObjectCreationHandling = old;
             }
         }
 
