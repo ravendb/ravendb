@@ -67,12 +67,13 @@ namespace Raven.Server.Documents
                 beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
 
                 var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
-                DatabaseRecord dbRecord;
+                DatabaseTopology dbTopology;
                 using (context.OpenReadTransaction())
                 {
-                    dbRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                    dbTopology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
                 }
-                if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
+
+                if (dbTopology.RelevantFor(ServerStore.NodeTag))
                 {
                     var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(Database.Name);
                     await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);

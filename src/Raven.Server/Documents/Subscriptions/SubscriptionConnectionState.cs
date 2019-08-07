@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
@@ -14,7 +16,7 @@ namespace Raven.Server.Documents.Subscriptions
     {
         private readonly long _subscriptionId;
         private readonly SubscriptionStorage _storage;
-        internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();        
+        internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
         public SubscriptionConnectionState(long subscriptionId, SubscriptionStorage storage)
         {
@@ -46,7 +48,7 @@ namespace Raven.Server.Documents.Subscriptions
             TimeSpan timeToWait)
         {
             try
-            {                
+            {
                 if (await ConnectionInUse.WaitAsync(timeToWait) == false)
                 {
                     switch (incomingConnection.Strategy)
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.Subscriptions
                 }
                 _recentConnections.Enqueue(incomingConnection);
                 Interlocked.CompareExchange(ref _currentConnection, null, incomingConnection);
-                ConnectionInUse.Set();                
+                ConnectionInUse.Set();
             });
         }
 
@@ -113,8 +115,15 @@ namespace Raven.Server.Documents.Subscriptions
             _rejectedConnections.Enqueue(connection);
         }
 
-        public SubscriptionConnection[] RecentConnections => _recentConnections.ToArray();
-        public SubscriptionConnection[] RecentRejectedConnections => _rejectedConnections.ToArray();
+        public IEnumerable<SubscriptionConnection> RecentConnections => _recentConnections;
+        public IEnumerable<SubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
+
+        public SubscriptionConnection MostRecentEndedConnection()
+        {
+            if (_recentConnections.TryPeek(out var recentConnection))
+                return recentConnection;
+            return null;
+        }
 
         public void EndConnection()
         {
@@ -131,6 +140,12 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 // ignored: If we've failed to raise the cancellation token, it means that it's already raised
             }
+        }
+        
+        public void CleanupRecentAndRejectedConnections()
+        {
+            _recentConnections.Clear();
+            _rejectedConnections.Clear();
         }
     }
 }

@@ -13,7 +13,16 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class BatchCommand : RavenCommand<BatchCommandResult>, IRaftCommand, IDisposable
+    internal class ClusterWideBatchCommand : SingleNodeBatchCommand, IRaftCommand
+    {
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+
+        public ClusterWideBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null) : base(conventions, context, commands, options, TransactionMode.ClusterWide)
+        {
+        }
+    }
+
+    public class SingleNodeBatchCommand : RavenCommand<BatchCommandResult>, IDisposable
     {
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly List<Stream> _attachmentStreams;
@@ -21,7 +30,7 @@ namespace Raven.Client.Documents.Commands.Batches
         private readonly BatchOptions _options;
         private readonly TransactionMode _mode;
 
-        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
+        public SingleNodeBatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode)
         {
             if (conventions == null)
                 throw new ArgumentNullException(nameof(conventions));
@@ -83,7 +92,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
             if (_attachmentStreams != null && _attachmentStreams.Count > 0)
             {
-                var multipartContent = new MultipartContent {request.Content};
+                var multipartContent = new MultipartContent { request.Content };
                 foreach (var stream in _attachmentStreams)
                 {
                     PutAttachmentCommandHelper.PrepareStream(stream);
@@ -162,7 +171,15 @@ namespace Raven.Client.Documents.Commands.Batches
 
             Result?.Results?.Dispose();
         }
+    }
 
+    [Obsolete("BatchCommand is not supported anymore. Will be removed in next major version of the product.")]
+    public class BatchCommand : SingleNodeBatchCommand, IRaftCommand
+    {
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+
+        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode) : base(conventions, context, commands, options, mode)
+        {
+        }
     }
 }

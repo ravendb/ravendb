@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 };
             }
 
-            var batchCommand = new BatchCommand(DocumentConventions.Default, context, commands, options);
+            var batchCommand = new SingleNodeBatchCommand(DocumentConventions.Default, context, commands, options);
 
             try
             {

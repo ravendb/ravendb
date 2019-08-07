@@ -14,7 +14,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -23,37 +22,36 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
-using Raven.Server.Json;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Raven.Server.Documents.Patch;
-using Raven.Server.Rachis;
-using Raven.Server.Smuggler.Migration;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.Smuggler.Documents;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Json;
+using Raven.Server.Rachis;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
-using Sparrow.Logging;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -234,9 +232,8 @@ namespace Raven.Server.Web.System
 
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-
                 var index = GetLongFromHeaders("ETag");
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
@@ -373,12 +370,11 @@ namespace Raven.Server.Web.System
 
         private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
         {
-            var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
-
-            if (index.HasValue && existingDatabaseRecord == null)
+            var dbRecordExist = ServerStore.Cluster.DatabaseExists(context, name);
+            if (index.HasValue && dbRecordExist == false)
                 throw new BadRequestException($"Attempted to modify non-existing database: '{name}'");
 
-            if (existingDatabaseRecord != null && index.HasValue == false)
+            if (dbRecordExist && index.HasValue == false)
                 throw new ConcurrencyException($"Database '{name}' already exists!");
 
             if (replicationFactor <= 0)
@@ -429,8 +425,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var record = ServerStore.Cluster.ReadDatabase(ctx, name);
-                return (newIndex, record.Topology, nodeUrlsAddedTo);
+                var topology = ServerStore.Cluster.ReadDatabaseTopology(ctx, name);
+                return (newIndex, topology, nodeUrlsAddedTo);
             }
         }
 
@@ -440,23 +436,27 @@ namespace Raven.Server.Web.System
             var name = GetStringQueryString("name");
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var record = ServerStore.LoadDatabaseRecord(name, out var _);
-                if (record == null)
+                DatabaseTopology topology;
+                using (context.OpenReadTransaction())
+                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
-                    DatabaseDoesNotExistException.Throw(name);
+                    if (rawRecord == null)
+                        DatabaseDoesNotExistException.Throw(name);
+
+                    topology = rawRecord.GetTopology();
                 }
+
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
                 var parameters = JsonDeserializationServer.Parameters.MembersOrder(json);
+                var reorderedTopology = DatabaseTopology.Reorder(topology, parameters.MembersOrder);
 
-                var reorderedTopology = DatabaseTopology.Reorder(record.Topology, parameters.MembersOrder);
-
-                record.Topology.Members = reorderedTopology.Members;
-                record.Topology.Promotables = reorderedTopology.Promotables;
-                record.Topology.Rehabs = reorderedTopology.Rehabs;
+                topology.Members = reorderedTopology.Members;
+                topology.Promotables = reorderedTopology.Promotables;
+                topology.Rehabs = reorderedTopology.Rehabs;
 
                 var reorder = new UpdateTopologyCommand(name, GetRaftRequestIdFromQuery())
                 {
-                    Topology = record.Topology
+                    Topology = topology
                 };
 
                 var res = await ServerStore.SendToLeaderAsync(reorder);
@@ -702,21 +702,26 @@ namespace Raven.Server.Web.System
                     {
                         foreach (var databaseName in parameters.DatabaseNames)
                         {
-                            var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
-                            if (record == null)
-                                continue;
+                            DatabaseTopology topology;
+                            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                            {
+                                if (rawRecord == null)
+                                    continue;
+
+                                topology = rawRecord.GetTopology();
+                            }
 
                             foreach (var node in parameters.FromNodes)
                             {
-                                if (record.Topology.RelevantFor(node) == false)
+                                if (topology.RelevantFor(node) == false)
                                 {
                                     throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                 }
                                 deletedDatabases.Add(node);
-                                record.Topology.RemoveFromTopology(node);
+                                topology.RemoveFromTopology(node);
                             }
 
-                            if (record.Topology.Count == 0)
+                            if (topology.Count == 0)
                                 waitOnRecordDeletion.Add(databaseName);
                         }
                     }
@@ -748,8 +753,7 @@ namespace Raven.Server.Web.System
                     var databaseName = waitOnRecordDeletion[databaseIndex];
                     using (context.OpenReadTransaction())
                     {
-                        var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
-                        if (record == null)
+                        if (ServerStore.Cluster.DatabaseExists(context, databaseName) == false)
                         {
                             waitOnRecordDeletion.RemoveAt(databaseIndex);
                             continue;
@@ -1019,14 +1023,16 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
                 var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
 
+                var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetRaftRequestIdFromQuery());
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
                 using (context.OpenReadTransaction())
+                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
                 {
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
-
-                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetRaftRequestIdFromQuery());
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                    var conflictSolverConfig = rawRecord.GetConflictSolverConfiguration();
+                    if (conflictSolverConfig == null)
+                        throw new InvalidOperationException($"Database record doesn't have {nameof(DatabaseRecord.ConflictSolverConfig)} property.");
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -1034,7 +1040,7 @@ namespace Raven.Server.Web.System
                         {
                             ["RaftCommandIndex"] = index,
                             ["Key"] = name,
-                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig?.ToJson()
+                            [nameof(DatabaseRecord.ConflictSolverConfig)] = conflictSolverConfig.ToJson()
                         });
                         writer.Flush();
                     }
@@ -1058,11 +1064,12 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"{nameof(compactSettings.Documents)} is false in compact settings and no indexes were supplied. Nothing to compact.");
 
                 using (context.OpenReadTransaction())
+                using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, compactSettings.DatabaseName))
                 {
-                    var record = ServerStore.Cluster.ReadDatabase(context, compactSettings.DatabaseName);
-                    if (record == null)
+                    if (rawRecord == null)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName}, it doesn't exist.");
-                    if (record.Topology.RelevantFor(ServerStore.NodeTag) == false)
+
+                    if (rawRecord.GetTopology().RelevantFor(ServerStore.NodeTag) == false)
                         throw new InvalidOperationException($"Cannot compact database {compactSettings.DatabaseName} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
                 }
 

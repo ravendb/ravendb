@@ -795,10 +795,10 @@ namespace Raven.Server
                 return null;
             }
 
-            if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate && forceRenew == false)
+            if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate == false && forceRenew == false)
             {
                 var msg =
-                    "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
+                    "It's time to renew your Let's Encrypt server certificate but automatic renewal is not supported by your license. Go to the certificate page in the studio and trigger the renewal manually.";
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
@@ -1646,6 +1646,8 @@ namespace Raven.Server
                 int supported;
                 while (true)
                 {
+                    context.Reset();
+                    context.Renew();
                     using (var headerJson = await context.ParseToMemoryAsync(
                         stream,
                         "tcp-header",

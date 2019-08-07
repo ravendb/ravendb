@@ -1,8 +1,8 @@
 <form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="editDocument" autocomplete="off">
     <div class="docEditor flex-window flex-grow content-margin">
         <div class="flex-window-head">
-            <div class="row">
-                <div class="col-md-6">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
                             <div class="input-group" data-bind="validationElement: userSpecifiedId">
@@ -14,21 +14,21 @@
                                        data-bind="textInput: userSpecifiedId, disable: $root.isBusy, hasFocus: userIdHasFocus()">
                             </div>
                         </div>
-                        <div data-bind="if: !isCreatingNewDocument()">
+                        <div class="flex-horizontal" data-bind="if: !isCreatingNewDocument()">
                             <!-- todo: bring back the star when doing issue RavenDB-8110 (vNext) -->
                             <!--<a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">-->
                                 <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
                             <!--</a>-->
-                            <span class="obj-name on-base-background" data-bind="text: userSpecifiedId"></span>
+                            <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
                             
-                            <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision"> | REVISION</span>
-                            <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision"> | DELETED REVISION</span>
+                            <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision flex-noshrink"> | REVISION</span>
+                            <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision flex-noshrink"> | DELETED REVISION</span>
                             
-                            <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i></a>
+                            <a target="_blank" href="#" title="Show raw output" class="flex-noshrink margin-left margin-left-sm" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i></a>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6" data-bind="visible: !inDiffMode()">
+                <div class="flex-noshrink" data-bind="visible: !inDiffMode()">
                     <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>

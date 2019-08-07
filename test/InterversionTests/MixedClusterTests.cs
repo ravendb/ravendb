@@ -1292,13 +1292,5 @@ namespace InterversionTests
             var subscriptionState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, database);
             return databaseRecord.Topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, null);
         }
-
-        private static void DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
-        {
-            var mre = new ManualResetEventSlim();
-            serverToDispose.AfterDisposal += () => mre.Set();           
-            serverToDispose.Dispose();
-            mre.Wait();
-        }
     }
 }

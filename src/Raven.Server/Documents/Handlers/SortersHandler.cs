@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.ServerWide;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,33 +14,37 @@ namespace Raven.Server.Documents.Handlers
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                DatabaseRecord record;
+                Dictionary<string, SorterDefinition> sorters;
                 using (context.OpenReadTransaction())
                 {
-                    record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                    var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name);
+                    sorters = rawRecord?.GetSorters();
                 }
 
-                var sorters = record.Sorters ?? new Dictionary<string, SorterDefinition>();
-                
+                if (sorters == null)
+                {
+                    sorters = new Dictionary<string, SorterDefinition>();
+                }
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    
+
                     writer.WriteStartObject();
 
                     writer.WriteArray(context, "Sorters", sorters.Values, (w, c, sorter) =>
                     {
                         w.WriteStartObject();
-                        
+
                         w.WritePropertyName(nameof(SorterDefinition.Name));
                         w.WriteString(sorter.Name);
                         w.WriteComma();
-                        
+
                         w.WritePropertyName(nameof(SorterDefinition.Code));
                         w.WriteString(sorter.Code);
-                        
+
                         w.WriteEndObject();
                     });
-                
+
                     writer.WriteEndObject();
                 }
             }

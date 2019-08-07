@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Queries
                     else if (q.Select != null)
                     {
                         //TODO : investigate fields to fetch
-                        var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields, null);
+                        var fieldsToFetch = new FieldsToFetch(query, null);
                         idc = new IncludeDocumentsCommand(Database.DocumentsStorage, documentsContext, query.Metadata.Includes, fieldsToFetch.IsProjection);
 
                         var resultRetriever = new GraphQueryResultRetriever(
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries
                 qp.IsStale = await qp.WaitForNonStaleResults();
             }
             else
-            {            
+            {
                 await qp.CreateAutoIndexesAndWaitIfNecessary();
             }
 

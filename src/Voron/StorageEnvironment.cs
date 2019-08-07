@@ -1284,4 +1284,27 @@ namespace Voron
             throw new InvalidOperationException("Simulation of db creation failure");
         }
     }
+    
+    public class StorageEnvironmentWithType
+    {
+        public string Name { get; set; }
+        public StorageEnvironmentType Type { get; set; }
+        public StorageEnvironment Environment { get; set; }
+        public DateTime? LastIndexQueryTime;
+
+        public StorageEnvironmentWithType(string name, StorageEnvironmentType type, StorageEnvironment environment)
+        {
+            Name = name;
+            Type = type;
+            Environment = environment;
+        }
+
+        public enum StorageEnvironmentType
+        {
+            Documents,
+            Index,
+            Configuration,
+            System
+        }
+    }
 }

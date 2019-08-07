@@ -113,7 +113,7 @@ namespace Raven.Server.Utils
 
                 // Can have exit code o (success) but still get errors. We log the errors anyway.
                 if (log.IsOperationsEnabled)
-                    log.Operations(string.Format($"Executing '{parameters.OnDirectoryInitializeExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}"));
+                    log.Operations($"Executing '{parameters.OnDirectoryInitializeExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
 
                 if (process.ExitCode != 0)
                 {

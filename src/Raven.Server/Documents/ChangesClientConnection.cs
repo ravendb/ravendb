@@ -439,6 +439,9 @@ namespace Raven.Server.Documents
                             break;
 
                         ms.SetLength(0);
+                        context.Reset();
+                        context.Renew();
+
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             sp.Restart();

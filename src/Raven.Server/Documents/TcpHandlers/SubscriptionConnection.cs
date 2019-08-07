@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (notification.CollectionName.Equals(Subscription.Collection, StringComparison.InvariantCultureIgnoreCase))
+                if (notification.CollectionName.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         subscriptionChangeVectorBeforeCurrentBatch);
                     subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
                     Stats.LastAckReceivedAt = DateTime.UtcNow;
-                    Stats.AckRate.Mark();
+                    Stats.AckRate?.Mark();
                     await WriteJsonAsync(new DynamicJsonValue
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
@@ -786,8 +786,8 @@ namespace Raven.Server.Documents.TcpHandlers
             var bufferSize = _buffer.Length;
             await FlushBufferToNetwork();
             Stats.LastMessageSentAt = DateTime.UtcNow;
-            Stats.DocsRate.Mark(flushedDocs);
-            Stats.BytesRate.Mark(bufferSize);
+            Stats.DocsRate?.Mark(flushedDocs);
+            Stats.BytesRate?.Mark(bufferSize);
             TcpConnection.RegisterBytesSent(bufferSize);
         }
 
@@ -861,6 +861,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     // ignored
                 }
                 CancellationTokenSource.Dispose();
+                Stats.Dispose();
             }
         }
 

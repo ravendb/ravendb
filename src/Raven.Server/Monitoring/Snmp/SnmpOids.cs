@@ -306,15 +306,15 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Index type")]
                 public const string Type = "5.2.{0}.4.{{0}}.16";
 
-                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, DatabaseRecord record, long databaseIndex)
+                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
                 {
-                    var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.DatabaseName);
+                    var mapping = SnmpDatabase.GetIndexMapping(context, serverStore, record.GetDatabaseName());
 
                     var djv = new DynamicJsonValue();
                     if (mapping.Count == 0)
                         return djv;
 
-                    foreach (var indexName in record.Indexes.Keys)
+                    foreach (var indexName in record.GetIndexes().Keys)
                     {
                         if (mapping.TryGetValue(indexName, out var index) == false)
                             continue;
@@ -372,23 +372,25 @@ namespace Raven.Server.Monitoring.Snmp
 
                 foreach (var kvp in mapping)
                 {
-                    var record = serverStore.LoadDatabaseRecord(kvp.Key, out _);
-                    if (record == null)
-                        continue;
-
-                    var array = new DynamicJsonArray();
-                    foreach (var field in typeof(Databases).GetFields())
+                    using (var record = serverStore.Cluster.ReadRawDatabaseRecord(context, kvp.Key))
                     {
-                        var fieldValue = GetFieldValue(field);
-                        var oid = string.Format(fieldValue.Oid, kvp.Value);
-                        array.Add(CreateJsonItem(Root + oid, fieldValue.Description));
+                        if (record == null)
+                            continue;
+
+                        var array = new DynamicJsonArray();
+                        foreach (var field in typeof(Databases).GetFields())
+                        {
+                            var fieldValue = GetFieldValue(field);
+                            var oid = string.Format(fieldValue.Oid, kvp.Value);
+                            array.Add(CreateJsonItem(Root + oid, fieldValue.Description));
+                        }
+
+                        djv[kvp.Key] = new DynamicJsonValue
+                        {
+                            [$"@{nameof(General)}"] = array,
+                            [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value)
+                        };
                     }
-
-                    djv[kvp.Key] = new DynamicJsonValue
-                    {
-                        [$"@{nameof(General)}"] = array,
-                        [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value) 
-                    };
                 }
 
                 return djv;

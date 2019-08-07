@@ -1,10 +1,18 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using NCrontab.Advanced;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter.Notifications;
@@ -12,16 +20,8 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Logging;
-using System.Collections.Concurrent;
-using System.Linq;
-using NCrontab.Advanced;
-using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Sparrow.Collections;
+using Sparrow.Logging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus)
         {
-            var taskStatus = GetTaskStatus(databaseRecord, configuration, skipErrorLog: true);
+            var taskStatus = GetTaskStatus(databaseRecord.Topology, configuration, skipErrorLog: true);
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
@@ -361,9 +361,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
             }
 
-            var databaseRecord = GetDatabaseRecord();
+            var topology = _serverStore.LoadDatabaseTopology(_database.Name);
             var backupStatus = GetBackupStatus(taskId);
-            return _database.WhoseTaskIsIt(databaseRecord.Topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            return _database.WhoseTaskIsIt(topology, periodicBackup.Configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
         }
 
         public long StartBackupTask(long taskId, bool isFullBackup)
@@ -528,15 +528,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             return isFullBackup ? "Snapshot" : "Incremental Snapshot";
         }
 
-        private DatabaseRecord GetDatabaseRecord()
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return _serverStore.Cluster.ReadDatabase(context, _database.Name);
-            }
-        }
-
         private bool ShouldRunBackupAfterTimerCallback(BackupTaskDetails backupInfo, out PeriodicBackup periodicBackup)
         {
             if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
@@ -545,11 +536,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return false;
             }
 
-            var databaseRecord = GetDatabaseRecord();
-            if (databaseRecord == null)
-                return false;
+            DatabaseTopology topology;
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name))
+            {
+                if (rawRecord == null)
+                    return false;
 
-            var taskStatus = GetTaskStatus(databaseRecord, periodicBackup.Configuration);
+                topology = rawRecord.GetTopology();
+            }
+
+            var taskStatus = GetTaskStatus(topology, periodicBackup.Configuration);
             return taskStatus == TaskStatus.ActiveByCurrentNode;
         }
 
@@ -619,7 +617,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var newBackupTaskId = periodicBackupConfiguration.TaskId;
                 allBackupTaskIds.Add(newBackupTaskId);
 
-                var taskState = GetTaskStatus(databaseRecord, periodicBackupConfiguration);
+                var taskState = GetTaskStatus(databaseRecord.Topology, periodicBackupConfiguration);
 
                 UpdatePeriodicBackup(newBackupTaskId, periodicBackupConfiguration, taskState);
             }
@@ -698,7 +696,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private TaskStatus GetTaskStatus(
-            DatabaseRecord databaseRecord,
+            DatabaseTopology topology,
             PeriodicBackupConfiguration configuration,
             bool skipErrorLog = false)
         {
@@ -722,7 +720,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var backupStatus = GetBackupStatus(configuration.TaskId);
-            var whoseTaskIsIt = _database.WhoseTaskIsIt(databaseRecord.Topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            var whoseTaskIsIt = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
             if (whoseTaskIsIt == null)
                 return TaskStatus.Disabled;
 

@@ -16,10 +16,11 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class Operations
+    public class Operations: ILowMemoryHandler
     {
         private readonly Logger _logger;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
@@ -28,39 +29,36 @@ namespace Raven.Server.Documents.Operations
         private readonly OperationsStorage _operationsStorage;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private readonly DocumentsChanges _changes;
+        private readonly TimeSpan _maxCompletedTaskLifeTime;
 
         public Operations(string name,
             OperationsStorage operationsStorage,
             NotificationCenter.NotificationCenter notificationCenter,
-            DocumentsChanges changes)
+            DocumentsChanges changes,
+            TimeSpan maxCompletedTaskLifeTime)
         {
             _name = name;
             _operationsStorage = operationsStorage;
             _notificationCenter = notificationCenter;
             _changes = changes;
-
+            _maxCompletedTaskLifeTime = maxCompletedTaskLifeTime;
             _logger = LoggingSource.Instance.GetLogger<Operations>(name ?? "Server");
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+
         }
 
         internal void CleanupOperations()
         {
-            var twoDaysAgo = SystemTime.UtcNow.AddDays(-2);
+            var oldestPossibleCompletedOperation = SystemTime.UtcNow - _maxCompletedTaskLifeTime;
 
             foreach (var taskAndState in _completed)
             {
                 var state = taskAndState.Value;
 
-                if (state.Description.EndTime.HasValue && state.Description.EndTime < twoDaysAgo)
+                if (state.Description.EndTime.HasValue && state.Description.EndTime < oldestPossibleCompletedOperation)
                 {
                     _completed.TryRemove(taskAndState.Key, out Operation _);
-                }
-
-                var task = state.Task;
-                if (task.Exception != null)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to execute background task {taskAndState.Key}", task.Exception);
-                }
+                }                
             }
         }
 
@@ -69,7 +67,7 @@ namespace Raven.Server.Documents.Operations
             if (_active.TryGetValue(id, out Operation operation) == false)
                 throw new ArgumentException($"Operation {id} was not registered");
 
-            if (operation?.Token != null && operation.Task.IsCompleted == false)
+            if (operation?.Token != null && operation.IsCompleted() == false)
             {
                 operation.Token.Cancel();
             }
@@ -176,6 +174,7 @@ namespace Raven.Server.Documents.Operations
 
                 if (_active.TryGetValue(id, out Operation completed))
                 {
+                    completed.SetCompleted();
                     // add to completed items before removing from active ones to ensure an operation status is accessible all the time
                     _completed.TryAdd(id, completed);
                     _active.TryRemove(id, out completed);
@@ -196,19 +195,7 @@ namespace Raven.Server.Documents.Operations
             operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 
             _changes?.RaiseNotifications(change);
-        }
-
-        public void KillRunningOperation(long id)
-        {
-            if (_active.TryGetValue(id, out Operation value) && value.Task.IsCompleted == false)
-            {
-                value.Token?.Cancel();
-
-                // add to completed items before removing from active ones to ensure an operation status is accessible all the time
-                _completed.TryAdd(id, value);
-                _active.TryRemove(id, out value);
-            }
-        }
+        }        
 
         public long GetNextOperationId()
         {
@@ -226,7 +213,7 @@ namespace Raven.Server.Documents.Operations
                         if (active.Killable)
                             active.Token.Cancel();
 
-                        active.Task.Wait();
+                        active.Task?.Wait();
                     }
                     catch (Exception)
                     {
@@ -242,6 +229,16 @@ namespace Raven.Server.Documents.Operations
         public IEnumerable<Operation> GetAll() => _active.Values.Union(_completed.Values);
 
         public ICollection<Operation> GetActive() => _active.Values;
+
+        public void LowMemory()
+        {
+            _completed.Clear();
+        }
+
+        public void LowMemoryOver()
+        {
+            // nothing to do here
+        }
 
         public bool HasActive => _active.Count > 0;
 
@@ -267,7 +264,7 @@ namespace Raven.Server.Documents.Operations
             public DocumentDatabase Database;
 
             public bool Killable => Token != null;
-
+            
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
@@ -324,6 +321,17 @@ namespace Raven.Server.Documents.Operations
                 }
                 
                 return true;
+            }
+
+            internal void SetCompleted()
+            {
+                this.Task = null;
+            }
+
+            internal bool IsCompleted()
+            {
+                var task = this.Task;
+                return task == null || task.IsCompleted;
             }
 
             private class ThrottledNotification

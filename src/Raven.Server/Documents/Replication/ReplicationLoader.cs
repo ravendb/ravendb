@@ -722,11 +722,12 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var record = _server.Cluster.ReadDatabase(ctx, Database.Name, out var _);
-                if (record.DeletionInProgress?.ContainsKey(node) == true)
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
-                    throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, " +
-                                                         "so it will not handle replications.");
+                    if (rawRecord != null && rawRecord.GetDeletionInProgressStatus().ContainsKey(node))
+                    {
+                        throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, so it will not handle replications.");
+                    }
                 }
             }
         }
@@ -736,9 +737,15 @@ namespace Raven.Server.Documents.Replication
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var record = _server.Cluster.ReadDatabase(ctx, Database.Name, out var _);
-                if (record?.DeletionInProgress?.ContainsKey(_server.NodeTag) == true)
+                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name))
                 {
+                    if (rawRecord == null)
+                        return;
+
+                    var deletionInProgress = rawRecord.GetDeletionInProgressStatus();
+                    if (deletionInProgress.ContainsKey(_server.NodeTag) == false)
+                        return;
+
                     try
                     {
                         cts.Cancel();
@@ -750,9 +757,10 @@ namespace Raven.Server.Documents.Replication
                     }
                     finally
                     {
+                        var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
                         TaskExecutor.Execute(state =>
                         {
-                            _server.DatabasesLandlord.DeleteDatabase(Database.Name, record.DeletionInProgress[_server.NodeTag], record);
+                            _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record);
                         }, null);
                     }
                 }
@@ -892,11 +900,6 @@ namespace Raven.Server.Documents.Replication
                 if (info != null)
                     _reconnectQueue.TryRemove(info);
             }
-        }
-
-        public DatabaseRecord LoadDatabaseRecord()
-        {
-            return _server.LoadDatabaseRecord(Database.Name, out _);
         }
 
         internal void AddAndStartOutgoingReplication(ReplicationNode node, bool external)

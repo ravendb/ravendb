@@ -135,12 +135,12 @@ namespace Raven.Server.Web.Studio
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
             {
-                var rawDatabaseRecord = _serverStore.Cluster.ReadRawDatabase(context, databaseName, out _);
-                if (rawDatabaseRecord == null)
+                if (rawRecord == null)
                     return new List<string>();
 
-                var databaseTopology = _serverStore.Cluster.ReadDatabaseTopology(rawDatabaseRecord);
+                var databaseTopology = rawRecord.GetTopology();
                 if (databaseTopology == null)
                     return new List<string>();
 

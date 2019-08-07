@@ -189,15 +189,15 @@ namespace Raven.Server.ServerWide.Maintenance
                     var clusterTopology = _server.GetClusterTopology(context);
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
-                        using (var databaseRecord = _engine.StateMachine.ReadRawDatabase(context, database, out long etag))
+                        using (var rawRecord = _engine.StateMachine.ReadRawDatabaseRecord(context, database, out long etag))
                         {
-                            if (databaseRecord == null)
+                            if (rawRecord == null)
                             {
                                 LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
                                 continue;
                             }
 
-                            var databaseTopology = _engine.StateMachine.ReadDatabaseTopology(databaseRecord);
+                            var databaseTopology = rawRecord.GetTopology();
                             var topologyStamp = databaseTopology?.Stamp ?? new LeaderStamp
                             {
                                 Index = -1,
@@ -221,7 +221,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 Current = newStats,
                                 Previous = prevStats,
 
-                                RawDatabase = databaseRecord,
+                                RawDatabase = rawRecord,
                             };
 
                             if (state.ReadDatabaseDisabled() == true)
@@ -429,14 +429,17 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private long GetMaxTombstonesEtagToDelete(TransactionOperationContext context, string dbName)
         {
-            var dbRecord = _server.LoadDatabaseRecord(dbName, out _);
-
+            List<PeriodicBackupConfiguration> periodicBackups;
             var maxEtag = long.MaxValue;
 
-            if (dbRecord.PeriodicBackups.Count == 0)
+            using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, dbName))
+            {
+                periodicBackups = rawRecord.GetPeriodicBackups();
+                if (periodicBackups == null || periodicBackups.Count == 0)
                 return 0;
+            }
 
-            foreach (var pb in dbRecord.PeriodicBackups)
+            foreach (var pb in periodicBackups)
             {
                 var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, pb.TaskId));
                 if (singleBackupStatus == null)
@@ -1272,11 +1275,11 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, ClusterNodeStatusReport> Previous;
             public ClusterTopology ClusterTopology;
 
-            public BlittableJsonReaderObject RawDatabase;
+            public RawDatabaseRecord RawDatabase;
 
             public long ReadTruncatedClusterTransactionCommandsCount()
             {
-                RawDatabase.TryGet(nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount), out long count);
+                RawDatabase.GetRecord().TryGet(nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount), out long count);
                 return count;
             }
 
@@ -1284,7 +1287,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 BlittableJsonReaderObject autoDefinition = null;
                 definition = null;
-                RawDatabase.TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject autoIndexes);
+                RawDatabase.GetRecord().TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject autoIndexes);
                 if (autoIndexes?.TryGet(name, out autoDefinition) == false)
                     return false;
 
@@ -1294,58 +1297,23 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public Dictionary<string, DeletionInProgressStatus> ReadDeletionInProgress()
             {
-                if (RawDatabase.TryGet(nameof(DatabaseRecord.DeletionInProgress), out BlittableJsonReaderObject obj) == false || obj == null)
-                    return null;
-
-                var deletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
-
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                for (int i = 0; i < obj.Count; i++)
-                {
-                    obj.GetPropertyByIndex(i, ref propertyDetails);
-
-                    if (propertyDetails.Value == null)
-                        continue;
-
-                    if (Enum.TryParse(propertyDetails.Value.ToString(), out DeletionInProgressStatus result))
-                        deletionInProgress[propertyDetails.Name] = result;
+                return RawDatabase.GetDeletionInProgressStatus();
                 }
 
-                return deletionInProgress;
+            public bool ReadDatabaseDisabled()
+            {
+                return RawDatabase.IsDisabled();
             }
 
-            public bool? ReadDatabaseDisabled()
+            public bool ReadRestoringInProgress()
             {
-                if (RawDatabase.TryGet(nameof(DatabaseRecord.Disabled), out bool disabled) == false)
-                    return null;
-
-                return disabled;
-            }
-
-            public bool? ReadRestoringInProgress()
-            {
-                if (RawDatabase.TryGet(nameof(DatabaseRecord.DatabaseState), out DatabaseStateStatus dbState) == false)
-                    return null;
-
-                return dbState == DatabaseStateStatus.RestoreInProgress;
+                return RawDatabase.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress;
             }
 
             public Dictionary<string, string> ReadSettings()
             {
-                var settings = new Dictionary<string, string>();
-                if (RawDatabase.TryGet(nameof(DatabaseRecord.Settings), out BlittableJsonReaderObject obj) == false || obj == null)
-                    return settings;
-
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                for (int i = 0; i < obj.Count; i++)
-                {
-                    obj.GetPropertyByIndex(i, ref propertyDetails);
-
-                    settings[propertyDetails.Name] = propertyDetails.Value?.ToString();
+                return RawDatabase.GetSettings();
                 }
-
-                return settings;
             }
         }
     }
-}

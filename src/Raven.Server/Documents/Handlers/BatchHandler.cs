@@ -4,35 +4,35 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations.Attachments;
-using Raven.Server.Documents.Indexes;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using System.Runtime.ExceptionServices;
-using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Json;
-using Raven.Server.Json;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Json;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 using Raven.Server.Rachis;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
-using Voron;
-using Raven.Server.Documents.Patch;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Handlers
@@ -184,9 +184,9 @@ namespace Raven.Server.Documents.Handlers
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
+            var topology = ServerStore.LoadDatabaseTopology(Database.Name);
 
-            var record = ServerStore.LoadDatabaseRecord(Database.Name, out _);
-            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, record.Topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, topology.DatabaseTopologyIdBase64, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
             if (result.Result is List<string> errors)

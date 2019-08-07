@@ -37,6 +37,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 
 namespace FastTests
