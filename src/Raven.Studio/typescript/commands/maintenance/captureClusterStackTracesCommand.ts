@@ -62,6 +62,7 @@ class captureClusterStackTracesCommand extends commandBase {
                                             resolve({
                                                 NodeTag: nodeTag,
                                                 Stacks: stacksAsJson.Results,
+                                                Threads: stacksAsJson.Threads,
                                                 NodeUrl: null,
                                                 Error: undefined
                                             })
@@ -73,7 +74,8 @@ class captureClusterStackTracesCommand extends commandBase {
                                     NodeTag: nodeTag,
                                     Stacks: null,
                                     NodeUrl: null,
-                                    Error: "Unable to find stack traces for given node. This operation is only supported on Windows nodes."
+                                    Threads: [],
+                                    Error: "Unable to find stack traces for given node."
                                 });
                             }
                         })

@@ -95,6 +95,9 @@
             .copy {
                 opacity: 1;
             }
+            .legend {
+                opacity: 1;
+            }
         }
     }
     
@@ -113,6 +116,19 @@
         font-weight: bold;
         fill: @gray-lighter;
         cursor: default;
+    }
+    
+    .cpuUsage {
+        fill: @gray-lighter;
+    }
+
+    .cpuUsageContainer {
+        .legend {
+            font-size: 10px; 
+            fill: @gray-light; 
+            opacity: 0;
+            transition: opacity .4s ease;
+        }
     }
 
     .title {
