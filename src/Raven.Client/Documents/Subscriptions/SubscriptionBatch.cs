@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Subscriptions
             public string Id { get; internal set; }
             public string ChangeVector { get; internal set; }
             public bool Projection { get; internal set; }
+            public bool Revision { get; internal set; }
 
             private void ThrowItemProcessException()
             {
@@ -140,7 +141,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var item in Items)
             {
-                if (item.Projection)
+                if (item.Projection || item.Revision)
                     continue;
 
                 s.RegisterExternalLoadedIntoTheSession(new DocumentInfo
@@ -168,8 +169,11 @@ namespace Raven.Client.Documents.Subscriptions
         internal string Initialize(BatchFromServer batch)
         {
             _includes = batch.Includes;
+
             Items.Capacity = Math.Max(Items.Capacity, batch.Messages.Count);
             Items.Clear();
+
+            var revision = typeof(T).IsConstructedGenericType && typeof(T).GetGenericTypeDefinition() == typeof(Revision<>);
             string lastReceivedChangeVector = null;
 
             foreach (var item in batch.Messages)
@@ -218,7 +222,8 @@ namespace Raven.Client.Documents.Subscriptions
                     RawMetadata = metadata,
                     Result = instance,
                     ExceptionMessage = item.Exception,
-                    Projection = projection
+                    Projection = projection,
+                    Revision = revision
                 });
             }
             return lastReceivedChangeVector;
