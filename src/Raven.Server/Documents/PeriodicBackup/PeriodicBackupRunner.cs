@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -413,6 +414,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new MaxNumberOfConcurrentBackupsException(
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
                         $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.");
+                }
+
+                if (LowMemoryNotification.Instance.LowMemoryState)
+                {
+                    throw new MaxNumberOfConcurrentBackupsException(
+                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
+                        $"The task cannot run because the server is in low memory state.");
                 }
 
                 if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
