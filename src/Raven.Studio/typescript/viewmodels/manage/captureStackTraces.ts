@@ -16,6 +16,7 @@ class stackInfo {
     static boxPadding = 15;
     static lineHeight = 20;
     static headerSize = 50;
+    static headerThreadNamePadding = 3;
 
     static shortName(v: string) {
         const withoutArgs = v.replace(/\(.*?\)/g, '');
@@ -35,13 +36,23 @@ class stackInfo {
     
     x: number;
     y: number;
+    cpuUsage: string;
+    threadNamesAndIds: string[] = [];
 
     children: stackInfo[];
     parent: stackInfo;
     depth: number;
-
+    
     boxHeight() {
-        return this.stackTrace.length * stackInfo.lineHeight + 2 * stackInfo.boxPadding;
+        return this.stackTrace.length * stackInfo.lineHeight + 2 * stackInfo.boxPadding + this.threadNamesHeight();
+    }
+    
+    threadNamesHeight() {
+        if (this.threadNamesAndIds.length) {
+            return this.threadNamesAndIds.length * stackInfo.lineHeight + 2 * stackInfo.headerThreadNamePadding;
+        }
+        
+        return 0;
     }
 
     stackWithShortcuts() {
@@ -64,7 +75,7 @@ class captureStackTraces extends viewModelBase {
         loading: ko.observable<boolean>(false)
     };
     
-    data: Array<rawStackTraceResponseItem> = [];
+    data: stackTracesResponseDto = { Results: [], Threads: [] };
     
     clusterWideData = ko.observableArray<clusterWideStackTraceResponseItem>([]);
     selectedClusterWideData = ko.observable<clusterWideStackTraceResponseItem>();
@@ -93,7 +104,10 @@ class captureStackTraces extends viewModelBase {
             if (data.Error) {
                 this.clearGraph();
             } else {
-                this.data = data.Stacks;
+                this.data = {
+                    Results: data.Stacks,
+                    Threads: data.Threads || []
+                };
                 this.draw(); 
             }
         })
@@ -119,7 +133,7 @@ class captureStackTraces extends viewModelBase {
 
             // extract shared stack:
             const sharedStack = new stackInfo([], sharedStacks[0].stackTrace.slice(0, depth));
-
+            
             // remove shared stack from all stacks and recurse
             const strippedStacks = sharedStacks
                 .map(s => new stackInfo(s.threadIds, s.stackTrace.slice(depth)))
@@ -276,16 +290,16 @@ class captureStackTraces extends viewModelBase {
             .append('rect')
             .attr('x', -captureStackTraces.maxBoxWidth / 2)
             .attr('width', captureStackTraces.maxBoxWidth - stackInfo.boxPadding)
-            .attr('y', d => -1 * d.boxHeight() - stackInfo.headerSize)
-            .attr('height', d => d.boxHeight() + stackInfo.headerSize);
-                
+            .attr('y', d => -1 * d.boxHeight())
+            .attr('height', d => d.boxHeight());
+
         enteringNodes
             .append("rect")
             .attr("class", "header")
             .attr("x", -1 * captureStackTraces.maxBoxWidth / 2)
             .attr("width", captureStackTraces.maxBoxWidth)
             .attr("y", d => -d.boxHeight() - stackInfo.headerSize)
-            .attr("height", stackInfo.headerSize);
+            .attr("height", d => stackInfo.headerSize + d.threadNamesHeight());
 
         const headerGroup = enteringNodes
             .append("g")
@@ -297,7 +311,7 @@ class captureStackTraces extends viewModelBase {
             .attr('text-anchor', 'end')
             .attr("x", -3)
             .text(d => d.threadIds.length);
-
+        
         headerGroup
             .append("text")
             .attr("class", "title")
@@ -305,6 +319,61 @@ class captureStackTraces extends viewModelBase {
             .attr("x", 3)
             .text(d => this.pluralize(d.threadIds.length, "THREAD", "THREADS", true));
         
+        const cpuUsageContainer = enteringNodes
+            .filter(d => d.cpuUsage != null)
+            .append("g")
+            .attr("class", "cpuUsageContainer")
+            .attr("transform", d => "translate(-" + (captureStackTraces.maxBoxWidth / 2) +"," + (-d.boxHeight() - 16) + ")");
+
+        cpuUsageContainer
+            .append("text")
+            .attr("class", "cpuUsage")
+            .attr('text-anchor', 'start')
+            .attr("x", stackInfo.boxPadding)
+            .text(d => d.cpuUsage);
+
+        cpuUsageContainer
+            .append("text")
+            .attr("class", "legend")
+            .attr('text-anchor', 'start')
+            .attr("x", stackInfo.boxPadding)
+            .attr("y", -16)
+            .text("CPU");
+
+        enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, index: number) {
+            if (d.threadNamesHeight() > 0) {
+                const threadContainer = this;
+                const offsetTop = d.boxHeight() - stackInfo.boxPadding + stackInfo.lineHeight/4;
+                const framesContainer = d3.select(threadContainer)
+                    .append("g")
+                    .attr('class', 'traces')
+                    .style('clip-path', () => 'url(#stack-clip-path-' + index + ')');
+
+                const stack = framesContainer
+                    .selectAll('.frame')
+                    .data(d.threadNamesAndIds);
+
+                stack
+                    .enter()
+                    .append("rect")
+                    .attr("class", "wireframe")
+                    .attr("x", -captureStackTraces.maxBoxWidth / 2 + stackInfo.boxPadding)
+                    .attr("y", (d, i) => -offsetTop + stackInfo.lineHeight * i - stackInfo.lineHeight / 2)
+                    .attr("width", captureStackTraces.maxBoxWidth - 2 * stackInfo.boxPadding)
+                    .attr("height", stackInfo.lineHeight - 3);
+
+                stack
+                    .enter()
+                    .append('text')
+                    .attr("class", "frame")
+                    .attr('x', -captureStackTraces.maxBoxWidth / 2 + stackInfo.boxPadding)
+                    .attr('y', (d, i) => -offsetTop + stackInfo.lineHeight * i)
+                    .text(d => d)
+                    .append("title")
+                    .text(d => d);
+            }
+        });
+
         const buttonGroup = enteringNodes
             .append("g")
             .attr("transform", d => "translate(" + (captureStackTraces.maxBoxWidth / 2) + "," + (-1 * d.boxHeight() - stackInfo.headerSize/2) + ")")
@@ -322,7 +391,6 @@ class captureStackTraces extends viewModelBase {
             .on("click", d => this.onCopyStack(d))
             .append("title")
             .text("Copy stack to clipboard");
-            
         
         buttonGroup
             .append("text")
@@ -334,7 +402,7 @@ class captureStackTraces extends viewModelBase {
         
         enteringNodes.filter(d => d.depth > 0).each(function (d: stackInfo, index: number) {
             const threadContainer = this;
-            const offsetTop = d.boxHeight() - stackInfo.boxPadding - stackInfo.lineHeight/2;
+            const offsetTop = d.boxHeight() - stackInfo.boxPadding - stackInfo.lineHeight/2 - d.threadNamesHeight();
             const framesContainer = d3.select(threadContainer)
                 .append("g")
                 .attr('class', 'traces')
@@ -429,7 +497,7 @@ class captureStackTraces extends viewModelBase {
                 .done(stacks => {
                     this.data = stacks;
                     this.hasAnyData(true);
-                    this.reverseStacks(stacks);
+                    this.reverseStacks(stacks.Results);
                     this.draw();
                 })
                 .always(() => this.spinners.loading(false));
@@ -437,8 +505,53 @@ class captureStackTraces extends viewModelBase {
     }
     
     draw() {
-        const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.filter(x => x.StackTrace.length).map(x => stackInfo.for(x)), null);
+        const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.Results.filter(x => x.StackTrace.length).map(x => stackInfo.for(x)), null);
+        
+        this.assignThreadsInfo(collatedStacks);
+        
         this.updateGraph(collatedStacks);
+    }
+    
+    private assignThreadsInfo(stacks: stackInfo[]) {
+        stacks.forEach(stack => {
+            stack.cpuUsage = this.getCpuUsage(stack.threadIds);
+            
+            if (stack.children && stack.children.length) {
+                this.assignThreadsInfo(stack.children);
+            } else {
+                // we want to show thread names on leaves
+                stack.threadNamesAndIds = this.getThreadNamesAndIds(stack.threadIds);
+            }
+        });
+    }
+
+    private getThreadInfo(threadIds: number[]): Array<Raven.Server.Dashboard.ThreadInfo> {
+        if (this.data.Threads) {
+            return this.data.Threads.filter(x => _.includes(threadIds, x.Id));
+        }
+
+        return [];
+    }
+    
+    private getCpuUsage(threadIds: number[]): string {
+        const threadInfo = this.getThreadInfo(threadIds);
+
+        if (threadInfo.length) {
+            const sum = _.sum(threadInfo.map(x => x.CpuUsage));
+            return sum.toFixed(1) + "%";
+        } else {
+            return null;
+        }
+    }
+
+    private getThreadNamesAndIds(threadIds: number[]): string[] {
+        const threadInfo = this.getThreadInfo(threadIds);
+
+        if (threadInfo.length) {
+            return threadInfo.map(x => x.Name + " [" + x.Id + "]");
+        } else {
+            return [];
+        }
     }
     
     private clearGraph() {

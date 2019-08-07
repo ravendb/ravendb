@@ -618,8 +618,14 @@ interface certificateInfo {
 interface clusterWideStackTraceResponseItem {
     NodeTag: string;
     Stacks: Array<rawStackTraceResponseItem>;
+    Threads: Array<Raven.Server.Dashboard.ThreadInfo>;
     NodeUrl: string;
     Error: string;
+}
+
+interface stackTracesResponseDto {
+    Results: Array<rawStackTraceResponseItem>;
+    Threads: Array<Raven.Server.Dashboard.ThreadInfo>;
 }
 
 interface rawStackTraceResponseItem {
