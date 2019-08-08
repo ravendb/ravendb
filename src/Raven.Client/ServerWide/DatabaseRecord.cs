@@ -48,6 +48,15 @@ namespace Raven.Client.ServerWide
 
         public DatabaseTopology Topology;
 
+        public DatabaseTopology[] Shards;
+
+        public List<ShardRangeAssignment> ShardAllocations = new List<ShardRangeAssignment>();
+        public class ShardRangeAssignment
+        {
+            public int RangeStart;
+            public int Shard;
+        }
+
         // public OnGoingTasks tasks;  tasks for this node..
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
 
@@ -282,6 +291,28 @@ namespace Raven.Client.ServerWide
                 count += AutoIndexes.Count;
 
             return count;
+        }
+
+        public bool ValidateTopologyNodes()
+        {
+            if (Topology != null && Topology.Count > 0)
+                return true;
+
+            return Shards != null && Shards.All(shard => shard?.Count > 0);
+        }
+
+        public IEnumerable<string> GetTopologyMembers(Func<DatabaseTopology, List<string>> get)
+        {
+            if (Topology != null)
+                return get(Topology);
+
+            var set = new HashSet<string>();
+            foreach (var shard in Shards)
+            {
+                set.UnionWith(get(shard));
+            }
+
+            return set.ToList();
         }
     }
 

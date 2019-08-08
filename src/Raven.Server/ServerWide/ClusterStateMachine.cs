@@ -1290,7 +1290,7 @@ namespace Raven.Server.ServerWide
             Exception exception = null;
             try
             {
-                Debug.Assert(addDatabaseCommand.Record.Topology.Count != 0, "Attempt to add database with no nodes");
+                Debug.Assert(addDatabaseCommand.Record.ValidateTopologyNodes(), "Attempt to add database with no nodes");
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
@@ -1316,7 +1316,16 @@ namespace Raven.Server.ServerWide
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
-                        return addDatabaseCommand.Record.Topology.Members;
+                        if(addDatabaseCommand.Record.Topology != null)
+                            return addDatabaseCommand.Record.Topology.Members;
+
+                        var set = new HashSet<string>();
+                        foreach (var shard in addDatabaseCommand.Record.Shards)
+                        {
+                            set.UnionWith(shard.Members);
+                        }
+
+                        return set.ToList();
                     }
 
                     void VerifyUnchangedTasks()
@@ -2573,11 +2582,41 @@ namespace Raven.Server.ServerWide
 
         public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name, out long etag)
         {
+            int shardIndex = TryGetShardIndexAndDatabaseName(ref name);
+
             var rawRecord = ReadRawDatabase(context, name, out etag);
+
+            var databaseRecord = BuildShardedDatabaseRecord(context, rawRecord, shardIndex);
+            return new RawDatabaseRecord(context, databaseRecord);
+        }
+
+        private static BlittableJsonReaderObject BuildShardedDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject rawRecord, int shardIndex)
+        {
             if (rawRecord == null)
                 return null;
 
-            return new RawDatabaseRecord(rawRecord);
+            if (shardIndex != -1)
+            {
+                rawRecord = new RawDatabaseRecord(context, rawRecord)
+                    .GetShardedDatabaseRecord(shardIndex)
+                    .GetRecord();
+            }
+
+            return rawRecord;
+        }
+
+        private static int TryGetShardIndexAndDatabaseName(ref string name)
+        {
+            int shardIndex = name.IndexOf('$');
+            if (shardIndex != -1)
+            {
+                var slice = name.AsSpan().Slice(shardIndex + 1);
+                name = name.Substring(0, shardIndex);
+                if (int.TryParse(slice, out shardIndex) == false)
+                    throw new ArgumentNullException(nameof(name), "Unable to parse sharded database name: " + name);
+            }
+
+            return shardIndex;
         }
 
         public RawDatabaseRecord ReadRawDatabaseRecord(TransactionOperationContext context, string name)
@@ -2587,6 +2626,8 @@ namespace Raven.Server.ServerWide
 
         public bool DatabaseExists(TransactionOperationContext context, string name)
         {
+            TryGetShardIndexAndDatabaseName(ref name);
+
             var dbKey = "db/" + name.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2600,22 +2641,25 @@ namespace Raven.Server.ServerWide
             var doc = ReadRawDatabase(context, name, out etag);
             if (doc == null)
                 return null;
-
             return JsonDeserializationCluster.DatabaseRecord(doc);
         }
 
         public BlittableJsonReaderObject ReadRawDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
-            return Read(context, "db/" + name.ToLowerInvariant(), out etag);
+            int shardIndex = TryGetShardIndexAndDatabaseName(ref name);
+            var result = Read(context, "db/" + name.ToLowerInvariant(), out etag);
+            return BuildShardedDatabaseRecord(context, result, shardIndex);
         }
 
         public DatabaseTopology ReadDatabaseTopology(TransactionOperationContext context, string name)
         {
             using (var rawDatabaseRecord = ReadRawDatabase(context, name, out _))
             {
-                if (rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
+                if (rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false 
+                    || topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
+
                 return JsonDeserializationCluster.DatabaseTopology(topology);
             }
         }

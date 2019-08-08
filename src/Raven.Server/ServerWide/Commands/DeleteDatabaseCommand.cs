@@ -61,9 +61,10 @@ namespace Raven.Server.ServerWide.Commands
             }
             else
             {
-                var allNodes = record.Topology.Members.Select(m => m)
-                    .Concat(record.Topology.Promotables.Select(p => p))
-                    .Concat(record.Topology.Rehabs.Select(r => r));
+                var allNodes = record.GetTopologyMembers(x=>x.Members)
+                    .Concat(record.GetTopologyMembers(x => x.Promotables))
+                    .Concat(record.GetTopologyMembers(x => x.Rehabs))
+                    .Distinct();
 
                 foreach (var node in allNodes)
                 {
@@ -73,7 +74,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 record.Topology = new DatabaseTopology
                 {
-                    Stamp = record.Topology.Stamp,
+                    Stamp = record.Topology?.Stamp,
                     ReplicationFactor = 0
                 };
             }

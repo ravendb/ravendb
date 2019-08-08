@@ -10,16 +10,20 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide
 {
     public class RawDatabaseRecord : IDisposable
     {
+        private readonly JsonOperationContext _context;
         private readonly BlittableJsonReaderObject _record;
 
-        public RawDatabaseRecord(BlittableJsonReaderObject record)
+        public RawDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject record)
         {
+            _context = context;
             _record = record;
         }
 
@@ -60,10 +64,58 @@ namespace Raven.Server.ServerWide
 
         public DatabaseTopology GetTopology()
         {
-            if (_record.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject rawTopology) == false)
+            if (_record.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject rawTopology) == false 
+                || rawTopology == null)
                 return null;
 
             return JsonDeserializationCluster.DatabaseTopology(rawTopology);
+        }
+
+        public bool IsSharded()
+        {
+            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
+            return array != null && array.Length > 0;
+        }
+
+        public RawDatabaseRecord GetShardedDatabaseRecord(int index)
+        {
+            _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
+            var name = GetDatabaseName();
+            var shardedTopology = (BlittableJsonReaderObject)array[index];
+            var shardName = name + "$" + index;
+            _record.Modifications = new DynamicJsonValue(_record)
+            {
+                [nameof(DatabaseRecord.DatabaseName)] = shardName,
+                [nameof(DatabaseRecord.Topology)] = shardedTopology,
+                [nameof(DatabaseRecord.ShardAllocations)] = null,
+                [nameof(DatabaseRecord.Shards)] = null,
+            };
+
+            return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
+        }
+
+        public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
+        {
+            if(_record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array) == false 
+               || array == null)
+                yield break;
+
+            var name = GetDatabaseName();
+
+            for (var index = 0; index < array.Length; index++)
+            {
+                var shardedTopology = (BlittableJsonReaderObject)array[index];
+                var shardName = name + "$" + index;
+                _record.Modifications = new DynamicJsonValue(_record)
+                {
+                    [nameof(DatabaseRecord.DatabaseName)] = shardName,
+                    [nameof(DatabaseRecord.Topology)] = shardedTopology,
+                    [nameof(DatabaseRecord.ShardAllocations)] = null,
+                    [nameof(DatabaseRecord.Shards)] = null,
+                };
+
+                yield return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
+            }
         }
 
         public DatabaseStateStatus GetDatabaseStateStatus()
