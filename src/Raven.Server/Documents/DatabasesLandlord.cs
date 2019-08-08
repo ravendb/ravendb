@@ -66,7 +66,6 @@ namespace Raven.Server.Documents
 
                 // response to changed database.
                 // if disabled, unload
-                DatabaseTopology topology;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
@@ -78,88 +77,23 @@ namespace Raven.Server.Documents
                         return;
                     }
 
-                    if (ShouldDeleteDatabase(context, databaseName, rawRecord))
-                        return;
-
-                    topology = rawRecord.GetTopology();
-                    if (topology.RelevantFor(_serverStore.NodeTag) == false)
-                        return;
-
-                    if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+                    if (rawRecord.IsSharded())
                     {
-                        UnloadDatabase(databaseName);
-                        return;
+                        foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
+                        {
+                            HandleSpecificClusterDatabaseChanged(
+                                shardRawRecord.GetDatabaseName(), index, type, changeType, context, shardRawRecord);
+                        }
                     }
-                }
-
-                if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
-                {
-                    // if the database isn't loaded, but it is relevant for this node, we need to create
-                    // it. This is important so things like replication will start pumping, and that 
-                    // configuration changes such as running periodic backup will get a chance to run, which
-                    // they wouldn't unless the database is loaded / will have a request on it.          
-                    task = TryGetOrCreateResourceStore(databaseName);
-                }
-
-                if (task.IsCanceled || task.IsFaulted)
-                    return;
-
-                switch (changeType)
-                {
-                    case ClusterDatabaseChangeType.RecordChanged:
-                        if (task.IsCompleted)
-                        {
-                            NotifyDatabaseAboutStateChange(databaseName, task, index);
-                            if (type == ClusterStateMachine.SnapshotInstalled)
-                            {
-                                NotifyPendingClusterTransaction(databaseName, task, index, changeType);
-                            }
-
-                            return;
-                        }
-
-                        task.ContinueWith(done =>
-                        {
-                            NotifyDatabaseAboutStateChange(databaseName, done, index);
-                            if (type == ClusterStateMachine.SnapshotInstalled)
-                            {
-                                NotifyPendingClusterTransaction(databaseName, done, index, changeType);
-                            }
-                        });
-                        break;
-                    case ClusterDatabaseChangeType.ValueChanged:
-                        if (task.IsCompleted)
-                        {
-                            NotifyDatabaseAboutValueChange(databaseName, task, index);
-                            return;
-                        }
-
-                        task.ContinueWith(done => { NotifyDatabaseAboutValueChange(databaseName, done, index); });
-                        break;
-                    case ClusterDatabaseChangeType.PendingClusterTransactions:
-                    case ClusterDatabaseChangeType.ClusterTransactionCompleted:
-                        if (task.IsCompleted)
-                        {
-                            task.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, task, index, changeType);
-                            return;
-                        }
-
-                        task.ContinueWith(done =>
-                        {
-                            done.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, done, index, changeType);
-                        });
-
-                        break;
-                    default:
-                        ThrowUnknownClusterDatabaseChangeType(changeType);
-                        break;
+                    else
+                    {
+                        HandleSpecificClusterDatabaseChanged(databaseName, index, type, changeType, context, rawRecord);
+                    }
                 }
 
                 // if deleted, unload / deleted and then notify leader that we removed it
             }
-            catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+            catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException?.Data["Source"]))
             {
                 // in the process of being deleted
             }
@@ -182,6 +116,89 @@ namespace Raven.Server.Documents
             finally
             {
                 _disposing.ExitReadLock();
+            }
+        }
+
+        private void HandleSpecificClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType,
+            TransactionOperationContext context,
+            RawDatabaseRecord rawRecord)
+        {
+            if (ShouldDeleteDatabase(context, databaseName, rawRecord))
+                return;
+
+            var topology = rawRecord.GetTopology();
+            if (topology.RelevantFor(_serverStore.NodeTag) == false)
+                return;
+
+            if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+            {
+                UnloadDatabase(databaseName);
+                return;
+            }
+
+            if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
+            {
+                // if the database isn't loaded, but it is relevant for this node, we need to create
+                // it. This is important so things like replication will start pumping, and that 
+                // configuration changes such as running periodic backup will get a chance to run, which
+                // they wouldn't unless the database is loaded / will have a request on it.          
+                task = TryGetOrCreateResourceStore(databaseName);
+            }
+
+            if (task.IsCanceled || task.IsFaulted)
+                return;
+
+            switch (changeType)
+            {
+                case ClusterDatabaseChangeType.RecordChanged:
+                    if (task.IsCompleted)
+                    {
+                        NotifyDatabaseAboutStateChange(databaseName, task, index);
+                        if (type == ClusterStateMachine.SnapshotInstalled)
+                        {
+                            NotifyPendingClusterTransaction(databaseName, task, index, changeType);
+                        }
+
+                        return;
+                    }
+
+                    task.ContinueWith(done =>
+                    {
+                        NotifyDatabaseAboutStateChange(databaseName, done, index);
+                        if (type == ClusterStateMachine.SnapshotInstalled)
+                        {
+                            NotifyPendingClusterTransaction(databaseName, done, index, changeType);
+                        }
+                    });
+                    break;
+                case ClusterDatabaseChangeType.ValueChanged:
+                    if (task.IsCompleted)
+                    {
+                        NotifyDatabaseAboutValueChange(databaseName, task, index);
+                        return;
+                    }
+
+                    task.ContinueWith(done => { NotifyDatabaseAboutValueChange(databaseName, done, index); });
+                    break;
+                case ClusterDatabaseChangeType.PendingClusterTransactions:
+                case ClusterDatabaseChangeType.ClusterTransactionCompleted:
+                    if (task.IsCompleted)
+                    {
+                        task.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
+                        NotifyPendingClusterTransaction(databaseName, task, index, changeType);
+                        return;
+                    }
+
+                    task.ContinueWith(done =>
+                    {
+                        done.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
+                        NotifyPendingClusterTransaction(databaseName, done, index, changeType);
+                    });
+
+                    break;
+                default:
+                    ThrowUnknownClusterDatabaseChangeType(changeType);
+                    break;
             }
         }
 
@@ -749,18 +766,14 @@ namespace Raven.Server.Documents
             if (databaseName.Equals("<system>")) // This is here to guard against old ravendb tests
                 throw new ArgumentNullException(nameof(databaseName),
                     "Database name cannot be <system>. Using of <system> database indicates outdated code that was targeted RavenDB 3.5.");
-
+           
             Debug.Assert(_serverStore.Disposed == false);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
 
-                var doc = _serverStore.Cluster.Read(context, "db/" + databaseName.Value.ToLowerInvariant());
-                if (doc == null)
-                    return null;
-
-                var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, databaseName.Value);
 
                 if (databaseRecord.Encrypted)
                 {
@@ -771,7 +784,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, databaseRecord);
+                return CreateDatabaseConfiguration(databaseRecord.DatabaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, databaseRecord);
             }
         }
 

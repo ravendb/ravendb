@@ -120,31 +120,46 @@ namespace Raven.Server.Web.System
                     var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
+                        long stampIndex;
+                        IEnumerable<DynamicJsonValue> dbNodes;
+                        if (dbRecord.Shards?.Length > 0)
+                        {
+                            dbNodes = clusterTopology.Members.Keys.Select(x => 
+                                TopologyNodeToJson(x, clusterTopology, dbRecord, ServerNode.Role.Member));
+                            stampIndex = dbRecord.Shards.Max(x => x.Stamp?.Index ?? -1);
+                        }
+                        else
+                        {
+                            dbNodes = dbRecord.Topology.Members.Select(x => 
+                                    TopologyNodeToJson(x, clusterTopology, dbRecord, ServerNode.Role.Member))
+                                .Concat(dbRecord.Topology.Rehabs.Select(x =>
+                                    TopologyNodeToJson(x, clusterTopology, dbRecord, ServerNode.Role.Rehab))
+                                );
+                            stampIndex = dbRecord.Topology.Stamp?.Index ?? -1;
+                        }
+
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(Topology.Nodes)] = new DynamicJsonArray(
-                                dbRecord.Topology.Members.Select(x => new DynamicJsonValue
-                                {
-                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                    [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
-                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName
-                                })
-                                .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
-                                {
-                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
-                                    [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
-                                })
-                                )
+                                dbNodes
                             ),
-                            [nameof(Topology.Etag)] = dbRecord.Topology.Stamp?.Index ?? -1
+                            [nameof(Topology.Etag)] = stampIndex
                         });
                     }
                 }
             }
             return Task.CompletedTask;
+        }
+
+        private DynamicJsonValue TopologyNodeToJson(string tag, ClusterTopology clusterTopology, DatabaseRecord dbRecord, ServerNode.Role role)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ServerNode.Url)] = GetUrl(tag, clusterTopology),
+                [nameof(ServerNode.ClusterTag)] = tag,
+                [nameof(ServerNode.ServerRole)] = role,
+                [nameof(ServerNode.Database)] = dbRecord.DatabaseName
+            };
         }
 
         // we can't use '/database/is-loaded` because that conflict with the `/databases/<db-name>`
