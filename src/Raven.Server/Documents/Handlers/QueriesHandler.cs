@@ -529,8 +529,11 @@ namespace Raven.Server.Documents.Handlers
                 Query = query.Query
             };
 
-            var task = Database.Operations.AddOperation(Database, indexName, operationType,
-                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
+            var task = 
+                Task.Run(()=>
+                Database.Operations.AddOperation(Database, indexName, operationType,
+                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token)
+            );;
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
