@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             // we will always wake up the database for a full backup.
             // but for incremental we will wake the database only if there were changes made.
-            
+
             var now = SystemTime.UtcNow;
 
             if (backupStatus == null)
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (nextlastIncrementalBackup != null)
                     return nextlastIncrementalBackup;
             }
-            
+
             var lastFullBackup = backupStatus.LastFullBackupInternal ?? now;
             return GetNextBackupOccurrence(configuration.FullBackupFrequency,
                 lastFullBackup, configuration, skipErrorLog: false);
@@ -327,17 +327,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 CreateBackupTask(periodicBackup, isFullBackup);
             }
-            catch (MaxNumberOfConcurrentBackupsException e)
+            catch (BackupDelayException e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Backup task will be retried in a minute", e);
+                    _logger.Info($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds.", e);
 
                 // we'll retry in one minute
                 var backupTaskDetails = new BackupTaskDetails
                 {
                     IsFullBackup = isFullBackup,
                     TaskId = periodicBackup.Configuration.TaskId,
-                    NextBackup = TimeSpan.FromMinutes(1)
+                    NextBackup = e.DelayPeriod
                 };
 
                 var timer = new Timer(TimerCallback, backupTaskDetails, backupTaskDetails.NextBackup, Timeout.InfiniteTimeSpan);
@@ -411,24 +411,33 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
                 {
-                    throw new MaxNumberOfConcurrentBackupsException(
+                    throw new BackupDelayException(
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
-                        $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.");
+                        $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
+                    {
+                        DelayPeriod = TimeSpan.FromMinutes(10)
+                    };
                 }
 
                 if (LowMemoryNotification.Instance.LowMemoryState)
                 {
-                    throw new MaxNumberOfConcurrentBackupsException(
+                    throw new BackupDelayException(
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
-                        $"The task cannot run because the server is in low memory state.");
+                        $"The task cannot run because the server is in low memory state.")
+                    {
+                        DelayPeriod = TimeSpan.FromMinutes(10)
+                    };
                 }
 
                 if (_serverStore.ConcurrentBackupsSemaphore.Wait(0) == false)
                 {
-                    throw new MaxNumberOfConcurrentBackupsException(
+                    throw new BackupDelayException(
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
                         $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current value of Backup.MaxNumberOfConcurrentBackups is: {_serverStore.Configuration.Backup.MaxNumberOfConcurrentBackups:#,#;;0}");
+                        $"Current value of Backup.MaxNumberOfConcurrentBackups is: {_serverStore.Configuration.Backup.MaxNumberOfConcurrentBackups:#,#;;0}")
+                    {
+                        DelayPeriod = TimeSpan.FromMinutes(1)
+                    };
                 }
 
                 try
@@ -442,7 +451,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
                         backupStatus.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
-                        // the local folder already includes a full backup or snapshot
+                    // the local folder already includes a full backup or snapshot
                     {
                         isFullBackup = true;
                     }
@@ -647,7 +656,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             TaskStatus taskState)
         {
             Debug.Assert(taskId == newConfiguration.TaskId);
-            
+
             var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
             if (_periodicBackups.TryGetValue(taskId, out var existingBackupState) == false)
             {
@@ -795,7 +804,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
             }
         }
-        
+
         public bool HasRunningBackups()
         {
             foreach (var periodicBackup in _periodicBackups)
