@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.LowMemory;
 using FacetedQueryHelper = Raven.Server.Documents.Queries.Facets.FacetedQueryHelper;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
+using Lucene.Net.Search;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -282,7 +283,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery, IState state)
         {
             var gatherAllCollector = new GatherAllCollectorByReader();
-            currentIndexSearcher.Search(baseQuery, gatherAllCollector, state);
+            using (Searcher.EnableLightWeightSimilarity())
+            {
+                currentIndexSearcher.Search(baseQuery, gatherAllCollector, state);
+            }
+            
 
             foreach (var readerFacetInfo in gatherAllCollector.Results)
             {
