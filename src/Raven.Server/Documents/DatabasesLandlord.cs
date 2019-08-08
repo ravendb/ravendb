@@ -35,6 +35,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
+        private readonly ResourceCache<bool> _shardedDatabases = new ResourceCache<bool>();
         private readonly TimeSpan _concurrentDatabaseLoadTimeout;
         private readonly Logger _logger;
         private readonly SemaphoreSlim _databaseSemaphore;
@@ -521,7 +522,69 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
+        public struct DatabaseSearchResult
+        {
+            public Task<DocumentDatabase> DatabaseTask;
+            public Status DatabaseStatus;
+            public enum Status
+            {
+                None,
+                Missing,
+                Database,
+                Sharded
+            }
+        }
+
+        public DatabaseSearchResult TryGetOrCreateDatabase(StringSegment databaseName)
+        {
+            if (_shardedDatabases.TryGetValue(databaseName, out var database))
+            {
+                if(database.Result == false)
+                {
+                    return new DatabaseSearchResult
+                    {
+                        DatabaseStatus = DatabaseSearchResult.Status.Database,
+                        DatabaseTask = TryGetOrCreateResourceStore(databaseName)
+                    };
+                }
+                return new DatabaseSearchResult
+                {
+                    DatabaseStatus = DatabaseSearchResult.Status.Sharded
+                };
+            }
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                context.OpenReadTransaction();
+
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, databaseName.Value);
+                if (databaseRecord == null)
+                {
+                    return new DatabaseSearchResult
+                    {
+                        DatabaseStatus = DatabaseSearchResult.Status.Missing,
+                        DatabaseTask = Task.FromResult((DocumentDatabase)null)
+                    };
+                }
+
+                if (databaseRecord.Shards != null)
+                {
+                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(true));
+                    return new DatabaseSearchResult
+                    {
+                        DatabaseStatus = DatabaseSearchResult.Status.Sharded
+                    };
+                }
+                _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(true));
+                return new DatabaseSearchResult
+                {
+                    DatabaseStatus = DatabaseSearchResult.Status.Database,
+                    DatabaseTask = TryGetOrCreateResourceStore(databaseName)
+                };
+            }
+        }
+
+            public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
         {
             try
             {
@@ -960,6 +1023,28 @@ namespace Raven.Server.Documents
             }
 
             database.DatabaseShutdownCompleted.Set();
+        }
+
+        public bool IsShardedDatabase(StringSegment databaseName)
+        {
+            if (IsDatabaseLoaded(databaseName))
+                return false;
+
+            if (_shardedDatabases.TryGetValue(databaseName, out _))
+                return true;
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
+                if (rawRecord.IsSharded())
+                {
+                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(true));
+                    return true;
+                }
+
+                return false;
+            }
         }
     }
 }

@@ -35,6 +35,19 @@ namespace Raven.Server.Routing
         }
     }
 
+    public class RavenShardedActionAttribute : Attribute
+    {
+        public string Path { get; }
+
+        public string Method { get; }
+
+        public RavenShardedActionAttribute(string path, string method)
+        {
+            Path = path;
+            Method = method;
+        }
+    }
+
     public enum AuthorizationStatus
     {
         ClusterAdmin,
