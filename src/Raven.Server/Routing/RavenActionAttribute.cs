@@ -21,6 +21,8 @@ namespace Raven.Server.Routing
 
         public bool SkipUsagesCount { get; set; }
 
+        public bool SkipLastRequestTimeUpdate { get; set; }
+
         public bool IsPosixSpecificEndpoint { get; set; }
 
         public RavenActionAttribute(string path, string method, AuthorizationStatus requireAuth, bool isDebugInformationEndpoint = false,
