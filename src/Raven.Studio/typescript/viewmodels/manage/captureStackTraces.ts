@@ -505,9 +505,13 @@ class captureStackTraces extends viewModelBase {
     }
     
     draw() {
-        const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.Results.filter(x => x.StackTrace.length).map(x => stackInfo.for(x)), null);
+        const collatedStacks = captureStackTraces.splitAndCollateStacks(this.data.Results.map(x => stackInfo.for(x)), null);
         
         this.assignThreadsInfo(collatedStacks);
+        
+        collatedStacks.filter(x => x.stackTrace.length === 0).forEach(emptyStack => {
+            emptyStack.stackTrace = ["Stack Trace is not available"];
+        });
         
         this.updateGraph(collatedStacks);
     }
@@ -548,10 +552,14 @@ class captureStackTraces extends viewModelBase {
         const threadInfo = this.getThreadInfo(threadIds);
 
         if (threadInfo.length) {
-            return threadInfo.map(x => x.Name + " [" + x.Id + "]");
-        } else {
-            return [];
+            const groupByName = _.groupBy(threadInfo, x => x.Name);
+            return Object.keys(groupByName).map(key => {
+                const ids = groupByName[key].map(x => x.Id);
+                return key + " [" + ids.join(",") + "]";
+            });
         }
+
+        return [];
     }
     
     private clearGraph() {
