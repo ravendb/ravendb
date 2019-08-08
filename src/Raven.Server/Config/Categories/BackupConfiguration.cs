@@ -32,6 +32,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MaxNumberOfConcurrentBackups", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxNumberOfConcurrentBackups { get; set; }
 
+        [Description("Number of minutes to delay the backup after entering the low memory state by the Server.")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Backup.LowMemoryBackupDelayInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting LowMemoryBackupDelay { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
             base.Initialize(settings, serverWideSettings, type, resourceName);

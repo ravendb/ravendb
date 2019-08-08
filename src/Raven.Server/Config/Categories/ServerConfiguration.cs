@@ -50,5 +50,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("Server.CpuCredits.ExhaustionFailoverThreshold", ConfigurationEntryScope.ServerWideOnly)]
         public double? CpuCreditsExhaustionFailoverThreshold { get; set; }
+
+        [Description("EXPERT: When CPU credits are exhausted backups are canceled. This value indicates after how many minutes the backup task will re-try.")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Server.CpuCredits.ExhaustionBackupDelayInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CpuCreditsExhaustionBackupDelay { get; set; }
     }
 }
