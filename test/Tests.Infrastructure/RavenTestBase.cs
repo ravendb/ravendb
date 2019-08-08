@@ -682,7 +682,7 @@ namespace FastTests
                 do
                 {
                     Thread.Sleep(500);
-                } while (documentStore.Commands(database).Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
+                } while (true);
 
                 documentStore.Commands(database).Delete("Debug/Done", null);
             }
