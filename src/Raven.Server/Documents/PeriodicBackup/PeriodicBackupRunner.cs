@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
                         $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
                     {
-                        DelayPeriod = TimeSpan.FromMinutes(10)
+                        DelayPeriod = _serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan
                     };
                 }
 
@@ -425,7 +425,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
                         $"The task cannot run because the server is in low memory state.")
                     {
-                        DelayPeriod = TimeSpan.FromMinutes(10)
+                        DelayPeriod = _serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
                     };
                 }
 
