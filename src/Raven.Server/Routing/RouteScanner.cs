@@ -40,7 +40,7 @@ namespace Raven.Server.Routing
             var routes = new Dictionary<string, RouteInformation>(StringComparer.OrdinalIgnoreCase);
 
             var corsHandler = typeof(CorsPreflightHandler).GetMethod(nameof(CorsPreflightHandler.HandlePreflightRequest));
-            
+
             var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
                 .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
                 .Where(type => type.IsDefined(typeof(RavenActionAttribute)))
@@ -57,33 +57,33 @@ namespace Raven.Server.Routing
                     {
                         // register endpoint for preflight request 
                         var optionsRouteKey = "OPTIONS" + route.Path;
-                        
+
                         // we don't check for duplicates here, as single endpoint like: /admin/cluster/node might have 2 verbs (PUT, DELETE),
                         // but we need single OPTIONS handler
-                        
+
                         if (routes.TryGetValue(optionsRouteKey, out RouteInformation optionsRouteInfo) == false)
                         {
                             routes[optionsRouteKey] = optionsRouteInfo = new RouteInformation(
-                                "OPTIONS", 
-                                route.Path, 
-                                route.RequiredAuthorization, 
+                                "OPTIONS",
+                                route.Path,
+                                route.RequiredAuthorization,
                                 route.SkipUsagesCount,
                                 route.SkipLastRequestTimeUpdate,
                                 route.CorsMode,
                                 route.IsDebugInformationEndpoint,
                                 route.DisableOnCpuCreditsExhaustion);
-                            
+
                             optionsRouteInfo.Build(corsHandler);
                         }
                     }
-                    
+
                     var routeKey = route.Method + route.Path;
                     if (routes.TryGetValue(routeKey, out RouteInformation routeInfo) == false)
                     {
                         routes[routeKey] = routeInfo = new RouteInformation(
-                            route.Method, 
-                            route.Path, 
-                            route.RequiredAuthorization, 
+                            route.Method,
+                            route.Path,
+                            route.RequiredAuthorization,
                             route.SkipUsagesCount,
                             route.SkipLastRequestTimeUpdate,
                             route.CorsMode,
@@ -98,9 +98,33 @@ namespace Raven.Server.Routing
                 }
             }
 
+            if (predicate == null)
+            {
+                var shardedActions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
+                    .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
+                    .Where(type => type.IsDefined(typeof(RavenShardedActionAttribute)))
+                    .ToList();
+
+                foreach (var shardedAction in shardedActions)
+                {
+                    foreach (var route in shardedAction.GetCustomAttributes<RavenShardedActionAttribute>())
+                    {
+
+                        var routeKey = route.Method + route.Path;
+                        if (routes.TryGetValue(routeKey, out RouteInformation routeInfo) == false)
+                        {
+                            throw new InvalidOperationException(
+                                $"Sharded action {shardedAction.Name} on {shardedAction.DeclaringType} was specified, but there is matching normal action");
+                        }
+
+                        routeInfo.BuildSharded(shardedAction);
+                    }
+                }
+            }
+
             return routes;
         }
-        
+
     }
-    
+
 }
