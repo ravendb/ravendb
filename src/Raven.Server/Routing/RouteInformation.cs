@@ -20,6 +20,7 @@ namespace Raven.Server.Routing
         public readonly string Path;
 
         public readonly bool SkipUsagesCount;
+        public readonly bool SkipLastRequestTimeUpdate;
         public readonly CorsMode CorsMode;
 
         public bool DisableOnCpuCreditsExhaustion;
@@ -35,7 +36,7 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, CorsMode corsMode,
+        public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, bool skipLastRequestTimeUpdate, CorsMode corsMode,
             bool isDebugInformationEndpoint = false, 
             bool disableOnCpuCreditsExhaustion = false)
         {
@@ -45,6 +46,7 @@ namespace Raven.Server.Routing
             Method = method;
             Path = path;
             SkipUsagesCount = skipUsagesCount;
+            SkipLastRequestTimeUpdate = skipLastRequestTimeUpdate;
             CorsMode = corsMode;
         }
 
