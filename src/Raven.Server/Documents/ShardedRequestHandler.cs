@@ -1,52 +1,46 @@
 ﻿using System;
-using System.Runtime.InteropServices;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow;
 
 namespace Raven.Server.Documents
 {
-    public class ShardedRequestHandler : RequestHandler
+    public unsafe class ShardedRequestHandler : RequestHandler
     {
-        protected static ushort GetShardId(string key)
+        /// <summary>
+        /// The shard id is a hash of the document id, lower case, reduced to
+        /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
+        /// perfect distribution of data, each shard is going to have about 1MB of data
+        /// per TB of overall db size. That means that even for *very* large databases, the
+        /// size of the shard is still going to be manageable.
+        /// </summary>
+        protected int GetShardId(TransactionOperationContext context,string key)
         {
-            return Crc16.ComputeChecksum(MemoryMarshal.AsBytes(key.AsSpan()));
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
+            {
+                byte* buffer = lowerId.Content.Ptr;
+                int size = lowerId.Size;
+
+                AdjustAfterSeparator((byte)'$', ref buffer, ref size);
+
+                if (size == 0)
+                    throw new ArgumentException("Key '" + key + "', has a shard id length of 0");
+
+                var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
+                var mixed = Hashing.Mix(hash);
+                return (int)(mixed & 0x0FFF);
+            }
         }
 
-        public static class Crc16
+        private static void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
         {
-            const ushort Polynomial = 0xA001;
-            static readonly ushort[] Table = new ushort[256];
-
-            public static ushort ComputeChecksum(ReadOnlySpan<byte> bytes)
+            for (int i = len - 1; i > 0; i--)
             {
-                ushort crc = 0;
-                for (int i = 0; i < bytes.Length; ++i)
-                {
-                    byte index = (byte)(crc ^ bytes[i]);
-                    crc = (ushort)((crc >> 8) ^ Table[index]);
-                }
-                return crc;
-            }
-
-            static Crc16()
-            {
-                for (ushort i = 0; i < Table.Length; ++i)
-                {
-                    ushort value = 0;
-                    var temp = i;
-                    for (byte j = 0; j < 8; ++j)
-                    {
-                        if (((value ^ temp) & 0x0001) != 0)
-                        {
-                            value = (ushort)((value >> 1) ^ Polynomial);
-                        }
-                        else
-                        {
-                            value >>= 1;
-                        }
-                        temp >>= 1;
-                    }
-                    Table[i] = value;
-                }
+                if (ptr[i] != expected)
+                    continue;
+                ptr += i + 1;
+                len -= i - 1;
+                break;
             }
         }
     }
