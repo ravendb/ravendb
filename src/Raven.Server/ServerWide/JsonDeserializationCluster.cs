@@ -67,6 +67,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, RestoreFromS3Configuration> RestoreS3BackupConfiguration = GenerateJsonDeserializationRoutine<RestoreFromS3Configuration>();
 
+        public static readonly Func<BlittableJsonReaderObject, RestoreFromAzureConfiguration> RestoreAzureBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreFromAzureConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PullReplicationAsSink> PullReplicationAsSink = GenerateJsonDeserializationRoutine<PullReplicationAsSink>();

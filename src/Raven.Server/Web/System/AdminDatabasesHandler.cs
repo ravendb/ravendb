@@ -539,6 +539,13 @@ namespace Raven.Server.Web.System
                         }
 
                         break;
+                    case PeriodicBackupConnectionType.Azure:
+                        var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
+                        using (var s3RestoreUtils = new AzureRestorePoints(sortedList, context, azureSettings))
+                        {
+                            await s3RestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
+                        }
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -597,6 +604,16 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         databaseName = await ValidateFreeSpace(s3Configuration, context, restoreBackupTask);
+
+                        break;
+                    case RestoreType.Azure:
+                        var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
+                        restoreBackupTask  = new RestoreFromAzure(
+                            ServerStore,
+                            azureConfiguration,
+                            ServerStore.NodeTag,
+                            cancelToken);
+                        databaseName = await ValidateFreeSpace(azureConfiguration,  context, restoreBackupTask);
 
                         break;
 
