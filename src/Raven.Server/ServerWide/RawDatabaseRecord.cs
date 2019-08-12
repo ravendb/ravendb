@@ -104,17 +104,20 @@ namespace Raven.Server.ServerWide
 
             for (var index = 0; index < array.Length; index++)
             {
-                var shardedTopology = (BlittableJsonReaderObject)array[index];
-                var shardName = name + "$" + index;
-                _record.Modifications = new DynamicJsonValue(_record)
+                using (var clone = _record.CloneOnTheSameContext())
                 {
-                    [nameof(DatabaseRecord.DatabaseName)] = shardName,
-                    [nameof(DatabaseRecord.Topology)] = shardedTopology,
-                    [nameof(DatabaseRecord.ShardAllocations)] = null,
-                    [nameof(DatabaseRecord.Shards)] = null,
-                };
+                    var shardedTopology = (BlittableJsonReaderObject)array[index];
+                    var shardName = name + "$" + index;
+                    clone.Modifications = new DynamicJsonValue(clone)
+                    {
+                        [nameof(DatabaseRecord.DatabaseName)] = shardName,
+                        [nameof(DatabaseRecord.Topology)] = shardedTopology,
+                        [nameof(DatabaseRecord.ShardAllocations)] = null,
+                        [nameof(DatabaseRecord.Shards)] = null,
+                    };
 
-                yield return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
+                    yield return new RawDatabaseRecord(_context, _context.ReadObject(clone, shardName));
+                }
             }
         }
 

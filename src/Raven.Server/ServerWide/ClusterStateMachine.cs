@@ -1171,25 +1171,39 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
                 var databaseName = remove.DatabaseName;
-                var databaseNameLowered = databaseName.ToLowerInvariant();
-                using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
-                using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
+
+                var keyStr = "db/" + databaseName;
+                using (Slice.From(context.Allocator, keyStr.ToLowerInvariant(), out Slice lowerKey))
+                using (Slice.From(context.Allocator, keyStr, out Slice key))
                 {
-                    if (items.ReadByKey(lowerKey, out TableValueReader reader) == false)
+                    int shardIndex = TryGetShardIndexAndDatabaseName(ref databaseName);
+
+                    var rawRecord = ReadRawDatabase(context, databaseName, out _);
+
+                    if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
 
-                    var doc = new BlittableJsonReaderObject(reader.Read(2, out int size), size, context);
-
-                    if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
+                    if (rawRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
                     {
                         items.DeleteByKey(lowerKey);
+
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                         return;
                     }
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
-                    remove.UpdateDatabaseRecord(databaseRecord, index);
+
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord);
+
+
+                    if (shardIndex == -1) // not sharded
+                    {
+                        remove.UpdateDatabaseRecord(databaseRecord, index);
+                    }
+                    else //sharded
+                    {
+                        remove.UpdateShardedDatabaseRecord(databaseRecord, shardIndex, index);
+                    }
 
                     if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                     {
@@ -1198,7 +1212,6 @@ namespace Raven.Server.ServerWide
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                         return;
                     }
-
                     var updated = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
 
                     UpdateValue(index, items, lowerKey, key, updated);
@@ -1316,7 +1329,7 @@ namespace Raven.Server.ServerWide
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
                         SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
-                        if(addDatabaseCommand.Record.Topology != null)
+                        if (addDatabaseCommand.Record.Topology != null)
                             return addDatabaseCommand.Record.Topology.Members;
 
                         var set = new HashSet<string>();
@@ -2634,7 +2647,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, dbKey, out var key))
                 return items.VerifyKeyExists(key);
         }
-         
+
         public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
@@ -2656,7 +2669,7 @@ namespace Raven.Server.ServerWide
         {
             using (var rawDatabaseRecord = ReadRawDatabase(context, name, out _))
             {
-                if (rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false 
+                if (rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false
                     || topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
 

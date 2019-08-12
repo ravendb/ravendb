@@ -744,7 +744,7 @@ namespace Raven.Server.ServerWide
                         {
                             addDatabase.Record.ShardAllocations = new List<DatabaseRecord.ShardRangeAssignment>();
                             var start = 0;
-                            var step = ushort.MaxValue / addDatabase.Record.Shards.Length;
+                            var step = (1024*1024) / addDatabase.Record.Shards.Length;
                             for (int i = 0; i < addDatabase.Record.Shards.Length; i++)
                             {
                                 addDatabase.Record.ShardAllocations.Add(new DatabaseRecord.ShardRangeAssignment

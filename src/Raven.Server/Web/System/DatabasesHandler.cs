@@ -82,14 +82,14 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var dbId = Constants.Documents.Prefix + name;
                 using (context.OpenReadTransaction())
-                using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
                     if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
                         return Task.CompletedTask;
 
-                    if (dbBlit == null)
+                    var dbRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
+
+                    if (dbRecord == null)
                     {
                         // here we return 503 so clients will try to failover to another server
                         // if this is a newly created db that we haven't been notified about it yet
@@ -117,7 +117,6 @@ namespace Raven.Server.Web.System
 
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
-                    var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         long stampIndex;
