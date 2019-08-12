@@ -68,7 +68,7 @@ namespace Raven.TestDriver
         protected IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
         {
             options = options ?? GetDocumentStoreOptions.Default;
-            var name = database + "_" + Interlocked.Increment(ref _index);
+            var name = "db-" + database + "_" + Interlocked.Increment(ref _index);
             var documentStore = TestServerStore.Value;
 
             var createDatabaseOperation = new CreateDatabaseOperation(new DatabaseRecord(name));
