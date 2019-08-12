@@ -306,6 +306,10 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.restore.cloudBackupCredentials.throttle(300).subscribe(() => {
             this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
         });
+
+        this.databaseModel.restore.azureCredentials.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        });
         
         this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
             this.updateBackupDirectoryPathOptions(newPath);
@@ -416,15 +420,31 @@ class createDatabase extends dialogViewModelBase {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
+    private updateRemoteFolderName(cred:  Raven.Client.Documents.Operations.Backups.AzureSettings): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forAzureBackup(cred)
+            .execute();
+    }
 
     updateFolderPathOptions(path: string) {
-        this.updateFolderPath(path)
+        if (this.databaseModel.restore.source() === "serverLocal") {
+            this.updateFolderPath(path)
+                .done(result => this.folderPathOptions(result.List));
+        }
+        if (this.databaseModel.restore.source() === "azure") {
+            this.databaseModel.restore.azureCredentials().RemoteFolderName = path;
+            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials())
             .done(result => this.folderPathOptions(result.List));
+        }
     }
 
     updateBackupDirectoryPathOptions(path: string) {
         if (this.databaseModel.restore.source() === "serverLocal") {
             this.updateFolderPath(path, true)
+                .done(result => this.backupDirectoryPathOptions(result.List));
+        }
+        if (this.databaseModel.restore.source() === "azure") {
+            this.databaseModel.restore.azureCredentials().RemoteFolderName = path;//this line makes error =(
+            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials())
                 .done(result => this.backupDirectoryPathOptions(result.List));
         }
     }
@@ -591,6 +611,10 @@ class createDatabase extends dialogViewModelBase {
                 return "Cloud";
             case "serverLocal":
                 return "Server local directory";
+            case "amazonS3":
+                return "Amazon S3";
+            case "azure":
+                return "Azure";
         }
     }
 
