@@ -288,20 +288,12 @@ namespace Raven.Server
                         throw new InvalidOperationException($"Both {RavenConfiguration.GetKey(s=> s.Server.CpuCreditsBase)} and {RavenConfiguration.GetKey(s => s.Server.CpuCreditsMax)} must be specified");
 
                     if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec))
-                    {
-                        CpuCreditsBalance.RemainingCpuCredits = Configuration.Server.CpuCreditsBase.Value;
-
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"CPU credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
-                    }
-                    else
-                    {
-                        var response = GetCpuCreditsFromExec();
-
-                        CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
-                        CpuCreditsBalance.LastSyncTime = response.Timestamp;
-                    }
-
+                        throw new InvalidOperationException($"CPU credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
+                    
+                    var response = GetCpuCreditsFromExec();
+                    CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
+                    CpuCreditsBalance.LastSyncTime = response.Timestamp;
+                    
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
                     CpuCreditsBalance.BackgroundTasksThreshold = 
@@ -411,27 +403,7 @@ namespace Raven.Server
             int remainingTimeToBackgroundAlert = 15, remainingTimeToFailvoerAlert = 5;
             AlertRaised backgroundTasksAlert = null, failoverAlert = null;
 
-            if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec) == false)
-            {
-                var response = GetCpuCreditsFromExec();
-
-                CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
-                CpuCreditsBalance.LastSyncTime = response.Timestamp;
-
-                CpuCreditsBalance.History = new double[60 * 60];
-                CpuCreditsBalance.HistoryCurrentIndex = 0;
-            }
-            else
-            {
-                var print = RavenConfiguration.GetKey(x => x.Server.CpuCreditsExec) +
-                            (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExecArguments)
-                                ? " key and the " + RavenConfiguration.GetKey(x => x.Server.CpuCreditsExecArguments)
-                                : "");
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"CPU credits were configured but missing the {print} key.");
-            }
-
-            var i = 0;
+            var sw = Stopwatch.StartNew();
 
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
             {
@@ -481,22 +453,29 @@ namespace Raven.Server
 
                 try
                 {
-                    if (i++ == (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds)
+                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds)
                     {
-                        i = 0;
-
                         if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec) == false)
                         {
                             var response = GetCpuCreditsFromExec();
 
                             CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
                             CpuCreditsBalance.LastSyncTime = response.Timestamp;
-
-                            CpuCreditsBalance.History = new double[60 * 60];
+                            Array.Clear(CpuCreditsBalance.History, 0, CpuCreditsBalance.History.Length);
                             CpuCreditsBalance.HistoryCurrentIndex = 0;
                         }
-                    }
 
+                        sw.Restart();
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
+                }
+                    
+                try
+                {
                     Task.Delay(1000).Wait(ServerStore.ServerShutdown);
                 }
                 catch (OperationCanceledException)
