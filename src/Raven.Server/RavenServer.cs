@@ -280,11 +280,28 @@ namespace Raven.Server
                 if (Configuration.Server.CpuCreditsBase != null ||
                     Configuration.Server.CpuCreditsMax != null ||
                     Configuration.Server.CpuCreditsExhaustionFailoverThreshold != null ||
-                    Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold != null)
+                    Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold != null ||
+                    Configuration.Server.CpuCreditsExec != null ||
+                    Configuration.Server.CpuCreditsExecArguments != null)
                 {
                     if (Configuration.Server.CpuCreditsBase == null ||
                         Configuration.Server.CpuCreditsMax == null)
                         throw new InvalidOperationException($"Both {RavenConfiguration.GetKey(s=> s.Server.CpuCreditsBase)} and {RavenConfiguration.GetKey(s => s.Server.CpuCreditsMax)} must be specified");
+
+                    if (Configuration.Server.CpuCreditsExec == null)
+                    {
+                        CpuCreditsBalance.RemainingCpuCredits = Configuration.Server.CpuCreditsBase.Value;
+
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Cpu credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
+                    }
+                    else
+                    {
+                        var response = GetCpuCreditsFromExec();
+
+                        CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
+                        CpuCreditsBalance.LastSyncTime = response.Timestamp;
+                    }
 
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
@@ -329,6 +346,7 @@ namespace Raven.Server
             public double BackgroundTasksThreshold;
             public double FailoverThreshold;
             private double _remainingCpuCredits;
+            public DateTime LastSyncTime;
 
             public double RemainingCpuCredits
             {
@@ -379,6 +397,7 @@ namespace Raven.Server
                     [nameof(CurrentConsumption)] = CurrentConsumption,
                     [nameof(MachineCpuUsage)] = MachineCpuUsage,
                     [nameof(History)] = historyByMinute,
+                    [nameof(LastSyncTime)] = LastSyncTime
                 };
             }
         }
@@ -386,13 +405,35 @@ namespace Raven.Server
         private void StartMonitoringCpuCredits()
         {
             CpuCreditsBalance.Used = true;
-            CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.BaseCredits;
             CpuCreditsBalance.BackgroundTasksThresholdReleaseValue = CpuCreditsBalance.BackgroundTasksThreshold * 1.25;
             CpuCreditsBalance.FailoverThresholdReleaseValue = CpuCreditsBalance.FailoverThreshold * 1.25;
             CpuCreditsBalance.CreditsGainedPerSecond = CpuCreditsBalance.BaseCredits / 3600;
 
             int remainingTimeToBackgroundAlert = 15, remainingTimeToFailvoerAlert = 5;
             AlertRaised backgroundTasksAlert = null, failoverAlert = null;
+
+            if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec) == false)
+            {
+                var response = GetCpuCreditsFromExec();
+
+                CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
+                CpuCreditsBalance.LastSyncTime = response.Timestamp;
+
+                CpuCreditsBalance.History = new double[60 * 60];
+                CpuCreditsBalance.HistoryCurrentIndex = 0;
+            }
+            else
+            {
+                var print = RavenConfiguration.GetKey(x => x.Server.CpuCreditsExec) +
+                            (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExecArguments)
+                                ? " key and the " + RavenConfiguration.GetKey(x => x.Server.CpuCreditsExecArguments)
+                                : "");
+                if (Logger.IsInfoEnabled)
+                    Logger.Operations($"Cpu credits were configured but missing the {print} key.");
+            }
+
+            var i = 0;
+
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
             {
                 try
@@ -441,6 +482,22 @@ namespace Raven.Server
 
                 try
                 {
+                    if (i++ == (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds)
+                    {
+                        i = 0;
+
+                        if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec) == false)
+                        {
+                            var response = GetCpuCreditsFromExec();
+
+                            CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
+                            CpuCreditsBalance.LastSyncTime = response.Timestamp;
+
+                            CpuCreditsBalance.History = new double[60 * 60];
+                            CpuCreditsBalance.HistoryCurrentIndex = 0;
+                        }
+                    }
+
                     Task.Delay(1000).Wait(ServerStore.ServerShutdown);
                 }
                 catch (OperationCanceledException)
@@ -482,6 +539,87 @@ namespace Raven.Server
                         alert = null;
                         remainingTimeToAlert = defaultTimeToAlert;
                     }
+                }
+            }
+        }
+
+        public class CpuCreditsResponse
+        {
+            public double Remaining { get; set; }
+            public DateTime Timestamp { get; set; }
+        }
+
+        private CpuCreditsResponse GetCpuCreditsFromExec()
+        {
+            var command = Configuration.Server.CpuCreditsExec;
+            var arguments = Configuration.Server.CpuCreditsExecArguments;
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            Process process;
+
+            try
+            {
+                process = Process.Start(startInfo);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}. Failed to start process.", e);
+            }
+
+            using (var ms = new MemoryStream())
+            {
+                var readErrors = process.StandardError.ReadToEndAsync();
+                var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
+                var timeoutInMs = (int)Configuration.Server.CpuCreditsExecTimeout.AsTimeSpan.TotalMilliseconds;
+
+                string GetStdError()
+                {
+                    try
+                    {
+                        return readErrors.Result;
+                    }
+                    catch
+                    {
+                        return "Unable to get stdout";
+                    }
+                }
+
+                try
+                {
+                    readStdOut.Wait(timeoutInMs);
+                    readErrors.Wait(timeoutInMs);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                }
+
+                if (process.WaitForExit(timeoutInMs) == false)
+                {
+                    process.Kill();
+
+                    throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
+                }
+
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                }
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    ms.Position = 0;
+                    var response = context.ReadForMemory(ms, "cpu-credits-from-script");
+                    return JsonDeserializationServer.CpuCreditsResponse(response);
                 }
             }
         }
