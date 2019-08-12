@@ -1,10 +1,11 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
+import { json } from "d3";
 
 class getFolderPathOptionsCommand extends commandBase {
 
     private constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
-                        private s3Credentials?: Raven.Client.Documents.Operations.Backups.S3Settings) {
+                        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
         super();
     }
 
@@ -12,9 +13,8 @@ class getFolderPathOptionsCommand extends commandBase {
         switch (this.connectionType) {
             case "Local":
                 return undefined;
-            case "S3":
-                return JSON.stringify(this.s3Credentials);
-                
+            default:
+                return JSON.stringify(this.credentials);
         }
     }
     
@@ -46,6 +46,10 @@ class getFolderPathOptionsCommand extends commandBase {
     
     static forS3Backup(credentials: Raven.Client.Documents.Operations.Backups.S3Settings) {
         return new getFolderPathOptionsCommand(null, false, "S3", credentials);  
+    }
+
+    static forAzureBackup(credentials: Raven.Client.Documents.Operations.Backups.AzureSettings) {
+        return new getFolderPathOptionsCommand(null, false, "Azure", credentials);  
     }
 }
 
