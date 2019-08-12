@@ -281,19 +281,18 @@ namespace Raven.Server
                     Configuration.Server.CpuCreditsMax != null ||
                     Configuration.Server.CpuCreditsExhaustionFailoverThreshold != null ||
                     Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold != null ||
-                    Configuration.Server.CpuCreditsExec != null ||
-                    Configuration.Server.CpuCreditsExecArguments != null)
+                    Configuration.Server.CpuCreditsExec != null)
                 {
                     if (Configuration.Server.CpuCreditsBase == null ||
                         Configuration.Server.CpuCreditsMax == null)
                         throw new InvalidOperationException($"Both {RavenConfiguration.GetKey(s=> s.Server.CpuCreditsBase)} and {RavenConfiguration.GetKey(s => s.Server.CpuCreditsMax)} must be specified");
 
-                    if (Configuration.Server.CpuCreditsExec == null)
+                    if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec))
                     {
                         CpuCreditsBalance.RemainingCpuCredits = Configuration.Server.CpuCreditsBase.Value;
 
                         if (Logger.IsInfoEnabled)
-                            Logger.Info($"Cpu credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
+                            Logger.Info($"CPU credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
                     }
                     else
                     {
@@ -429,7 +428,7 @@ namespace Raven.Server
                                 ? " key and the " + RavenConfiguration.GetKey(x => x.Server.CpuCreditsExecArguments)
                                 : "");
                 if (Logger.IsInfoEnabled)
-                    Logger.Operations($"Cpu credits were configured but missing the {print} key.");
+                    Logger.Info($"CPU credits were configured but missing the {print} key.");
             }
 
             var i = 0;

@@ -67,13 +67,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Server.CpuCredits.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string CpuCreditsExecArguments { get; set; }
 
-        [Description("EXPERT: The number of seconds between every invokation of the Cpu Credits executable. Default: 30 minutes.")]
-        [DefaultValue(30*60)]
+        [Description("EXPERT: The number of seconds between every invocation of the CPU Credits executable. Default: 1800 seconds.")]
+        [DefaultValue(1800)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Server.CpuCredits.Exec.SyncInterval", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.SyncIntervalInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CpuCreditsExecSyncInterval { get; set; }
 
-        [Description("EXPERT: The number of seconds to wait for the Cpu Credits executable to exit. Default: 30 seconds")]
+        [Description("EXPERT: The number of seconds to wait for the CPU Credits executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
