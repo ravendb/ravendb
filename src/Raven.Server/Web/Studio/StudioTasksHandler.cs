@@ -13,6 +13,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -126,10 +127,32 @@ namespace Raven.Server.Web.Studio
                             }
                         }
                         break;
-                    case PeriodicBackupConnectionType.Glacier:
                     case PeriodicBackupConnectionType.Azure:
+                        var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
+                            throw new BadRequestException("No JSON was posted.");
+
+                        var azureSettings = JsonDeserializationServer.AzureSettings(azureJson);
+                        if (azureSettings == null)
+                            throw new BadRequestException("No AzureSettings were found.");
+
+                        using (var client = new RavenAzureClient(azureSettings,null, null ,isTest:true))
+                        {
+                            var folders = (await client.ListBlobs( azureSettings.RemoteFolderName,"/",true));
+                            folderPathOptions = new FolderPathOptions();
+                            foreach (var folder in folders.ListBlob)
+                            {
+                                var fullPath = folder.Name;
+                                if (string.IsNullOrWhiteSpace(fullPath))
+                                    continue;
+
+                                folderPathOptions.List.Add(fullPath);
+                            }
+                        }
+                        break;
                     case PeriodicBackupConnectionType.GoogleCloud:
                     case PeriodicBackupConnectionType.FTP:
+                    case PeriodicBackupConnectionType.Glacier:
                         throw new NotSupportedException();
                     default:
                         throw new ArgumentOutOfRangeException();

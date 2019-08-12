@@ -352,6 +352,36 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             return new Blob(data, headers);
         }
+        public async Task<Blob> GetBlobAsync(string key)
+        {
+            var url = _serverUrlForContainer + "/" + key;
+
+            var now = SystemTime.UtcNow;
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", now.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+
+            var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return null;
+
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
+
+            var data = await response.Content.ReadAsStreamAsync();
+            var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
+
+            return new Blob(data, headers);
+        }
 
         public void DeleteContainer()
         {
@@ -378,6 +408,77 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 return;
 
             throw StorageException.FromResponseMessage(response);
+        }
+
+        public async Task<ListBlobResult> ListBlobs(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
+        {
+            var url = GetBaseServerUrl() + $"/{_containerName}?restype=container&comp=list";
+            if (prefix != null)
+                url += $"&prefix={Uri.EscapeDataString(prefix)}";
+
+            if (delimiter != null)
+                url += $"&delimiter={delimiter}";
+
+            if (maxResult != null)
+                url += $"&maxresults={maxResult}";
+
+            if (marker != null)
+                url += $"&maxresults={marker}";
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", SystemTime.UtcNow.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+
+            var response = await client.SendAsync(requestMessage, CancellationToken).ConfigureAwait(false);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return new ListBlobResult();
+
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
+
+            var responseStream = await response.Content.ReadAsStreamAsync();
+            var listBlobsResult = XDocument.Load(responseStream);
+            var result = GetResult();
+
+            var nextMarker = listBlobsResult.Root.Element("NextMarker")?.Value;
+
+            return new ListBlobResult
+            {
+                ListBlob = result,
+                NextMarker = nextMarker == "true" ? listBlobsResult.Root.Element("NextMarker")?.Value : null
+            };
+
+            IEnumerable<BlobProperties> GetResult()
+            {
+                if (listFolders)
+                {
+
+                    foreach (var element in listBlobsResult.Descendants("Blobs").Descendants("Name").Select(x => new BlobProperties { Name = x.Value }))
+                    {
+                        yield return element;
+                    }
+                }
+                else
+                {
+                    var blobs = listBlobsResult.Descendants("Blob").ToList();
+                    foreach (var blob in blobs)
+                    {
+                        yield return new BlobProperties
+                        {
+                            Name = blob.Element("Name")?.Value,
+                            LastModify = Convert.ToDateTime(blob.Element("Properties")?.Element("Last-Modified")?.Value)
+                        };
+                    }
+
+                }
+            }
         }
 
         public List<string> GetContainerNames(int maxResults)

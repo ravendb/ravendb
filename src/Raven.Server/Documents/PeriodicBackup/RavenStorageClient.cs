@@ -77,5 +77,18 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             public Dictionary<string, string> Metadata { get; }
         }
+
+        public class ListBlobResult
+        {
+            public IEnumerable<BlobProperties> ListBlob { get; set; }
+
+            public string NextMarker { get; set; }
+        }
+
+        public class BlobProperties
+        {
+            public string Name { get; set; }
+            public DateTime LastModify { get; set; }
+        }
     }
 }

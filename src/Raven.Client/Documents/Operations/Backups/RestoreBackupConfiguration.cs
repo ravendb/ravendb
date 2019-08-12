@@ -63,10 +63,24 @@ namespace Raven.Client.Documents.Operations.Backups
             return json;
         }
     }
+    public class RestoreFromAzureConfiguration : RestoreBackupConfigurationBase
+    {
+        public AzureSettings Settings { get; set; } = new AzureSettings();
+
+        protected override RestoreType Type => RestoreType.Azure;
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Settings)] = Settings;
+            return json;
+        }
+    }
 
     public enum RestoreType
     {
         Local,
-        S3
+        S3,
+        Azure
     }
 }
