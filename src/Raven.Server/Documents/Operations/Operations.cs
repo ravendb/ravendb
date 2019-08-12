@@ -20,7 +20,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Operations
 {
-    public class Operations: ILowMemoryHandler
+    public class Operations : ILowMemoryHandler
     {
         private readonly Logger _logger;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
@@ -44,7 +44,6 @@ namespace Raven.Server.Documents.Operations
             _maxCompletedTaskLifeTime = maxCompletedTaskLifeTime;
             _logger = LoggingSource.Instance.GetLogger<Operations>(name ?? "Server");
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
-
         }
 
         internal void CleanupOperations()
@@ -58,7 +57,7 @@ namespace Raven.Server.Documents.Operations
                 if (state.Description.EndTime.HasValue && state.Description.EndTime < oldestPossibleCompletedOperation)
                 {
                     _completed.TryRemove(taskAndState.Key, out Operation _);
-                }                
+                }
             }
         }
 
@@ -134,7 +133,7 @@ namespace Raven.Server.Documents.Operations
                 RaiseNotifications(notification, operation);
             }
 
-            operation.Task = taskFactory(ProgressNotification);
+            operation.Task = Task.Run(() => taskFactory(ProgressNotification));
 
             operation.Task.ContinueWith(taskResult =>
             {
@@ -175,8 +174,8 @@ namespace Raven.Server.Documents.Operations
                 if (_active.TryGetValue(id, out Operation completed))
                 {
                     completed.SetCompleted();
-                    // add to completed items before removing from active ones to ensure an operation status is accessible all the time
-                    _completed.TryAdd(id, completed);
+                        // add to completed items before removing from active ones to ensure an operation status is accessible all the time
+                        _completed.TryAdd(id, completed);
                     _active.TryRemove(id, out completed);
                 }
 
@@ -195,7 +194,7 @@ namespace Raven.Server.Documents.Operations
             operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 
             _changes?.RaiseNotifications(change);
-        }        
+        }
 
         public long GetNextOperationId()
         {
@@ -264,7 +263,7 @@ namespace Raven.Server.Documents.Operations
             public DocumentDatabase Database;
 
             public bool Killable => Token != null;
-            
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
@@ -283,7 +282,7 @@ namespace Raven.Server.Documents.Operations
                     addToNotificationCenter(notification);
                     return;
                 }
-                
+
                 // let us throttle changes about the operation progress
 
                 var now = SystemTime.UtcNow;
@@ -312,14 +311,14 @@ namespace Raven.Server.Documents.Operations
                     });
                 }
             }
-            
+
             private bool ShouldThrottleMessage(OperationChanged notification)
             {
                 if (notification.State.Status != OperationStatus.InProgress)
                 {
                     return false;
                 }
-                
+
                 return true;
             }
 
@@ -405,19 +404,19 @@ namespace Raven.Server.Documents.Operations
 
             [Description("Replay Transaction Commands")]
             ReplayTransactionCommands,
-            
+
             [Description("Record Transaction Commands")]
             RecordTransactionCommands,
 
             [Description("Certificate generation")]
             CertificateGeneration,
-            
+
             [Description("Migration from v3.x")]
             MigrationFromLegacyData,
 
             [Description("Database Backup")]
             DatabaseBackup,
-            
+
             [Description("Migration from SQL")]
             MigrationFromSql,
 
