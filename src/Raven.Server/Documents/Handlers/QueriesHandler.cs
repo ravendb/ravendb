@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private  async Task Graph(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        private async Task Graph(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method, tracker);
             var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var item in results.Nodes)
                 {
                     var val = item.Value;
-                    if(val is Document d)
+                    if (val is Document d)
                     {
                         d.EnsureMetadata();
                         val = d.Data;
@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Handlers
                         ["Name"] = edge.Key,
                         ["Results"] = array
                     };
-                    foreach(var item in edge.Value)
+                    foreach (var item in edge.Value)
                     {
                         var edgeVal = item.Edge;
                         if (edgeVal is Document d)
@@ -529,11 +529,11 @@ namespace Raven.Server.Documents.Handlers
                 Query = query.Query
             };
 
-            var task = 
-                Task.Run(()=>
-                Database.Operations.AddOperation(Database, indexName, operationType,
-                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token)
-            );;
+            var task = Database.Operations.AddOperation(
+                Database,
+                indexName,
+                operationType,
+                onProgress => operation(Database.QueryRunner, options, onProgress, token), operationId, details, token);
 
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
