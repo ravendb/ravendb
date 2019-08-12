@@ -35,7 +35,7 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
-        private readonly ResourceCache<bool> _shardedDatabases = new ResourceCache<bool>();
+        private readonly ResourceCache<ShardedContext> _shardedDatabases = new ResourceCache<ShardedContext>();
         private readonly TimeSpan _concurrentDatabaseLoadTimeout;
         private readonly Logger _logger;
         private readonly SemaphoreSlim _databaseSemaphore;
@@ -126,6 +126,16 @@ namespace Raven.Server.Documents
         {
             if (ShouldDeleteDatabase(context, databaseName, rawRecord))
                 return;
+
+            if (rawRecord.IsSharded())
+            {
+                foreach (var shardedDatabaseRecord in rawRecord.GetShardedDatabaseRecords())
+                {
+                    HandleSpecificClusterDatabaseChanged(shardedDatabaseRecord.GetDatabaseName(), 
+                        index, type, changeType, context, shardedDatabaseRecord);
+                }
+                return;
+            }
 
             var topology = rawRecord.GetTopology();
             if (topology.RelevantFor(_serverStore.NodeTag) == false)
@@ -295,7 +305,6 @@ namespace Raven.Server.Documents
                 return false;
 
             var record = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
-            context.CloseTransaction();
 
             DeleteDatabase(dbName, deletionInProgress, record);
             return true;
@@ -525,6 +534,7 @@ namespace Raven.Server.Documents
         public struct DatabaseSearchResult
         {
             public Task<DocumentDatabase> DatabaseTask;
+            public ShardedContext ShardedContext;
             public Status DatabaseStatus;
             public enum Status
             {
@@ -539,7 +549,8 @@ namespace Raven.Server.Documents
         {
             if (_shardedDatabases.TryGetValue(databaseName, out var database))
             {
-                if(database.Result == false)
+                var shardedContext = database.Result;
+                if(shardedContext == null)
                 {
                     return new DatabaseSearchResult
                     {
@@ -549,7 +560,8 @@ namespace Raven.Server.Documents
                 }
                 return new DatabaseSearchResult
                 {
-                    DatabaseStatus = DatabaseSearchResult.Status.Sharded
+                    DatabaseStatus = DatabaseSearchResult.Status.Sharded,
+                    ShardedContext = shardedContext
                 };
             }
 
@@ -567,15 +579,17 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                if (databaseRecord.Shards != null)
+                if (databaseRecord.Shards?.Length > 0)
                 {
-                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(true));
+                    var shardedContext = new ShardedContext(_serverStore, databaseRecord);
+                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext));
                     return new DatabaseSearchResult
                     {
-                        DatabaseStatus = DatabaseSearchResult.Status.Sharded
+                        DatabaseStatus = DatabaseSearchResult.Status.Sharded,
+                        ShardedContext = shardedContext
                     };
                 }
-                _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(true));
+                _shardedDatabases.GetOrAdd(databaseName, Task.FromResult((ShardedContext)null));
                 return new DatabaseSearchResult
                 {
                     DatabaseStatus = DatabaseSearchResult.Status.Database,
@@ -1039,7 +1053,9 @@ namespace Raven.Server.Documents
                 var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
                 if (rawRecord.IsSharded())
                 {
-                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(true));
+                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.GetRecord());
+                    var shardedContext = new ShardedContext(_serverStore,  databaseRecord);
+                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext));
                     return true;
                 }
 

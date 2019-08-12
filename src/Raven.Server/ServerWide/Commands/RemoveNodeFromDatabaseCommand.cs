@@ -34,6 +34,22 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
+        public string UpdateShardedDatabaseRecord(DatabaseRecord record, int shardIndex, long etag)
+        {
+            record.Shards[shardIndex].RemoveFromTopology(NodeTag);
+            record.DeletionInProgress?.Remove($"{NodeTag}${shardIndex}");
+
+            if (DatabaseId == null)
+                return null;
+
+            if (record.UnusedDatabaseIds == null)
+                record.UnusedDatabaseIds = new HashSet<string>();
+
+            record.UnusedDatabaseIds.Add(DatabaseId);
+
+            return null;
+        }
+
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(NodeTag)] = NodeTag;
