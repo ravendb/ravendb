@@ -152,7 +152,7 @@ namespace Sparrow.Json
         }
         public static decimal operator +(LazyNumberValue y)
         {
-            return -(decimal)y;
+            return (decimal)y;
         }
 
         public static decimal operator -(LazyNumberValue y)
