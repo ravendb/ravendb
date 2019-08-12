@@ -56,5 +56,27 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Server.CpuCredits.ExhaustionBackupDelayInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CpuCreditsExhaustionBackupDelay { get; set; }
+
+        [Description("EXPERT: A command or executable that will provide RavenDB with the current CPU credits balance.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string CpuCreditsExec { get; set; }
+
+        [Description("EXPERT: The command line arguments for the Server.CpuCredits.Exec command or executable.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string CpuCreditsExecArguments { get; set; }
+
+        [Description("EXPERT: The number of seconds between every invokation of the Cpu Credits executable. Default: 30 minutes.")]
+        [DefaultValue(30*60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.SyncInterval", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CpuCreditsExecSyncInterval { get; set; }
+
+        [Description("EXPERT: The number of seconds to wait for the Cpu Credits executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting CpuCreditsExecTimeout { get; set; }
     }
 }
