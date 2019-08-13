@@ -1,28 +1,25 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Exceptions;
-using Raven.Server.Indexing;
-using Sparrow;
-using Sparrow.Logging;
-using Voron.Impl;
-using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
+using Raven.Server.Exceptions;
+using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
-using FacetedQueryHelper = Raven.Server.Documents.Queries.Facets.FacetedQueryHelper;
-using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
-using Lucene.Net.Search;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -287,7 +284,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 currentIndexSearcher.Search(baseQuery, gatherAllCollector, state);
             }
-            
+
 
             foreach (var readerFacetInfo in gatherAllCollector.Results)
             {

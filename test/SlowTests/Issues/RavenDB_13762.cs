@@ -6,9 +6,10 @@ using FastTests;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                         .ModifyDatabaseRevisions(
                             context,
                             store.Database,
-                            EntityToBlittable.ConvertCommandToBlittable(configuration, context));
+                            EntityToBlittable.ConvertCommandToBlittable(configuration, context), RaftIdGenerator.NewId());
                 }
 
                 for (int i = 0; i < 10; i++)
