@@ -289,11 +289,8 @@ namespace Raven.Server
 
                     if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec))
                         throw new InvalidOperationException($"CPU credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
-                    
-                    var response = GetCpuCreditsFromExec();
-                    CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
-                    CpuCreditsBalance.LastSyncTime = response.Timestamp;
-                    
+
+                    CpuCreditsBalance.RemainingCpuCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
                     CpuCreditsBalance.BackgroundTasksThreshold = 
@@ -404,6 +401,17 @@ namespace Raven.Server
             AlertRaised backgroundTasksAlert = null, failoverAlert = null;
 
             var sw = Stopwatch.StartNew();
+            Stopwatch err = null;
+
+            try
+            {
+                UpdateCpuCreditsFromExec();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
+            }
 
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
             {
@@ -455,23 +463,22 @@ namespace Raven.Server
                 {
                     if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds)
                     {
-                        if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec) == false)
-                        {
-                            var response = GetCpuCreditsFromExec();
-
-                            CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
-                            CpuCreditsBalance.LastSyncTime = response.Timestamp;
-                            Array.Clear(CpuCreditsBalance.History, 0, CpuCreditsBalance.History.Length);
-                            CpuCreditsBalance.HistoryCurrentIndex = 0;
-                        }
-
                         sw.Restart();
+
+                        UpdateCpuCreditsFromExec();
                     }
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
+                    if (err == null || err.Elapsed.TotalMinutes > 15)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
+                        if(err == null)
+                            err = Stopwatch.StartNew();
+                        else
+                            err.Restart();
+                    }
                 }
                     
                 try
@@ -519,6 +526,21 @@ namespace Raven.Server
                     }
                 }
             }
+        }
+
+        internal double UpdateCpuCreditsFromExec()
+        {
+            var response = GetCpuCreditsFromExec();
+
+            if(response.Timestamp < DateTime.UtcNow.AddHours(-1))
+                throw new InvalidOperationException($"Cannot sync the remaining CPU credits, got a result with a timestamp of more than one hour ago: {response.Timestamp}.");
+
+            CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
+            CpuCreditsBalance.LastSyncTime = response.Timestamp;
+            CpuCreditsBalance.HistoryCurrentIndex = 0;
+            Array.Clear(CpuCreditsBalance.History, 0, CpuCreditsBalance.History.Length);
+
+            return response.Remaining;
         }
 
         public class CpuCreditsResponse
@@ -595,9 +617,38 @@ namespace Raven.Server
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    ms.Position = 0;
-                    var response = context.ReadForMemory(ms, "cpu-credits-from-script");
-                    return JsonDeserializationServer.CpuCreditsResponse(response);
+                    try
+                    {
+                        ms.Position = 0;
+                        var response = context.ReadForMemory(ms, "cpu-credits-from-script");
+                        if (response.TryGet("Error", out string err))
+                        {
+                            throw new InvalidOperationException("Error from server: " + err);
+                        }
+                        if (response.GetPropertyIndex(nameof(CpuCreditsResponse.Remaining)) == -1)
+                        {
+                            throw new InvalidOperationException("Missing required property: " + nameof(CpuCreditsResponse.Remaining));
+                        }
+                        var cpuCreditsFromExec = JsonDeserializationServer.CpuCreditsResponse(response);
+                        return cpuCreditsFromExec;
+                    }
+                    catch (Exception e)
+                    {
+                        string s = null;
+                        try
+                        {
+                            if (ms.TryGetBuffer(out var buffer))
+                            {
+                                s = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(buffer.Array, buffer.Offset, buffer.Count));
+                            }
+                        }
+                        catch 
+                        {
+                            // nothing to do
+                        }
+
+                        throw new InvalidOperationException("Failed to get cpu credits: " + s, e);
+                    }
                 }
             }
         }
