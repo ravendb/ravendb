@@ -65,7 +65,25 @@ function getManageServerMenuItem() {
             css: 'icon-certificate',
             dynamicHash: appUrl.forCertificates,
             enabled: access.enableCertificatesMenuItem
-        }), 
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/serverWideBackupList',
+            moduleId: "viewmodels/manage/serverWideBackupList",
+            title: "Server-Wide Backup",
+            nav: true,
+            css: 'icon-global',
+            dynamicHash: appUrl.forServerWideBackupList,
+            enabled: access.enableServerWideBackupMenuItem
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/editServerWideBackup',
+            moduleId: "viewmodels/manage/editServerWideBackup",
+            title: "Edit Server-Wide Backup Task",
+            nav: false,
+            dynamicHash: appUrl.forEditServerWideBackup,
+            enabled: accessManager.default.clusterAdminOrClusterNode,
+            itemRouteToHighlight: 'admin/settings/serverWideBackupList'
+        }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
         new leafMenuItem({

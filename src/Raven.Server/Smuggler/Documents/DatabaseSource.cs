@@ -110,7 +110,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             var databaseRecord = _database.ReadDatabaseRecord();
 
-            // filter server wide backup tasks;
+            // filter server-wide backup tasks;
             for (var i = databaseRecord.PeriodicBackups.Count - 1; i >= 0; i--)
             {
                 var periodicBackup = databaseRecord.PeriodicBackups[i];

@@ -5,6 +5,7 @@ import glacierSettings = require("models/database/tasks/periodicBackup/glacierSe
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
 import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getBackupLocationCommand = require("commands/database/tasks/getBackupLocationCommand");
+import getServerWideBackupLocationCommand = require("commands/resources/getServerWideBackupLocationCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
@@ -23,6 +24,8 @@ class periodicBackupConfiguration {
     disabled = ko.observable<boolean>();
     name = ko.observable<string>();
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
+    
+    isServerWide = ko.observable<boolean>();
 
     manualChooseMentor = ko.observable<boolean>(false);
     mentorNode = ko.observable<string>();
@@ -35,6 +38,7 @@ class periodicBackupConfiguration {
 
     retentionPolicy = ko.observable<retentionPolicy>();
     encryptionSettings = ko.observable<encryptionSettings>();
+    isBackupEncryped = ko.observable<boolean>();
     
     localSettings = ko.observable<localSettings>();
     s3Settings = ko.observable<s3Settings>();
@@ -55,7 +59,11 @@ class periodicBackupConfiguration {
 
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration, serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration | 
+                     Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration, 
+                serverLimits: periodicBackupServerLimitsResponse, 
+                encryptedDatabase: boolean,
+                isServerWide: boolean) {
         this.taskId(dto.TaskId);
         this.disabled(dto.Disabled);
         this.name(dto.Name);
@@ -70,6 +78,7 @@ class periodicBackupConfiguration {
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
         this.googleCloudSettings(!dto.GoogleCloudSettings ? googleCloudSettings.empty() : new googleCloudSettings(dto.GoogleCloudSettings));
         this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
+        this.isServerWide(isServerWide); 
         
         this.manualChooseMentor(!!dto.MentorNode);
         this.mentorNode(dto.MentorNode);
@@ -82,7 +91,8 @@ class periodicBackupConfiguration {
         this.updateFolderPathOptions(folderPath);
 
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
-        this.encryptionSettings(new encryptionSettings(encryptedDatabase, this.backupType, dto.BackupEncryptionSettings));
+        this.encryptionSettings(new encryptionSettings(encryptedDatabase, this.backupType, dto.BackupEncryptionSettings, this.isServerWide()));
+        this.isBackupEncryped(!!dto.BackupEncryptionSettings);
 
         this.initObservables();
         this.initValidation();
@@ -172,7 +182,11 @@ class periodicBackupConfiguration {
     }    
     
     private updateBackupLocationInfo(path: string) {
-        const task = new getBackupLocationCommand(path, activeDatabaseTracker.default.database())
+        const getLocationCommand = this.isServerWide() ? 
+                        new getServerWideBackupLocationCommand(path) : 
+                        new getBackupLocationCommand(path, activeDatabaseTracker.default.database());
+
+        const getLocationtask = getLocationCommand
             .execute()
             .done((result: Raven.Server.Web.Studio.DataDirectoryResult) => {
                 if (this.localSettings().folderPath() !== path) {
@@ -183,7 +197,7 @@ class periodicBackupConfiguration {
                 this.backupLocationInfo(result.List);
             });
         
-        generalUtils.delayedSpinner(this.spinners.backupLocationInfoLoading, task);
+        generalUtils.delayedSpinner(this.spinners.backupLocationInfoLoading, getLocationtask);
     }
 
     private updateFolderPathOptions(path: string) {
@@ -231,7 +245,7 @@ class periodicBackupConfiguration {
         };
     }
 
-    static empty(serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean): periodicBackupConfiguration {
+    static empty(serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean, isServerWide: boolean): periodicBackupConfiguration {
         return new periodicBackupConfiguration({
             TaskId: 0,
             Disabled: false,
@@ -251,7 +265,7 @@ class periodicBackupConfiguration {
                 EncryptionMode: null
             },
             RetentionPolicy: null
-        }, serverLimits, encryptedDatabase);
+        }, serverLimits, encryptedDatabase, isServerWide);
     }
 }
 

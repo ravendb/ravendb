@@ -1335,7 +1335,7 @@ namespace Raven.Server.ServerWide
                         if (propertyNames.Length == 0)
                             return currentDatabaseRecord;
 
-                        // add the server wide backup configurations
+                        // add the server-wide backup configurations
                         foreach (var propertyName in propertyNames)
                         {
                             if (serverWideBackups.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
@@ -2856,12 +2856,12 @@ namespace Raven.Server.ServerWide
         private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
         {
             if (serverWideBackupConfiguration == null)
-                throw new RachisInvalidOperationException($"Server wide backup configuration is null for commmand type: {type}");
+                throw new RachisInvalidOperationException($"Server-wide backup configuration is null for commmand type: {type}");
 
             if (serverWideBackupConfiguration.Name == null)
-                throw new RachisInvalidOperationException($"Server wide backup configuration name is null or empty for command type: {type}");
+                throw new RachisInvalidOperationException($"Server-wide backup configuration name is null or empty for command type: {type}");
 
-            // the server wide backup name might have changed
+            // the server-wide backup name might have changed
             var serverWideBlittable = context.ReadObject(serverWideBackupConfiguration.ToJson(), "server-wide-configuration");
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 

@@ -64,6 +64,7 @@ class accessManager {
         enableStudioConfigurationMenuItem: this.clusterAdminOrClusterNode,
         enableAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
         enableCertificatesMenuItem: this.clusterAdminOrClusterNode,
+        enableServerWideBackupMenuItem: this.clusterAdminOrClusterNode,
         enableAdminLogsMenuItem: this.clusterAdminOrClusterNode,
         enableTrafficWatchMenuItem: this.clusterAdminOrClusterNode,
         enableGatherDebugInfoMenuItem: this.clusterAdminOrClusterNode,

@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands
                         if (backup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
                         {
                             var action = Disable ? "disable" : "enable";
-                            throw new InvalidOperationException($"Can't {action} task name '{backup.Name}', because it is a server wide backup task");
+                            throw new InvalidOperationException($"Can't {action} task name '{backup.Name}', because it is a server-wide backup task");
                         }
 
                         backup.Disabled = Disable;

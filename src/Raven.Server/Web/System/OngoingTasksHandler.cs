@@ -1154,8 +1154,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        
-
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.Operator)]
         public async Task UpdateExternalReplication()
         {
