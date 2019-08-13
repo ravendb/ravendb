@@ -39,7 +39,9 @@ class encryptionSettings {
     
     constructor(encryptedDatabase: boolean,
                 backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>, 
-                dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings) {
+                dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings,
+                private isServerWideBackupTask : boolean = false) {       
+        
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
         
@@ -119,7 +121,6 @@ class encryptionSettings {
             }]
         });
 
-
         const self = this;
         this.enabled.extend({
             validation: [{
@@ -136,12 +137,11 @@ class encryptionSettings {
                             }
                         }
                     } else {
-                        if (self.enabled() && self.backupType() === "Snapshot") {
+                        if (self.enabled() && self.backupType() === "Snapshot" && !self.isServerWideBackupTask) {
                             this.message = "A 'Snapshot' backup-type was selected. Creating an Encrypted backup for Unencrypted databases is only supported when selecting the 'Backup' backup-type.";
                             return false;
                         }
                     }
-                    
                     return true;
                 }
             }]
@@ -186,8 +186,6 @@ class encryptionSettings {
             Key: this.mode() === "UseProvidedKey" ? this.key() : undefined
         }
     }
-    
-
 }
 
 export = encryptionSettings;

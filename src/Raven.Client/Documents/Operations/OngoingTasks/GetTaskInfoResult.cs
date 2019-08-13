@@ -95,7 +95,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
     public class OngoingTaskReplication : OngoingTask
     {
-       
         public OngoingTaskReplication()
         {
             TaskType = OngoingTaskType.Replication;
@@ -294,7 +293,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string ResponsibleNode;
     }
 
-    public class NextBackup
+    public class NextBackup : IDynamicJson
     {
         public TimeSpan TimeSpan { get; set; }
 
@@ -313,7 +312,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class RunningBackup
+    public class RunningBackup : IDynamicJson
     {
         public DateTime? StartTime { get; set; }
 

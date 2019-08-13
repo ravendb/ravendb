@@ -167,6 +167,15 @@ class appUrl {
         return "#admin/settings/certificates";
     }
 
+    static forServerWideBackupList(): string {
+        return "#admin/settings/serverWideBackupList";
+    }
+    
+    static forEditServerWideBackup(serverWideBackupTaskName? : string): string {
+        const backupNamePart = serverWideBackupTaskName ? "?&taskName=" + encodeURIComponent(serverWideBackupTaskName) : "";
+        return "#admin/settings/editServerWideBackup" + backupNamePart;
+    }
+
     static forDatabases(): string {
         return "#databases";
     }

@@ -176,6 +176,10 @@ abstract class setupEncryptionKey {
         return new backupSetupEncryptionKey(key, keyConfirmation, databaseName);
     }
 
+    static forServerWideBackup(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>) {
+        return new serverWideBackupSetupEncryptionKey(key, keyConfirmation);
+    }
+
     static forExport(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
         return new exportSetupEncryptionKey(key, keyConfirmation, databaseName);
     }
@@ -213,6 +217,26 @@ class backupSetupEncryptionKey extends setupEncryptionKey {
     }
 }
 
+class serverWideBackupSetupEncryptionKey extends setupEncryptionKey {
+    
+    constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>) {
+        super(key, keyConfirmation, ko.observable<string>("ServerWide"));
+        // The 3'rd param passed to super() is needed only for validation. Not actually used.
+    }
+    
+    getContainer() {
+        return document.getElementsByTagName("body")[0];
+    }
+
+    getFileName() {
+        return `Encryption-key-for-Server-Wide-Backup-${moment().format("YYYY-MM-DD-HH-mm")}.txt`;
+    }
+
+    keyDataText(): string {
+        const encryptionKey = this.key();
+        return `Encryption Key for Server-Wide-Backup: ${encryptionKey}\r\n\r\nThis key is used to encrypt the server-wide-backup, it is required for restoring the data.\r\nMake sure you keep it in a private, safe place.`;
+    }
+}
 class exportSetupEncryptionKey extends setupEncryptionKey {
     getContainer() {
         return document.getElementsByTagName("body")[0];

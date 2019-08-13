@@ -1,84 +1,87 @@
-﻿import appUrl = require("common/appUrl");
+import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import savePeriodicBackupConfigurationCommand = require("commands/database/tasks/savePeriodicBackupConfigurationCommand");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
-import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
-import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
+import getServerWideBackupConfigCommand = require("commands/resources/getServerWideBackupConfigCommand");
+import getServerWideBackupsCommand = require("commands/resources/getServerWideBackupCommand");
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import cronEditor = require("viewmodels/common/cronEditor");
+import saveServerWideBackupCommand = require("commands/resources/saveServerWideBackupCommand");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
 
-class editPeriodicBackupTask extends viewModelBase {
-
+class editServerWideBackup extends viewModelBase {
+    
+    // Using the periodic-backup-configuration-model in this view since there isn't much difference to account for a child class..
     configuration = ko.observable<periodicBackupConfiguration>();
+    serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
+
+    isAddingNewBackupTask = ko.observable<boolean>(true);    
     
-    isAddingNewBackupTask = ko.observable<boolean>(true);
-    possibleMentors = ko.observableArray<string>([]);
-    serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
-
     encryptionSection: setupEncryptionKey;
-
+    
     constructor() {
         super();
-        
+
         this.bindToCurrentInstance("testCredentials");
     }
-
-    activate(args: any) { 
+    
+    activate(args: any) {
         super.activate(args);
 
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
 
-            if (args.taskId) {
-                // 1. Editing an existing task
+            if (args && args.taskName) { 
+                // 1 Editing an existing task
                 this.isAddingNewBackupTask(false);
-
-                new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
+               
+                new getServerWideBackupsCommand(args.taskName)
                     .execute()
-                    .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
-                        if (this.serverConfiguration().LocalRootPath && configuration.LocalSettings.FolderPath && configuration.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
-                            configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
-                        }
-                        
-                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
-                        deferred.resolve();
-                    })
-                    .fail(() => {
-                        deferred.reject();
+                    .done((backupsList: Raven.Server.Web.System.ServerWideBackupConfigurationResults) => {
+                        if (backupsList.Results.length) {
+                            const backupTask = backupsList.Results[0];
+                            if (this.serverConfiguration().LocalRootPath && backupTask.LocalSettings.FolderPath && backupTask.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
+                                backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
+                            }
 
-                        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+                            this.configuration(new periodicBackupConfiguration(backupTask, this.serverConfiguration(), false, true)); 
+                            deferred.resolve();
+                        }
+                        else {
+                            deferred.reject();
+                            router.navigate(appUrl.forServerWideBackupList());
+                        }
+                    })
+                   .fail(() => {
+                         deferred.reject();
+                         router.navigate(appUrl.forServerWideBackupList()); 
                     });
+            
             } else {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
-
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                
+                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), false, true));
                 deferred.resolve();
             }
 
             return deferred
                 .then(() => {
-                    const dbName = ko.pureComputed(() => {
-                        const db = this.activeDatabase();
-                        return db ? db.name : null;
-                    });
                     const encryptionSettings = this.configuration().encryptionSettings();
-                    this.encryptionSection = setupEncryptionKey.forBackup(encryptionSettings.key, encryptionSettings.keyConfirmation, dbName);
+                    this.encryptionSection = setupEncryptionKey.forServerWideBackup(encryptionSettings.key, encryptionSettings.keyConfirmation); 
+                    
                     this.dirtyFlag = this.configuration().dirtyFlag;
 
                     this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
                     this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
-                    
+
                     if (!encryptionSettings.key()) {
                         return this.encryptionSection.generateEncryptionKey()
                             .done(() => {
@@ -88,23 +91,17 @@ class editPeriodicBackupTask extends viewModelBase {
                 });
         };
 
-        return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
+        return $.when<any>(this.loadServerSideConfiguration())
             .then(backupLoader);
     }
 
     private loadServerSideConfiguration() {
-        return new getPeriodicBackupConfigCommand(this.activeDatabase())
+        return new getServerWideBackupConfigCommand()
             .execute()
-            .done(config => { 
+            .done(config => {
                 this.serverConfiguration(config);
             });
-    }
-    
-    private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
-    }
+    }  
 
     isBackupOptionAvailable(option: backupOptions) {
         const destinations = this.serverConfiguration().AllowedDestinations;
@@ -113,27 +110,27 @@ class editPeriodicBackupTask extends viewModelBase {
         }
         return true;
     }
-    
+
     compositionComplete() {
         super.compositionComplete();
 
-        this.encryptionSection.syncQrCode(); 
-        
+        this.encryptionSection.syncQrCode();
+
         this.configuration().encryptionSettings().key.subscribe(() => this.encryptionSection.syncQrCode());
-        
+
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
-        
+
         $(".edit-backup .js-option-disabled").tooltip({
             title: "Destination was disabled by administrator",
             placement: "right"
         });
-        
-        document.getElementById("taskName").focus();
+
+        document.getElementById("backup-type").focus();
     }
 
     attached() {
         super.attached();
-        
+
         popoverUtils.longWithHover($("#backup-info"),
             {
                 content: backupCommonContent.generalBackupInfo
@@ -146,7 +143,7 @@ class editPeriodicBackupTask extends viewModelBase {
 
         popoverUtils.longWithHover($("#bucket-info"),
             {
-                content: backupCommonContent.textForPopover("Bucket")
+                content: backupCommonContent.textForPopover("Bucket") 
             });
 
         popoverUtils.longWithHover($("#bucket-gcs-info"),
@@ -156,38 +153,43 @@ class editPeriodicBackupTask extends viewModelBase {
 
         popoverUtils.longWithHover($("#storage-container-info"),
             {
-                content: backupCommonContent.textForPopover("Storage container")
+                content: backupCommonContent.textForPopover("Storage container") 
             });
 
         popoverUtils.longWithHover($("#vault-info"),
             {
-                content: backupCommonContent.textForPopover("Vault")
+                content: backupCommonContent.textForPopover("Vault") 
             });
 
         popoverUtils.longWithHover($("#ftp-host-info"),
             {
                 content: backupCommonContent.ftpHostInfo
             });
+
+        popoverUtils.longWithHover($("#serverwide-snapshot-encryption-info"),
+            {
+                content: backupCommonContent.serverwideSnapshotEncryptionInfo
+            });
     }
 
-    savePeriodicBackup() {
+    saveServerWideBackup() {
         if (!this.validate()) {
-             return;
+            return;
         }
 
-        const dto = this.configuration().toDto();
-        
+        const dto = this.configuration().toDto();    
+
         if (this.serverConfiguration().LocalRootPath) {
             dto.LocalSettings.FolderPath = this.serverConfiguration().LocalRootPath + dto.LocalSettings.FolderPath;
         }
 
-        eventsCollector.default.reportEvent("periodic-backup", "save");
+        eventsCollector.default.reportEvent("server-wide-backup", "save");
         
-        new savePeriodicBackupConfigurationCommand(this.activeDatabase(), dto)
+        new saveServerWideBackupCommand(dto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();
-                this.goToOngoingTasksView();
+                this.goToServerWideBackupsView();
             });
     }
 
@@ -198,21 +200,21 @@ class editPeriodicBackupTask extends viewModelBase {
 
         bs.isTestingCredentials(true);
         bs.testConnectionResult(null);
-        
+
         new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
             .execute()
             .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
-                bs.testConnectionResult(result);        
+                bs.testConnectionResult(result);
             })
             .always(() => bs.isTestingCredentials(false));
     }
 
     cancelOperation() {
-        this.goToOngoingTasksView();
+        this.goToServerWideBackupsView();
     }
 
-    private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+    private goToServerWideBackupsView() {
+        router.navigate(appUrl.forServerWideBackupList()); 
     }
 
     private validate(): boolean {
@@ -220,7 +222,7 @@ class editPeriodicBackupTask extends viewModelBase {
 
         if (!this.isValid(this.configuration().validationGroup))
             valid = false;
-        
+
         if (!this.isValid(this.configuration().encryptionSettings().validationGroup))
             valid = false;
 
@@ -232,7 +234,7 @@ class editPeriodicBackupTask extends viewModelBase {
 
         if (!this.isValid(this.configuration().azureSettings().validationGroup))
             valid = false;
-            
+
         if (!this.isValid(this.configuration().googleCloudSettings().validationGroup))
             valid = false;
 
@@ -246,4 +248,4 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 }
 
-export = editPeriodicBackupTask;
+export = editServerWideBackup;
