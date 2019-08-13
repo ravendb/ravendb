@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
@@ -200,13 +201,16 @@ exit 129";
             Assert.True(e.InnerException.Message.Contains("ERROR!") && e.InnerException.Message.Contains("Karmelush is ANGRY"));
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public void CanGetCpuCreditsFromExec()
         {
             string script;
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
             var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
-            var jsonCpuCredits = "{\"Remaining\":34.665476, \"Timestamp\":\"2019-08-11T16:25:00+03:00\"}";
+
+            var timestamp = $"{DateTime.UtcNow:s}";
+
+            var jsonCpuCredits = "{\"Remaining\":34.665476, \"Timestamp\":\"" + timestamp + "\"}";
 
             if (PlatformDetails.RunningOnPosix)
             {
@@ -237,10 +241,12 @@ exit 129";
 
                 File.WriteAllText(scriptFile, script);
             }
-
+            
             UseNewLocalServer(customSettings: customSettings, runInMemory: false);
 
-            Assert.True(Server.CpuCreditsBalance.RemainingCpuCredits == 34.665476);
+            var value = Server.UpdateCpuCreditsFromExec();
+
+            Assert.Equal(34.665476, value);
         }
 
         [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
