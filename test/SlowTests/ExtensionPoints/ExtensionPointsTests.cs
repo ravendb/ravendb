@@ -201,7 +201,7 @@ exit 129";
             Assert.True(e.InnerException.Message.Contains("ERROR!") && e.InnerException.Message.Contains("Karmelush is ANGRY"));
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public void CanGetCpuCreditsFromExec()
         {
             string script;
@@ -241,7 +241,7 @@ exit 129";
 
                 File.WriteAllText(scriptFile, script);
             }
-            
+
             UseNewLocalServer(customSettings: customSettings, runInMemory: false);
 
             var value = Server.UpdateCpuCreditsFromExec();
