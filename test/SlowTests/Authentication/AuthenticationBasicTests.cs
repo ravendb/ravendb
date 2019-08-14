@@ -147,8 +147,8 @@ namespace SlowTests.Authentication
             {
                 var ravenConnectionStr = new RavenConnectionString()
                 {
-                    Name = $"RavenConnectionString",
-                    TopologyDiscoveryUrls = new []{$"http://127.0.0.1:8080" },
+                    Name = "RavenConnectionString",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = dbName,
                 };
 
@@ -180,8 +180,8 @@ namespace SlowTests.Authentication
             {
                 var ravenConnectionStr = new RavenConnectionString()
                 {
-                    Name = $"RavenConnectionString",
-                    TopologyDiscoveryUrls = new[] { $"http://127.0.0.1:8080" },
+                    Name = "RavenConnectionString",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                     Database = dbName,
                 };
 
@@ -278,7 +278,7 @@ namespace SlowTests.Authentication
         public void CannotContactServerWhenNotUsingHttps()
         {
             var serverCertPath = SetupServerAuthentication(serverUrl: $"http://{Environment.MachineName}:0");
-            Assert.Throws<System.InvalidOperationException>(() =>
+            Assert.Throws<InvalidOperationException>(() =>
             {
                 AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             });
@@ -339,10 +339,19 @@ namespace SlowTests.Authentication
         [Fact]
         public void AllAdminAuthorizationStatusHaveCorrectRoutes()
         {
+            var routesToIgnore = new HashSet<string>
+            {
+                "/monitoring/snmp/oids",
+                "/monitoring/snmp"
+            };
+
             var routes = RouteScanner.Scan(attr =>
-                !attr.Path.Contains("/admin/") && (attr.RequiredAuthorization == AuthorizationStatus.Operator ||
-                                                   attr.RequiredAuthorization == AuthorizationStatus.Operator ||
-                                                   attr.RequiredAuthorization == AuthorizationStatus.DatabaseAdmin));
+                routesToIgnore.Contains(attr.Path) == false
+                && !attr.Path.Contains("/admin/")
+                && (attr.RequiredAuthorization == AuthorizationStatus.ClusterAdmin
+                    || attr.RequiredAuthorization == AuthorizationStatus.Operator
+                    || attr.RequiredAuthorization == AuthorizationStatus.DatabaseAdmin));
+
             Assert.Empty(routes);
         }
 
