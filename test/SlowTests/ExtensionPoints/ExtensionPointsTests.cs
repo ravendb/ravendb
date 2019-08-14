@@ -221,7 +221,7 @@ exit 129";
                 customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsMax)] = "4320";
                 customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsBase)] = "180";
 
-                script = "#!/bin/bash\necho " + jsonCpuCredits.Replace("\"", "\\\"") + "\ndone";
+                script = "#!/bin/bash\necho " + jsonCpuCredits.Replace("\"", "\\\"");
 
                 File.WriteAllText(scriptFile, script);
                 Process.Start("chmod", $"700 {scriptFile}");
