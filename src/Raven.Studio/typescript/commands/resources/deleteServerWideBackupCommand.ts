@@ -6,13 +6,13 @@ class deleteServerWideBackupCommand extends commandBase {
         super();
     }
     
-    execute(): JQueryPromise<Raven.Server.Web.System.ModifyServerWideBackupResult> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse> {
         const args = {
             name: this.taskName
         };
         const url = endpoints.global.adminServerWideBackup.adminConfigurationServerWideBackup + this.urlEncodeArgs(args);
 
-        return this.del<Raven.Server.Web.System.ModifyServerWideBackupResult>(url, null)
+        return this.del<Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse>(url, null)
             .done(() => this.reportSuccess(`Successfully deleted Server-Wide Backup: ${this.taskName}`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to delete Server-Wide Backup: ${this.taskName}`, response.responseText));
     }

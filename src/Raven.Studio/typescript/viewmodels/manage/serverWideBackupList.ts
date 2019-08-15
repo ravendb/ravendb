@@ -61,13 +61,13 @@ class serverWideBackupList extends viewModelBase {
         this.mergeTasks(this.serverWideBackupTasks,
             result.Results, 
             toDeleteIds,
-            (dto: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration) => new ongoingTaskServerWideBackupListModel(dto));
+            (dto: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio) => new ongoingTaskServerWideBackupListModel(dto));
     }
       
     private mergeTasks<T extends ongoingTaskListModel>(container: KnockoutObservableArray<ongoingTaskServerWideBackupListModel>,
-                                                       incomingData: Array<Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration>,
+                                                       incomingData: Array<Raven.Server.Web.System.ServerWideBackupConfigurationForStudio>,
                                                        toDelete: Array<number>,
-                                                       ctr: (dto: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration) => ongoingTaskServerWideBackupListModel) {
+                                                       ctr: (dto:  Raven.Server.Web.System.ServerWideBackupConfigurationForStudio) => ongoingTaskServerWideBackupListModel) {
         // remove old tasks
         container()
             .filter(x => _.includes(toDelete, x.taskId))
