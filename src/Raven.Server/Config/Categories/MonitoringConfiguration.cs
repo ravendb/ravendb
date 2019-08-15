@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Monitoring.Snmp;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Config.Categories
@@ -45,6 +46,30 @@ namespace Raven.Server.Config.Categories
             [DefaultValue("ravendb")]
             [ConfigurationEntry("Monitoring.Snmp.Community", ConfigurationEntryScope.ServerWideOnly)]
             public string Community { get; set; }
+
+            [DefaultValue(SnmpAuthenticationProtocol.SHA1)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationProtocol", ConfigurationEntryScope.ServerWideOnly)]
+            public SnmpAuthenticationProtocol AuthenticationProtocol { get; set; }
+
+            [DefaultValue("ravendb")]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationUser", ConfigurationEntryScope.ServerWideOnly)]
+            public string AuthenticationUser { get; set; }
+
+            [DefaultValue(null)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword", ConfigurationEntryScope.ServerWideOnly)]
+            public string AuthenticationPassword { get; set; }
+
+            [DefaultValue(SnmpPrivacyProtocol.None)]
+            [ConfigurationEntry("Monitoring.Snmp.PrivacyProtocol", ConfigurationEntryScope.ServerWideOnly)]
+            public SnmpPrivacyProtocol PrivacyProtocol { get; set; }
+
+            [DefaultValue("ravendb")]
+            [ConfigurationEntry("Monitoring.Snmp.PrivacyPassword", ConfigurationEntryScope.ServerWideOnly)]
+            public string PrivacyPassword { get; set; }
+
+            [DefaultValue("V2C;V3")]
+            [ConfigurationEntry("Monitoring.Snmp.SupportedVersions", ConfigurationEntryScope.ServerWideOnly)]
+            public string[] SupportedVersions { get; set; }
         }
     }
 }

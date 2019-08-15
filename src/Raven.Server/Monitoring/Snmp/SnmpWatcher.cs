@@ -10,11 +10,12 @@ using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 using Raven.Client;
-using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Monitoring.Snmp.Objects.Server;
+using Raven.Server.Monitoring.Snmp.Providers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
@@ -149,15 +150,14 @@ namespace Raven.Server.Monitoring.Snmp
 
         private static SnmpEngine CreateSnmpEngine(RavenServer server, ObjectStore objectStore)
         {
-            var v2MembershipProvider = new Version2MembershipProvider(new OctetString(server.Configuration.Monitoring.Snmp.Community), new OctetString(server.Configuration.Monitoring.Snmp.Community));
-            var v3MembershipProvider = new Version3MembershipProvider();
-            var membershipProvider = new ComposedMembershipProvider(new IMembershipProvider[] { v2MembershipProvider, v3MembershipProvider });
+            (HashSet<SnmpVersion> versions, string handlerVersion) = GetVersions(server);
+            var membershipProvider = CreateMembershipProvider(server, versions);
 
             var handlers = new[]
             {
-                new HandlerMapping("V2,V3", "GET", new GetMessageHandler()),
-                new HandlerMapping("V2,V3", "GETNEXT", new GetNextMessageHandler()),
-                new HandlerMapping("V2,V3", "GETBULK", new GetBulkMessageHandler())
+                new HandlerMapping(handlerVersion, "GET", new GetMessageHandler()),
+                new HandlerMapping(handlerVersion, "GETNEXT", new GetNextMessageHandler()),
+                new HandlerMapping(handlerVersion, "GETBULK", new GetBulkMessageHandler())
             };
 
             var messageHandlerFactory = new MessageHandlerFactory(handlers);
@@ -165,7 +165,44 @@ namespace Raven.Server.Monitoring.Snmp
             var factory = new SnmpApplicationFactory(new SnmpLogger(Logger), objectStore, membershipProvider, messageHandlerFactory);
 
             var listener = new Listener();
-            listener.Users.Add(new OctetString("ravendb"), new DefaultPrivacyProvider(new SHA1AuthenticationProvider(new OctetString(server.Configuration.Monitoring.Snmp.Community))));
+
+            if (versions.Contains(SnmpVersion.V3))
+            {
+                var authenticationPassword = server.Configuration.Monitoring.Snmp.AuthenticationPassword ?? server.Configuration.Monitoring.Snmp.Community;
+
+                IAuthenticationProvider authenticationProvider;
+                switch (server.Configuration.Monitoring.Snmp.AuthenticationProtocol)
+                {
+                    case SnmpAuthenticationProtocol.SHA1:
+                        authenticationProvider = new SHA1AuthenticationProvider(new OctetString(authenticationPassword));
+                        break;
+                    case SnmpAuthenticationProtocol.MD5:
+                        authenticationProvider = new MD5AuthenticationProvider(new OctetString(authenticationPassword));
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown authentication protocol '{server.Configuration.Monitoring.Snmp.AuthenticationProtocol}'.");
+                }
+
+                var privacyPassword = server.Configuration.Monitoring.Snmp.PrivacyPassword;
+
+                IPrivacyProvider privacyProvider;
+                switch (server.Configuration.Monitoring.Snmp.PrivacyProtocol)
+                {
+                    case SnmpPrivacyProtocol.None:
+                        privacyProvider = new DefaultPrivacyProvider(authenticationProvider);
+                        break;
+                    case SnmpPrivacyProtocol.DES:
+                        privacyProvider = new BouncyCastleDESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
+                        break;
+                    case SnmpPrivacyProtocol.AES:
+                        privacyProvider = new BouncyCastleAESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown privacy protocol '{server.Configuration.Monitoring.Snmp.AuthenticationProtocol}'.");
+                }
+
+                listener.Users.Add(new OctetString(server.Configuration.Monitoring.Snmp.AuthenticationUser), privacyProvider);
+            }
 
             var engineGroup = new EngineGroup();
 
@@ -178,6 +215,60 @@ namespace Raven.Server.Monitoring.Snmp
             };
 
             return engine;
+        }
+
+        private static (HashSet<SnmpVersion> Versions, string HandlerVersion) GetVersions(RavenServer server)
+        {
+            var length = server.Configuration.Monitoring.Snmp.SupportedVersions.Length;
+            if (length <= 0)
+                throw new InvalidOperationException($"There are no SNMP versions configured. Please set at least one in via '{RavenConfiguration.GetKey(x => x.Monitoring.Snmp.SupportedVersions)}' configuration option.");
+
+            var protocols = new HashSet<string>();
+            var versions = new HashSet<SnmpVersion>();
+            foreach (string version in server.Configuration.Monitoring.Snmp.SupportedVersions)
+            {
+                if (Enum.TryParse(version, ignoreCase: true, out SnmpVersion v) == false)
+                    throw new InvalidOperationException($"Could not recognize '{version}' as a valid SNMP version.");
+
+                versions.Add(v);
+
+                switch (v)
+                {
+                    case SnmpVersion.V2C:
+                        protocols.Add("V2");
+                        break;
+                    case SnmpVersion.V3:
+                        protocols.Add("V3");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            return (versions, string.Join(",", protocols));
+        }
+
+        private static ComposedMembershipProvider CreateMembershipProvider(RavenServer server, HashSet<SnmpVersion> versions)
+        {
+            var providers = new List<IMembershipProvider>();
+            foreach (var version in versions)
+            {
+                switch (version)
+                {
+                    case SnmpVersion.V2C:
+                        providers.Add(new Version2MembershipProvider(
+                            new OctetString(server.Configuration.Monitoring.Snmp.Community),
+                            new OctetString(server.Configuration.Monitoring.Snmp.Community)));
+                        break;
+                    case SnmpVersion.V3:
+                        providers.Add(new Version3MembershipProvider());
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            return new ComposedMembershipProvider(providers.ToArray());
         }
 
         private static ObjectStore CreateStore(RavenServer server)
