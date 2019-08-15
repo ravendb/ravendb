@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
@@ -779,8 +780,8 @@ namespace Raven.Client.Documents.Indexes
                 var enumType = node.Value.GetType();
                 if (_insideWellKnownType || TypeExistsOnServer(enumType))
                 {
-                    var name = _insideWellKnownType 
-                        ? enumType.Name 
+                    var name = _insideWellKnownType
+                        ? enumType.Name
                         : enumType.FullName;
 
                     Out(name.Replace("+", "."));
@@ -994,6 +995,9 @@ namespace Raven.Client.Documents.Indexes
                 return true;
 
             if (type.GetTypeInfo().Assembly == typeof(HashSet<>).GetTypeInfo().Assembly) // System.Core
+                return true;
+
+            if (type.GetTypeInfo().Assembly == typeof(Regex).GetTypeInfo().Assembly) // System.Text.RegularExpressions
                 return true;
 
             if (type.GetTypeInfo().Assembly.FullName.StartsWith("Lucene.Net") &&
