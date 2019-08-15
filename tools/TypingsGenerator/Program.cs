@@ -382,7 +382,7 @@ namespace TypingsGenerator
 
             // server-wide backup
             scripter.AddType(typeof(ServerWideBackupConfigurationResults));
-            scripter.AddType(typeof(ModifyServerWideBackupResult)); 
+            scripter.AddType(typeof(PutServerWideBackupConfigurationResponse)); 
             
             // certificates
             scripter.AddType(typeof(CertificateDefinition));

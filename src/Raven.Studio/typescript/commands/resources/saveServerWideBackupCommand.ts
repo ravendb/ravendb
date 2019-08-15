@@ -6,12 +6,12 @@ class saveServerWideBackupCommand extends commandBase {
         super();
     } 
     
-    execute(): JQueryPromise<Raven.Server.Web.System.ModifyServerWideBackupResult> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse> {
         const url = endpoints.global.adminServerWideBackup.adminConfigurationServerWideBackup;
         const isNewTask = this.configuration.TaskId === 0;
         
-        return this.put<Raven.Server.Web.System.ModifyServerWideBackupResult>(url, JSON.stringify(this.configuration))
-            .done((results: Raven.Server.Web.System.ModifyServerWideBackupResult) => {
+        return this.put<Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse>(url, JSON.stringify(this.configuration))
+            .done((results: Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse) => {
                 const taskTypeText = isNewTask ? "created" : "updated";
                 this.reportSuccess(`Succefully ${taskTypeText} Server-wide backup configuration`);
             })
