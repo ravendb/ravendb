@@ -17,7 +17,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
     
     private static serverWideNamePrefixFromServer = "Server Wide Backup";
-    private static serverWideNamePrefixInStudio = "Server-Wide Backup";    
     isServerWide: KnockoutComputed<boolean>;
     
     editUrl: KnockoutComputed<string>;
@@ -63,13 +62,13 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         super.initializeObservables();
 
         this.isServerWide = ko.pureComputed(() => {
-            return this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixInStudio);
+            return this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer);
         });
         
         this.editUrl = ko.pureComputed(()=> {
              const urls = appUrl.forCurrentDatabase();
              
-             return this.isServerWide() ?  appUrl.forEditServerWideBackup(this.taskName().replace(ongoingTaskBackupListModel.serverWideNamePrefixInStudio +', ', '')) :
+             return this.isServerWide() ?  appUrl.forEditServerWideBackup(this.taskName().replace(ongoingTaskBackupListModel.serverWideNamePrefixFromServer +', ', '')) :
                                            // Using replace() above since the Server-Wide view is using tasks name *without* the prefix...
                                            urls.editPeriodicBackupTask(this.taskId)();
         });
@@ -178,12 +177,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
-        
-        if (dto.TaskName.startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer)) {
-            // This is done here instead of changing the server code, avoiding schema upgrade
-            dto.TaskName = dto.TaskName.replace(ongoingTaskBackupListModel.serverWideNamePrefixFromServer, ongoingTaskBackupListModel.serverWideNamePrefixInStudio);
-        }
-        
         super.update(dto);
 
         this.backupType(dto.BackupType);

@@ -10,7 +10,7 @@ class deleteServerWideBackupCommand extends commandBase {
         const args = {
             name: this.taskName
         };
-        const url = endpoints.global.backupServerWide.adminConfigurationServerWideBackup + this.urlEncodeArgs(args);
+        const url = endpoints.global.adminServerWideBackup.adminConfigurationServerWideBackup + this.urlEncodeArgs(args);
 
         return this.del<Raven.Server.Web.System.ModifyServerWideBackupResult>(url, null)
             .done(() => this.reportSuccess(`Successfully deleted Server-Wide Backup: ${this.taskName}`))

@@ -161,10 +161,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
 
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, false)));
-                Assert.Contains("Can't enable task name 'Server-Wide Backup, Backup w/o destinations', because it is a server-wide backup task", e.Message);
+                Assert.Contains("Can't enable task name 'Server Wide Backup, Backup w/o destinations', because it is a server-wide backup task", e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, true)));
-                Assert.Contains("Can't disable task name 'Server-Wide Backup, Backup w/o destinations', because it is a server-wide backup task", e.Message);
+                Assert.Contains("Can't disable task name 'Server Wide Backup, Backup w/o destinations', because it is a server-wide backup task", e.Message);
             }
         }
 

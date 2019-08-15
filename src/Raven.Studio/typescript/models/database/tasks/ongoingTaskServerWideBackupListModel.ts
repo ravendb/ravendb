@@ -47,7 +47,7 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
         this.textClass = ko.pureComputed(() => this.backupDestinations().length ? "text-details" : "text-warning")
     }
 
-    // update method has 2 params only so that it compiles - due to class inheritance....
+    // dto param is union-type only so that it compiles - due to class inheritance....
     update(dto: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration | Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
         super.update({ TaskName: (dto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration).Name,
                        TaskId:   (dto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration).TaskId,
@@ -55,7 +55,7 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
                        TaskConnectionStatus: null, // not relevant for this view
                        ResponsibleNode: null,      // not relevant for this view 
                        MentorNode: null,           // not relevant for this view 
-                       Error: ""} as Raven.Client.Documents.Operations.OngoingTasks.OngoingTask ); // todo : add error field in models ???
+                       } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTask );
 
         const serverWideDto = dto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration;
         

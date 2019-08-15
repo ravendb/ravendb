@@ -7,7 +7,7 @@ class saveServerWideBackupCommand extends commandBase {
     } 
     
     execute(): JQueryPromise<Raven.Server.Web.System.ModifyServerWideBackupResult> {
-        const url = endpoints.global.backupServerWide.adminConfigurationServerWideBackup;
+        const url = endpoints.global.adminServerWideBackup.adminConfigurationServerWideBackup;
         const isNewTask = this.configuration.TaskId === 0;
         
         return this.put<Raven.Server.Web.System.ModifyServerWideBackupResult>(url, JSON.stringify(this.configuration))

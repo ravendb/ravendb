@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -19,13 +20,12 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Rachis;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Web.Studio;
 
 namespace Raven.Server.Web.System
 {
-    public class BackupServerWideHandler : RequestHandler
+    public class AdminServerWideBackupHandler : RequestHandler
     {
-        [RavenAction("/admin/configuration/server-wide", "GET", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/configuration/server-wide", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetConfigurationServerWide()
         {
             // FullPath removes the trailing '/' so adding it back for the studio
@@ -55,7 +55,6 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
-
                 var configuration = JsonDeserializationCluster.ServerWideBackupConfiguration(configurationBlittable);
 
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
@@ -73,14 +72,14 @@ namespace Raven.Server.Web.System
                     if (backupName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
                     
-                    var test = new ModifyServerWideBackupResult()
+                    var putResponse = new PutServerWideBackupConfigurationResponse()
                     {
-                        TaskName = backupName,
+                        Name = backupName,
                         RaftCommandIndex = newIndex 
                     };
 
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    context.Write(writer, test.ToJson());
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                    context.Write(writer, putResponse.ToJson());
                     writer.Flush();
                 }
             }
@@ -99,14 +98,14 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
-                    var result = new ModifyServerWideBackupResult()
+                    var deleteResponse = new PutServerWideBackupConfigurationResponse()
                     {
-                        TaskName = name,
+                        Name = name,
                         RaftCommandIndex = newIndex 
                     };
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    context.Write(writer, result.ToJson());
+                    context.Write(writer, deleteResponse.ToJson());
                     writer.Flush();
                 }
             }
@@ -141,7 +140,7 @@ namespace Raven.Server.Web.System
         }
         
         // Toggle Disable/Enable for specified task
-        [RavenAction("/admin/configuration/serve-wide/backup/state", "POST", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/configuration/server-wide/backup/state", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task ToggleTaskState()
         {
             var disable = GetBoolValueQueryString("disable") ?? true;
@@ -151,16 +150,12 @@ namespace Raven.Server.Web.System
             using (context.OpenReadTransaction())
             {
                 // Get existing task
-                var backups = ServerStore.Cluster.GetServerWideBackupConfigurations(context, taskName); 
-                ServerWideBackupConfigurationResults backupsResult = new ServerWideBackupConfigurationResults();
-                
-                if (backups.Count() == 0)
+                var serveWideBackupBlittable = ServerStore.Cluster.GetServerWideBackupConfigurations(context, taskName).FirstOrDefault();
+                if (serveWideBackupBlittable == null)
                     throw new InvalidOperationException($"Server-Wide Backup Task: {taskName} was not found in the server.");
-                
-                var serveWideBackupBlittable = backups.ToList()[0];
-                ServerWideBackupConfiguration serverWideBackup = JsonDeserializationServer.ServerWideBackupConfiguration(serveWideBackupBlittable);
-                
+               
                 // Toggle
+                ServerWideBackupConfiguration serverWideBackup = JsonDeserializationServer.ServerWideBackupConfiguration(serveWideBackupBlittable);
                 serverWideBackup.Disabled = disable; 
             
                 // Save task
@@ -169,14 +164,13 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var test = new ModifyServerWideBackupResult() 
+                    var toggleResponse = new PutServerWideBackupConfigurationResponse()
                     {
-                        TaskName = taskName,
-                        RaftCommandIndex = newIndex
+                        Name = taskName,
+                        RaftCommandIndex = newIndex 
                     };
 
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    context.Write(writer, test.ToJson());
+                    context.Write(writer, toggleResponse.ToJson());
                     writer.Flush();
                 }
             }
@@ -186,37 +180,20 @@ namespace Raven.Server.Web.System
         public async Task FullBackupDataDirectory()
         {
             var path = GetStringQueryString("path", required: true);
-            var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
-
-            var pathResult = BackupConfigurationHelper.GetActualFullPath(ServerStore, path);
+            var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000; 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, pathResult.FolderPath, null, isBackup: true, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
-            await info.UpdateDirectoryResult(databaseName: null, error: pathResult.Error);
-        }
-    }
-    
-    public class ModifyServerWideBackupResult : IDynamicJson 
-    {
-        public string TaskName { get; set; }
-        public long RaftCommandIndex { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(TaskName)] = TaskName,
-                [nameof(RaftCommandIndex)] = RaftCommandIndex
-            };
+            await BackupConfigurationHelper.GetFullBackupDataDirectory(path, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
         }
     }
     
     public class ServerWideBackupConfigurationResults : IDynamicJson
     {
-        public List<ServerWideBackupConfiguration> Results;
+        public List<ServerWideBackupConfigurationForStudio> Results;
 
         public ServerWideBackupConfigurationResults()
         {
-            Results = new List<ServerWideBackupConfiguration>();
+            Results = new List<ServerWideBackupConfigurationForStudio>();
         }
         
         public DynamicJsonValue ToJson()
@@ -225,6 +202,25 @@ namespace Raven.Server.Web.System
             {
                 [nameof(Results)] = new DynamicJsonArray(Results.Select(x => x.ToJson()))
             };
+        }
+    }
+    
+    public class ServerWideBackupConfigurationForStudio : ServerWideBackupConfiguration
+    {
+        public OngoingTaskState TaskState { get; set; }
+        public List<string> BackupDestinations { get; set; }
+        
+        public ServerWideBackupConfigurationForStudio()
+        {
+            BackupDestinations = new List<string>();
+        }
+        
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(TaskState)] = TaskState;
+            json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
+            return json;
         }
     }
 }

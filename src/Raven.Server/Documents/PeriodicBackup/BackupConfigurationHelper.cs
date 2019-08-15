@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
@@ -11,6 +13,13 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         internal static bool SkipMinimumBackupAgeToKeepValidation = false;
 
+        public static async Task GetFullBackupDataDirectory(string path, int requestTimeoutInMs, bool getNodesInfo, ServerStore serverStore, Stream responseStream)
+        {
+            var pathResult = GetActualFullPath(serverStore, path);
+            var info = new DataDirectoryInfo(serverStore, pathResult.FolderPath, null, isBackup: true, getNodesInfo, requestTimeoutInMs, responseStream);
+            await info.UpdateDirectoryResult(databaseName: null, error: pathResult.Error);
+        }
+        
         public static void UpdateLocalPathIfNeeded(PeriodicBackupConfiguration configuration, ServerStore serverStore)
         {
             if (configuration.LocalSettings == null || configuration.LocalSettings.Disabled)

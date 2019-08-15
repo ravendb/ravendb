@@ -10,7 +10,7 @@ class toggleServerWideBackupCommand extends commandBase {
     execute(): JQueryPromise<Raven.Server.Web.System.ModifyServerWideBackupResult> {
         const args = { taskName: this.taskName,  disable: this.disable };
         
-        const url = endpoints.global.backupServerWide.adminConfigurationServeWideBackupState;
+        const url = endpoints.global.adminServerWideBackup.adminConfigurationServerWideBackupState;
 
         const operationText = this.disable ? "disable" : "enable";
      
