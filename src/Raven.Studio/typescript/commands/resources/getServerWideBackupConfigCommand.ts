@@ -3,12 +3,8 @@ import endpoints = require("endpoints");
 
 class getServerWideBackupConfigCommand extends commandBase {
 
-    constructor() {
-        super();
-    }
-
     execute(): JQueryPromise<periodicBackupServerLimitsResponse> {
-        const url = endpoints.global.backupServerWide.adminConfigurationServerWide;
+        const url = endpoints.global.adminServerWideBackup.adminConfigurationServerWide;
 
         return this.query<periodicBackupServerLimitsResponse>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to get server-wide configuration", response.responseText, response.statusText));

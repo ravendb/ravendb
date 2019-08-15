@@ -45,7 +45,7 @@ namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfiguration> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfigurationForStudio> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfigurationForStudio>();
         
         public static readonly Func<BlittableJsonReaderObject, StartTransactionsRecordingOperation.Parameters> StartTransactionsRecordingOperationParameters = GenerateJsonDeserializationRoutine<StartTransactionsRecordingOperation.Parameters>();
 

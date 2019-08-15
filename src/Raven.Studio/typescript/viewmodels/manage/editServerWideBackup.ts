@@ -53,8 +53,7 @@ class editServerWideBackup extends viewModelBase {
 
                             this.configuration(new periodicBackupConfiguration(backupTask, this.serverConfiguration(), false, true)); 
                             deferred.resolve();
-                        }
-                        else {
+                        } else {
                             deferred.reject();
                             router.navigate(appUrl.forServerWideBackupList());
                         }
@@ -91,7 +90,7 @@ class editServerWideBackup extends viewModelBase {
                 });
         };
 
-        return $.when<any>(this.loadServerSideConfiguration())
+        return this.loadServerSideConfiguration()
             .then(backupLoader);
     }
 

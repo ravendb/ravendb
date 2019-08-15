@@ -7,7 +7,7 @@
                         <i class="icon-plus"></i><span>Add Server-Wide Backup Task</span>
                     </button>
                 </div>
-                <div class="flex-separator"></div>              
+                <div class="flex-separator"></div>
             </div>
             <div class="scroll flex-grow">
                 <div data-bind="if: serverWideBackupTasks().length === 0">
@@ -23,14 +23,15 @@
                  </div>
                  <div data-bind="foreach: serverWideBackupTasks">
                      <div class="panel destination-item periodic-backup">
-                         <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                         <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }">
+                             <i class="icon-global" id="icon-global-serverwide"></i>
+                         </div>
                          <div class="padding destination-info flex-vertical">
                              <div class="flex-horizontal">
                                  <div class="panel-name flex-grow">  
                                      <h3>
-                                         <i class="icon-global"></i>
                                          <a href="#" data-bind="click: editTask, attr: { 'title': 'Server-Wide Backup name: ' + taskName() }">
-                                             <span data-bind="text: '&nbsp;Server-Wide Backup, ' + taskName()"></span>
+                                             <span data-bind="text: '&nbsp;' + taskName()"></span>
                                          </a>
                                      </h3>
                                  </div>
