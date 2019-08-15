@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -96,6 +97,7 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
+        public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _clusterRequestExecutor;
 
@@ -128,6 +130,8 @@ namespace Raven.Server.ServerWide
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             _server = server;
+
+            IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>();
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
@@ -856,6 +860,7 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly MultipleUseFlag _notify = new MultipleUseFlag();
+
         public void NotifyAboutClusterTopologyAndConnectivityChanges()
         {
             if (_notify.Raise() == false)
@@ -1959,12 +1964,6 @@ namespace Raven.Server.ServerWide
                         if (idleDbInstance.CanUnload == false)
                             continue;
 
-                        if (idleDbInstance.ReplicationLoader?.IncomingHandlers.Any() == true)
-                        {
-                            //TODO: until RavenDB-10065 is fixed, don't unload a replicated database if it has valid a incoming connection
-                            continue;
-                        }
-
                         if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
                             continue;
 
@@ -1974,9 +1973,19 @@ namespace Raven.Server.ServerWide
                         if (idleDbInstance.Operations.HasActive)
                             continue;
 
+                        var dbIdEtagDictionary = new Dictionary<string, long>();
+                        using (idleDbInstance.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                        using (documentsContext.OpenReadTransaction())
+                        {
+                            foreach (var kvp in DocumentsStorage.GetAllReplicatedEtags(documentsContext))
+                            {
+                                dbIdEtagDictionary[kvp.Key] = kvp.Value;
+                            }
+                        }
+                        IdleDatabases[idleDbInstance.Name.ToLowerInvariant()] = dbIdEtagDictionary.Count > 0 ? dbIdEtagDictionary : null;
+
                         DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTime());
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -2652,7 +2661,7 @@ namespace Raven.Server.ServerWide
 
                 using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                 {
-                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, "Test-Connection", Server.Certificate.Certificate,
+                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, null, default, "Test-Connection", Server.Certificate.Certificate,
                         cts.Token);
                 }
                 Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);

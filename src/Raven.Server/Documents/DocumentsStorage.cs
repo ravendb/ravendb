@@ -6,27 +6,26 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
-using Sparrow.Json;
-using Voron;
-using Voron.Data.Fixed;
-using Voron.Data.Tables;
-using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Voron;
 using Voron.Data;
+using Voron.Data.Fixed;
+using Voron.Data.Tables;
 using Voron.Exceptions;
+using Voron.Impl;
 
 namespace Raven.Server.Documents
 {
@@ -1747,6 +1746,27 @@ namespace Raven.Server.Documents
                 {
                     var tombstoneCollection = it.CurrentKey.ToString();
                     yield return tombstoneCollection.Substring(TombstonesPrefix.Size);
+                }
+                while (it.MoveNext());
+            }
+        }
+
+        public static IEnumerable<KeyValuePair<string, long>> GetAllReplicatedEtags(DocumentsOperationContext context)
+        {
+            var readTree = context.Transaction.InnerTransaction.ReadTree(LastReplicatedEtagsSlice);
+            using (var it = readTree.Iterate(true))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+
+                do
+                {
+                    var dbId = it.CurrentKey.ToString();
+                    var readResult = readTree.Read(dbId);
+                    if (readResult == null)
+                        yield return new KeyValuePair<string, long>(dbId, 0);
+
+                    yield return new KeyValuePair<string, long>(dbId, readResult.Reader.ReadLittleEndianInt64());
                 }
                 while (it.MoveNext());
             }

@@ -258,6 +258,16 @@ namespace Raven.Server.Documents.Replication
             var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
             if (newConnection == newIncoming)
             {
+                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext doc))
+                using (var tx = doc.OpenWriteTransaction())
+                {
+                    if (DocumentsStorage.GetLastReplicatedEtagFrom(doc, newIncoming.ConnectionInfo.SourceDatabaseId) == 0)
+                    {
+                        DocumentsStorage.SetLastReplicatedEtagFrom(doc, newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming.LastDocumentEtag);
+                        tx.Commit();
+                    }
+                }
+
                 newIncoming.Start();
                 IncomingReplicationAdded?.Invoke(newIncoming);
                 ForceTryReconnectAll();
@@ -951,7 +961,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", certificate, cts.Token);
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication", certificate, cts.Token);
                     }
                 }
 
@@ -1064,7 +1074,7 @@ namespace Raven.Server.Documents.Replication
                 DocumentConventions.Default))
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                var cmd = new GetTcpInfoCommand("external-replication", database);
+                var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
                     requestExecutor.Execute(cmd, ctx);
