@@ -253,10 +253,10 @@ namespace Raven.Server.ServerWide
                     //actually delete the database before we notify about changes to the record otherwise we 
                     //don't know that it was us who needed to delete the database.
                     case nameof(RemoveNodeFromDatabaseCommand):
-                        RemoveNodeFromDatabase(context, cmd, index, leader);
+                        RemoveNodeFromDatabase(context, cmd, index, leader, serverStore);
                         break;
                     case nameof(RemoveNodeFromClusterCommand):
-                        RemoveNodeFromCluster(context, cmd, index, leader);
+                        RemoveNodeFromCluster(context, cmd, index, leader, serverStore);
                         break;
                     case nameof(DeleteCertificateFromClusterCommand):
                         DeleteCertificate(context, type, cmd, index);
@@ -915,7 +915,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             RemoveNodeFromClusterCommand removedCmd = null;
             Exception exception = null;
@@ -938,7 +938,7 @@ namespace Raven.Server.ServerWide
                             var deleteNow = record.DeletionInProgress.Remove(removed) && _parent.Tag == removed;
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
                                 actions.Add(() => DatabaseChanged?.Invoke(this,
                                     (record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
                                 continue;
@@ -952,7 +952,7 @@ namespace Raven.Server.ServerWide
                             record.Topology.ReplicationFactor = record.Topology.Count;
                             if (record.Topology.Count == 0)
                             {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
                                 continue;
                             }
                         }
@@ -1104,7 +1104,7 @@ namespace Raven.Server.ServerWide
             await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
         }
 
-        private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             Exception exception = null;
             RemoveNodeFromDatabaseCommand remove = null;
@@ -1135,7 +1135,7 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
                     {
-                        DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
+                        DeleteDatabaseRecord(context, index, items, lowerKey, databaseName, serverStore);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                         return;
@@ -1161,13 +1161,13 @@ namespace Raven.Server.ServerWide
 
         }
 
-        private static void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
+        private static void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName, ServerStore serverStore)
         {
             // delete database record
             items.DeleteByKey(lowerKey);
 
             // delete all values linked to database record - for subscription, etl etc.
-            CleanupDatabaseRelatedValues(context, items, databaseName);
+            CleanupDatabaseRelatedValues(context, items, databaseName, serverStore);
 
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
@@ -1179,7 +1179,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string databaseName)
+        private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string databaseName, ServerStore serverStore)
         {
             var dbValuesPrefix = Helpers.ClusterStateMachineValuesPrefix(databaseName).ToLowerInvariant();
             using (Slice.From(context.Allocator, dbValuesPrefix, out var loweredKey))
@@ -1187,13 +1187,17 @@ namespace Raven.Server.ServerWide
                 items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
 
-            var databaseLowered = $"{databaseName.ToLowerInvariant()}/";
+            var dbNameLowered = databaseName.ToLowerInvariant();
+            var databaseLowered = $"{dbNameLowered}/";
             using (Slice.From(context.Allocator, databaseLowered, out var databaseSlice))
             {
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange).DeleteByPrimaryKeyPrefix(databaseSlice);
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones).DeleteByPrimaryKeyPrefix(databaseSlice);
                 context.Transaction.InnerTransaction.OpenTable(IdentitiesSchema, Identities).DeleteByPrimaryKeyPrefix(databaseSlice);
             }
+
+            // db can be idle when we are deleting it
+            serverStore?.IdleDatabases.Remove(dbNameLowered, out _);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -1786,7 +1790,7 @@ namespace Raven.Server.ServerWide
 
                     if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {
-                        DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
+                        DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, serverStore);
                         return;
                     }
 
@@ -2038,7 +2042,7 @@ namespace Raven.Server.ServerWide
                 var dbKey = "db/" + databaseName;
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
+                    DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName, null);
                 }
             }
 
@@ -2792,7 +2796,7 @@ namespace Raven.Server.ServerWide
             TcpConnectionInfo info;
             using (var cts = new CancellationTokenSource(_parent.TcpConnectionTimeout))
             {
-                info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
+                info = await ReplicationUtils.GetTcpInfoAsync(url, null, null, default, "Cluster", certificate, cts.Token);
             }
 
             TcpClient tcpClient = null;
