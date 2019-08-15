@@ -23,6 +23,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     session.Store(new { Name = "Oren" }, "users/ayende");
                     session.TimeSeriesFor("users/ayende")
                         .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+
                     session.SaveChanges();
                 }
 
@@ -34,6 +35,36 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanCreateSimpleTimeSeries2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 60d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new[] { 61d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(2, val.Count);
                 }
             }
         }

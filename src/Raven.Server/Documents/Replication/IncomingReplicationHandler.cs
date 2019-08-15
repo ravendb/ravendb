@@ -998,10 +998,15 @@ namespace Raven.Server.Documents.Replication
                                 var tss = database.DocumentsStorage.TimeSeriesStorage;
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, out var docId, out var name, out var baseline);
 
-                                foreach (var result in segment.Segment.YieldAllValues(context, baseline))
+                                if (tss.TryAppendEntireSegment(context, segment, baseline))
                                 {
-                                    tss.AppendTimestamp(context, docId, segment.Collection, name, result.TimeStamp, result.Values.Span, result.Tag, fromReplication: true);
+                                    var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+                                    var changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
+                                    context.LastDatabaseChangeVector = changeVector;
+                                    continue;
                                 }
+
+                                tss.AppendTimestamp(context, docId, segment.Collection, name, segment.Segment.YieldAllValues(context, baseline), segment.ChangeVector);
 
                                 break;
                             case DocumentReplicationItem doc:

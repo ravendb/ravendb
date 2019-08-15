@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -164,19 +166,32 @@ namespace Raven.Server.Documents.Handlers
 
                 if (_batch.Appends != null)
                 {
-                    foreach (var append in _batch.Appends)
+                    // TODO: I guess we can do it more efficient
+                    var groups = 
+                        from batch in _batch.Appends
+                        group batch by batch.Name
+                        into g
+                        select new
+                        {
+                            Name = g.Key,
+                            Appendies = g.Select(x => new TimeSeriesStorage.Reader.SingleResult
+                            {
+                                Values = x.Values,
+                                Tag = context.GetLazyString(x.Tag),
+                                TimeStamp = x.Timestamp
+                            }).OrderBy(x => x.TimeStamp)
+                        };
+
+                    foreach (var group in groups)
                     {
                         LastChangeVector = tss.AppendTimestamp(context,
                             _batch.Id,
                             docCollection,
-                            append.Name,
-                            append.Timestamp,
-                            new Span<double>(append.Values),
-                            append.Tag,
-                            fromReplication: false
+                            group.Name,
+                            group.Appendies
                         );
 
-                        changes++;
+                        changes += group.Appendies.Count();
                     }
                 }
 
