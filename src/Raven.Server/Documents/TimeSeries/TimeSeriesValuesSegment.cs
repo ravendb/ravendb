@@ -67,6 +67,11 @@ namespace Raven.Server.Documents.TimeSeries
                 InvalidCapacity();
         }
 
+        public void CopyTo(byte* dest)
+        {
+            Memory.Copy(dest, _buffer, _capacity);
+        }
+
         private void InvalidCapacity()
         {
             throw new ArgumentOutOfRangeException("Maximum capacity for segment is 2KB, but was: " + _capacity);
@@ -113,17 +118,18 @@ namespace Raven.Server.Documents.TimeSeries
                 2 // previous tag position (10 bits)
                 ;
 
-            using (allocator.Allocate(maximumSize + sizeof(SegmentHeader), out var tempBuffer))
+            var copiedHeaderSize = sizeof(SegmentHeader) + Header->NumberOfValues * sizeof(StatefulTimeStampValue);
+            using (allocator.Allocate(maximumSize + copiedHeaderSize, out var tempBuffer))
             {
                 Memory.Set(tempBuffer.Ptr, 0, maximumSize);
 
                 var tempHeader = (SegmentHeader*)(tempBuffer.Ptr + maximumSize);
 
-                *tempHeader = *Header;
+                Memory.Copy(tempHeader,Header, copiedHeaderSize);
 
                 var tempBitsBuffer = new BitsBuffer(tempBuffer.Ptr, maximumSize);
 
-                var prevs = new Span<StatefulTimeStampValue>(_buffer + sizeof(SegmentHeader), tempHeader->NumberOfValues);
+                var prevs = new Span<StatefulTimeStampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
                 if (tempHeader->NumberOfEntries == 0)
@@ -193,8 +199,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                 }
 
-
-                *Header = *tempHeader;
+                Memory.Copy(Header, tempHeader, copiedHeaderSize);
 
                 return true;
             }
@@ -303,7 +308,6 @@ namespace Raven.Server.Documents.TimeSeries
                     break;
                 }
             }
-            tempHeader->PreviousTimeStamp = deltaFromStart;
             tempHeader->PreviousDelta = delta;
         }
 
@@ -385,7 +389,6 @@ namespace Raven.Server.Documents.TimeSeries
                 while (enumerator.MoveNext(out int ts, values, states, ref tagPointer))
                 {
                     var cur = baseline.AddMilliseconds(ts);
-
                     var tag = SetTimestampTag(context, tagPointer);
 
                     var end = values.Length;
@@ -416,7 +419,7 @@ namespace Raven.Server.Documents.TimeSeries
             var bytes = new Span<byte>(key.Content.Ptr, key.Size);
             var order = ParsingOrder.Id;
             var next = -1;
-            for (int i = 0; i < bytes.Length; i++)
+            for (int i = 0; i < bytes.Length - sizeof(long); i++)
             {
                 var val = bytes[i];
                 if (val != SpecialChars.RecordSeparator)
@@ -438,7 +441,7 @@ namespace Raven.Server.Documents.TimeSeries
                 order++;
             }
 
-            var ticks = MemoryMarshal.Read<long>(bytes.Slice(next, bytes.Length - next));
+            var ticks = MemoryMarshal.Read<long>(bytes.Slice(bytes.Length - sizeof(long), sizeof(long)));
             baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
         }
 
@@ -446,6 +449,8 @@ namespace Raven.Server.Documents.TimeSeries
         {
             public byte* Pointer;
             public int Length;
+
+            public byte Size => *Pointer; // the first byte is the size
 
             public Span<byte> AsSpan()
             {
