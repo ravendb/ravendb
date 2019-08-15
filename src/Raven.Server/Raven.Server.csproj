@@ -123,6 +123,7 @@
     <Folder Include="Documents\Indexes\IndexMerging" />
     <Folder Include="Exceptions\PeriodicBackup" />
     <Folder Include="Exceptions\PeriodicBackup" />
+    <Folder Include="Monitoring\Snmp\Providers\" />
     <Folder Include="ServerWide\Commands\ETL" />
     <Folder Include="ServerWide\Commands\ETL" />
     <Folder Include="ServerWide\Commands\PeriodicBackup" />
