@@ -75,6 +75,11 @@ namespace Raven.Client.Documents.Operations.Backups
             return Name;
         }
 
+        public bool IsResourceIntensive()
+        {
+            return true;
+        }
+
         public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)
         {
             if (other == null)

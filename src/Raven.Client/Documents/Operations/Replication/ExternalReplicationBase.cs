@@ -114,5 +114,10 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             return Name;
         }
+
+        public bool IsResourceIntensive()
+        {
+            return false;
+        }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Sparrow;
@@ -26,6 +27,7 @@ namespace Raven.Client.ServerWide
         string GetMentorNode();
         string GetDefaultTaskName();
         string GetTaskName();
+        bool IsResourceIntensive();
     }
 
     public interface IDatabaseTaskStatus
@@ -90,6 +92,11 @@ namespace Raven.Client.ServerWide
         public string GetTaskName()
         {
             return _name;
+        }
+
+        public bool IsResourceIntensive()
+        {
+            return false;
         }
     }
 
@@ -361,10 +368,32 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
             topology.AddRange(Rehabs);
             topology.Sort();
 
+            if (task.IsResourceIntensive() && Members.Count > 1)
+            {
+                // if resource intensive operation, we don't want to have it on the first node of the database topology
+                return FindNodeForIntensiveOperation(task.GetTaskKey(), topology);
+            }
+
+            return FindNode(task.GetTaskKey(), topology);
+        }
+
+        private string FindNodeForIntensiveOperation(ulong key, List<string> topology)
+        {
+            var firstNode = Members[0];
+            topology.Remove(firstNode);
+
+            var node = FindNode(key, topology);
+            if (node == null)
+                return firstNode;
+
+            return node;
+        }
+
+        private string FindNode(ulong key, List<string> topology)
+        {
             if (topology.Count == 0)
                 return null; // this is probably being deleted now, no one is able to run tasks
 
-            var key = task.GetTaskKey();
             while (true)
             {
                 var index = (int)Hashing.JumpConsistentHash.Calculate(key, topology.Count);
