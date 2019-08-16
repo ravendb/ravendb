@@ -12,7 +12,7 @@ namespace Raven.Server.Monitoring.Snmp
 {
     public class SnmpHandler : RequestHandler
     {
-        [RavenAction("/monitoring/snmp", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/monitoring/snmp", "GET", AuthorizationStatus.Operator)]
         public Task Get()
         {
             if (ServerStore.Configuration.Monitoring.Snmp.Enabled == false)
@@ -44,7 +44,7 @@ namespace Raven.Server.Monitoring.Snmp
             return Task.CompletedTask;
         }
 
-        [RavenAction("/monitoring/snmp/oids", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/monitoring/snmp/oids", "GET", AuthorizationStatus.Operator)]
         public Task GetOids()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

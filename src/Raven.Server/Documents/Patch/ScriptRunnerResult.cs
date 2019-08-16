@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {            
-            _parent?.DisposeClonedDocuments();
+            _parent?.JavaScriptUtils.Clear();
         }
     }
 }

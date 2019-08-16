@@ -150,6 +150,15 @@ namespace Sparrow.Json
         {
             return x % (decimal)y;
         }
+        public static decimal operator +(LazyNumberValue y)
+        {
+            return (decimal)y;
+        }
+
+        public static decimal operator -(LazyNumberValue y)
+        {
+            return -(decimal)y;
+        }
 
         public override bool Equals(object obj)
         {

@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
@@ -198,6 +199,54 @@ exit 129";
                 UseNewLocalServer(customSettings: customSettings, runInMemory: false);
             });
             Assert.True(e.InnerException.Message.Contains("ERROR!") && e.InnerException.Message.Contains("Karmelush is ANGRY"));
+        }
+
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        public void CanGetCpuCreditsFromExec()
+        {
+            string script;
+            IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
+            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+
+            var timestamp = $"{DateTime.UtcNow:s}";
+
+            var jsonCpuCredits = "{\"Remaining\":34.665476, \"Timestamp\":\"" + timestamp + "\"}";
+
+            if (PlatformDetails.RunningOnPosix)
+            {
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExec)] = "bash";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExecArguments)] = $"{scriptFile}";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExhaustionBackgroundTasksThreshold)] = "15";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExhaustionFailoverThreshold)] = "30";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsMax)] = "4320";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsBase)] = "180";
+
+                script = "#!/bin/bash\necho " + jsonCpuCredits.Replace("\"", "\\\"");
+
+                File.WriteAllText(scriptFile, script);
+                Process.Start("chmod", $"700 {scriptFile}");
+            }
+            else
+            {
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExec)] = "powershell";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExecArguments)] = $"-NoProfile {scriptFile}";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExhaustionBackgroundTasksThreshold)] = "15";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsExhaustionFailoverThreshold)] = "30";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsMax)] = "4320";
+                customSettings[RavenConfiguration.GetKey(x => x.Server.CpuCreditsBase)] = "180";
+
+                jsonCpuCredits = $"\"{jsonCpuCredits.Replace("\"", "`\"")}\"";
+
+                script = $@"Write-Host {jsonCpuCredits}";
+
+                File.WriteAllText(scriptFile, script);
+            }
+
+            UseNewLocalServer(customSettings: customSettings, runInMemory: false);
+
+            var value = Server.UpdateCpuCreditsFromExec();
+
+            Assert.Equal(34.665476, value);
         }
 
         [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]

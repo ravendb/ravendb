@@ -38,11 +38,20 @@ namespace Sparrow.Utils
             public ulong UnmanagedThreadId;
             public long Allocations;
             public long ReleasesFromOtherThreads;
-            private Thread _threadInstance;
+            private WeakReference<Thread> _threadInstance = new WeakReference<Thread>(null);
             public readonly int ManagedThreadId;
             private string _lastName = "Unknown";
-            public string Name => _threadInstance?.Name ?? _lastName;
-
+            public string Name
+            {
+                get
+                {
+                    if (_threadInstance.TryGetTarget(out var thread))
+                    {
+                        return thread?.Name??_lastName;
+                    }
+                    return _lastName;
+                }
+            }
             public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
 
             private static int _uniqueThreadId = 0;
@@ -51,7 +60,12 @@ namespace Sparrow.Utils
 
             public bool IsThreadAlive()
             {
-                var copy = _threadInstance;
+                if (_threadInstance == null)
+                    return false;
+
+                if (_threadInstance.TryGetTarget(out var copy) == false)
+                    return false;
+                
 
                 if (copy == null)
                     return false;
@@ -71,8 +85,9 @@ namespace Sparrow.Utils
 
             public ThreadStats()
             {
-                _threadInstance = Thread.CurrentThread;
-                ManagedThreadId = _threadInstance.ManagedThreadId;
+                var currentThread = Thread.CurrentThread;
+                _threadInstance.SetTarget(currentThread);
+                ManagedThreadId = currentThread.ManagedThreadId;
                 InternalId = Interlocked.Increment(ref _uniqueThreadId);
                 UnmanagedThreadId = GetCurrentUnmanagedThreadId.Invoke();
             }

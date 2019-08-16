@@ -53,7 +53,7 @@ namespace Raven.Server.Web.Studio
             if (CanAccessPath(_path, out var pathAccessError) == false)
                 error = pathAccessError;
 
-            var currentNodeInfo = new SingleNodeDataDirectoryResult
+            var currentNodeDirectoryInfo = new SingleNodeDataDirectoryResult
             {
                 NodeTag = _serverStore.NodeTag,
                 FullPath = realPath,
@@ -64,15 +64,13 @@ namespace Raven.Server.Web.Studio
                 Error = error
             };
 
-
-
             if (_getNodesInfo == false)
             {
                 // write info of a single node
                 using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (var writer = new BlittableJsonTextWriter(context, _responseBodyStream))
                 {
-                    context.Write(writer, currentNodeInfo.ToJson());
+                    context.Write(writer, currentNodeDirectoryInfo.ToJson());
                 }
 
                 return;
@@ -82,7 +80,7 @@ namespace Raven.Server.Web.Studio
             var relevantNodes = GetRelevantNodes(databaseName, clusterTopology);
 
             var dataDirectoryResult = new DataDirectoryResult();
-            dataDirectoryResult.List.Add(currentNodeInfo);
+            dataDirectoryResult.List.Add(currentNodeDirectoryInfo);
 
             if (relevantNodes.Count > 1)
             {

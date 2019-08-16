@@ -16,8 +16,9 @@ import shell = require("viewmodels/shell");
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
     
-    private static namePrefix = "Server Wide Backup";
-
+    private static serverWideNamePrefixFromServer = "Server Wide Backup";
+    isServerWide: KnockoutComputed<boolean>;
+    
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
     
@@ -48,8 +49,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     onGoingBackupHumanized: KnockoutComputed<string>;
     retentionPolicyHumanized: KnockoutComputed<string>;
     
-    isServerWide: KnockoutComputed<boolean>;
-
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
         
@@ -62,8 +61,17 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     initializeObservables() {
         super.initializeObservables();
 
-        const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editPeriodicBackupTask(this.taskId);
+        this.isServerWide = ko.pureComputed(() => {
+            return this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer);
+        });
+        
+        this.editUrl = ko.pureComputed(()=> {
+             const urls = appUrl.forCurrentDatabase();
+             
+             return this.isServerWide() ?  appUrl.forEditServerWideBackup(this.taskName().replace(ongoingTaskBackupListModel.serverWideNamePrefixFromServer +', ', '')) :
+                                           // Using replace() above since the Server-Wide view is using tasks name *without* the prefix...
+                                           urls.editPeriodicBackupTask(this.taskId)();
+        });
 
         this.isBackupNowEnabled = ko.pureComputed(() => {
             if (this.nextBackupHumanized() === "N/A") {
@@ -166,10 +174,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         });
 
         this.fullBackupTypeName = ko.pureComputed(() => this.getBackupType(this.backupType(), true));
-        
-        this.isServerWide = ko.pureComputed(() => {
-            return this.taskName().startsWith(ongoingTaskBackupListModel.namePrefix);
-        });
     }
 
     update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
@@ -275,6 +279,10 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             });
 
         app.showBootstrapDialog(confirmDeleteViewModel);
+    }
+
+    navigateToServerWideBackupsListView() {
+        router.navigate(appUrl.forServerWideBackupList());
     }
 }
 

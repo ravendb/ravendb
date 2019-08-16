@@ -291,6 +291,11 @@ class ongoingTasks extends viewModelBase {
             groupedTasks['Backup' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => new ongoingTaskBackupListModel(dto, task => this.watchBackupCompletion(task)));
+        
+        // Sort backup tasks 
+        const groupedBackupTasks = _.groupBy(this.backupTasks(), x => x.isServerWide()); 
+        this.backupTasks(groupedBackupTasks.false.concat(groupedBackupTasks.true));
+        
         this.mergeTasks(this.etlTasks, 
             groupedTasks['RavenEtl' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
             toDeleteIds,
@@ -377,7 +382,7 @@ class ongoingTasks extends viewModelBase {
             .filter(x => _.includes(toDelete, x.taskId))
             .forEach(task => container.remove(task));
         
-         (incomingData || []).forEach(item => {
+        (incomingData || []).forEach(item => {
             const existingItem = container().find(x => x.taskId === item.TaskId);
             if (existingItem) {
                 existingItem.update(item);
@@ -386,8 +391,7 @@ class ongoingTasks extends viewModelBase {
                 const insertIdx = _.sortedIndexBy(container(), newItem, x => x.taskName().toLocaleLowerCase());
                 container.splice(insertIdx, 0, newItem);
             }
-        })
-        
+        });
     }
 
     manageDatabaseGroupUrl(dbInfo: databaseInfo): string {

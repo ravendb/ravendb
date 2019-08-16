@@ -183,6 +183,11 @@ namespace Raven.Server.Web.System
             {
                 throw new NotImplementedException();
             }
+
+            public bool IsResourceIntensive()
+            {
+                return false;
+            }
         }
     }
 }

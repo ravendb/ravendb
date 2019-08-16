@@ -68,6 +68,7 @@ namespace Raven.Server.Routing
                                 route.Path, 
                                 route.RequiredAuthorization, 
                                 route.SkipUsagesCount,
+                                route.SkipLastRequestTimeUpdate,
                                 route.CorsMode,
                                 route.IsDebugInformationEndpoint,
                                 route.DisableOnCpuCreditsExhaustion);
@@ -84,6 +85,7 @@ namespace Raven.Server.Routing
                             route.Path, 
                             route.RequiredAuthorization, 
                             route.SkipUsagesCount,
+                            route.SkipLastRequestTimeUpdate,
                             route.CorsMode,
                             route.IsDebugInformationEndpoint,
                             route.DisableOnCpuCreditsExhaustion);

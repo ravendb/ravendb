@@ -1152,41 +1152,7 @@ namespace Raven.Server.Web.System
 
             return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
         }
-
-        [RavenAction("/admin/configuration/server-wide/backup", "PUT", AuthorizationStatus.ClusterAdmin)]
-        public async Task PutServerWideBackupConfigurationCommand()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var configurationBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-backup-configuration");
-
-                var configuration = JsonDeserializationCluster.ServerWideBackupConfiguration(configurationBlittable);
-
-                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
-                BackupConfigurationHelper.UpdateLocalPathIfNeeded(configuration, ServerStore);
-                BackupConfigurationHelper.AssertBackupConfiguration(configuration);
-                BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
-
-                var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                using (context.OpenReadTransaction())
-                {
-                    var backupName = ServerStore.Cluster.GetServerWideBackupNameByTaskId(context, newIndex);
-                    if (backupName == null)
-                        throw new InvalidOperationException($"Backup name is null for server wide backup with task id: {newIndex}");
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(PutServerWideBackupConfigurationResponse.Name));
-                    writer.WriteString(backupName);
-
-                    writer.WriteEndObject();
-                }
-            }
-        }
-
+        
         [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]
         public async Task SetUnusedDatabaseIds()
         {
@@ -1202,50 +1168,6 @@ namespace Raven.Server.Web.System
             }
 
             NoContentStatus();
-        }
-
-
-        [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
-        public async Task DeleteServerWideBackupConfigurationCommand()
-        {
-            var name = GetStringQueryString("name", required: true);
-
-            var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name, GetRaftRequestIdFromQuery());
-            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
-
-            NoContentStatus();
-        }
-
-        [RavenAction("/admin/configuration/server-wide/backup", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetServerWideBackupConfigurationCommand()
-        {
-            var name = GetStringQueryString("name", required: false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var backups = ServerStore.Cluster.GetServerWideBackupConfigurations(context, name);
-
-                writer.WriteStartObject();
-
-                var isFirst = true;
-                writer.WritePropertyName(nameof(GetServerWideBackupConfigurationsResponse.Results));
-                writer.WriteStartArray();
-                foreach (var backup in backups)
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-                    writer.WriteObject(backup);
-                }
-
-                writer.WriteEndArray();
-                writer.WriteEndObject();
-
-                return Task.CompletedTask;
-            }
         }
 
         [RavenAction("/admin/migrate", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]

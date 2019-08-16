@@ -76,7 +76,8 @@ namespace Raven.Server.Routing
 
             try
             {
-                _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
+                if (tryMatch.Value.SkipLastRequestTimeUpdate == false)
+                    _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
 
                 if (handler == null)
                 {
@@ -122,7 +123,7 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
-                    if (tryMatch.Value.DisableOnCpuCreditsExhaustion && 
+                    if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&
                         _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
                         RejectRequestBecauseOfCpuThreshold(context);
