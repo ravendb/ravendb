@@ -1037,6 +1037,9 @@ namespace Raven.Client.Documents.Indexes
             if (type.GetTypeInfo().Assembly == typeof(HashSet<>).GetTypeInfo().Assembly) // System.Core
                 return true;
 
+            if (type.GetTypeInfo().Assembly == typeof(Regex).GetTypeInfo().Assembly) // System.Text.RegularExpressions
+                return true;
+
             if (type.GetTypeInfo().Assembly.FullName.StartsWith("Lucene.Net") &&
                 type.GetTypeInfo().Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
                 return true;
