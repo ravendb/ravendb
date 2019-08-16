@@ -127,17 +127,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server wide backup task";
+                var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
 
                 backupConfiguration.TaskId = 0;
                 backupConfiguration.Name = currentBackupConfiguration.Name;
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                expectedError = $"Can't update task name '{taskName}', because it is a server wide backup task";
+                expectedError = $"Can't update task name '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
-                expectedError = $"Can't delete task id: {serverWideBackupTaskId}, name: '{taskName}', because it is a server wide backup task";
+                expectedError = $"Can't delete task id: {serverWideBackupTaskId}, name: '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
             }
         }
@@ -161,10 +161,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var serverWideBackupTaskId = currentBackupConfiguration.TaskId;
 
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, false)));
-                Assert.Contains("Can't enable task name 'Server Wide Backup, Backup w/o destinations', because it is a server wide backup task", e.Message);
+                Assert.Contains("Can't enable task name 'Server Wide Backup, Backup w/o destinations', because it is a server-wide backup task", e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(serverWideBackupTaskId, OngoingTaskType.Backup, true)));
-                Assert.Contains("Can't disable task name 'Server Wide Backup, Backup w/o destinations', because it is a server wide backup task", e.Message);
+                Assert.Contains("Can't disable task name 'Server Wide Backup, Backup w/o destinations', because it is a server-wide backup task", e.Message);
             }
         }
 
@@ -195,17 +195,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var taskName = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(putConfiguration.GetDefaultTaskName());
                 var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server wide backup task";
+                var expectedError = $"Can't delete task id: {currentBackupConfiguration.TaskId}, name: '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
 
                 backupConfiguration.TaskId = 0;
                 backupConfiguration.Name = currentBackupConfiguration.Name;
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                expectedError = $"Can't update task name '{taskName}', because it is a server wide backup task";
+                expectedError = $"Can't update task name '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
-                expectedError = $"Can't delete task id: {serverWideBackupTaskId}, name: '{taskName}', because it is a server wide backup task";
+                expectedError = $"Can't delete task id: {serverWideBackupTaskId}, name: '{taskName}', because it is a server-wide backup task";
                 Assert.Contains(expectedError, e.Message);
             }
         }
@@ -329,7 +329,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(3, databaseRecord.PeriodicBackups.Count);
 
-                // new database includes all server wide backups
+                // new database includes all server-wide backups
                 var newDbName = store.Database + "-testDatabase";
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
                 databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
@@ -369,7 +369,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
                 Assert.Equal(1, serverWideBackups.Length);
 
-                // verify that the server wide backup was deleted from all databases
+                // verify that the server-wide backup was deleted from all databases
                 record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record1.PeriodicBackups.Count);
                 Assert.Equal($"{ServerWideBackupConfiguration.NamePrefix}, {putConfiguration.GetDefaultTaskName()} #2", record1.PeriodicBackups.First().Name);
@@ -631,7 +631,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 store.Maintenance.Server.Send(restoreOperation)
                     .WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                // old server should have 2: 1 server wide and 1 regular backup
+                // old server should have 2: 1 server-wide and 1 regular backup
                 using (var store2 = GetDocumentStore(new Options
                 {
                     CreateDatabase = false,

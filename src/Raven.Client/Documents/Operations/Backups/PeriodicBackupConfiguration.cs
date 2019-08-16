@@ -13,43 +13,32 @@ namespace Raven.Client.Documents.Operations.Backups
 {
     public class PeriodicBackupConfiguration : IDatabaseTask
     {
-        public long TaskId { get; set; }
-
-        public bool Disabled { get; set; }
-
+        public long TaskId { get; set; } 
+        public bool Disabled { get; set; } 
         public string Name { get; set; }
-
         public string MentorNode { get; set; }
-
         public BackupType BackupType { get; set; }
-
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
-
         public RetentionPolicy RetentionPolicy { get; set; }
-
+        
+        public LocalSettings LocalSettings { get; set; }
+        public S3Settings S3Settings { get; set; }
+        public GlacierSettings GlacierSettings { get; set; }
+        public AzureSettings AzureSettings { get; set; }
+        public FtpSettings FtpSettings { get; set; }
+        public GoogleCloudSettings GoogleCloudSettings { get; set; }
+        
         /// <summary>
         /// Frequency of full backup jobs in cron format
         /// </summary>
         public string FullBackupFrequency { get; set; }
-
+        
         /// <summary>
         /// Frequency of incremental backup jobs in cron format
         /// If set to null incremental backup will be disabled.
         /// </summary>
         public string IncrementalBackupFrequency { get; set; }
-
-        public LocalSettings LocalSettings { get; set; }
-
-        public S3Settings S3Settings { get; set; }
-
-        public GlacierSettings GlacierSettings { get; set; }
-
-        public AzureSettings AzureSettings { get; set; }
-
-        public FtpSettings FtpSettings { get; set; }
-
-        public GoogleCloudSettings GoogleCloudSettings { get; set; }
-
+        
         public ulong GetTaskKey()
         {
             Debug.Assert(TaskId != 0);
@@ -73,6 +62,11 @@ namespace Raven.Client.Documents.Operations.Backups
         public string GetTaskName()
         {
             return Name;
+        }
+
+        public bool IsResourceIntensive()
+        {
+            return true;
         }
 
         public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)
@@ -135,7 +129,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return backupDestinations;
         }
 
-        public DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {

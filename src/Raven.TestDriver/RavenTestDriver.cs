@@ -68,6 +68,12 @@ namespace Raven.TestDriver
         protected IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
         {
             options = options ?? GetDocumentStoreOptions.Default;
+
+            if (string.Equals(database, ".ctor", StringComparison.OrdinalIgnoreCase))
+                database = $"{GetType().Name}_ctor";
+            else if (string.Equals(database, ".cctor", StringComparison.OrdinalIgnoreCase))
+                database = $"{GetType().Name}_cctor";
+
             var name = database + "_" + Interlocked.Increment(ref _index);
             var documentStore = TestServerStore.Value;
 

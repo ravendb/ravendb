@@ -380,6 +380,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ConnectionStringType));
             scripter.AddType(typeof(GetConnectionStringsResult));
 
+            // server-wide backup
+            scripter.AddType(typeof(ServerWideBackupConfigurationResults));
+            scripter.AddType(typeof(PutServerWideBackupConfigurationResponse)); 
+            
             // certificates
             scripter.AddType(typeof(CertificateDefinition));
 

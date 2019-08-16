@@ -422,11 +422,9 @@ namespace Raven.Server.Web.System
         {
             var path = GetStringQueryString("path", required: true);
             var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
-
-            var pathResult = BackupConfigurationHelper.GetActualFullPath(ServerStore, path);
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            var info = new DataDirectoryInfo(ServerStore, pathResult.FolderPath, Database.Name, isBackup: true, getNodesInfo, requestTimeoutInMs, ResponseBodyStream());
-            await info.UpdateDirectoryResult(databaseName: Database.Name, error: pathResult.Error);
+            
+            await BackupConfigurationHelper.GetFullBackupDataDirectory(path, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
@@ -1153,8 +1151,6 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
-        
 
         [RavenAction("/databases/*/admin/tasks/external-replication", "POST", AuthorizationStatus.Operator)]
         public async Task UpdateExternalReplication()

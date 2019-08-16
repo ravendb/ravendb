@@ -92,6 +92,11 @@ namespace Raven.Client.Documents.Operations.ETL
             return Name;
         }
 
+        public bool IsResourceIntensive()
+        {
+            return false;
+        }
+
         public override string ToString()
         {
             return Name;

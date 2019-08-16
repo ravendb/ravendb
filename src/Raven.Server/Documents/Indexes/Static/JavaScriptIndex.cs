@@ -19,7 +19,6 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptIndex : StaticIndexBase
     {
-
         private const string GlobalDefinitions = "globalDefinition";
         private const string MapsProperty = "maps";
         private const string CollectionProperty = "collection";
@@ -62,6 +61,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 ProcessFields(definition, collectionFunctions);
             }
+
+            _javaScriptUtils = new JavaScriptUtils(null, _engine);
         }
 
         public Action TryRemoveFromCache { get; set; }
@@ -209,7 +210,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private (List<string> Maps, List<HashSet<CollectionName>> MapReferencedCollections) InitializeEngine(IndexDefinition definition)
         {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
-
+            _engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", GetMetadata));
+            _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
             _engine.ExecuteWithReset(Code);
 
             if (definition.AdditionalSources != null)
@@ -234,6 +236,22 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             return (maps, mapReferencedCollections);
+        }
+
+        private JsValue GetDocumentId(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.GetDocumentId(self, args);
+        }
+
+        private JsValue GetMetadata(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.GetMetadata(self, args);
         }
 
         private void ThrowIndexCreationException(string message)
@@ -303,6 +321,7 @@ function createSpatialField(lat, lng) {
 
         private readonly IndexDefinition _definitions;
         private readonly Engine _engine;
+        private readonly JavaScriptUtils _javaScriptUtils;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
 

@@ -476,10 +476,9 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var recentConnection = state.Value.MostRecentEndedConnection();
 
-                while (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
+                if (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
                     _subscriptionConnectionStates.Remove(state.Key, out _);
-                    recentConnection = state.Value.MostRecentEndedConnection();
                 }
             }
         }
@@ -491,7 +490,7 @@ namespace Raven.Server.Documents.Subscriptions
                 if (state.Value.Connection != null)
                     continue;
 
-                state.Value.CleanupRecentAndRejectedConnections();
+                _subscriptionConnectionStates.Remove(state.Key, out _);
             }
         }
 

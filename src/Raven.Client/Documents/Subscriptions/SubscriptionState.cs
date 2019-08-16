@@ -43,6 +43,11 @@ namespace Raven.Client.Documents.Subscriptions
             return SubscriptionName;
         }
 
+        public bool IsResourceIntensive()
+        {
+            return false;
+        }
+
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

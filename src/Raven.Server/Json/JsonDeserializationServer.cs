@@ -45,6 +45,8 @@ namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, ServerWideBackupConfigurationForStudio> ServerWideBackupConfiguration = GenerateJsonDeserializationRoutine<ServerWideBackupConfigurationForStudio>();
+        
         public static readonly Func<BlittableJsonReaderObject, StartTransactionsRecordingOperation.Parameters> StartTransactionsRecordingOperationParameters = GenerateJsonDeserializationRoutine<StartTransactionsRecordingOperation.Parameters>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader = GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
@@ -114,8 +116,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, CertificateDefinition> CertificateDefinition = GenerateJsonDeserializationRoutine<CertificateDefinition>();
 
-        public static readonly Func<BlittableJsonReaderObject, AdminCpuCreditsHandler.CpuCredits> CpuCredits = GenerateJsonDeserializationRoutine<AdminCpuCreditsHandler.CpuCredits>();
-
         public static readonly Func<BlittableJsonReaderObject, UserDomainsWithIps> UserDomainsWithIps = GenerateJsonDeserializationRoutine<UserDomainsWithIps>();
 
         public static readonly Func<BlittableJsonReaderObject, SetupInfo> SetupInfo = GenerateJsonDeserializationRoutine<SetupInfo>();
@@ -165,6 +165,10 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, NodeConnectionTestResult> NodeConnectionTestResult = GenerateJsonDeserializationRoutine<NodeConnectionTestResult>();
 
         public static readonly Func<BlittableJsonReaderObject, SingleNodeDataDirectoryResult> SingleNodeDataDirectoryResult = GenerateJsonDeserializationRoutine<SingleNodeDataDirectoryResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, AdminCpuCreditsHandler.CpuCredits> CpuCredits = GenerateJsonDeserializationRoutine<AdminCpuCreditsHandler.CpuCredits>();
+
+        public static readonly Func<BlittableJsonReaderObject, RavenServer.CpuCreditsResponse> CpuCreditsResponse = GenerateJsonDeserializationRoutine<RavenServer.CpuCreditsResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, LocalSettings> LocalSettings = GenerateJsonDeserializationRoutine<LocalSettings>();
 

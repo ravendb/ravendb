@@ -14,8 +14,6 @@ using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
-using Lucene.Net.Store;
-using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
@@ -36,7 +34,7 @@ namespace Raven.Server.Documents.Patch
         private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
         private readonly DocumentDatabase _db;
         private readonly RavenConfiguration _configuration;
-        private readonly bool _enableClr;
+        internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
 
@@ -104,7 +102,6 @@ namespace Raven.Server.Documents.Patch
             private readonly DocumentDatabase _database;
             private readonly RavenConfiguration _configuration;
 
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
             private DocumentsOperationContext _docsCtx;
@@ -115,11 +112,18 @@ namespace Raven.Server.Documents.Patch
             public bool PutOrDeleteCalled;
             public HashSet<string> Includes;
             private HashSet<string> _documentIds;
-            public bool ReadOnly;
+
+            public bool ReadOnly
+            {
+                get => JavaScriptUtils.ReadOnly;
+                set => JavaScriptUtils.ReadOnly = value;
+            }
+
             public string OriginalDocumentId;
             public bool RefreshOriginalDocument;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
             public HashSet<string> UpdatedDocumentCounterIds;
+            public JavaScriptUtils JavaScriptUtils;
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -140,6 +144,11 @@ namespace Raven.Server.Documents.Patch
                         .LocalTimeZone(TimeZoneInfo.Utc);
 
                 });
+
+                JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
+                ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, "getMetadata", JavaScriptUtils.GetMetadata));
+                ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
+
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
                 ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
                 consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
@@ -159,9 +168,6 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("incrementCounter", new ClrFunctionInstance(ScriptEngine, "incrementCounter", IncrementCounter));
                 ScriptEngine.SetValue("deleteCounter", new ClrFunctionInstance(ScriptEngine, "deleteCounter", DeleteCounter));
 
-                ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, "getMetadata", GetMetadata));
-
-                ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", GetDocumentId));
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, "lastModified", GetLastModified));
 
                 ScriptEngine.SetValue("startsWith", new ClrFunctionInstance(ScriptEngine, "startsWith", StartsWith));
@@ -498,38 +504,6 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("Unable to put documents when this instance is not attached to a database operation");
             }
 
-            private JsValue GetDocumentId(JsValue self, JsValue[] args)
-            {
-                if (args.Length != 1 && args.Length != 2) //length == 2 takes into account Query Arguments that can be added to args
-                    throw new InvalidOperationException("id(doc) must be called with a single argument");
-
-                if (args[0].IsNull() || args[0].IsUndefined())
-                    return args[0];
-
-                if (args[0].IsObject() == false)
-                    throw new InvalidOperationException("id(doc) must be called with an object argument");
-
-                var objectInstance = args[0].AsObject();
-
-                if (objectInstance is BlittableObjectInstance doc && doc.DocumentId != null)
-                    return doc.DocumentId;
-
-                var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
-                // search either @metadata.@id or @id
-                var metadata = jsValue.IsObject() == false ? objectInstance : jsValue.AsObject();
-                var value = metadata.Get(Constants.Documents.Metadata.Id);
-                if (value.IsString() == false)
-                {
-                    // search either @metadata.Id or Id
-                    value = metadata.Get(Constants.Documents.Metadata.IdProperty);
-                    if (value.IsString() == false)
-                        return JsValue.Null;
-                }
-                return value;
-            }
-
-
-
             private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
@@ -561,27 +535,6 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
-            }
-
-
-            private JsValue GetMetadata(JsValue self, JsValue[] args)
-            {
-                if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
-                    throw new InvalidOperationException("getMetadata(doc) must be called with a single entity argument");
-
-                if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
-                    return JsValue.Null;
-
-                metadata.Modifications = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
-                    [Constants.Documents.Metadata.Id] = boi.DocumentId,
-                    [Constants.Documents.Metadata.LastModified] = boi.LastModified,
-                };
-
-                metadata = _jsonCtx.ReadObject(metadata, boi.DocumentId);
-
-                return TranslateToJs(ScriptEngine, _jsonCtx, metadata);
             }
 
             private JsValue CompareExchange(JsValue self, JsValue[] args)
@@ -1118,8 +1071,6 @@ namespace Raven.Server.Documents.Patch
                 {
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
                 }
-
-
             }
 
             private JsValue CmpXchangeInternal(string key)
@@ -1134,7 +1085,7 @@ namespace Raven.Server.Documents.Patch
                     if (value == null)
                         return null;
 
-                    var jsValue = TranslateToJs(ScriptEngine, _jsonCtx, value.Clone(_jsonCtx));
+                    var jsValue = JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, value.Clone(_jsonCtx));
                     return jsValue.AsObject().Get("Object");
                 }
             }
@@ -1146,14 +1097,7 @@ namespace Raven.Server.Documents.Patch
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
                 var document = _database.DocumentsStorage.Get(_docsCtx, id);
-                return TranslateToJs(ScriptEngine, _jsonCtx, document);
-            }
-
-            public void DisposeClonedDocuments()
-            {
-                foreach (var disposable in _disposables)
-                    disposable.Dispose();
-                _disposables.Clear();
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
             private JsValue[] _args = Array.Empty<JsValue>();
@@ -1168,6 +1112,7 @@ namespace Raven.Server.Documents.Patch
             {
                 _docsCtx = docCtx;
                 _jsonCtx = jsonCtx ?? ThrowArgumentNull();
+                JavaScriptUtils.Reset(_jsonCtx);
 
                 Reset();
                 OriginalDocumentId = documentId;
@@ -1183,12 +1128,12 @@ namespace Raven.Server.Documents.Patch
                 catch (JavaScriptException e)
                 {
                     //ScriptRunnerResult is in charge of disposing of the disposible but it is not created (the clones did)
-                    DisposeClonedDocuments();
+                    JavaScriptUtils.Clear();
                     throw CreateFullError(e);
                 }
                 catch (Exception)
                 {
-                    DisposeClonedDocuments();
+                    JavaScriptUtils.Clear();
                     throw;
                 }
                 finally
@@ -1204,7 +1149,7 @@ namespace Raven.Server.Documents.Patch
                 if (_args.Length != args.Length)
                     _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
-                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+                    _args[i] = JavaScriptUtils.TranslateToJs(ScriptEngine, jsonCtx, args[i]);
 
                 if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
@@ -1258,126 +1203,7 @@ namespace Raven.Server.Documents.Patch
 
             public object Translate(JsonOperationContext context, object o)
             {
-                return TranslateToJs(ScriptEngine, context, o);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin, JsonOperationContext context)
-            {
-                if (ReadOnly)
-                    return origin;
-
-                var noCache = origin.NoCache;
-                origin.NoCache = true;
-                // RavenDB-8286
-                // here we need to make sure that we aren't sending a value to 
-                // the js engine that might be modified by the actions of the js engine
-                // for example, calling put() might cause the original data to change 
-                // because we defrag the data that we looked at. We are handling this by
-                // ensuring that we have our own, safe, copy.
-                var cloned = origin.Clone(context);
-                cloned.NoCache = true;
-                _disposables.Add(cloned);
-
-                origin.NoCache = noCache;
-                return cloned;
-            }
-
-            private JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
-            {
-                if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
-                {
-                    var d = t.Item1;
-                    return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d.Id, d.LastModified, d.ChangeVector)
-                    {
-                        LuceneDocument = t.Item2,
-                        LuceneState = t.Item3
-                    };
-                }
-                if (o is Document doc)
-                {
-                    return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified);
-                }
-                if (o is DocumentConflict dc)
-                {
-                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified);
-                }
-
-                if (o is BlittableJsonReaderObject json)
-                {
-                    return new BlittableObjectInstance(engine, null, Clone(json, context), null, null);
-                }
-
-                if (o == null)
-                    return Undefined.Instance;
-                if (o is long lng)
-                    return lng;
-                if (o is BlittableJsonReaderArray bjra)
-                {
-                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
-                    var args = new JsValue[1];
-                    for (var i = 0; i < bjra.Length; i++)
-                    {
-                        args[0] = TranslateToJs(engine, context, bjra[i]);
-                        engine.Array.PrototypeObject.Push(jsArray, args);
-                    }
-                    return jsArray;
-                }
-                if (o is List<object> list)
-                {
-                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
-                    var args = new JsValue[1];
-                    for (var i = 0; i < list.Count; i++)
-                    {
-                        args[0] = TranslateToJs(engine, context, list[i]);
-                        engine.Array.PrototypeObject.Push(jsArray, args);
-                    }
-                    return jsArray;
-                }
-                if (o is List<Document> docList)
-                {
-                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
-                    var args = new JsValue[1];
-                    for (var i = 0; i < docList.Count; i++)
-                    {
-                        args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified);
-                        engine.Array.PrototypeObject.Push(jsArray, args);
-                    }
-                    return jsArray;
-                }
-                // for admin
-                if (o is RavenServer || o is DocumentDatabase)
-                {
-                    AssertAdminScriptInstance();
-                    return JsValue.FromObject(engine, o);
-                }
-                if (o is ObjectInstance j)
-                    return j;
-                if (o is bool b)
-                    return b ? JsBoolean.True : JsBoolean.False;
-                if (o is int integer)
-                    return integer;
-                if (o is double dbl)
-                    return dbl;
-                if (o is string s)
-                    return s;
-                if (o is LazyStringValue ls)
-                    return ls.ToString();
-                if (o is LazyCompressedStringValue lcs)
-                    return lcs.ToString();
-                if (o is LazyNumberValue lnv)
-                {
-                    return BlittableObjectInstance.BlittableObjectProperty.GetJSValueForLazyNumber(engine, lnv);
-                }
-                if (o is JsValue js)
-                    return js;
-                throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
-            }
-
-            private void AssertAdminScriptInstance()
-            {
-                if (_runner._enableClr == false)
-                    throw new InvalidOperationException("Unable to run admin scripts using this instance of the script runner, the EnableClr is set to false");
+                return JavaScriptUtils.TranslateToJs(ScriptEngine, context, o);
             }
 
             public object CreateEmptyObject()
@@ -1434,7 +1260,6 @@ namespace Raven.Server.Documents.Patch
                 _run.UpdatedDocumentCounterIds?.Clear();
 
                 _parent._cache.Enqueue(_run);
-
                 _run = null;
                 _parent = null;
             }

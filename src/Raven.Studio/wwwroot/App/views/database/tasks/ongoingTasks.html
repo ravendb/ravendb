@@ -242,14 +242,12 @@
                                     </div>
                                     <div class="panel-name flex-grow">
                                         <h3>
-                                            <a href="#" data-bind="visible: !isServerWide(), click: editTask, attr: { 'title': 'Task name: ' + taskName() }">
-                                                <span data-bind="text: taskName"></span>
-                                            </a>
-                                            <div data-bind="visible: isServerWide">
-                                                <i class="icon-global"></i>
-                                                <span data-bind="text: taskName"></span>    
-                                            </div>
-                                            
+                                            <i class="icon-global" data-bind="visible: isServerWide()"></i>
+                                            <span>
+                                                <a href="#" data-bind="click: editTask, attr: { 'title': 'Task name: ' + taskName() }">
+                                                    <span data-bind="text: taskName"></span>
+                                                </a>
+                                            </span>
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
@@ -292,7 +290,7 @@
                                         </div>
                                     </div>
                                     <div class="flex-noshrink">
-                                        <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(),
+                                        <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: !isServerWide(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
                                             <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
@@ -477,35 +475,33 @@
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
                                 <div class="padding">
-                                    
-                                        <div class="list-properties">
-                                            <div class="property-item">
-                                                <div class="property-name">Hub Definition Name:</div>
-                                                <div class="property-value"><span class="text-details" data-bind="text: hubDefinitionName"></span></div>
-                                            </div>
-                                            <div class="property-item">
-                                                <div class="property-name">Task Status:</div>
-                                                <div class="property-value" data-bind="text: badgeText"></div>
-                                            </div>
-                                            <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
-                                            <div class="property-item" data-bind="visible: connectionStringDefined">
-                                                <div class="property-name">Destination Database:</div>
-                                                <div class="property-value" data-bind="text:  destinationDB" title="Destination database"></div>
-                                            </div>
-                                            <div class="property-item">
-                                                <div class="property-name">Actual Destination URL</div>
-                                                <div class="property-value" title="Actual Destination Url">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
-                                                </div>
-                                            </div>
-                                            <!-- ko foreach: topologyDiscoveryUrls -->
-                                            <div class="property-item">
-                                                <div class="property-name" data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></div>
-                                                <div class="property-value" data-bind="text: $data" title="Discovery Url"></div>
-                                            </div>
-                                            <!-- /ko -->
+                                    <div class="list-properties">
+                                        <div class="property-item">
+                                            <div class="property-name">Hub Definition Name:</div>
+                                            <div class="property-value"><span class="text-details" data-bind="text: hubDefinitionName"></span></div>
                                         </div>
-                                    
+                                        <div class="property-item">
+                                            <div class="property-name">Task Status:</div>
+                                            <div class="property-value" data-bind="text: badgeText"></div>
+                                        </div>
+                                        <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
+                                        <div class="property-item" data-bind="visible: connectionStringDefined">
+                                            <div class="property-name">Destination Database:</div>
+                                            <div class="property-value" data-bind="text:  destinationDB" title="Destination database"></div>
+                                        </div>
+                                        <div class="property-item">
+                                            <div class="property-name">Actual Destination URL</div>
+                                            <div class="property-value" title="Actual Destination Url">
+                                                <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
+                                            </div>
+                                        </div>
+                                        <!-- ko foreach: topologyDiscoveryUrls -->
+                                        <div class="property-item">
+                                            <div class="property-name" data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></div>
+                                            <div class="property-value" data-bind="text: $data" title="Discovery Url"></div>
+                                        </div>
+                                        <!-- /ko -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -586,8 +582,9 @@
     <div class="actions-container">
         <div class="actions">
             <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
-            <button class="btn btn-default" data-bind="visible: !isServerWide(), click: editTask" title="Edit task"><i class="icon-edit"></i></button>
+            <button class="btn btn-default" data-bind="click: editTask, attr: { 'title': isServerWide() ? 'Edit Server-Wide Backup task' : 'Edit backup task'}"><i class="icon-edit"></i></button>
             <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+            <button class="btn btn-default" data-bind="visible: isServerWide(), click: navigateToServerWideBackupsListView" title="Navigate to Server-Wide Backups List View"><i class="icon-global"></i></button>
         </div>
     </div>
 </script>

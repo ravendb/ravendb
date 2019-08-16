@@ -143,7 +143,7 @@ namespace Raven.Server.Web.System
             {".appcache", "text/cache-manifest; charset=utf-8"}
         };
 
-        [RavenAction("/favicon.ico", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        [RavenAction("/favicon.ico", "GET", AuthorizationStatus.UnauthenticatedClients, SkipLastRequestTimeUpdate = true)]
         public Task FavIcon()
         {
             return GetStudioFileInternal("favicon.ico");

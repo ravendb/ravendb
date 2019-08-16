@@ -12,6 +12,7 @@ import backupSettings = require("models/database/tasks/periodicBackup/backupSett
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import cronEditor = require("viewmodels/common/cronEditor");
+import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
 
 class editPeriodicBackupTask extends viewModelBase {
 
@@ -49,7 +50,7 @@ class editPeriodicBackupTask extends viewModelBase {
                             configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                         }
                         
-                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted()));
+                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
                         deferred.resolve();
                     })
                     .fail(() => {
@@ -61,7 +62,7 @@ class editPeriodicBackupTask extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
 
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), this.activeDatabase().isEncrypted()));
+                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
                 deferred.resolve();
             }
 
@@ -135,84 +136,38 @@ class editPeriodicBackupTask extends viewModelBase {
         
         popoverUtils.longWithHover($("#backup-info"),
             {
-                content: 
-                    "Differences between Backup and Snapshot:" +
-                    "<ul>" +
-                        "<li>Data" +
-                            "<small><ul>" +
-                                "<li><strong>Backup</strong> includes documents, indexes definitions and identities.<br> " +
-                                    "It doesn't include the index data itself, the indexes will be rebuilt after Restore, based on exported definitions.</li>" +
-                                "<li><strong>Snapshot</strong> contains the raw data including the indexes (definitions and data).</li>" +
-                            "</ul></small>" +
-                        "</li>" +
-                        "<li>Speed" +
-                            "<small><ul>" +
-                                "<li><strong>Backup</strong> is usually much faster than a <strong>Snapshot</strong></li>" +
-                            "</ul></small>" +
-                        "</li>" +
-                        "<li>Size" +
-                            "<small><ul>" +
-                                "<li><strong>Backup</strong> is much smaller than <strong>Snapshot</strong></li>" +
-                            "</ul></small>" +
-                        "</li>" +
-                        "<li>Restore" +
-                            "<small><ul>" +
-                                "<li>Restore of a <strong>Snapshot</strong> is faster than of a <strong>Backup</strong></li>" +
-                            "</ul></small>" +
-                        "</li>" +
-                    "</ul></>" +
-                    "Note: An incremental Snapshot is the same as an incremental Backup"
+                content: backupCommonContent.generalBackupInfo
             });
 
         popoverUtils.longWithHover($("#backup-age-info"),
             {
-                content:
-                    "<ul>" +
-                    "<li>Define the minimum time to keep the Backups (and Snapshots) in the system.<br></li>" +
-                    "<li>A <strong>Full Backup</strong> that is older than the specified retention time will be deleted by RavenDB server.<br>" +
-                    "If <strong>Incremental Backups</strong> exists, the Full Backup, and its incrementals, are removed only if the <em>last incremental</em> is older than the defined retention time.<br></li>"+
-                    "<li>The deletion occurs when the backup task is triggered on its schedule.</li>" +
-                    "</ul>"
+                content: backupCommonContent.backupAgeInfo
             });
 
         popoverUtils.longWithHover($("#bucket-info"),
             {
-                content: this.textForPopover("Bucket")
+                content: backupCommonContent.textForPopover("Bucket")
             });
 
         popoverUtils.longWithHover($("#bucket-gcs-info"),
             {
-                content: this.textForPopovergcs("Bucket")
+                content: backupCommonContent.textForPopoverGCS("Bucket")
             });
 
         popoverUtils.longWithHover($("#storage-container-info"),
             {
-                content: this.textForPopover("Storage container")
+                content: backupCommonContent.textForPopover("Storage container")
             });
 
         popoverUtils.longWithHover($("#vault-info"),
             {
-                content: this.textForPopover("Vault")   
+                content: backupCommonContent.textForPopover("Vault")
             });
 
         popoverUtils.longWithHover($("#ftp-host-info"),
             {
-                content:
-                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br />" +
-                    "If no protocol is specified the default one (ftp://) will be used.<br />" +
-                    "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>"
+                content: backupCommonContent.ftpHostInfo
             });
-    }
-
-    private textForPopover(storageName: string): string {
-        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
-            "You can use the 'Test credentials' button to verify its existance.";
-    }
-
-    private textForPopovergcs(storageName: string): string {
-        return `${storageName} should be created manually in order for this backup to work.<br /> ` +
-            "You can use the 'Test credentials' button to verify its existance.<br />" +
-            "<a href='https://cloud.google.com/storage/docs/bucket-naming' target='_blank'>Bucket naming guidelines</a>";
     }
 
     savePeriodicBackup() {

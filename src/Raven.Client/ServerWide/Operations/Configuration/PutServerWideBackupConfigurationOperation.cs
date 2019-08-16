@@ -7,6 +7,7 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
@@ -60,6 +61,21 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             {
                 Result = JsonDeserializationClient.PutServerWideBackupConfigurationResponse(response);
             }
+        }
+    }
+    
+    public class PutServerWideBackupConfigurationResponse : IDynamicJson 
+    {
+        public string Name { get; set; } 
+        public long RaftCommandIndex { get; set; }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(RaftCommandIndex)] = RaftCommandIndex
+            };
         }
     }
 }
