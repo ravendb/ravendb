@@ -1187,8 +1187,7 @@ namespace Raven.Server.ServerWide
                 items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
 
-            var dbNameLowered = databaseName.ToLowerInvariant();
-            var databaseLowered = $"{dbNameLowered}/";
+            var databaseLowered = $"{databaseName.ToLowerInvariant()}/";
             using (Slice.From(context.Allocator, databaseLowered, out var databaseSlice))
             {
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange).DeleteByPrimaryKeyPrefix(databaseSlice);
@@ -1197,7 +1196,7 @@ namespace Raven.Server.ServerWide
             }
 
             // db can be idle when we are deleting it
-            serverStore?.IdleDatabases.Remove(dbNameLowered, out _);
+            serverStore?.IdleDatabases.Remove(databaseName, out _);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -2796,7 +2795,7 @@ namespace Raven.Server.ServerWide
             TcpConnectionInfo info;
             using (var cts = new CancellationTokenSource(_parent.TcpConnectionTimeout))
             {
-                info = await ReplicationUtils.GetTcpInfoAsync(url, null, null, default, "Cluster", certificate, cts.Token);
+                info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
 
             TcpClient tcpClient = null;

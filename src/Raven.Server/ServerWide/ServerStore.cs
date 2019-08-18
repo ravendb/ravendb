@@ -131,7 +131,7 @@ namespace Raven.Server.ServerWide
 
             _server = server;
 
-            IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>();
+            IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
@@ -1959,7 +1959,7 @@ namespace Raven.Server.ServerWide
                                 dbIdEtagDictionary[kvp.Key] = kvp.Value;
                             }
                         }
-                        IdleDatabases[idleDbInstance.Name.ToLowerInvariant()] = dbIdEtagDictionary.Count > 0 ? dbIdEtagDictionary : null;
+                        IdleDatabases[idleDbInstance.Name] = dbIdEtagDictionary;
 
                         DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTime());
                     }
@@ -2638,7 +2638,7 @@ namespace Raven.Server.ServerWide
 
                 using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
                 {
-                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, null, default, "Test-Connection", Server.Certificate.Certificate,
+                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, "Test-Connection", Server.Certificate.Certificate,
                         cts.Token);
                 }
                 Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);

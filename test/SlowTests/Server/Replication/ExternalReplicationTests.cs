@@ -144,7 +144,8 @@ namespace SlowTests.Server.Replication
                 RunInMemory = false
             }))
             {
-                var externalTask = new ExternalReplication(store2.Database, "MyConnectionString")
+                // lowercase for test 
+                var externalTask = new ExternalReplication(store2.Database.ToLowerInvariant(), "MyConnectionString")
                 {
                     Name = "MyExternalReplication"
                 };
@@ -388,18 +389,79 @@ namespace SlowTests.Server.Replication
             foreach (var server in Servers)
             {
                 Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
-                Assert.True(server.ServerStore.IdleDatabases.TryGetValue(databaseName.ToLowerInvariant(), out var dictionary));
-                Assert.Equal(2, dictionary.Count);
+                Assert.True(server.ServerStore.IdleDatabases.TryGetValue(databaseName, out var dictionary));
+                
+                // new incoming replications not saved in IdleDatabases
+                Assert.Equal(0, dictionary.Count);
             }
 
             var rnd = new Random();
+            var index = rnd.Next(0, Servers.Count - 1);
             using (var store = new DocumentStore
             {
-                Urls = new[] { Servers[rnd.Next(0, Servers.Count - 1)].WebUrl },
+                Urls = new[] { Servers[index].WebUrl },
                 Database = databaseName
             }.Initialize())
             {
                 await store.Maintenance.SendAsync(new GetStatisticsOperation());
+            }
+
+            Assert.Equal(2, GetIdleCount());
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { Servers[index].WebUrl },
+                Database = databaseName
+            }.Initialize())
+            {
+                using (var s = store.OpenAsyncSession())
+                {
+                    await s.StoreAsync(new User()
+                    {
+                        Name = "Egor"
+                    }, "foo/bar");
+
+                    await s.SaveChangesAsync();
+                }
+            }
+
+            nextNow = DateTime.Now + TimeSpan.FromSeconds(300);
+            while (now < nextNow && GetIdleCount() > 0)
+            {
+                Thread.Sleep(3000);
+                now = DateTime.Now;
+            }
+
+            Assert.Equal(0, GetIdleCount());
+
+            foreach (var server in Servers)
+            {
+                using (var store = new DocumentStore
+                {
+                    Urls = new[] { server.WebUrl},
+                    Database = databaseName
+                }.Initialize())
+                {
+                    var docs = (await store.Maintenance.SendAsync(new GetStatisticsOperation())).CountOfDocuments;
+                    Assert.Equal(1, docs);
+                }
+            }
+
+            index = rnd.Next(0, Servers.Count - 1);
+            nextNow = DateTime.Now + TimeSpan.FromSeconds(300);
+
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { Servers[index].WebUrl },
+                Database = databaseName
+            }.Initialize())
+            {
+                while (now < nextNow && GetIdleCount() < 2)
+                {
+                    Thread.Sleep(3000);
+                    await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                    now = DateTime.Now;
+                }
             }
 
             Assert.Equal(2, GetIdleCount());
