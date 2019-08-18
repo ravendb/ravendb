@@ -87,21 +87,23 @@ namespace Raven.Server.Routing
                 throw new NodeIsPassiveException($"Can't perform actions on the database '{databaseName}' while the node is passive.");
             }
 
-            if (context.RavenServer.ServerStore.IdleDatabases.Count > 0 
-                && context.RavenServer.ServerStore.IdleDatabases.TryGetValue(databaseName.Value.ToLowerInvariant(), out var replicationsDictionary) && replicationsDictionary != null)
+            if (context.RavenServer.ServerStore.IdleDatabases.TryGetValue(databaseName.Value, out var replicationsDictionary))
             {
-                if (context.HttpContext.Request.Query.TryGetValue("from-outgoing", out var dbId))
+                if (context.HttpContext.Request.Query.TryGetValue("from-outgoing", out var dbId) && context.HttpContext.Request.Query.TryGetValue("etag", out var replicationEtag))
                 {
                     var hasChanges = false;
+                    var etag = Convert.ToInt64(replicationEtag);
 
                     if (replicationsDictionary.TryGetValue(dbId, out var storedEtag))
                     {
-                        if (context.HttpContext.Request.Query.TryGetValue("etag", out var etag) && storedEtag < Convert.ToInt64(etag))
+                        if (storedEtag < etag)
                             hasChanges = true;
                     }
                     else
                     {
-                        hasChanges = true;
+                        if (etag > 0)
+                            hasChanges = true;
+
                     }
 
                     if (hasChanges == false)
@@ -133,7 +135,7 @@ namespace Raven.Server.Routing
 
         private void ClearIdleDatabase(RequestHandlerContext context, string databaseName)
         {
-            context.RavenServer.ServerStore.IdleDatabases.Remove(databaseName.ToLowerInvariant(), out _);
+            context.RavenServer.ServerStore.IdleDatabases.Remove(databaseName, out _);
         }
 
         private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database,

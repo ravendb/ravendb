@@ -1762,11 +1762,7 @@ namespace Raven.Server.Documents
                 do
                 {
                     var dbId = it.CurrentKey.ToString();
-                    var readResult = readTree.Read(dbId);
-                    if (readResult == null)
-                        yield return new KeyValuePair<string, long>(dbId, 0);
-
-                    yield return new KeyValuePair<string, long>(dbId, readResult.Reader.ReadLittleEndianInt64());
+                    yield return new KeyValuePair<string, long>(dbId, it.CreateReaderForCurrent().ReadLittleEndianInt64());
                 }
                 while (it.MoveNext());
             }

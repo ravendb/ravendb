@@ -258,16 +258,6 @@ namespace Raven.Server.Documents.Replication
             var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
             if (newConnection == newIncoming)
             {
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext doc))
-                using (var tx = doc.OpenWriteTransaction())
-                {
-                    if (DocumentsStorage.GetLastReplicatedEtagFrom(doc, newIncoming.ConnectionInfo.SourceDatabaseId) == 0)
-                    {
-                        DocumentsStorage.SetLastReplicatedEtagFrom(doc, newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming.LastDocumentEtag);
-                        tx.Commit();
-                    }
-                }
-
                 newIncoming.Start();
                 IncomingReplicationAdded?.Invoke(newIncoming);
                 ForceTryReconnectAll();
