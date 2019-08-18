@@ -99,6 +99,24 @@ namespace Tests.Infrastructure
             }
         }
 
+        protected void DisconnectBiDirectionalFromNode(RachisConsensus<CountingStateMachine> node)
+        {
+            foreach (var follower in RachisConsensuses.Where(x => x.Url != node.Url))
+            {
+                Disconnect(follower.Url, node.Url);
+                Disconnect(node.Url, follower.Url);
+            }
+        }
+
+        protected void ReconnectBiDirectionalFromNode(RachisConsensus<CountingStateMachine> node)
+        {
+            foreach (var follower in RachisConsensuses.Where(x => x.Url != node.Url))
+            {
+                Reconnect(follower.Url, node.Url);
+                Reconnect(node.Url, follower.Url);
+            }
+        }
+
         protected void ReconnectToNode(RachisConsensus<CountingStateMachine> node)
         {
             foreach (var follower in RachisConsensuses.Where(x => x.Url != node.Url))
