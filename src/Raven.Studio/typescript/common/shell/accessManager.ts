@@ -25,7 +25,8 @@ class accessManager {
     clusterView = {
         canAddNode: this.clusterAdminOrClusterNode,
         canDeleteNode: this.clusterAdminOrClusterNode,
-        showCoresInfo: this.clusterAdminOrClusterNode
+        showCoresInfo: this.clusterAdminOrClusterNode,
+        canDemotePromoteNode: this.clusterAdminOrClusterNode
     };
     
     aboutView = {
