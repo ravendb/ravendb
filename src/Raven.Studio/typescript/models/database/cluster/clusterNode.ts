@@ -1,9 +1,9 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import generalUtils = require("common/generalUtils");
 import license = require("models/auth/licenseModel");
 import popoverUtils = require("common/popoverUtils");
+import accessManager = require("common/shell/accessManager");
 
 class clusterNode {
     tag = ko.observable<string>();
@@ -144,7 +144,9 @@ class clusterNode {
             if (!topology.leader()) {
                 return false;
             }
-            return this.type() === "Watcher";
+          
+            return this.type() === "Watcher" &&
+                   accessManager.default.clusterView.canDemotePromoteNode();
         });
     }
 
@@ -154,7 +156,10 @@ class clusterNode {
             if (!topology.leader()) {
                 return false;
             }
-            return topology.leader() !== this.tag() && (this.type() === "Member" || this.type() === "Promotable");
+            
+            return topology.leader() !== this.tag() && 
+                   (this.type() === "Member" || this.type() === "Promotable") &&
+                    accessManager.default.clusterView.canDemotePromoteNode();
         });
     }
 
