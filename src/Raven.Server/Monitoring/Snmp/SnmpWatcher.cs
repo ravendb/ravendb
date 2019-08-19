@@ -323,9 +323,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerLicenseExpirationLeft(server.ServerStore));
 
             store.Add(new ServerStorageUsedSize(server.ServerStore));
-            store.Add(new ServerStorageAllocatedSize(server.ServerStore));
             store.Add(new ServerStorageTotalSize(server.ServerStore));
             store.Add(new ServerStorageDiskRemainingSpace(server.ServerStore));
+            store.Add(new ServerStorageDiskRemainingSpacePercentage(server.ServerStore));
 
             return store;
         }
