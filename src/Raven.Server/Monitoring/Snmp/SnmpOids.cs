@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Reflection;
-using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -78,6 +77,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
 
+            [Description("Server low memory flag value")]
+            public const string LowMemoryFlag = "1.6.2";
+
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 
@@ -89,16 +91,27 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Server last request time")]
             public const string LastRequestTime = "1.8";
-            
+
             [Description("Server license type")]
             public const string ServerLicenseType = "1.9.1";
-            
+
             [Description("Server license expiration date")]
             public const string ServerLicenseExpiration = "1.9.2";
-            
+
             [Description("Server license expiration left")]
             public const string ServerLicenseExpirationLeft = "1.9.3";
-            
+
+            [Description("Server storage used size in MB")]
+            public const string StorageUsedSize = "1.10.1";
+
+            [Description("Server storage allocated size in MB")]
+            public const string StorageAllocatedSize = "1.10.2";
+
+            [Description("Server storage total size in MB")]
+            public const string StorageTotalSize = "1.10.3";
+
+            [Description("Remaining server storage disk space in MB")]
+            public const string StorageDiskRemainingSpace = "1.10.4";
 
             public static DynamicJsonArray ToJson()
             {
@@ -230,10 +243,10 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Number of requests per second (one minute rate)")]
             public const string RequestsPerSecond = "5.2.{0}.3.5";
-            
+
             [Description("Number of requests from database start")]
             public const string RequestsCount = "5.2.{0}.3.6";
-            
+
             [Description("Average request time in milliseconds")]
             public const string RequestAverageDuration = "5.2.{0}.3.7";
 
