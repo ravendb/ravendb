@@ -42,15 +42,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCreateIndex()
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = s =>
-                {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    s.Conventions.PrettifyGeneratedLinqExpressions = false;
-#pragma warning restore CS0618 // Type or member is obsolete
-                }
-            }))
+            using (var store = GetDocumentStore())
             {
                 new Index_ByDescriptionAndTitle().Execute(store);
 
@@ -65,15 +57,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCreateIndex2()
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDocumentStore = s =>
-                {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    s.Conventions.PrettifyGeneratedLinqExpressions = false;
-#pragma warning restore CS0618 // Type or member is obsolete
-                }
-            }))
+            using (var store = GetDocumentStore())
             {
                 new Index_ByDescriptionAndTitle2().Execute(store);
 

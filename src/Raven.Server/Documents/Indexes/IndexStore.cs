@@ -686,10 +686,6 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if ((differences & IndexDefinitionCompareDifferences.MapsFormatting) == IndexDefinitionCompareDifferences.MapsFormatting ||
-                (differences & IndexDefinitionCompareDifferences.ReduceFormatting) == IndexDefinitionCompareDifferences.ReduceFormatting)
-                return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
-
             if ((differences & IndexDefinitionCompareDifferences.Priority) == IndexDefinitionCompareDifferences.Priority)
                 return IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
 

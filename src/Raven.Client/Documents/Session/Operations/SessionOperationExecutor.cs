@@ -11,12 +11,6 @@ namespace Raven.Client.Documents.Session.Operations
     {
         private readonly InMemoryDocumentSessionOperations _session;
 
-        [Obsolete("This constructor should not be used", error: true)]
-        public SessionOperationExecutor(DocumentStoreBase store, string databaseName = null)
-            : base(store, databaseName)
-        {
-        }
-
         public SessionOperationExecutor(InMemoryDocumentSessionOperations session)
             : base(session.DocumentStore, session.DatabaseName)
         {

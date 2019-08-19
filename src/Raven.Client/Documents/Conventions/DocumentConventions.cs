@@ -148,10 +148,6 @@ namespace Raven.Client.Documents.Conventions
 
             MaxNumberOfRequestsPerSession = 30;
 
-#pragma warning disable CS0618 // Type or member is obsolete
-            PrettifyGeneratedLinqExpressions = true;
-#pragma warning restore CS0618 // Type or member is obsolete
-
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { };
             CustomizeJsonDeserializer = serializer => { };
@@ -179,7 +175,6 @@ namespace Raven.Client.Documents.Conventions
         private string _identityPartsSeparator;
         private bool _disableTopologyUpdates;
         private Func<MemberInfo, bool> _findIdentityProperty;
-        private bool _prettifyGeneratedLinqExpressions;
         private Func<string, string> _transformTypeCollectionNameToDocumentIdPrefix;
         private Func<string, object, Task<string>> _asyncDocumentIdGenerator;
         private Func<string, string> _findIdentityPropertyNameFromCollectionName;
@@ -531,20 +526,6 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _typeIsKnownServerSide = value;
-            }
-        }
-
-        /// <summary>
-        ///     Attempts to prettify the generated linq expressions for indexes 
-        /// </summary>
-        [Obsolete("This feature is currently not implemented and does not have any effect on the generated LINQ expressions")]
-        public bool PrettifyGeneratedLinqExpressions
-        {
-            get => _prettifyGeneratedLinqExpressions;
-            set
-            {
-                AssertNotFrozen();
-                _prettifyGeneratedLinqExpressions = value;
             }
         }
 
@@ -930,9 +911,6 @@ namespace Raven.Client.Documents.Conventions
                 if (configuration.Disabled && _originalConfiguration != null) // need to revert to original values
                 {
                     _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-#pragma warning disable CS0618 // Type or member is obsolete
-                    _prettifyGeneratedLinqExpressions = _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
-#pragma warning restore CS0618 // Type or member is obsolete
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
 
                     _originalConfiguration = null;
@@ -944,16 +922,10 @@ namespace Raven.Client.Documents.Conventions
                     {
                         Etag = -1,
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-#pragma warning disable CS0618 // Type or member is obsolete
-                        PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions,
-#pragma warning restore CS0618 // Type or member is obsolete
                         ReadBalanceBehavior = ReadBalanceBehavior
                     };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-#pragma warning disable CS0618 // Type or member is obsolete
-                _prettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
-#pragma warning restore CS0618 // Type or member is obsolete
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
             }
         }
@@ -1027,14 +999,6 @@ namespace Raven.Client.Documents.Conventions
                 strValue = null;
                 return false;
             }
-        }
-
-        [Obsolete("Use TryConvertValueForQuery, staying here for backward compact")]
-        public bool TryConvertValueForQuery(string fieldName, object value, bool forRange, out string strValue)
-        {
-            var result = TryConvertValueToObjectForQuery(fieldName, value, forRange, out var output);
-            strValue = output as string;
-            return result && (strValue != null || output == null);
         }
 
         private void RegisterQueryValueConverter<T>(TryConvertValueToObjectForQueryDelegate<T> converter)

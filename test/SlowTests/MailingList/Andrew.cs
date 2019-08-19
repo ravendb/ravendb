@@ -12,15 +12,7 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanCompile()
         {
-            var technologySummaryIndex = new TechnologySummary_Index
-            {
-                Conventions = new DocumentConventions
-                {
-#pragma warning disable CS0618 // Type or member is obsolete
-                    PrettifyGeneratedLinqExpressions = false
-#pragma warning restore CS0618 // Type or member is obsolete
-                }
-            };
+            var technologySummaryIndex = new TechnologySummary_Index();
 
             var indexDefinition = technologySummaryIndex.CreateIndexDefinition();
 

@@ -34,9 +34,7 @@ namespace SlowTests.Tests.Indexes
                 Map = orders => from order in orders
                                 from line in order.OrderLines
                                 select new { line.ProductId }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
 
             indexDefinition.Name = "Index1";
             var index = IndexCompiler.Compile(indexDefinition);
@@ -98,9 +96,7 @@ namespace SlowTests.Tests.Indexes
                                 from role in person.Roles
                                 where role == "Student"
                                 select new { role }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
 
             indexDefinition.Name = "Index1";
             IndexCompiler.Compile(indexDefinition);
@@ -121,9 +117,7 @@ namespace SlowTests.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { user.Name },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
 
             var original = new IndexDefinition
             {
@@ -148,9 +142,8 @@ namespace SlowTests.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { Age = user.Age - (20 - user.Age) },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
+
             var original = new IndexDefinition
             {
                 Fields =
@@ -174,9 +167,8 @@ namespace SlowTests.Tests.Indexes
                                where user.Location == "Tel Aviv"
                                select new { user.Name, user.Id },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
+
             var original = new IndexDefinition
             {
                 Fields =
@@ -202,9 +194,8 @@ namespace SlowTests.Tests.Indexes
                                where !(user.Location == "Te(l) (A)viv")
                                select new { user.Name },
                 Stores = { { user => user.Name, FieldStorage.Yes } }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
+
             var original = new IndexDefinition
             {
                 Fields =
@@ -228,9 +219,8 @@ namespace SlowTests.Tests.Indexes
                 Map = users => from user in users
                                where user.Name.Contains('C')
                                select user
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
+
             var original = new IndexDefinition
             {
                 Maps = { "docs.Users.Where(user => user.Name.Contains('C'))" }
@@ -249,9 +239,8 @@ namespace SlowTests.Tests.Indexes
                                    group agg by agg.Location
                                        into g
                                    select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
+
             var original = new IndexDefinition
             {
                 Maps = { @"docs.Users.Select(user => new {
@@ -277,9 +266,8 @@ namespace SlowTests.Tests.Indexes
                                    group agg by agg.Location
                                        into g
                                    select new { Location = g.Key, Count = g.Sum(x => x.Count) },
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
+
             var original = new IndexDefinition
             {
                 Maps = { expectedIndexString },

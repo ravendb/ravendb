@@ -12,12 +12,7 @@ namespace SlowTests.Bugs.MultiMap
         [Fact]
         public void CanCreateMultiMapIndex()
         {
-            using (var store = GetDocumentStore(new Options
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                ModifyDocumentStore = s => s.Conventions.PrettifyGeneratedLinqExpressions = false
-#pragma warning restore CS0618 // Type or member is obsolete
-            }))
+            using (var store = GetDocumentStore())
             {
                 new CatsAndDogs().Execute(store);
 

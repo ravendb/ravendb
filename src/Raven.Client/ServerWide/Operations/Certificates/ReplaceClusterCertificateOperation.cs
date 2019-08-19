@@ -13,13 +13,6 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         private readonly byte[] _certBytes;
         private readonly bool _replaceImmediately;
 
-        [Obsolete("Use second constructor instead.")]
-        public ReplaceClusterCertificateOperation(string name, byte[] certBytes, bool replaceImmediately)
-        {
-            _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
-            _replaceImmediately = replaceImmediately;
-        }
-
         public ReplaceClusterCertificateOperation(byte[] certBytes, bool replaceImmediately)
         {
             _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));

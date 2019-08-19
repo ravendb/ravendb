@@ -58,12 +58,10 @@ namespace SlowTests.Issues
         [Fact]
         public void WillNotForgetCastToNullableDateTime()
         {
-            var indexDefinition = new IndexDefinitionBuilder<Person>()
+            var indexDefinition = new IndexDefinitionBuilder<Person>
             {
                 Map = persons => from p in persons select new { DateTime = (DateTime?)null }
-#pragma warning disable CS0618 // Type or member is obsolete
-            }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
-#pragma warning restore CS0618 // Type or member is obsolete
+            }.ToIndexDefinition(DocumentConventions.Default);
 
             var expected = LinuxTestUtils.Dos2Unix(@"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)

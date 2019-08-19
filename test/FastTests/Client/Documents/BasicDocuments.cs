@@ -99,10 +99,8 @@ namespace FastTests.Client.Documents
 
                     using (var session = (DocumentSession)store.OpenSession())
                     {
-#pragma warning disable 618
-                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1", ref doc1);
-                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2", ref doc2);
-#pragma warning restore 618
+                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1", ref doc1, trackEntity: true);
+                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2", ref doc2, trackEntity: true);
 
                         Assert.Equal("Fitzchak", user1.Name);
                         Assert.Equal("Arek", user2.Name);

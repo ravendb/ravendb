@@ -55,12 +55,6 @@ namespace Raven.Client.Documents.Changes
         public string CollectionName { get; set; }
 
         /// <summary>
-        /// Document type name.
-        /// </summary>
-        [Obsolete("DatabaseChanges.ForDocumentsOfType is not supported anymore. Will be removed in next major version of the product.")]
-        public string TypeName { get; set; }
-
-        /// <summary>
         /// Document change vector
         /// </summary>
         public string ChangeVector { get; set; }
@@ -69,7 +63,7 @@ namespace Raven.Client.Documents.Changes
 
         public override string ToString()
         {
-            return string.Format("{0} on {1}", Type, Id);
+            return $"{Type} on {Id}";
         }
 
         public DynamicJsonValue ToJson()

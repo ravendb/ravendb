@@ -62,7 +62,7 @@ namespace Raven.Server.Smuggler.Documents
             _startRaftIndex = startRaftIndex;
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
+        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
         {
             _currentTypeIndex = 0;
 

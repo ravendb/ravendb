@@ -172,14 +172,4 @@ namespace Raven.Client.Documents.Commands.Batches
             Result?.Results?.Dispose();
         }
     }
-
-    [Obsolete("BatchCommand is not supported anymore. Will be removed in next major version of the product.")]
-    public class BatchCommand : SingleNodeBatchCommand, IRaftCommand
-    {
-        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
-
-        public BatchCommand(DocumentConventions conventions, JsonOperationContext context, IList<ICommandData> commands, BatchOptions options = null, TransactionMode mode = TransactionMode.SingleNode) : base(conventions, context, commands, options, mode)
-        {
-        }
-    }
 }

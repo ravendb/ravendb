@@ -13,19 +13,15 @@ namespace Raven.Server.Smuggler.Documents.Data
             Collections = new List<string>();
         }
 
+        public bool ReadLegacyEtag { get; set; }
+
         public string FileName { get; set; }
 
         public List<string> Collections { get; set; }
 
         public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
 
-        public new bool SkipRevisionCreation
-        {
-#pragma warning disable 618
-            get => base.SkipRevisionCreation;
-            set => base.SkipRevisionCreation = value;
-#pragma warning restore 618
-        }
+        public bool SkipRevisionCreation { get; set; }
 
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {

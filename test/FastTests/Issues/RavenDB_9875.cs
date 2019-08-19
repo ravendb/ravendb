@@ -20,9 +20,6 @@ namespace FastTests.Issues
                 typeof(QueryCommand),
                 typeof(GetRevisionsBinEntryCommand),
                 typeof(GetRevisionsCommand),
-#pragma warning disable 618
-                typeof(BatchCommand),
-#pragma warning restore 618
                 typeof(SingleNodeBatchCommand),
                 typeof(ClusterWideBatchCommand),
                 typeof(PatchOperation.PatchCommand)

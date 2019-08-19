@@ -276,22 +276,6 @@ namespace SlowTests.Server.Documents.Notifications
                 Assert.Equal("users/2", documentChange.Id);
             }
         }
-        
-        [Fact]
-        public async Task ShouldThrowWhenTryingToGetNotificationAboutDocumentsWithType()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var list = new BlockingCollection<DocumentChange>();
-                var taskObservable = store.Changes();
-                await taskObservable.EnsureConnectedNow();
-
-#pragma warning disable CS0618 // Type or member is obsolete
-                Assert.Throws<NotSupportedException>(() => taskObservable.ForDocumentsOfType<Company>());
-#pragma warning restore CS0618 // Type or member is obsolete
-
-            }
-        }
 
         private class UsersIndex : AbstractIndexCreationTask<User>
         {

@@ -143,14 +143,6 @@ namespace Raven.Client.Documents.Operations.ETL
                    config.Disabled == Disabled;
         }
 
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public bool ValidateConnectionString(DatabaseRecord databaseRecord)
-        {
-            return EtlType == EtlType.Raven
-                ? databaseRecord.RavenConnectionStrings.TryGetValue(ConnectionStringName, out _)
-                : databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out _);
-        }
-
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
         {
             if (etlConfiguration.TryGet(nameof(EtlConfiguration<ConnectionString>.EtlType), out string type) == false)
