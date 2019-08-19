@@ -300,12 +300,30 @@
             </div>
         </div>
 
-        <div class="form-group row" data-bind="validationElement: backupLink, visible: source() === 'cloud'">
-            <div class="col-md-4">
-                <label class="control-label">Backup Link</label>
+        <div data-bind="if: source() === 'cloud'">
+            <div class="form-group row" data-bind="validationElement: backupLink">
+                <div class="col-md-4">
+                    <label class="control-label">Backup Link</label>
+                </div>
+                <div class="col-md-8">
+                     <input class="form-control" data-bind="textInput: backupLink" />
+                </div>
             </div>
-            <div class="col-md-8">
-                 <input class="form-control" data-bind="textInput: backupLink" />
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Backup Storage Type</label>
+                </div>
+                <div class="col-md-8">
+                    <div data-bind="if: $root.databaseModel.spinners.backupStorageTypeLoading()">
+                        <label class="control-label global-spinner spinner-sm"></label>
+                    </div>
+                    <div data-bind="if: !$root.databaseModel.spinners.backupStorageTypeLoading()">
+                        <label data-bind="if: cloudCredentials() && backupLink.isValid()" class="control-label text-info">
+                            <span data-bind="text: cloudCredentials().BackupStorageType"></span>
+                        </label>
+                        <label data-bind="if: !cloudCredentials() || !backupLink.isValid()" class="control-label">N/A</label>
+                    </div>
+                </div>
             </div>
         </div>
         

@@ -192,6 +192,10 @@ interface restoreTypeAware {
     Type: Raven.Client.Documents.Operations.Backups.RestoreType;
 }
 
+interface backupCredentials {
+    BackupStorageType: string
+}
+
 interface availableConfigurationSection {
     name: string;
     id: availableConfigurationSectionId;

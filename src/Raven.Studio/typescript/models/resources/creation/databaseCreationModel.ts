@@ -56,7 +56,8 @@ class databaseCreationModel {
     ];
 
     spinners = {
-        fetchingRestorePoints: ko.observable<boolean>(false)
+        fetchingRestorePoints: ko.observable<boolean>(false),
+        backupStorageTypeLoading: ko.observable<boolean>(false)
     };
     
     lockActiveTab = ko.observable<boolean>(false);
@@ -70,7 +71,7 @@ class databaseCreationModel {
     restore = {
         source: ko.observable<restoreSource>("serverLocal"),
         backupLink: ko.observable<string>(),
-        cloudCredentials: ko.observable<string>(),
+        cloudCredentials: ko.observable<backupCredentials>(),
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
         backupDirectoryError: ko.observable<string>(null),
         lastFailedBackupDirectory: null as string,
@@ -214,7 +215,9 @@ class databaseCreationModel {
         });
         
         this.restore.backupLink.subscribe(link => {
-            this.downloadCloudCredentials(link);
+            if (!!_.trim(link)) {
+                this.downloadCloudCredentials(link) 
+            }
         });
         
         this.restore.cloudCredentials.subscribe((credentials) => {
@@ -292,11 +295,15 @@ class databaseCreationModel {
     }
 
     downloadCloudCredentials(link: string) {
+        this.spinners.backupStorageTypeLoading(true);
+        
         new getCloudCredentialsFromLinkCommand(link)
             .execute()
-            .then(credentials => {
+            .fail(() => this.restore.cloudCredentials(null))
+            .done(credentials => {
                 this.restore.cloudCredentials(credentials);
-            });
+            })
+            .always(() => this.spinners.backupStorageTypeLoading(false));
     }
     
     dataPathHasChanged(value: string) {
@@ -466,7 +473,6 @@ class databaseCreationModel {
         if (this.creationMode === "legacyMigration") {
             this.setupLegacyMigrationValidation();    
         }
-        
     }
     
     private setupReplicationValidation(maxReplicationFactor: number) {
