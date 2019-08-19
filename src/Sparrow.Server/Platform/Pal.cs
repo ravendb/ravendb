@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
 
@@ -97,6 +98,16 @@ namespace Sparrow.Server.Platform
         }
 
         private const string LIBRVNPAL = "librvnpal";
+
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_spawn_process(string filename, 
+            string cmdline, 
+            out IntPtr pid, 
+            out SafeFileHandle stdin, 
+            out SafeFileHandle stdout, 
+            out SafeFileHandle stderr,
+            out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_write_header(

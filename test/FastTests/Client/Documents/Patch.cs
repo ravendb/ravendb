@@ -1,4 +1,6 @@
-﻿using Xunit;
+﻿using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
+using Xunit;
 
 namespace FastTests.Client.Documents
 {

@@ -157,6 +157,7 @@
     <ClCompile Include="src\posix\mapping.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\posix\spawn.c" />
     <ClCompile Include="src\posix\sync.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -173,6 +174,7 @@
     <ClCompile Include="src\win\getsysteminformation.c" />
     <ClCompile Include="src\win\journal.c" />
     <ClCompile Include="src\win\mapping.c" />
+    <ClCompile Include="src\win\spawn.c" />
     <ClCompile Include="src\win\virtualmemory.c" />
     <ClCompile Include="src\win\writefileheader.c" />
   </ItemGroup>

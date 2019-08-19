@@ -95,5 +95,11 @@
     <ClCompile Include="src\posix\writefileheader.c">
       <Filter>Source Files\Posix</Filter>
     </ClCompile>
+    <ClCompile Include="src\posix\spawn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\win\spawn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

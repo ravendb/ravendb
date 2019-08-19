@@ -311,7 +311,7 @@ namespace Voron.Impl.Journal
             if (_readAt4Kb > _journalPagerNumberOfAllocated4Kb)
             {
                 current = null;
-                return false; // end of jouranl
+                return false; // end of journal
             }
 
             const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
@@ -380,6 +380,13 @@ namespace Voron.Impl.Journal
             else
             {
                 hashIsValid = ValidatePagesHash(options, current);
+
+                Console.WriteLine(current->TransactionId + " " + options);
+
+                if (!hashIsValid)
+                {
+                    Console.WriteLine("******");
+                }
             }
 
             long lastTxId;
