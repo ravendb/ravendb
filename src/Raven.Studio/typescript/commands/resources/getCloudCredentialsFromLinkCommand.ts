@@ -6,14 +6,14 @@ class getCloudCredentialsFromLinkCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<string> {
-        return this.query<string>(this.link, undefined)
+    execute(): JQueryPromise<backupCredentials> {
+        return this.query<backupCredentials>(this.link, undefined)
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to get restore credentials`,
+                this.reportError(`Failed to get backup credentials`,
                     response.responseText,
                     response.statusText);
             });
     }
 }
 
-export = getCloudCredentialsFromLinkCommand; 
+export = getCloudCredentialsFromLinkCommand;
