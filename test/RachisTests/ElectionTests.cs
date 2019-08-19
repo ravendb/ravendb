@@ -29,6 +29,51 @@ namespace RachisTests
             Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
         }
 
+
+        [Fact]
+        public async Task RavenDB_13922()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var leader = await CreateNetworkAndGetLeader(2);
+            var follower = GetFollowers().Single();
+
+            leader.ForTestingPurposesOnly();
+            follower.ForTestingPurposesOnly();
+
+            DisconnectBiDirectionalFromNode(leader);
+
+            await leader.WaitForState(RachisState.Candidate, CancellationToken.None);
+            await follower.WaitForState(RachisState.Candidate, CancellationToken.None);
+
+            var le1 = leader.WaitForState(RachisState.LeaderElect, CancellationToken.None);
+            var le2 = follower.WaitForState(RachisState.LeaderElect, CancellationToken.None);
+
+            ReconnectBiDirectionalFromNode(leader);
+
+            await Task.WhenAny(le1, le2);
+
+            await leader.WaitForState(RachisState.Candidate, CancellationToken.None);
+            await follower.WaitForState(RachisState.Candidate, CancellationToken.None);
+
+
+            var mre1 = leader.ForTestingPurposesOnly().Mre;
+            leader.ForTestingPurposesOnly().Mre = null;
+            mre1.Set();
+
+            var mre2 = follower.ForTestingPurposesOnly().Mre;
+            follower.ForTestingPurposesOnly().Mre = null;
+            mre2.Set();
+
+            var lastIndex = await IssueCommandsAndWaitForCommit(3, "test", 1);
+
+            var t1 = leader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            var t2 = follower.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            if (await Task.WhenAll(t1, t2).WaitAsync(5000) == false)
+            {
+                throw new TimeoutException();
+            }
+        }
+
         [Fact]
         public async Task CanElectOnDivergence()
         {
