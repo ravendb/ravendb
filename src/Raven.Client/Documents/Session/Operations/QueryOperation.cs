@@ -257,13 +257,6 @@ namespace Raven.Client.Documents.Session.Operations
             return (T)property.GetValue(deserialized);
         }
 
-        [Obsolete("Use NoTracking instead")]
-        public bool DisableEntitiesTracking
-        {
-            get => NoTracking;
-            set => NoTracking = value;
-        }
-
         public bool NoTracking { get; set; }
 
         public void EnsureIsAcceptableAndSaveResult(QueryResult result)

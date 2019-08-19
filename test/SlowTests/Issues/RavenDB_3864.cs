@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_indexes_container()
         {
-            using (var store = CreateDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, store, store.Conventions);
                 Assert.True(TestFailed.Value == false);
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task can_use_conventions_with_create_indexes_async_container()
         {
-            using (var store = CreateDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, store, store.Conventions);
                 Assert.True(TestFailed.Value == false);
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_indexes()
         {
-            using (var store = CreateDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new List<AbstractIndexCreationTask>
                 {
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task can_use_conventions_with_create_indexes_async()
         {
-            using (var store = CreateDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new List<AbstractIndexCreationTask>
                 {
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
         [Fact]
         public void can_use_conventions_with_create_side_by_side_indexes()
         {
-            using (var store = CreateDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new List<AbstractIndexCreationTask>
                 {
@@ -83,7 +83,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task can_use_conventions_with_create_side_by_side_indexes_async()
         {
-            using (var store = CreateDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 var list = new List<AbstractIndexCreationTask>
                 {
@@ -94,16 +94,6 @@ namespace SlowTests.Issues
                 await store.ExecuteIndexesAsync(list);
                 Assert.True(TestFailed.Value == false);
             }
-        }
-
-        private DocumentStore CreateDocumentStore([CallerMemberName] string caller = null)
-        {
-            return GetDocumentStore(new Options
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                ModifyDocumentStore = store => store.Conventions.PrettifyGeneratedLinqExpressions = false
-#pragma warning restore CS0618 // Type or member is obsolete
-            }, caller);
         }
 
         private static readonly AsyncLocal<bool> TestFailed = new AsyncLocal<bool>();
@@ -117,9 +107,7 @@ namespace SlowTests.Issues
 
             public override IndexDefinition CreateIndexDefinition()
             {
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (Conventions == null || Conventions.PrettifyGeneratedLinqExpressions)
-#pragma warning restore CS0618 // Type or member is obsolete
+                if (Conventions == null)
                     TestFailed.Value = true;
 
                 return base.CreateIndexDefinition();
@@ -140,9 +128,7 @@ namespace SlowTests.Issues
 
             public override IndexDefinition CreateIndexDefinition()
             {
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (Conventions == null || Conventions.PrettifyGeneratedLinqExpressions)
-#pragma warning restore CS0618 // Type or member is obsolete
+                if (Conventions == null )
                     TestFailed.Value = true;
 
                 return base.CreateIndexDefinition();

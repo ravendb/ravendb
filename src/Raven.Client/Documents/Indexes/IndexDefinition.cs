@@ -88,23 +88,10 @@ namespace Raven.Client.Documents.Indexes
                 return result;
 
             if (Maps.SetEquals(other.Maps) == false)
-            {
-                var currentWithFormattingComparer = new HashSet<string>(Maps, IndexPrettyPrinterEqualityComparer.Instance);
-                var otherWithFormattingComparer = new HashSet<string>(other.Maps, IndexPrettyPrinterEqualityComparer.Instance);
-
-                if (currentWithFormattingComparer.SetEquals(otherWithFormattingComparer))
-                    result |= IndexDefinitionCompareDifferences.MapsFormatting;
-                else
-                    result |= IndexDefinitionCompareDifferences.Maps;
-            }
+                result |= IndexDefinitionCompareDifferences.Maps;
 
             if (Equals(Reduce, other.Reduce) == false)
-            {
-                if (IndexPrettyPrinterEqualityComparer.Instance.Equals(Reduce, other.Reduce))
-                    result |= IndexDefinitionCompareDifferences.ReduceFormatting;
-                else
-                    result |= IndexDefinitionCompareDifferences.Reduce;
-            }
+                result |= IndexDefinitionCompareDifferences.Reduce;
 
             if (DictionaryExtensions.ContentEquals(other.Fields, Fields) == false)
                 result |= IndexDefinitionCompareDifferences.Fields;
@@ -157,8 +144,7 @@ namespace Raven.Client.Documents.Indexes
         /// Equals the specified other.
         /// </summary>
         /// <param name="other">The other.</param>
-        /// <param name="ignoreFormatting">Comparison ignores formatting in both of the definitions</param>
-        public bool Equals(IndexDefinition other, bool ignoreFormatting = false)
+        public bool Equals(IndexDefinition other)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -171,9 +157,7 @@ namespace Raven.Client.Documents.Indexes
             if (result == IndexDefinitionCompareDifferences.None)
                 return true;
 
-            var mapsReduceEquals = ignoreFormatting
-                ? result.HasFlag(IndexDefinitionCompareDifferences.MapsFormatting) == false && result.HasFlag(IndexDefinitionCompareDifferences.ReduceFormatting) == false
-                : result.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && result.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false;
+            var mapsReduceEquals = result.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && result.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false;
 
             var configurationEquals = result.HasFlag(IndexDefinitionCompareDifferences.Configuration) == false;
             var fieldsEquals = result.HasFlag(IndexDefinitionCompareDifferences.Fields) == false;
@@ -338,8 +322,8 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
-        private static readonly Regex CommentsStripper = new Regex(@"\s+|\/\*[\s\S]*?\*\/|\/\/.*$", 
-            RegexOptions.IgnorePatternWhitespace | 
+        private static readonly Regex CommentsStripper = new Regex(@"\s+|\/\*[\s\S]*?\*\/|\/\/.*$",
+            RegexOptions.IgnorePatternWhitespace |
             RegexOptions.Multiline);
 
         public IndexType DetectStaticIndexType()
@@ -444,9 +428,7 @@ namespace Raven.Client.Documents.Indexes
     {
         None = 0,
         Maps = 1 << 1,
-        MapsFormatting = 1 << 2,
         Reduce = 1 << 3,
-        ReduceFormatting = 1 << 4,
         Fields = 1 << 5,
         Configuration = 1 << 6,
         LockMode = 1 << 7,
@@ -454,6 +436,6 @@ namespace Raven.Client.Documents.Indexes
         State = 1 << 9,
         AdditionalSources = 1 << 10,
 
-        All = Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority | State | AdditionalSources
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources
     }
 }

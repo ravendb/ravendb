@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
@@ -18,15 +17,6 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3365 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-4185")]
-        public void index_pretty_printer_ignores_whitespaces()
-        {
-            var firstFormat = IndexPrettyPrinter.TryFormat("from order in docs.Orders select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }");
-            var secondFormat = IndexPrettyPrinter.TryFormat("from order  \t   in docs.Orders       select new { order.Company, Count = 1, Total = order.Lines.Sum(l=>(l.Quantity * l.PricePerUnit) *  ( 1 - l.Discount)) }");
-
-            Assert.Equal(firstFormat, secondFormat);
-        }
-
         [Fact]
         public void shouldnt_reset_index_when_non_meaningful_change()
         {

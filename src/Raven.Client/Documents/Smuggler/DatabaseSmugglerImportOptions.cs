@@ -15,13 +15,7 @@
             TransformScript = options.TransformScript;
         }
 
-        public new bool SkipRevisionCreation
-        {
-#pragma warning disable 618
-            get => base.SkipRevisionCreation;
-            set => base.SkipRevisionCreation = value;
-#pragma warning restore 618
-        }
+        public bool SkipRevisionCreation { get; set; }
     }
 
     internal interface IDatabaseSmugglerImportOptions : IDatabaseSmugglerOptions

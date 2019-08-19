@@ -134,13 +134,6 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public TimeSpan MaxErroneousPeriod { get; set; }
 
-        [Obsolete("Use MaxErroneousPeriod instead")]
-        public TimeSpan MaxErrorousPeriod
-        {
-            get => MaxErroneousPeriod;
-            set => MaxErroneousPeriod = value;
-        }
-
         /// <summary>
         /// Will continue the subscription work until the server have no more new documents to send.
         /// That's a useful practice for ad-hoc, one-time, persistent data processing. 

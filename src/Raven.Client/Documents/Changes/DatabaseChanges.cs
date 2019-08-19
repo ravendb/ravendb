@@ -287,24 +287,6 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public IChangesObservable<DocumentChange> ForDocumentsOfType(string typeName)
-        {
-            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
-        }
-
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public IChangesObservable<DocumentChange> ForDocumentsOfType(Type type)
-        {
-            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
-        }
-
-        [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
-        public IChangesObservable<DocumentChange> ForDocumentsOfType<TEntity>()
-        {
-            throw new NotSupportedException($"Method {nameof(ForDocumentsOfType)} is obsolete.");
-        }
-
         public event Action<Exception> OnError;
 
         public void Dispose()

@@ -169,11 +169,6 @@ namespace Raven.Client.Documents.Indexes
                 var termVectors = ConvertToStringDictionary(TermVectors);
                 var spatialOptions = ConvertToStringDictionary(SpatialIndexes);
 
-#pragma warning disable CS0618 // Type or member is obsolete
-                if (conventions.PrettifyGeneratedLinqExpressions)
-#pragma warning restore CS0618 // Type or member is obsolete
-                    indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
-
                 foreach (var indexesString in IndexesStrings)
                 {
                     if (indexes.ContainsKey(indexesString.Key))
@@ -226,9 +221,7 @@ namespace Raven.Client.Documents.Indexes
                             querySource,
                             translateIdentityProperty: true);
 
-#pragma warning disable CS0618 // Type or member is obsolete
-                    indexDefinition.Maps.Add(conventions.PrettifyGeneratedLinqExpressions ? IndexPrettyPrinter.TryFormat(map) : map);
-#pragma warning restore CS0618 // Type or member is obsolete
+                    indexDefinition.Maps.Add(map);
                 }
 
                 indexDefinition.AdditionalSources = AdditionalSources;

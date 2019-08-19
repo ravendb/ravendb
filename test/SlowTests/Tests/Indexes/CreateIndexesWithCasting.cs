@@ -12,12 +12,7 @@ namespace SlowTests.Tests.Indexes
         [Fact]
         public void WillPreserverTheCasts()
         {
-            var indexDefinition = new WithCasting
-            {
-#pragma warning disable CS0618 // Type or member is obsolete
-                Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false }
-#pragma warning restore CS0618 // Type or member is obsolete
-            }.CreateIndexDefinition();
+            var indexDefinition = new WithCasting().CreateIndexDefinition();
 
             var map = indexDefinition.Maps.First();
 

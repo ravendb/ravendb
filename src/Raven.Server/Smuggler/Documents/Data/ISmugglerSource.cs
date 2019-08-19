@@ -14,7 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerSource
     {
-        IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion);
+        IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion);
         DatabaseItemType GetNextType();
         DatabaseRecord GetDatabaseRecord();
         IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions);

@@ -158,32 +158,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="id">The id.</param>
         /// <param name="document">The document found.</param>
         /// <returns>The converted entity</returns>
-        [Obsolete("Use different ConvertToEntity overload")]
-        public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document)
-        {
-            return ConvertToEntity(entityType, id, ref document);
-        }
-
-        /// <summary>
-        /// Converts a BlittableJsonReaderObject to an entity.        
-        /// </summary>
-        /// <param name="entityType"></param>
-        /// <param name="id">The id.</param>
-        /// <param name="document">The document found.</param>
-        /// <returns>The converted entity</returns>
-        [Obsolete("Use different ConvertToEntity overload")]
-        public object ConvertToEntity(Type entityType, string id, ref BlittableJsonReaderObject document)
-        {
-            return ConvertToEntity(entityType, id, ref document, true);
-        }
-
-        /// <summary>
-        /// Converts a BlittableJsonReaderObject to an entity.
-        /// </summary>
-        /// <param name="entityType"></param>
-        /// <param name="id">The id.</param>
-        /// <param name="document">The document found.</param>
-        /// <returns>The converted entity</returns>
         public object ConvertToEntity(Type entityType, string id, ref BlittableJsonReaderObject document, bool trackEntity)
         {
             try

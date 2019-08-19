@@ -1443,53 +1443,6 @@ namespace Raven.Client.Http
         private static RemoteCertificateValidationCallback[] _serverCertificateCustomValidationCallback = Array.Empty<RemoteCertificateValidationCallback>();
         private static readonly object _locker = new object();
 
-        // HttpClient and ClientWebSocket use certificate validation callbacks with different signatures.
-        // We need this translator for backward compatibility to allow the user to supply any of the two signatures.
-        private class CallbackTranslator
-        {
-            public Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> Callback;
-
-            public bool Translate(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
-            {
-                return Callback(sender as HttpRequestMessage, cert as X509Certificate2, chain, errors);
-            }
-        }
-
-        [Obsolete("Use RemoteCertificateValidationCallback instead")]
-        public static event Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> ServerCertificateCustomValidationCallback
-        {
-            add
-            {
-                lock (_locker)
-                {
-                    var callbackTranslator = new CallbackTranslator
-                    {
-                        Callback = value
-                    };
-
-                    RemoteCertificateValidationCallback += callbackTranslator.Translate;
-                }
-            }
-
-            remove
-            {
-                lock (_locker)
-                {
-                    var callbacks = _serverCertificateCustomValidationCallback;
-                    if (callbacks == null)
-                        return;
-
-                    foreach (var callback in callbacks)
-                    {
-                        if (callback.Target is CallbackTranslator ct && ct.Callback == value)
-                        {
-                            RemoteCertificateValidationCallback -= ct.Translate;
-                        }
-                    }
-                }
-            }
-        }
-
         public static event RemoteCertificateValidationCallback RemoteCertificateValidationCallback
         {
             add

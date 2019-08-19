@@ -55,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents
             _collection = collection;
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
+        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
         {
             buildVersion = ServerVersion.DevBuildNumber;
             _reader = new StreamReader(_stream);

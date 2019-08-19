@@ -12,9 +12,6 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public int? MaxNumberOfRequestsPerSession { get; set; }
 
-        [Obsolete("This feature is currently not implemented and does not have any effect on the generated LINQ expressions")]
-        public bool? PrettifyGeneratedLinqExpressions { get; set; }
-
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -24,9 +21,6 @@ namespace Raven.Client.Documents.Operations.Configuration
                 [nameof(Disabled)] = Disabled,
                 [nameof(Etag)] = Etag,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
-#pragma warning disable CS0618 // Type or member is obsolete
-                [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions,
-#pragma warning restore CS0618 // Type or member is obsolete
                 [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior
             };
         }

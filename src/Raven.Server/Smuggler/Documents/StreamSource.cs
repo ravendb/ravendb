@@ -65,7 +65,7 @@ namespace Raven.Server.Smuggler.Documents
             _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
+        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
         {
             _result = result;
             _returnBuffer = _context.GetManagedBuffer(out _buffer);
@@ -81,9 +81,7 @@ namespace Raven.Server.Smuggler.Documents
             _operateOnTypes = options.OperateOnTypes;
             buildVersion = ReadBuildVersion();
             _buildVersionType = BuildVersion.Type(buildVersion);
-#pragma warning disable 618
             _readLegacyEtag = options.ReadLegacyEtag;
-#pragma warning restore 618
 
             return new DisposableAction(() =>
             {
