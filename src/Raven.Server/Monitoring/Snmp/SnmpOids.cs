@@ -104,14 +104,14 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server storage used size in MB")]
             public const string StorageUsedSize = "1.10.1";
 
-            [Description("Server storage allocated size in MB")]
-            public const string StorageAllocatedSize = "1.10.2";
-
             [Description("Server storage total size in MB")]
-            public const string StorageTotalSize = "1.10.3";
+            public const string StorageTotalSize = "1.10.2";
 
             [Description("Remaining server storage disk space in MB")]
-            public const string StorageDiskRemainingSpace = "1.10.4";
+            public const string StorageDiskRemainingSpace = "1.10.3";
+
+            [Description("Remaining server storage disk space in %")]
+            public const string StorageDiskRemainingSpacePercentage = "1.10.4";
 
             public static DynamicJsonArray ToJson()
             {
