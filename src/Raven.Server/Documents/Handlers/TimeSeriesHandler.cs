@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -138,12 +140,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
             private readonly DocumentTimeSeriesOperation _batch;
             private readonly bool _fromEtl;
+
+            private readonly Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> _appendDictionary;
 
             public string LastChangeVector;
 
@@ -152,6 +155,20 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _batch = batch;
                 _fromEtl = fromEtl;
+
+                if (batch.Appends?.Count > 1)
+                {
+                    _appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
+             
+                    foreach (var item in batch.Appends)
+                    {
+                        if (_appendDictionary.TryGetValue(item.Name, out var sorted) == false)
+                            sorted = new SortedList<long, AppendTimeSeriesOperation>();
+
+                        sorted.Add(item.Timestamp.Ticks, item);
+                        _appendDictionary[item.Name] = sorted;
+                    }
+                }
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -164,36 +181,45 @@ namespace Raven.Server.Documents.Handlers
 
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
-                if (_batch.Appends != null)
+                var holder = new TimeSeriesStorage.Reader.SingleResult();
+                if (_appendDictionary != null)
                 {
-                    // TODO: I guess we can do it more efficient
-                    var groups = 
-                        from batch in _batch.Appends
-                        group batch by batch.Name
-                        into g
-                        select new
-                        {
-                            Name = g.Key,
-                            Appendies = g.Select(x => new TimeSeriesStorage.Reader.SingleResult
-                            {
-                                Values = x.Values,
-                                Tag = context.GetLazyString(x.Tag),
-                                TimeStamp = x.Timestamp
-                            }).OrderBy(x => x.TimeStamp)
-                        };
-
-                    foreach (var group in groups)
+                    foreach (var kvp in _appendDictionary)
                     {
                         LastChangeVector = tss.AppendTimestamp(context,
                             _batch.Id,
                             docCollection,
-                            group.Name,
-                            group.Appendies
+                            kvp.Key,
+                            kvp.Value.Values.Select(x =>
+                            {
+                                holder.Values = x.Values;
+                                holder.Tag = context.GetLazyString(x.Tag);
+                                holder.TimeStamp = x.Timestamp;
+                                return holder;
+                            })
                         );
 
-                        changes += group.Appendies.Count();
+                        changes += kvp.Value.Count;
                     }
                 }
+                else if (_batch.Appends != null)
+                {
+                    LastChangeVector = tss.AppendTimestamp(context,
+                        _batch.Id,
+                        docCollection,
+                        _batch.Appends[0].Name,
+                        _batch.Appends.Select(x =>
+                        {
+                            holder.Values = x.Values;
+                            holder.Tag = context.GetLazyString(x.Tag);
+                            holder.TimeStamp = x.Timestamp;
+                            return holder;
+                        })
+                    );
+
+                    changes++;
+                }
+                
 
                 if (_batch.Removals != null)
                 {
