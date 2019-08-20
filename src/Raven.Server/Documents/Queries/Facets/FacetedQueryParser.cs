@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
@@ -167,8 +168,8 @@ namespace Raven.Server.Documents.Queries.Facets
 
             foreach (var kvp in facet.Aggregations)
             {
-                if (result.Aggregations.TryGetValue(kvp.Value, out var value) == false)
-                    result.Aggregations[kvp.Value] = value = new FacetResult.Aggregation();
+                if (result.Aggregations.TryGetValue(kvp.Value.First(), out var value) == false)
+                    result.Aggregations[kvp.Value.First()] = value = new FacetResult.Aggregation();
 
                 switch (kvp.Key)
                 {

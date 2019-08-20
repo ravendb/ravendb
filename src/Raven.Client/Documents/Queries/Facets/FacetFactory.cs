@@ -112,25 +112,37 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public IFacetOperations<T> SumOn(Expression<Func<T, object>> path)
         {
-            Facet.Aggregations[FacetAggregation.Sum] = path.ToPropertyPath();
+            if (Facet.Aggregations.TryGetValue(FacetAggregation.Sum, out var aggregations) == false)
+                Facet.Aggregations[FacetAggregation.Sum] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            aggregations.Add(path.ToPropertyPath());
             return this;
         }
 
         public IFacetOperations<T> MinOn(Expression<Func<T, object>> path)
         {
-            Facet.Aggregations[FacetAggregation.Min] = path.ToPropertyPath();
+            if (Facet.Aggregations.TryGetValue(FacetAggregation.Min, out var aggregations) == false)
+                Facet.Aggregations[FacetAggregation.Min] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            aggregations.Add(path.ToPropertyPath());
             return this;
         }
 
         public IFacetOperations<T> MaxOn(Expression<Func<T, object>> path)
         {
-            Facet.Aggregations[FacetAggregation.Max] = path.ToPropertyPath();
+            if (Facet.Aggregations.TryGetValue(FacetAggregation.Max, out var aggregations) == false)
+                Facet.Aggregations[FacetAggregation.Max] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            aggregations.Add(path.ToPropertyPath());
             return this;
         }
 
         public IFacetOperations<T> AverageOn(Expression<Func<T, object>> path)
         {
-            Facet.Aggregations[FacetAggregation.Average] = path.ToPropertyPath();
+            if (Facet.Aggregations.TryGetValue(FacetAggregation.Average, out var aggregations) == false)
+                Facet.Aggregations[FacetAggregation.Average] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            aggregations.Add(path.ToPropertyPath());
             return this;
         }
 

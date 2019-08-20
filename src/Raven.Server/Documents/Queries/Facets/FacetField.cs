@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
         private ValueTokenType _optionsType;
 
-        public Dictionary<FacetAggregation, string> Aggregations;
+        public Dictionary<FacetAggregation, HashSet<string>> Aggregations;
 
         public List<QueryExpression> Ranges;
 
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Facets
         public FacetField()
         {
             IsFacet = true;
-            Aggregations = new Dictionary<FacetAggregation, string>();
+            Aggregations = new Dictionary<FacetAggregation, HashSet<string>>();
             Ranges = new List<QueryExpression>();
         }
 
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Queries.Facets
             if (Aggregations.ContainsKey(aggregation))
                 throw new InvalidOperationException($"Detected duplicate facet aggregation operation '{aggregation}'. Each facet can only contain one of each available operations.");
 
-            Aggregations.Add(aggregation, name);
+            Aggregations.Add(aggregation, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name });
         }
 
         public void AddOptions(string optionsAsStringOrParameterName, ValueTokenType type)

@@ -147,26 +147,29 @@ namespace Raven.Client.Documents.Session.Tokens
         {
             foreach (var aggregation in facet.Aggregations)
             {
-                FacetAggregationToken aggregationToken;
-                switch (aggregation.Key)
+                foreach (string value in aggregation.Value)
                 {
-                    case FacetAggregation.Max:
-                        aggregationToken = FacetAggregationToken.Max(aggregation.Value);
-                        break;
-                    case FacetAggregation.Min:
-                        aggregationToken = FacetAggregationToken.Min(aggregation.Value);
-                        break;
-                    case FacetAggregation.Average:
-                        aggregationToken = FacetAggregationToken.Average(aggregation.Value);
-                        break;
-                    case FacetAggregation.Sum:
-                        aggregationToken = FacetAggregationToken.Sum(aggregation.Value);
-                        break;
-                    default:
-                        throw new NotSupportedException($"Unsupported aggregation method: {aggregation.Key}");
-                }
+                    FacetAggregationToken aggregationToken;
+                    switch (aggregation.Key)
+                    {
+                        case FacetAggregation.Max:
+                            aggregationToken = FacetAggregationToken.Max(value);
+                            break;
+                        case FacetAggregation.Min:
+                            aggregationToken = FacetAggregationToken.Min(value);
+                            break;
+                        case FacetAggregation.Average:
+                            aggregationToken = FacetAggregationToken.Average(value);
+                            break;
+                        case FacetAggregation.Sum:
+                            aggregationToken = FacetAggregationToken.Sum(value);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Unsupported aggregation method: {aggregation.Key}");
+                    }
 
-                token._aggregations.Add(aggregationToken);
+                    token._aggregations.Add(aggregationToken);
+                }
             }
         }
 
