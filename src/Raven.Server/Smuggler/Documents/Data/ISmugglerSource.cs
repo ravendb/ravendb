@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
@@ -30,6 +29,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
         IEnumerable<SubscriptionState> GetSubscriptions();
+        IEnumerable<TimeSeriesItem> GetTimeSeries();
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
         IEnumerable<string> GetCompareExchangeTombstones();

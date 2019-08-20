@@ -13,6 +13,8 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -334,6 +336,13 @@ namespace Raven.Server.Smuggler.Documents
             Debug.Assert(_context != null);
 
             return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue);
+        }
+
+        public IEnumerable<TimeSeriesItem> GetTimeSeries()
+        {
+            Debug.Assert(_context != null);
+
+            return _database.DocumentsStorage.TimeSeriesStorage.GetAllValuesFrom(_context, _startDocumentEtag);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

@@ -22,6 +22,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -115,6 +116,11 @@ namespace Raven.Server.Smuggler.Documents
         public ISubscriptionActions Subscriptions()
         {
             return new StreamSubscriptionActions(_writer, _context, nameof(DatabaseItemType.Subscriptions));
+        }
+
+        public ITimeSeriesActions TimeSeries()
+        {
+            return new StreamTimeSeriesActions(_writer, _context, nameof(DatabaseItemType.TimeSeries));
         }
 
         public IIndexActions Indexes()
@@ -629,6 +635,69 @@ namespace Raven.Server.Smuggler.Documents
             public Stream GetTempStream()
             {
                 throw new NotSupportedException("GetTempStream is never used in StreamCounterActions. Shouldn't happen");
+            }
+        }
+
+        private class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
+        {
+            private readonly DocumentsOperationContext _context;
+
+            public StreamTimeSeriesActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
+            {
+                _context = context;
+            }
+
+            public void WriteTimeSeries(TimeSeriesItem ts)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                Writer.WriteStartObject();
+
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Key));
+                Writer.WriteString(ts.Key, skipEscaping: true);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
+                Writer.WriteString(ts.ChangeVector, skipEscaping: true);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Collection));
+                Writer.WriteString(ts.Collection);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Values));
+
+                Writer.WriteStartArray();
+
+                var firstValue = true;
+
+                foreach (var val in ts.Values)
+                {
+                    if (firstValue == false)
+                        Writer.WriteComma();
+
+                    firstValue = false;
+
+                    Writer.WriteStartObject();
+
+                    Writer.WritePropertyName(nameof(TimeSeriesStorage.Reader.SingleResult.TimeStamp));
+                    Writer.WriteDateTime(val.TimeStamp, true);
+                    Writer.WriteComma();
+
+                    Writer.WritePropertyName(nameof(TimeSeriesStorage.Reader.SingleResult.Tag));
+                    Writer.WriteString(val.Tag);
+                    Writer.WriteComma();
+
+                    Writer.WriteArray(nameof(TimeSeriesStorage.Reader.SingleResult.Values), val.Values);
+
+                    Writer.WriteEndObject();
+                }
+
+                Writer.WriteEndArray();
+
+                Writer.WriteEndObject();
             }
         }
 

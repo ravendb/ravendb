@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Server.Documents;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -60,5 +61,17 @@ namespace Raven.Server.Smuggler.Documents
         {
             public BlittableJsonReaderObject Values;
         }
+    }
+
+
+    public class TimeSeriesItem
+    {
+        public string Key;
+
+        public string ChangeVector;
+
+        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> Segment;
+
+        public string Collection;
     }
 }

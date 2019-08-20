@@ -26,7 +26,9 @@ namespace Raven.Client.Documents.Smuggler
         Attachments = 1 << 14,
         CounterGroups = 1 << 15,
         Subscriptions = 1 << 16,
-        CompareExchangeTombstones = 1 << 17
+        CompareExchangeTombstones = 1 << 17,
+
+        TimeSeries = 1 << 18
     }
 
     [Flags]

@@ -225,6 +225,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Subscriptions:
                     counts = ProcessSubscriptions(result);
                     break;
+                case DatabaseItemType.TimeSeries:
+                    counts = ProcessTimeSeries(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -944,6 +947,27 @@ namespace Raven.Server.Smuggler.Documents
 
             return result.Subscriptions;
         }
+
+        private SmugglerProgressBase.Counts ProcessTimeSeries(SmugglerResult result)
+        {
+            using (var actions = _destination.TimeSeries())
+            {
+                foreach (var ts in _source.GetTimeSeries())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.TimeSeries.ReadCount++;
+
+                    if (result.TimeSeries.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
+
+                    actions.WriteTimeSeries(ts);
+
+                }
+            }
+
+            return result.TimeSeries;
+        }
+
 
         private static void SkipDocument(DocumentItem item, SmugglerResult result)
         {

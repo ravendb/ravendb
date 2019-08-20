@@ -411,12 +411,12 @@ namespace Raven.Server.Documents.TimeSeries
             Name,
             BaseLine
         }
-        public static void ParseTimeSeriesKey(Slice key, out string docId, out string name, out DateTime baseLine)
+        public static void ParseTimeSeriesKey(byte* ptr, int size, out string docId, out string name, out DateTime baseLine)
         {
             docId = null;
             name = null;
 
-            var bytes = new Span<byte>(key.Content.Ptr, key.Size);
+            var bytes = new Span<byte>(ptr, size);
             var order = ParsingOrder.Id;
             var next = -1;
             for (int i = 0; i < bytes.Length - sizeof(long); i++)
@@ -443,6 +443,11 @@ namespace Raven.Server.Documents.TimeSeries
 
             var ticks = MemoryMarshal.Read<long>(bytes.Slice(bytes.Length - sizeof(long), sizeof(long)));
             baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
+        }
+
+        public static void ParseTimeSeriesKey(Slice key, out string docId, out string name, out DateTime baseLine)
+        {
+            ParseTimeSeriesKey(key.Content.Ptr, key.Size, out docId, out name, out baseLine);
         }
 
         public struct TagPointer
