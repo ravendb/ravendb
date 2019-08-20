@@ -2,6 +2,8 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetValue
     {
+        public string Name { get; set; }
+
         /// <summary>
         /// Name of range for which facet value applies.
         /// </summary>
@@ -43,6 +45,8 @@ namespace Raven.Client.Documents.Queries.Facets
                 msg += "Min: " + Min + ",";
             if (Average != null)
                 msg += "Average: " + Average + ",";
+            if (Name != null)
+                msg += "Name: " + Name + ",";
 
             msg = msg.TrimEnd(',', ' ');
             return msg;
