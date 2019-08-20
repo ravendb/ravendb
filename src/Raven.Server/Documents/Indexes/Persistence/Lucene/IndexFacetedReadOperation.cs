@@ -258,10 +258,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (groups.TryGetValue(allTerm, out var facetValues) == false || facetValues == null || facetValues.Any == false)
                         return 0;
 
-                    foreach (var value in facetValues.GetAll())
-                        return value.Count;
-
-                    return 0;
+                    return facetValues.Count;
                 });
 
                 result.Value.Result = new FacetResult
