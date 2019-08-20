@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -70,6 +71,8 @@ namespace Raven.Server.Documents.Queries
 
         public List<string> Diagnostics;
 
+        public string ClientVersion;
+
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = Uri.UnescapeDataString(query);
@@ -117,12 +120,15 @@ namespace Raven.Server.Documents.Queries
                 if (result.Metadata.Query.Limit != null)
                 {
                     var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                    result.Limit = limit;   
+                    result.Limit = limit;
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
 
                 if (tracker != null)
                     tracker.Query = result.Query;
+
+                if (result.Metadata.HasFacet && httpContext.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var clientVersion))
+                    result.ClientVersion = clientVersion;
 
                 return result;
             }

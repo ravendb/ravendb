@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (facetsByName == null)
                         facetsByName = new Dictionary<string, Dictionary<string, FacetValues>>();
 
-                    HandleFacets(returnedReaders, result, facetsByName);
+                    HandleFacets(returnedReaders, result, facetsByName, facetQuery.Legacy);
                     continue;
                 }
 
-                HandleRangeFacets(returnedReaders, result);
+                HandleRangeFacets(returnedReaders, result, facetQuery.Legacy);
             }
 
             UpdateFacetResults(results, query, facetsByName);
@@ -97,7 +97,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void HandleRangeFacets(
             List<ReaderFacetInfo> returnedReaders,
-            KeyValuePair<string, FacetedQueryParser.FacetResult> result)
+            KeyValuePair<string, FacetedQueryParser.FacetResult> result,
+            bool legacy)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
             var facetValues = new Dictionary<string, FacetValues>();
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (facetValues.TryGetValue(key, out var collectionOfFacetValues)) 
                     continue;
 
-                collectionOfFacetValues = new FacetValues();
+                collectionOfFacetValues = new FacetValues(legacy);
                 if (needToApplyAggregation == false)
                     collectionOfFacetValues.AddDefault(key);
                 else
@@ -161,7 +162,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void HandleFacets(List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValues>> facetsByName)
+        private void HandleFacets(
+            List<ReaderFacetInfo> returnedReaders, 
+            KeyValuePair<string, FacetedQueryParser.FacetResult> result, 
+            Dictionary<string, Dictionary<string, FacetValues>> facetsByName,
+            bool legacy)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
 
@@ -182,7 +187,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (facetValues.TryGetValue(kvp.Key, out var collectionOfFacetValues) == false)
                     {
                         var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, kvp.Key);
-                        collectionOfFacetValues = new FacetValues();
+                        collectionOfFacetValues = new FacetValues(legacy);
                         if (needToApplyAggregation == false)
                             collectionOfFacetValues.AddDefault(range);
                         else
@@ -599,10 +604,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private class FacetValues
         {
+            private readonly bool _legacy;
             private readonly Dictionary<string, FacetValue> _values = new Dictionary<string, FacetValue>();
 
             public int Count;
             public bool Any;
+
+            public FacetValues(bool legacy)
+            {
+                _legacy = legacy;
+            }
 
             public void AddDefault(string range)
             {
@@ -612,12 +623,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void Add(string name, string range)
             {
+                if (_legacy)
+                {
+                    if (Any)
+                        return;
+
+                    AddDefault(range);
+                    return;
+                }
+
                 Any = true;
                 _values[name] = new FacetValue { Range = range, Name = name };
             }
 
             public FacetValue Get(string name)
             {
+                if (_legacy)
+                    return _values[string.Empty];
+
                 return _values[name];
             }
 
