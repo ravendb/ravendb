@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
@@ -15,6 +16,18 @@ namespace Raven.Client.Documents.Queries.Facets
         internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
             return FacetToken.Create(this, addQueryParameter);
+        }
+
+        internal static Facet Create(BlittableJsonReaderObject json)
+        {
+            var facet = new Facet();
+
+            if (json.TryGet(nameof(facet.FieldName), out string fieldName))
+                facet.FieldName = fieldName;
+
+            Fill(facet, json);
+
+            return facet;
         }
     }
 

@@ -6,6 +6,7 @@ using System.Reflection;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Tokens;
 using Sparrow.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
@@ -32,6 +33,22 @@ namespace Raven.Client.Documents.Queries.Facets
             if (_parent != null)
                 return _parent.ToFacetToken(addQueryParameter);
             return FacetToken.Create(this, addQueryParameter);
+        }
+
+        internal static RangeFacet Create(BlittableJsonReaderObject json)
+        {
+            var facet = new RangeFacet();
+
+            if (json.TryGet(nameof(facet.Ranges), out BlittableJsonReaderArray array) && array != null)
+            {
+                facet.Ranges = new List<string>();
+                foreach (var range in array)
+                    facet.Ranges.Add(range.ToString());
+            }
+
+            Fill(facet, json);
+
+            return facet;
         }
     }
 

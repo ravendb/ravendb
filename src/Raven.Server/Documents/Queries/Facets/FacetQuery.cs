@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
 
@@ -51,7 +49,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     else
                         facetsEtag = facetsEtag.Value ^ documentJson.Etag;
 
-                    var document = (FacetSetup)EntityToBlittable.ConvertToEntity(typeof(FacetSetup), facetField.FacetSetupDocumentId, documentJson.Data, DocumentConventions.Default);
+                    var document = FacetSetup.Create(facetField.FacetSetupDocumentId, documentJson.Data);
 
                     facets[facetField.FacetSetupDocumentId] = document;
                 }
