@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Queries.Facets
 
         public readonly long FacetsEtag;
 
+        public bool Legacy;
+
         private FacetQuery(IndexQueryServerSide query, Dictionary<string, FacetSetup> facets, long facetsEtag)
         {
             Query = query;
@@ -54,7 +56,10 @@ namespace Raven.Server.Documents.Queries.Facets
                     facets[facetField.FacetSetupDocumentId] = document;
                 }
 
-                return new FacetQuery(query, facets, facetsEtag ?? 0);
+                return new FacetQuery(query, facets, facetsEtag ?? 0)
+                {
+                    Legacy = string.IsNullOrEmpty(query.ClientVersion) == false && query.ClientVersion[0] == '4'
+                };
             }
             finally
             {

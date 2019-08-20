@@ -1027,6 +1027,15 @@ namespace Raven.Client.Http
             return new HttpCache.ReleaseCacheItem();
         }
 
+        private string _localClientVersion;
+
+        internal IDisposable UsingClientVersion(string clientVersion)
+        {
+            _localClientVersion = clientVersion;
+
+            return new DisposableAction(() => _localClientVersion = null);
+        }
+
         public static readonly string ClientVersion = RavenVersionAttribute.Instance.AssemblyVersion;
 
         internal HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
@@ -1046,7 +1055,7 @@ namespace Raven.Client.Http
             request.RequestUri = builder.Uri;
 
             if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
-                request.Headers.Add(Constants.Headers.ClientVersion, ClientVersion);
+                request.Headers.Add(Constants.Headers.ClientVersion, _localClientVersion ?? ClientVersion);
             
             return request;
         }
