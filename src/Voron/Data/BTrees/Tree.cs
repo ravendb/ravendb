@@ -214,6 +214,13 @@ namespace Voron.Data.BTrees
                 *(long*)ptr = value;
         }
 
+        public void Add(Slice key, int value)
+        {
+            using (DirectAdd(key, sizeof(int), out byte* ptr))
+                *(int*)ptr = value;
+        }
+
+
         public void Add(Slice key, Stream value)
         {
             ValidateValueLength(value);
