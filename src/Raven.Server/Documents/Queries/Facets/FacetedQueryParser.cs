@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
@@ -142,11 +141,6 @@ namespace Raven.Server.Documents.Queries.Facets
 
                     ranges.Add(parsedRange);
 
-                    result.Result.Values.Add(new FacetValue
-                    {
-                        Range = parsedRange.RangeText
-                    });
-
                     if (fieldName == null)
                         fieldName = parsedRange.Field;
                     else
@@ -168,23 +162,26 @@ namespace Raven.Server.Documents.Queries.Facets
 
             foreach (var kvp in facet.Aggregations)
             {
-                if (result.Aggregations.TryGetValue(kvp.Value.First(), out var value) == false)
-                    result.Aggregations[kvp.Value.First()] = value = new FacetResult.Aggregation();
-
-                switch (kvp.Key)
+                foreach (string v in kvp.Value)
                 {
-                    case FacetAggregation.Max:
-                        value.Max = true;
-                        break;
-                    case FacetAggregation.Min:
-                        value.Min = true;
-                        break;
-                    case FacetAggregation.Average:
-                        value.Average = true;
-                        break;
-                    case FacetAggregation.Sum:
-                        value.Sum = true;
-                        break;
+                    if (result.Aggregations.TryGetValue(v, out var value) == false)
+                        result.Aggregations[v] = value = new FacetResult.Aggregation();
+
+                    switch (kvp.Key)
+                    {
+                        case FacetAggregation.Max:
+                            value.Max = true;
+                            break;
+                        case FacetAggregation.Min:
+                            value.Min = true;
+                            break;
+                        case FacetAggregation.Average:
+                            value.Average = true;
+                            break;
+                        case FacetAggregation.Sum:
+                            value.Sum = true;
+                            break;
+                    }
                 }
             }
 

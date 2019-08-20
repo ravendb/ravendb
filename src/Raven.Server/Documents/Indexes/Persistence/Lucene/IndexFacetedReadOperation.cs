@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var results = FacetedQueryParser.Parse(context, facetQuery);
 
             var query = facetQuery.Query;
-            var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
+            Dictionary<string, Dictionary<string, FacetValues>> facetsByName = null;
 
             var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
@@ -71,11 +71,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
                 {
+                    if (facetsByName == null)
+                        facetsByName = new Dictionary<string, Dictionary<string, FacetValues>>();
+
                     HandleFacets(returnedReaders, result, facetsByName);
                     continue;
                 }
 
-                HandleRangeFacets(result, returnedReaders);
+                HandleRangeFacets(returnedReaders, result);
             }
 
             UpdateFacetResults(results, query, facetsByName);
@@ -92,9 +95,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 .ToList();
         }
 
-        private void HandleRangeFacets(KeyValuePair<string, FacetedQueryParser.FacetResult> result, List<ReaderFacetInfo> returnedReaders)
+        private void HandleRangeFacets(
+            List<ReaderFacetInfo> returnedReaders,
+            KeyValuePair<string, FacetedQueryParser.FacetResult> result)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
+            var facetValues = new Dictionary<string, FacetValues>();
 
             foreach (var readerFacetInfo in returnedReaders)
             {
@@ -107,21 +113,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     for (int i = 0; i < ranges.Count; i++)
                     {
                         var parsedRange = ranges[i];
+
+                        var range = parsedRange.RangeText;
+                        if (facetValues.TryGetValue(range, out var collectionOfFacetValues) == false)
+                        {
+                            collectionOfFacetValues = new FacetValues();
+                            if (needToApplyAggregation == false)
+                                collectionOfFacetValues.AddDefault(range);
+                            else
+                            {
+                                foreach (var aggregation in result.Value.Aggregations)
+                                    collectionOfFacetValues.Add(aggregation.Key, range);
+                            }
+
+                            facetValues.Add(range, collectionOfFacetValues);
+                        }
+
                         if (parsedRange.IsMatch(kvp.Key))
                         {
-                            var facetValue = result.Value.Result.Values[i];
-
                             var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                             var intersectCount = intersectedDocuments.Count;
                             if (intersectCount == 0)
                                 continue;
 
-                            facetValue.Count += intersectCount;
+                            collectionOfFacetValues.IncrementCount(intersectCount);
 
                             if (needToApplyAggregation)
                             {
                                 var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                                ApplyAggregation(result.Value.Aggregations, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
+                                ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
                                 IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
                                 intersectedDocuments.Documents = null;
                             }
@@ -129,55 +149,72 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
                 }
             }
+
+            foreach (var kvp in facetValues)
+            {
+                if (kvp.Value.Any == false)
+                    continue;
+
+                result.Value.Result.Values.AddRange(kvp.Value.GetAll());
+            }
         }
 
-        private void HandleFacets(List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private void HandleFacets(List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValues>> facetsByName)
         {
+            var needToApplyAggregation = result.Value.Aggregations.Count > 0;
+
             foreach (var readerFacetInfo in returnedReaders)
             {
                 var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
 
-                if (facetsByName.TryGetValue(result.Key, out Dictionary<string, FacetValue> facetValues) == false)
-                    facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValue>();
+                if (facetsByName.TryGetValue(result.Key, out var facetValues) == false)
+                    facetsByName[result.Key] = facetValues = new Dictionary<string, FacetValues>();
 
                 foreach (var kvp in termsForField)
                 {
-                    var needToApplyAggregation = result.Value.Aggregations.Count > 0;
                     var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                     var intersectCount = intersectedDocuments.Count;
                     if (intersectCount == 0)
                         continue;
 
-                    if (facetValues.TryGetValue(kvp.Key, out FacetValue facetValue) == false)
+                    if (facetValues.TryGetValue(kvp.Key, out var collectionOfFacetValues) == false)
                     {
-                        facetValue = new FacetValue
+                        var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, kvp.Key);
+                        collectionOfFacetValues = new FacetValues();
+                        if (needToApplyAggregation == false)
+                            collectionOfFacetValues.AddDefault(range);
+                        else
                         {
-                            Range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, kvp.Key)
-                        };
-                        facetValues.Add(kvp.Key, facetValue);
+                            foreach (var aggregation in result.Value.Aggregations)
+                                collectionOfFacetValues.Add(aggregation.Key, range);
+                        }
+
+                        facetValues.Add(kvp.Key, collectionOfFacetValues);
                     }
 
-                    facetValue.Count += intersectCount;
+                    collectionOfFacetValues.IncrementCount(intersectCount);
 
                     if (needToApplyAggregation)
                     {
                         var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                        ApplyAggregation(result.Value.Aggregations, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
+                        ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
                     }
                 }
             }
         }
 
-        private static void UpdateFacetResults(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private static void UpdateFacetResults(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query, Dictionary<string, Dictionary<string, FacetValues>> facetsByName)
         {
             foreach (var result in results)
             {
                 if (result.Value.Ranges != null && result.Value.Ranges.Count > 0)
                     continue;
 
+                var valuesCount = 0;
+                var valuesSumOfCounts = 0;
                 var values = new List<FacetValue>();
                 List<string> allTerms;
-                if (facetsByName.TryGetValue(result.Key, out Dictionary<string, FacetValue> groups) == false || groups == null)
+                if (facetsByName.TryGetValue(result.Key, out var groups) == false || groups == null)
                     continue;
 
                 switch (result.Value.Options.TermSortMode)
@@ -195,38 +232,48 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         allTerms = new List<string>(groups.OrderByDescending(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
                         break;
                     default:
-                        throw new ArgumentException(string.Format("Could not understand '{0}'", result.Value.Options.TermSortMode));
+                        throw new ArgumentException($"Could not understand '{result.Value.Options.TermSortMode}'");
                 }
 
                 var start = result.Value.Options.Start;
                 var pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
 
-                foreach (var term in allTerms.Skip(start).TakeWhile(term => values.Count < pageSize))
+                foreach (var term in allTerms.Skip(start).TakeWhile(term => valuesCount < pageSize))
                 {
-                    if (groups.TryGetValue(term, out FacetValue facetValue) == false || facetValue == null)
-                        facetValue = new FacetValue { Range = term };
+                    valuesCount++;
 
-                    values.Add(facetValue);
+                    if (groups.TryGetValue(term, out var facetValues) == false || facetValues == null || facetValues.Any == false)
+                    {
+                        values.Add(new FacetValue { Range = term });
+                        continue;
+                    }
+
+                    values.AddRange(facetValues.GetAll());
+
+                    valuesSumOfCounts += facetValues.Count;
                 }
 
                 var previousHits = allTerms.Take(start).Sum(allTerm =>
                 {
-                    if (groups.TryGetValue(allTerm, out FacetValue facetValue) == false || facetValue == null)
+                    if (groups.TryGetValue(allTerm, out var facetValues) == false || facetValues == null || facetValues.Any == false)
                         return 0;
 
-                    return facetValue.Count;
+                    foreach (var value in facetValues.GetAll())
+                        return value.Count;
+
+                    return 0;
                 });
 
                 result.Value.Result = new FacetResult
                 {
                     Name = result.Key,
                     Values = values,
-                    RemainingTermsCount = allTerms.Count - (start + values.Count),
-                    RemainingHits = groups.Values.Sum(x => x.Count) - (previousHits + values.Sum(x => x.Count))
+                    RemainingTermsCount = allTerms.Count - (start + valuesCount),
+                    RemainingHits = groups.Values.Sum(x => x.Count) - (previousHits + valuesSumOfCounts)
                 };
 
                 if (result.Value.Options.IncludeRemainingTerms)
-                    result.Value.Result.RemainingTerms = allTerms.Skip(start + values.Count).ToList();
+                    result.Value.Result.RemainingTerms = allTerms.Skip(start + valuesCount).ToList();
             }
         }
 
@@ -247,12 +294,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private static void ApplyAggregation(Dictionary<string, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
+        private static void ApplyAggregation(Dictionary<string, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             foreach (var kvp in aggregations)
             {
-                if (kvp.Key == null) // Count
+                if (string.IsNullOrEmpty(kvp.Key)) // Count
                     continue;
+
+                var value = values.Get(kvp.Key);
 
                 var name = FieldUtil.ApplyRangeSuffixIfNecessary(kvp.Key, RangeType.Double);
                 var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
@@ -547,6 +596,44 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             public override bool AcceptsDocsOutOfOrder => true;
+        }
+
+        private class FacetValues
+        {
+            private readonly Dictionary<string, FacetValue> _values = new Dictionary<string, FacetValue>();
+
+            public int Count;
+            public bool Any;
+
+            public void AddDefault(string range)
+            {
+                Any = true;
+                _values[string.Empty] = new FacetValue { Range = range };
+            }
+
+            public void Add(string name, string range)
+            {
+                Any = true;
+                _values[name] = new FacetValue { Range = range, Name = name };
+            }
+
+            public FacetValue Get(string name)
+            {
+                return _values[name];
+            }
+
+            public IEnumerable<FacetValue> GetAll()
+            {
+                return _values.Values;
+            }
+
+            public void IncrementCount(int count)
+            {
+                Count += count;
+
+                foreach (var facetValue in _values)
+                    facetValue.Value.Count += count;
+            }
         }
     }
 }

@@ -242,6 +242,10 @@ namespace Raven.Server.Json
 
                 writer.WriteStartObject();
 
+                writer.WritePropertyName(nameof(value.Name));
+                writer.WriteString(value.Name);
+                writer.WriteComma();
+
                 if (value.Average.HasValue)
                 {
                     writer.WritePropertyName(nameof(value.Average));
