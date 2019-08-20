@@ -33,6 +33,11 @@ namespace Raven.Client.Documents.Queries.Facets
 
         internal static void Fill(FacetBase facet, BlittableJsonReaderObject json)
         {
+            if (facet == null) 
+                throw new ArgumentNullException(nameof(facet));
+            if (json == null) 
+                throw new ArgumentNullException(nameof(json));
+
             if (json.TryGet(nameof(facet.DisplayFieldName), out string displayFieldName))
                 facet.DisplayFieldName = displayFieldName;
 

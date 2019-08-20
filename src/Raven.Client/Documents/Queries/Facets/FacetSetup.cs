@@ -36,10 +36,10 @@ namespace Raven.Client.Documents.Queries.Facets
 
             var result = new FacetSetup { Id = id };
 
-            if (json.TryGet(nameof(result.Facets), out BlittableJsonReaderArray array))
+            if (json.TryGet(nameof(result.Facets), out BlittableJsonReaderArray array) && array != null)
                 result.Facets = CreateFacets(array);
 
-            if (json.TryGet(nameof(result.RangeFacets), out array))
+            if (json.TryGet(nameof(result.RangeFacets), out array) && array != null)
                 result.RangeFacets = CreateRangeFacets(array);
 
             return result;

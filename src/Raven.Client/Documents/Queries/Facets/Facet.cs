@@ -20,6 +20,9 @@ namespace Raven.Client.Documents.Queries.Facets
 
         internal static Facet Create(BlittableJsonReaderObject json)
         {
+            if (json == null) 
+                throw new ArgumentNullException(nameof(json));
+
             var facet = new Facet();
 
             if (json.TryGet(nameof(facet.FieldName), out string fieldName))
