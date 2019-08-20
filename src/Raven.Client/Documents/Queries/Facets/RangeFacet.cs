@@ -37,6 +37,9 @@ namespace Raven.Client.Documents.Queries.Facets
 
         internal static RangeFacet Create(BlittableJsonReaderObject json)
         {
+            if (json == null) 
+                throw new ArgumentNullException(nameof(json));
+
             var facet = new RangeFacet();
 
             if (json.TryGet(nameof(facet.Ranges), out BlittableJsonReaderArray array) && array != null)
