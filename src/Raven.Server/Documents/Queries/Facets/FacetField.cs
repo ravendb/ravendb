@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries.Facets
         public void AddAggregation(FacetAggregation aggregation, QueryFieldName name)
         {
             if (Aggregations.TryGetValue(aggregation, out var values) == false)
-                Aggregations[aggregation] = values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Aggregations[aggregation] = values = new HashSet<string>();
 
             values.Add(name);
         }
