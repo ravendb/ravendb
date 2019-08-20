@@ -102,49 +102,51 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
             var facetValues = new Dictionary<string, FacetValues>();
 
+            var ranges = result.Value.Ranges;
+            foreach (var range in ranges)
+            {
+                var key = range.RangeText;
+                if (facetValues.TryGetValue(key, out var collectionOfFacetValues)) 
+                    continue;
+
+                collectionOfFacetValues = new FacetValues();
+                if (needToApplyAggregation == false)
+                    collectionOfFacetValues.AddDefault(key);
+                else
+                {
+                    foreach (var aggregation in result.Value.Aggregations)
+                        collectionOfFacetValues.Add(aggregation.Key, key);
+                }
+
+                facetValues.Add(key, collectionOfFacetValues);
+            }
+
             foreach (var readerFacetInfo in returnedReaders)
             {
                 var name = FieldUtil.ApplyRangeSuffixIfNecessary(result.Value.AggregateBy, result.Value.RangeType);
                 var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, name, _indexName, _state);
 
-                var ranges = result.Value.Ranges;
                 foreach (var kvp in termsForField)
                 {
-                    for (int i = 0; i < ranges.Count; i++)
+                    foreach (var range in ranges)
                     {
-                        var parsedRange = ranges[i];
+                        if (range.IsMatch(kvp.Key) == false)
+                            continue;
 
-                        var range = parsedRange.RangeText;
-                        if (facetValues.TryGetValue(range, out var collectionOfFacetValues) == false)
+                        var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
+                        var intersectCount = intersectedDocuments.Count;
+                        if (intersectCount == 0)
+                            continue;
+
+                        var collectionOfFacetValues = facetValues[range.RangeText];
+                        collectionOfFacetValues.IncrementCount(intersectCount);
+
+                        if (needToApplyAggregation)
                         {
-                            collectionOfFacetValues = new FacetValues();
-                            if (needToApplyAggregation == false)
-                                collectionOfFacetValues.AddDefault(range);
-                            else
-                            {
-                                foreach (var aggregation in result.Value.Aggregations)
-                                    collectionOfFacetValues.Add(aggregation.Key, range);
-                            }
-
-                            facetValues.Add(range, collectionOfFacetValues);
-                        }
-
-                        if (parsedRange.IsMatch(kvp.Key))
-                        {
-                            var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
-                            var intersectCount = intersectedDocuments.Count;
-                            if (intersectCount == 0)
-                                continue;
-
-                            collectionOfFacetValues.IncrementCount(intersectCount);
-
-                            if (needToApplyAggregation)
-                            {
-                                var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                                ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
-                                IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
-                                intersectedDocuments.Documents = null;
-                            }
+                            var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
+                            ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
+                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
+                            intersectedDocuments.Documents = null;
                         }
                     }
                 }
