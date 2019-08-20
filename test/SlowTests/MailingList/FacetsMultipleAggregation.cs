@@ -42,9 +42,9 @@ namespace SlowTests.MailingList
                 {
                     FieldName = "Prices",
                     DisplayFieldName = "Prices",
-                    Aggregations = new Dictionary<FacetAggregation, string>
+                    Aggregations = new Dictionary<FacetAggregation, HashSet<string>>
                     {
-                        { FacetAggregation.Min, "Prices" }
+                        { FacetAggregation.Min, new HashSet<string> { "Prices" } }
                     },
                     Options = new FacetOptions
                     {
@@ -56,9 +56,9 @@ namespace SlowTests.MailingList
                     FieldName = "Prices",
                     DisplayFieldName = "PricesMax",
                     //MaxResults = 1,
-                    Aggregations = new Dictionary<FacetAggregation, string>
+                    Aggregations = new Dictionary<FacetAggregation, HashSet<string>>
                     {
-                        { FacetAggregation.Max, "Prices" }
+                        { FacetAggregation.Max, new HashSet<string> { "Prices" } }
                     },
                     Options = new FacetOptions
                     {

@@ -12,12 +12,12 @@ namespace Raven.Client.Documents.Queries.Facets
 
         protected FacetBase()
         {
-            Aggregations = new Dictionary<FacetAggregation, string>();
+            Aggregations = new Dictionary<FacetAggregation, HashSet<string>>();
         }
 
         public FacetOptions Options { get; set; }
 
-        public Dictionary<FacetAggregation, string> Aggregations { get; set; }
+        public Dictionary<FacetAggregation, HashSet<string>> Aggregations { get; set; }
 
         /// <summary>
         /// Displayed field name in facet results
