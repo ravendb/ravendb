@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
@@ -38,9 +39,12 @@ namespace Voron.Data.Tables
         private readonly LowLevelTransaction _llt;
         private readonly Tree _parentTree;
         internal static readonly Slice AllocationStorage;
+        internal static readonly Slice AllocationStorageSize;
+        private int _numberOfPagesToAllocate;
         private const byte BitmapSize = sizeof(long)*4;
         internal const int NumberOfPagesInSection = BitmapSize*8;
         public const string AllocationStorageName = "Allocation-Storage";
+        public const string AllocationStorageSizeName = "Allocation-Storage-Size";
 
         static NewPageAllocator()
         {
@@ -48,6 +52,9 @@ namespace Voron.Data.Tables
             {
                 Slice.From(ctx, AllocationStorageName, ByteStringType.Immutable,
                     out AllocationStorage);
+
+                Slice.From(ctx, AllocationStorageSizeName, ByteStringType.Immutable,
+                    out AllocationStorageSize);
             }
         }
 
@@ -60,47 +67,76 @@ namespace Voron.Data.Tables
 
         public void Create()
         {
+            // we need to decide what is the size that we'll be allocating upfront
+            // we use different values for 32 / 64 bits system, but we *remember* what is
+            // the first value that we allocated on, and then re-use this value regardless
+            // of whatever we are *currently* running on 32/64 bits.
+            // for the most part, we'll usually run in the same environment, so there is no
+            // change here. The key is that we can now handle it better with integration.
+
             var fixedSizeTree = _parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
+
+            // we store this as a fixed size tree with a single element because we can't store raw values inside the RootObjects
+            var fixedSizeTreeSize = _parentTree.FixedTreeFor(AllocationStorageSize, valSize: sizeof(int));
+
+            if (fixedSizeTreeSize.NumberOfEntries == 0)
+            {
+                _numberOfPagesToAllocate = fixedSizeTree.NumberOfEntries != 0 ?
+                    // It's always safe to use 64 bits size, even if we started out in 32 bits.
+                    // So we'll default to that. This may cause changes in existing deployments on 32 bits, 
+                    // but the cost of creating the additional value is relatively small optimization, so 
+                    // it is safe to go with it.
+                    NumberOfPagesInSection :
+                    // if there are no values, we are new allocator, and can decide (and remember) based on
+                    // the current bit value
+                    ComputeNumberOfPagesToAllocate();
+
+                fixedSizeTreeSize.Add(0, BitConverter.GetBytes(_numberOfPagesToAllocate));
+            }
+            else
+            {
+                using (fixedSizeTreeSize.Read(0, out var slice))
+                {
+                    _numberOfPagesToAllocate = slice.CreateReader().ReadLittleEndianInt32();
+                }
+            }
+
             if (fixedSizeTree.NumberOfEntries != 0)
                 return;
 
             AllocateMoreSpace(fixedSizeTree);
         }
 
+
         private unsafe Page AllocateMoreSpace(FixedSizeTree fst)
         {
-            int numberOfPagesToAllocate = GetNumberOfPagesToAllocate();
+            
 
-            var allocatePage = _llt.AllocatePage(numberOfPagesToAllocate);
+            var allocatePage = _llt.AllocatePage(_numberOfPagesToAllocate);
             _llt.BreakLargeAllocationToSeparatePages(allocatePage.PageNumber);
 
             var initialPageNumber = allocatePage.PageNumber;
 
-            bool isNew;
-            byte* ptr;
-            using (fst.DirectAdd(initialPageNumber, out isNew,out ptr))
+            using (fst.DirectAdd(initialPageNumber, out bool isNew, out byte* ptr))
             {
                 if (isNew == false)
                     ThrowInvalidExistingBuffer();
 
                 // in 32 bits, we pre-allocate just 256 KB, not 2MB
-                Debug.Assert(numberOfPagesToAllocate % 8 == 0);
-                Debug.Assert(numberOfPagesToAllocate % 8 <= BitmapSize);
+                Debug.Assert(_numberOfPagesToAllocate % 8 == 0);
+                Debug.Assert(_numberOfPagesToAllocate % 8 <= BitmapSize);
                 Memory.Set(ptr, 0xFF, BitmapSize); // mark the pages that we haven't allocated as busy
-                Memory.Set(ptr, 0, numberOfPagesToAllocate / 8); // mark just the first part as free
+                Memory.Set(ptr, 0, _numberOfPagesToAllocate / 8); // mark just the first part as free
 
             }
             return allocatePage;
         }
 
-        private unsafe int GetNumberOfPagesToAllocate()
+        private int ComputeNumberOfPagesToAllocate()
         {
-            int numberOfPagesToAllocate;
             if (_llt.Environment.Options.ForceUsing32BitsPager || PlatformDetails.Is32Bits)
-                numberOfPagesToAllocate = BitmapSize;             // 256 KB
-            else
-                numberOfPagesToAllocate = NumberOfPagesInSection; // 2 MB
-            return numberOfPagesToAllocate;
+                return BitmapSize;             // 256 KB
+            return  NumberOfPagesInSection; // 2 MB
         }
 
         private static void ThrowInvalidExistingBuffer()
@@ -235,13 +271,12 @@ namespace Voron.Data.Tables
                         ThrowInvalidPageReleased(pageNumber);
                 }
 
-                var numberOfPagesActuallyAllocatedInSection = GetNumberOfPagesToAllocate();
-
                 if (it.CurrentKey > pageNumber ||
-                    it.CurrentKey + numberOfPagesActuallyAllocatedInSection <= pageNumber)
+                    it.CurrentKey + _numberOfPagesToAllocate <= pageNumber)
                     ThrowInvalidPageReleased(pageNumber);
 
-                var positionInBuffer = (int) (pageNumber - it.CurrentKey);
+                var positionInBuffer = (int)(pageNumber - it.CurrentKey);
+
                 UnsetValue(fst, it.CurrentKey, positionInBuffer);
                 var page = _llt.ModifyPage(pageNumber);
                 Memory.Set(page.Pointer, 0, Constants.Storage.PageSize);
@@ -264,11 +299,10 @@ namespace Voron.Data.Tables
                 if (it.Seek(long.MinValue) == false)
                     throw new InvalidOperationException($"Could not seek to the first element of {fst.Name} tree");
 
-                Slice slice;
-                using (it.Value(out slice))
+                using (it.Value(out Slice slice))
                 {
                     byte* ptr = slice.Content.Ptr;
-                    for (int i = 0; i < NumberOfPagesInSection; i++)
+                    for (int i = 0; i < _numberOfPagesToAllocate; i++)
                     {
                         if (PtrBitVector.GetBitInPointer(ptr, i) == false)
                         {
@@ -278,11 +312,10 @@ namespace Voron.Data.Tables
                 }
             }
 
-            int amountOfPagesActuallyAllocated = GetNumberOfPagesToAllocate();
 
             return new Report
             {
-                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * amountOfPagesActuallyAllocated,
+                NumberOfOriginallyAllocatedPages = fst.NumberOfEntries * _numberOfPagesToAllocate,
                 NumberOfFreePages = free
             };
         }
