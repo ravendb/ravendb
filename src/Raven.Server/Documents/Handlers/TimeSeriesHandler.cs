@@ -140,6 +140,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        
+        
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
@@ -147,28 +149,18 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _fromEtl;
 
             private readonly Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> _appendDictionary;
+            private readonly AppendTimeSeriesOperation _singleValue;
 
             public string LastChangeVector;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, DocumentTimeSeriesOperation batch, bool fromEtl)
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, DocumentTimeSeriesOperation batch, bool fromEtl, Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> appendDictionary = null)
             {
                 _database = database;
                 _batch = batch;
                 _fromEtl = fromEtl;
 
-                if (batch.Appends?.Count > 1)
-                {
-                    _appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
-             
-                    foreach (var item in batch.Appends)
-                    {
-                        if (_appendDictionary.TryGetValue(item.Name, out var sorted) == false)
-                            sorted = new SortedList<long, AppendTimeSeriesOperation>();
-
-                        sorted.Add(item.Timestamp.Ticks, item);
-                        _appendDictionary[item.Name] = sorted;
-                    }
-                }
+                ConvertBatch(batch, ref appendDictionary, ref _singleValue);
+                _appendDictionary = appendDictionary;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -180,8 +172,8 @@ namespace Raven.Server.Documents.Handlers
                     return 0;
 
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
-
                 var holder = new TimeSeriesStorage.Reader.SingleResult();
+
                 if (_appendDictionary != null)
                 {
                     foreach (var kvp in _appendDictionary)
@@ -201,25 +193,27 @@ namespace Raven.Server.Documents.Handlers
 
                         changes += kvp.Value.Count;
                     }
+
+                    _appendDictionary.Clear();
                 }
-                else if (_batch.Appends != null)
+                else if (_singleValue != null)
                 {
                     LastChangeVector = tss.AppendTimestamp(context,
                         _batch.Id,
                         docCollection,
-                        _batch.Appends[0].Name,
-                        _batch.Appends.Select(x =>
-                        {
-                            holder.Values = x.Values;
-                            holder.Tag = context.GetLazyString(x.Tag);
-                            holder.TimeStamp = x.Timestamp;
-                            return holder;
-                        })
-                    );
+                        _singleValue.Name,
+                        Single(_singleValue));
 
                     changes++;
+
+                    IEnumerable<TimeSeriesStorage.Reader.SingleResult> Single(AppendTimeSeriesOperation element)
+                    {
+                        holder.Values = element.Values;
+                        holder.Tag = context.GetLazyString(element.Tag);
+                        holder.TimeStamp = element.Timestamp;
+                        yield return holder;
+                    }
                 }
-                
 
                 if (_batch.Removals != null)
                 {
@@ -236,6 +230,34 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
                 return changes;
+            }
+            private void ConvertBatch(DocumentTimeSeriesOperation batch, ref Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> appendDictionary, ref AppendTimeSeriesOperation singleValue)
+            {
+                appendDictionary?.Clear();
+                singleValue = null;
+
+                if (batch.Appends == null || batch.Appends.Count == 0)
+                {
+                    return;
+                }
+
+                if (batch.Appends.Count == 1)
+                {
+                    singleValue = batch.Appends[0];
+                    return;
+                }
+
+                if (appendDictionary == null)
+                    appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
+
+                foreach (var item in batch.Appends)
+                {
+                    if (appendDictionary.TryGetValue(item.Name, out var sorted) == false)
+                        sorted = new SortedList<long, AppendTimeSeriesOperation>();
+
+                    sorted[item.Timestamp.Ticks] = item;
+                    appendDictionary[item.Name] = sorted;
+                }
             }
 
             private string GetDocumentCollection(DocumentsOperationContext context, DocumentTimeSeriesOperation docBatch)
