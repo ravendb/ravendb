@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="Data\RavenDB-12785.ravendbdump" />
+    <None Remove="Data\RavenDB-13937.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
@@ -34,6 +35,7 @@
     <EmbeddedResource Include="Data\oraclesql.northwind.create.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.insert.sql" />
     <EmbeddedResource Include="Data\RavenDB-12785.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB-13937.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
     <EmbeddedResource Include="Data\RavenDB_10958.json" />
     <EmbeddedResource Include="Data\mssql.northwind.create.sql" />

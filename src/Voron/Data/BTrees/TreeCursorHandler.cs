@@ -65,7 +65,8 @@ namespace Voron.Data.BTrees
                     var cursorPage = _tree.GetReadOnlyTreePage(p);
                     if (key.Options == SliceOptions.Key)
                     {
-                        if (cursorPage.Search(_llt, key) != null && cursorPage.LastMatch != 0)
+                        cursorPage.Search(_llt, key);
+                        if (cursorPage.LastMatch != 0)
                             cursorPage.LastSearchPosition--;
                     }
                     else if (key.Options == SliceOptions.BeforeAllKeys)
