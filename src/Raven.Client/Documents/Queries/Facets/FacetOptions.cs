@@ -1,3 +1,6 @@
+using System;
+using Sparrow.Json;
+
 namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetOptions
@@ -23,5 +26,24 @@ namespace Raven.Client.Documents.Queries.Facets
         public int Start { get; set; }
 
         public int PageSize { get; set; }
+
+        internal static FacetOptions Create(BlittableJsonReaderObject json)
+        {
+            var result = new FacetOptions();
+
+            if (json.TryGet(nameof(result.TermSortMode), out string termSortMode))
+                result.TermSortMode = (FacetTermSortMode)Enum.Parse(typeof(FacetTermSortMode), termSortMode, ignoreCase: true);
+
+            if (json.TryGet(nameof(result.IncludeRemainingTerms), out bool includeRemainingTerms))
+                result.IncludeRemainingTerms = includeRemainingTerms;
+
+            if (json.TryGet(nameof(result.Start), out int start))
+                result.Start = start;
+
+            if (json.TryGet(nameof(result.PageSize), out int pageSize))
+                result.PageSize = pageSize;
+
+            return result;
+        }
     }
 }

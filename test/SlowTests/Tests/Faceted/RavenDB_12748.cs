@@ -2,13 +2,63 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using SlowTests.Core.Utils.Entities.Faceted;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
     public class RavenDB_12748 : RavenTestBase
     {
+        [Fact]
+        public void CanDeserializeLegacyFacetSetup()
+        {
+            var facets = new DynamicJsonArray
+            {
+                new DynamicJsonValue
+                {
+                    [nameof(Facet.Aggregations)] = new DynamicJsonValue
+                    {
+                        [nameof(FacetAggregation.Min)] = "Test"
+                    }
+                }
+            };
+            var rangeFacets = new DynamicJsonArray
+            {
+                new DynamicJsonValue
+                {
+                    [nameof(Facet.Aggregations)] = new DynamicJsonValue
+                    {
+                        [nameof(FacetAggregation.Max)] = "Test2"
+                    }
+                }
+            };
+
+            var djv = new DynamicJsonValue
+            {
+                [nameof(FacetSetup.Facets)] = facets,
+                [nameof(FacetSetup.RangeFacets)] = rangeFacets
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json = context.ReadObject(djv, "facet/setup");
+                var setup = FacetSetup.Create("myId", json);
+
+                Assert.Equal("myId", setup.Id);
+
+                Assert.Equal(1, setup.Facets.Count);
+                Assert.Equal(1, setup.Facets[0].Aggregations.Count);
+                Assert.Equal("Test", setup.Facets[0].Aggregations[FacetAggregation.Min].Single());
+
+                Assert.Equal(1, setup.RangeFacets.Count);
+                Assert.Equal(1, setup.RangeFacets[0].Aggregations.Count);
+                Assert.Equal("Test2", setup.RangeFacets[0].Aggregations[FacetAggregation.Max].Single());
+            }
+        }
+
         [Fact]
         public void CanCorrectlyAggregate()
         {
