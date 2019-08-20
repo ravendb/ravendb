@@ -1001,12 +1001,12 @@ namespace Raven.Server.Documents.Replication
                                 if (tss.TryAppendEntireSegment(context, segment, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                                    var changeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
-                                    context.LastDatabaseChangeVector = changeVector;
+                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
                                 }
 
-                                tss.AppendTimestamp(context, docId, segment.Collection, name, segment.Segment.YieldAllValues(context, baseline), segment.ChangeVector);
+                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, name, segment.Segment.YieldAllValues(context, baseline), segment.ChangeVector);
+                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
                             case DocumentReplicationItem doc:

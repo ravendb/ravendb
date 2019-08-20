@@ -700,6 +700,11 @@ namespace Raven.Server.Documents.TimeSeries
                 _internalScopesToDispose.Add(context.Allocator.Allocate(MaxSegmentSize, out Buffer));
             }
 
+            public void UpdateTagSlice(DocumentsOperationContext context, LazyStringValue tag)
+            {
+                _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, tag, out TagSlice));
+            }
+
             public void Dispose()
             {
                 foreach (var internalScope in _internalScopesToDispose)
@@ -949,36 +954,14 @@ namespace Raven.Server.Documents.TimeSeries
                                 }
                             }
 
-                            var lastTimeStamp = segment.GetLastTimestamp(segmentHolder.BaselineDate);
-                            var canAppend = current.TimeStamp > lastTimeStamp;
-                            var deltaInMs = (current.TimeStamp.Ticks / 10_000) - segmentHolder.BaselineMilliseconds;
-
-                            if (canAppend &&
-                                deltaInMs < int.MaxValue) // if the range is too big (over 50 days, using ms precision), we need a new segment
-                            {
-                                // this is the simplest scenario, we can just add it.
-                                segment.CopyTo(slicer.Buffer.Ptr);
-                                var newSegment = new TimeSeriesValuesSegment(slicer.Buffer.Ptr, MaxSegmentSize);
-
-                                // checking if we run out of space here, in which can we'll create new segment
-                                if (newSegment.Append(context.Allocator, (int)deltaInMs, current.Values.Span, slicer.TagSlice.AsSpan()))
-                                {
-                                    segmentHolder.AppendExistingSegment(newSegment);
-                                    break;
-                                }
-                            }
-
-                            if (canAppend)
-                            {
-                                // either the range is too high to fit in a single segment (~50 days) or the 
-                                // previous segment is full, we can just create a completely new segment with the 
-                                // new value
-                                segmentHolder.AppendNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice);
+                            if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, out var newValueFetched))
                                 break;
-                            }
 
-                            if (HasIdenticalValue(context, segmentHolder, current))
+                            if (newValueFetched)
+                            {
+                                retry = true;
                                 continue;
+                            }
 
                             retry = SplitSegment(context, segmentHolder, appendEnumerator, current, updatedValuesNewSize: 0);
                         }
@@ -989,33 +972,68 @@ namespace Raven.Server.Documents.TimeSeries
             return context.LastDatabaseChangeVector;
         }
 
-        private bool HasIdenticalValue(DocumentsOperationContext context, TimeSeriesSegmentHolder segmentHolder, Reader.SingleResult current)
+        private bool TryAppendToCurrentSegment(
+            DocumentsOperationContext context, 
+            TimeSeriesSegmentHolder segmentHolder, 
+            IEnumerator<Reader.SingleResult> appendEnumerator, 
+            out bool newValueFetched)
         {
             var segment = segmentHolder.ReadOnlySegment;
-            using (context.Allocator.Allocate(segment.NumberOfValues * sizeof(double), out var valuesBuffer))
-            using (context.Allocator.Allocate(segment.NumberOfValues * sizeof(TimeStampState), out var stateBuffer))
-            using (var enumerator = segment.GetEnumerator(context.Allocator))
+            var slicer = segmentHolder.Allocator;
+
+            var current = appendEnumerator.Current;
+            var lastTimeStamp = segment.GetLastTimestamp(segmentHolder.BaselineDate);
+            var nextSegmentBaseline = BaselineOfNextSegment(segmentHolder, current.TimeStamp) ?? DateTime.MaxValue;
+
+            TimeSeriesValuesSegment newSegment = default;
+            newValueFetched = false;
+            while (true)
             {
-                var currentValues = new Span<double>(valuesBuffer.Ptr, segment.NumberOfValues);
-                var state = new Span<TimeStampState>(stateBuffer.Ptr, segment.NumberOfValues);
-                var currentTag = new TimeSeriesValuesSegment.TagPointer();
-                while (enumerator.MoveNext(out var currentTimestamp, currentValues, state, ref currentTag))
+                var canAppend = current.TimeStamp > lastTimeStamp;
+                var deltaInMs = (current.TimeStamp.Ticks / 10_000) - segmentHolder.BaselineMilliseconds;
+
+                if (canAppend &&
+                    deltaInMs < int.MaxValue) // if the range is too big (over 50 days, using ms precision), we need a new segment
                 {
-                    var ts = segmentHolder.BaselineDate.AddMilliseconds(currentTimestamp);
-                    if (ts == current.TimeStamp)
+                    // this is the simplest scenario, we can just add it.
+                    if (newValueFetched == false)
                     {
-                        if (currentTag.Size != current.Tag.Size || 
-                            Memory.CompareInline(currentTag.Pointer + 1,current.Tag.Buffer,currentTag.Length) != 0)
+                        segment.CopyTo(slicer.Buffer.Ptr);
+                        newSegment = new TimeSeriesValuesSegment(slicer.Buffer.Ptr, MaxSegmentSize);
+                    }
+
+                    // checking if we run out of space here, in which can we'll create new segment
+                    if (newSegment.Append(context.Allocator, (int)deltaInMs, current.Values.Span, slicer.TagSlice.AsSpan()))
+                    {
+                        newValueFetched = true;
+                        current = GetNext(appendEnumerator);
+
+                        bool unchangedNumberOfValues = segment.NumberOfValues == current?.Values.Length;
+                        if (current?.TimeStamp < nextSegmentBaseline && unchangedNumberOfValues)
                         {
-                            return false;
+                            slicer.UpdateTagSlice(context, current.Tag);
+                            continue;
                         }
 
-                        return currentValues.SequenceCompareTo(current.Values.Span) == 0;
+                        canAppend = false;
                     }
                 }
-            }
 
-            return false;
+                if (newValueFetched)
+                {
+                    segmentHolder.AppendExistingSegment(newSegment);
+                }
+                else if (canAppend)
+                {
+                    // either the range is too high to fit in a single segment (~50 days) or the 
+                    // previous segment is full, we can just create a completely new segment with the 
+                    // new value
+                    segmentHolder.AppendNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice);
+                    return true;
+                }
+
+                return current == null;
+            }
         }
 
         private bool SplitSegment(
@@ -1033,6 +1051,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var nextSegmentBaseline = BaselineOfNextSegment(timeSeriesSegment, current.TimeStamp);
             var segmentToSplit = timeSeriesSegment.ReadOnlySegment;
+            var changed = false;
 
             using (context.Allocator.Allocate(segmentToSplit.NumberOfBytes, out var currentSegmentBuffer))
             {
@@ -1076,6 +1095,7 @@ namespace Raven.Server.Documents.TimeSeries
                                     break;
                                 }
 
+                                changed = true;
                                 Debug.Assert(current != null);
                                 timeSeriesSegment.AddValue(current, ref splitSegment);
 
@@ -1092,9 +1112,13 @@ namespace Raven.Server.Documents.TimeSeries
                     var retryAppend = current != null;
                     if (retryAppend && (current.TimeStamp >= nextSegmentBaseline == false))
                     {
+                        changed = true;
                         retryAppend = false;
                         timeSeriesSegment.AddValue(current, ref splitSegment);
                     }
+
+                    if (changed == false)
+                        return retryAppend;
 
                     timeSeriesSegment.AppendExistingSegment(splitSegment);
                     return retryAppend;

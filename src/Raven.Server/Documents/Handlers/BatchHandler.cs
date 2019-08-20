@@ -15,6 +15,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
@@ -675,6 +676,7 @@ namespace Raven.Server.Documents.Handlers
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
             public Queue<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
+            private readonly Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> _appendDictionary;
 
             private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -973,7 +975,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case CommandType.TimeSeries:
                             cmd.TimeSeries.Id = cmd.Id;
-                            var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.TimeSeries, false);
+                            var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.TimeSeries, false, _appendDictionary);
 
                             tsCmd.ExecuteDirectly(context);
 
