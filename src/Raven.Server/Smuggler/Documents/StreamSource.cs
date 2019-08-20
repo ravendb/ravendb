@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
@@ -18,6 +19,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -474,6 +476,58 @@ namespace Raven.Server.Smuggler.Documents
                         LastBatchAckTime = lastBatchAckTime,
                         LastClientConnectionTime = lastClientConnectionTime,
                         Disabled = disabled
+                    };
+                }
+            }
+        }
+
+        public IEnumerable<TimeSeriesItem> GetTimeSeries()
+        {
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet(nameof(TimeSeriesItem.Key), out string key) == false ||
+                        reader.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
+                        reader.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false ||
+                        reader.TryGet(nameof(TimeSeriesItem.Values), out BlittableJsonReaderArray segment))
+                    {
+                        _result.TimeSeries.ErroredCount++;
+                        _result.AddWarning("Could not read time series entry.");
+
+                        continue;
+                    }
+
+                    var list = new List<TimeSeriesStorage.Reader.SingleResult>(segment.Length);
+
+                    foreach (var val in segment)
+                    {
+                        if (!(val is BlittableJsonReaderObject bjro) ||
+                            bjro.TryGet(nameof(TimeSeriesStorage.Reader.SingleResult.TimeStamp), out DateTime timeStamp) == false ||
+                            bjro.TryGet(nameof(TimeSeriesStorage.Reader.SingleResult.Tag), out LazyStringValue tag) == false ||
+                            bjro.TryGet(nameof(TimeSeriesStorage.Reader.SingleResult.Values), out BlittableJsonReaderArray values) == false)
+                        {
+                            _result.TimeSeries.ErroredCount++;
+                            _result.AddWarning("Could not read time series entry.");
+
+                            continue;
+                        }
+
+                        list.Add(new TimeSeriesStorage.Reader.SingleResult
+                        {
+                            TimeStamp = timeStamp,
+                            Tag = tag,
+                            Values = new Memory<double>(values.Select(x => (double)x).ToArray())
+                        });
+
+                    }
+
+                    yield return new TimeSeriesItem
+                    {
+                        Key = key,
+                        ChangeVector = cv,
+                        Collection = collection,
+                        Values = list
                     };
                 }
             }

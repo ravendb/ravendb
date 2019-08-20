@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -1270,6 +1271,38 @@ namespace Raven.Server.Documents.TimeSeries
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             item.ToDispose(Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out item.Key));
             return item;
+        }
+
+        public IEnumerable<TimeSeriesItem> GetAllValuesFrom(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+
+            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
+            {
+                yield return CreateTimeSeriesItem(context, result.Reader);
+            }
+        }
+
+        private static TimeSeriesItem CreateTimeSeriesItem(DocumentsOperationContext context, TableValueReader reader)
+        {
+            //var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
+            var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
+            var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
+            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+
+            var baselineMilliseconds = Bits.SwapBytes(
+                *(long*)(keyPtr + keySize - sizeof(long)));
+
+            var baseline = new DateTime(baselineMilliseconds * 10_000);
+
+            return new TimeSeriesItem
+            {
+                Key = Encoding.UTF8.GetString(keyPtr, keySize),
+                ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
+                Values = new TimeSeriesValuesSegment(segmentPtr, segmentSize).YieldAllValues(context, baseline),
+                Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                //Etag = Bits.SwapBytes(etag),
+            };
         }
 
         internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)

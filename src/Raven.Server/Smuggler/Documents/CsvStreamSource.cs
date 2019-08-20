@@ -382,6 +382,11 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<SubscriptionState>();
         }
 
+        public IEnumerable<TimeSeriesItem> GetTimeSeries()
+        {
+            return Enumerable.Empty<TimeSeriesItem>();
+        }
+
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
             return 0;

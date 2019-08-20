@@ -11,14 +11,15 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
@@ -110,6 +111,11 @@ namespace Raven.Server.Smuggler.Documents
         public ISubscriptionActions Subscriptions()
         {
             return new SubscriptionActions(_database);
+        }
+
+        public ITimeSeriesActions TimeSeries()
+        {
+            return new TimeSeriesActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -1553,6 +1559,109 @@ namespace Raven.Server.Smuggler.Documents
 
                 _subscriptionCommands.Clear();
             }
+        }
+
+        private class TimeSeriesActions : ITimeSeriesActions
+        {
+            private readonly DocumentDatabase _database;
+            private TimeSeriesHandler.ExecuteTimeSeriesBatchCommand _cmd;
+            private TimeSeriesHandler.ExecuteTimeSeriesBatchCommand _prevCommand;
+            private Task _prevCommandTask = Task.CompletedTask;
+            private int _countersCount;
+            private readonly int _maxBatchSize;
+
+            private Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> _appendDictionary; 
+
+            public TimeSeriesActions(DocumentDatabase database)
+            {
+                _database = database;
+                _cmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(database, new DocumentTimeSeriesOperation(), false);
+
+                _appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
+
+                _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
+                    ? 2 * 1024
+                    : 10 * 1024;
+            }
+
+            private void AddToBatch(TimeSeriesItem ts)
+            {
+                //TimeSeriesValuesSegment.ParseTimeSeriesKey();
+
+                foreach (var v in ts.Values)
+                {
+
+                    _currentBatch.Appends.Add(new AppendTimeSeriesOperation
+                    {
+                        Name = "",
+                        Tag = v.Tag,
+                        Timestamp = v.TimeStamp,
+                        Values = v.Values.ToArray()
+                    });
+                }
+
+            }
+
+            public void Dispose()
+            {
+                FinishBatchOfTimeSeries();
+            }
+
+            public void WriteTimeSeries(TimeSeriesItem ts)
+            {
+                AddToBatch(ts);
+                HandleBatchOfTimeSeriesIfNecessary();
+            }
+
+            private void HandleBatchOfTimeSeriesIfNecessary()
+            {
+                if (_countersCount < _maxBatchSize)
+                    return;
+
+                var prevCommand = _prevCommand;
+                var prevCommandTask = _prevCommandTask;
+
+                var commandTask = _database.TxMerger.Enqueue(_cmd);
+
+                _prevCommand = _cmd;
+                _prevCommandTask = commandTask;
+
+                if (prevCommand != null)
+                {
+                    //using (prevCommand)
+                    {
+                        AsyncHelpers.RunSync(() => prevCommandTask);
+                    }
+                }
+
+                _cmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(_database, new DocumentTimeSeriesOperation(), false);
+
+                _countersCount = 0;
+            }
+
+            private void FinishBatchOfTimeSeries()
+            {
+                if (_prevCommand != null)
+                {
+                    //using (_prevCommand)
+                    {
+                        AsyncHelpers.RunSync(() => _prevCommandTask);
+                    }
+
+                    _prevCommand = null;
+                }
+
+                if (_countersCount > 0)
+                {
+                    //using (_cmd)
+                    {
+                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
+                    }
+                }
+
+                _cmd = null;
+            }
+
         }
 
     }

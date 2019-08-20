@@ -180,6 +180,8 @@ namespace Raven.Client.Documents.Smuggler
         public Counts Subscriptions { get; set; }
         public CountsWithLastEtag Counters { get; set; }
 
+        public CountsWithLastEtag TimeSeries { get; set; }
+
         public Counts CompareExchangeTombstones { get; set; }
 
         public virtual DynamicJsonValue ToJson()

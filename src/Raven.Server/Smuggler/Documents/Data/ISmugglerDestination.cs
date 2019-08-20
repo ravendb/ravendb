@@ -27,6 +27,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context);
         ICounterActions Counters(SmugglerResult result);
         ISubscriptionActions Subscriptions();
+        ITimeSeriesActions TimeSeries();
     }
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
@@ -75,5 +76,10 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface IDatabaseRecordActions : IDisposable
     {
         void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
+    }
+
+    public interface ITimeSeriesActions : IDisposable
+    {
+        void WriteTimeSeries(TimeSeriesItem ts);
     }
 }
