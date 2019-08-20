@@ -10,7 +10,7 @@ import validateOfflineMigration = require("commands/resources/validateOfflineMig
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
-import getCloudCredentialsFromLinkCommand = require("commands/resources/getCloudCredentialsFromLinkCommand");
+import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -57,7 +57,7 @@ class databaseCreationModel {
 
     spinners = {
         fetchingRestorePoints: ko.observable<boolean>(false),
-        backupStorageTypeLoading: ko.observable<boolean>(false)
+        backupCredentialsLoading: ko.observable<boolean>(false)
     };
     
     lockActiveTab = ko.observable<boolean>(false);
@@ -295,15 +295,16 @@ class databaseCreationModel {
     }
 
     downloadCloudCredentials(link: string) {
-        this.spinners.backupStorageTypeLoading(true);
+        this.spinners.backupCredentialsLoading(true);
         
-        new getCloudCredentialsFromLinkCommand(link)
+        new getCloudBackupCredentialsFromLinkCommand(link)
             .execute()
             .fail(() => this.restore.cloudCredentials(null))
             .done(credentials => {
+                credentials.Expires = generalUtils.formatUtcDateAsLocal(credentials.Expires);                
                 this.restore.cloudCredentials(credentials);
             })
-            .always(() => this.spinners.backupStorageTypeLoading(false));
+            .always(() => this.spinners.backupCredentialsLoading(false));
     }
     
     dataPathHasChanged(value: string) {

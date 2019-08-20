@@ -193,7 +193,8 @@ interface restoreTypeAware {
 }
 
 interface backupCredentials {
-    BackupStorageType: string
+    BackupStorageType: string,
+    Expires: string
 }
 
 interface availableConfigurationSection {
