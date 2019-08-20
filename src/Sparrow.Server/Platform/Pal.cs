@@ -10,7 +10,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42011; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42012; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -106,8 +106,19 @@ namespace Sparrow.Server.Platform
             out IntPtr pid, 
             out SafeFileHandle stdin, 
             out SafeFileHandle stdout, 
-            out SafeFileHandle stderr,
             out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_wait_for_close_process( 
+            IntPtr pid,
+            int timeoutMs,
+            out int exitCode,
+            out int detailedErrorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_kill_process(
+            IntPtr pid,
+            out int detailedErrorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_write_header(

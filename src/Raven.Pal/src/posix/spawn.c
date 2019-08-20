@@ -2,8 +2,9 @@
 #define _GNU_SOURCE
 #endif
 
-
 #include <sys/wait.h>
+#include <pthread.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -15,10 +16,15 @@
 #include <assert.h>
 #include <time.h>
 #include <string.h>
+#include <signal.h>
 
 #include "rvn.h"
 #include "status_codes.h"
 #include "internal_posix.h"
+
+
+#define MSEC_TO_SEC(x) (x/1000)
+#define MSEC_TO_NANOSEC(x) ((x % 1000) * 1000000)
 
 char** parse_cmd_line(char* line)
 {
@@ -30,7 +36,7 @@ char** parse_cmd_line(char* line)
         while (*line == ' ' || *line == '\t' || *line == '\n')
             *line++ = '\0';
 
-        if (tmp = realloc(argv, (++argc) * sizeof(char*)) == NULL) {
+        if ((tmp = realloc(argv, (++argc) * sizeof(char*))) == NULL) {
             if(argv != NULL)
                 free(argv);
             return NULL;
@@ -42,7 +48,7 @@ char** parse_cmd_line(char* line)
             line++;
     }
 
-    if (tmp = realloc(argv, (++argc) * sizeof(char*)) == NULL) {
+    if ((tmp = realloc(argv, (++argc) * sizeof(char*))) == NULL) {
         if (argv != NULL)
             free(argv);
         return NULL;
@@ -54,44 +60,53 @@ char** parse_cmd_line(char* line)
 
 EXPORT int32_t
 rvn_kill_process(void* pid, int32_t* detailed_error_code) {
-    int rc = kill((pid_t)pid, 9);
+    int rc = kill(*(pid_t*)pid, 9);
     if (rc != 0) {
         *detailed_error_code = errno;
         return FAIL_KILL;
     }
-    // calling this to observe the statuc code of the process
-    waitpid((pid_t)pid, &rc, WNOHANG);
+    /* calling this to observe the statuc code of the process*/
+    waitpid(*(pid_t*)pid, &rc, WNOHANG);
     return SUCCESS;
 }
 
 EXPORT int32_t
 rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, int32_t* detailed_error_code) {
-    timespec ts;
+
     sigset_t child_mask;
     sigemptyset(&child_mask);
     sigaddset(&child_mask, SIGCHLD);
-    ts.tv_sec = MSEC_TO_SEC(timeout_ms);
-    ts.tv_nsec = (timeout_ms % 1000) * 1000000;
+    time_t timeout_sec = MSEC_TO_SEC(timeout_ms);
+    
+    int status;
 
+    time_t start = time(NULL);
+
+    struct timespec houndrad_ms;
+    houndrad_ms.tv_sec = 0;
+    houndrad_ms.tv_nsec = MSEC_TO_NANOSEC(timeout_ms);
+
+    struct timespec remaining;
+
+    /*busy wait for proc to end, can't use 'sigtimedwait' on OS X*/
     while (1) {
-        int status;
-        pid_t result = waitpid((pid_t)pid, &status, WNOHANG);
+        
+        pid_t result = waitpid(*(pid_t*)pid, &status, WNOHANG);
         if (result != -1)
             break;
 
-        *detailed_error_code = errno;
-        status = sigtimedwait(&child_mask, NULL, &ts);
-        if (status == -1) {
-            if (errno == EAGAIN) {
-                return FAIL_TIMEOUT;
-            }
+        if (difftime(time(NULL), start) >= timeout_sec)
+        {
+            *detailed_error_code = errno;
+            return FAIL_TIMEOUT;
         }
+        nanosleep((const struct timespec*)&houndrad_ms,&remaining);
     }
 
     *detailed_error_code = status;
 
     if (WIFEXITED(status)) {
-        exit_code = WEXITSTATUS(status);
+        *exit_code = WEXITSTATUS(status);
         return SUCCESS;
     }
     else if (WIFSIGNALED(status)) {
@@ -104,15 +119,19 @@ rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, in
 }
 
 EXPORT int32_t
-rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void* stdin, void* stdout, void* stderr, int32_t* detailed_error_code) {
+rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void** standard_in, void** standard_out, int32_t* detailed_error_code) {
     int filesdes_stdout[2] = { -1,-1 };
-    int filesdes_stderr[2] = { -1,-1 };
     int filesdes_stdin[2] = { -1,-1 };
     pid_t process_id = -1;
-    int thread_cancel_state;
     int32_t rc = SUCCESS;
-    char** argv;
-    char* line = strdup(cmdline);
+    char** argv = NULL;
+    char* line = NULL; 
+    int thread_cancel_state;
+
+    /* None of this code can be canceled without leaking handles, so just don't allow it*/
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &thread_cancel_state);
+
+    line = strdup(cmdline);
 
     if (line == NULL) {
         rc = FAIL_NOMEM;
@@ -125,24 +144,15 @@ rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void* s
         goto error;
     }
 
-    // None of this code can be canceled without leaking handles, so just don't allow it
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &thread_cancel_state);
+ 
 
     if (pipe(filesdes_stdout) == -1) {
         rc = FAIL_CREATE_PIPE;
         goto error;
     }
-    if (pipe(filesdes_stderr) == -1) {
-        rc = FAIL_CREATE_PIPE;
-        goto error;
-    }
+
     if (pipe(filesdes_stdin) == -1) {
         rc = FAIL_CREATE_PIPE;
-        goto error;
-    }
-
-    if (fcntl(filesdes_stderr[0], F_SETFD, FD_CLOEXEC) == -1) {
-        rc = FAIL_FCNTL;
         goto error;
     }
 
@@ -160,35 +170,28 @@ rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void* s
         rc = FAIL_VFORK;
         goto error;
     }
-    else if (pid == 0) {
+    else if (process_id == 0) {
         while ((dup2(filesdes_stdout[1], STDOUT_FILENO) == -1) && (errno == EINTR)) {}
-        while ((dup2(filesdes_stderr[1], STDERR_FILENO) == -1) && (errno == EINTR)) {}
+        while ((dup2(filesdes_stdout[1], STDERR_FILENO) == -1) && (errno == EINTR)) {}
         while ((dup2(filesdes_stdin[0], STDIN_FILENO) == -1) && (errno == EINTR)) {}
 
         close(filesdes_stdout[1]);
-        close(filesdes_stderr[1]);
         close(filesdes_stdin[0]);
 
-        execvpe(filename, argv, NULL);
+        execve(filename, argv, NULL);
 
-        // can only get there if we failed to execvpe()
+        /* can only get there if we failed to execvpe()*/
         _exit(errno);
     }
 
-    // close the child end of these
+    /* close the child end of these*/
     close(filesdes_stdout[1]);
-    close(filesdes_stderr[1]);
     close(filesdes_stdin[0]);
 
     goto success;
 
 error:
-    detailed_error_code = errno;
-
-    if(filesdes_stderr[0] != -1)
-        close(filesdes_stderr[0]);
-    if(filesdes_stderr[1] != -1)
-        close(filesdes_stderr[1]);
+    *detailed_error_code = errno;
 
     if (filesdes_stdout[0] != -1)
         close(filesdes_stdout[0]);
@@ -200,13 +203,12 @@ success:
         free(line);
     if (argv != NULL)
         free(argv);
+    
+    *standard_out = (void*)(intptr_t)filesdes_stdout[0];
+    *standard_in = (void*)(intptr_t)filesdes_stdin[1];
+    *pid    = (void*)(intptr_t)process_id;
 
-    *stdout = filesdes_stdout[0];
-    *stderr = filesdes_stderr[0];
-    *stdin = filesdes_stdin[1];
-    *pid = process_id;
-
-    // Restore thread cancel state
+    /* Restore thread cancel state*/
     pthread_setcancelstate(thread_cancel_state, &thread_cancel_state);
 
     return rc;

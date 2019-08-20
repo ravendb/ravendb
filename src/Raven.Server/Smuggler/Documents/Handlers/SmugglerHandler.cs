@@ -502,10 +502,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     UseShellExecute = false
                 };
 
-                Process process = null;
+                RavenProcess process = null;
                 try
                 {
-                    process = Process.Start(processStartInfo);
+                    process = RavenProcess.Start(processStartInfo);
                 }
                 catch (Exception e)
                 {
@@ -521,16 +521,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var isExportCommand = command == "export";
                 if (isExportCommand == false)
                 {
-                    var errorReadTask = ProcessExtensions.ReadOutput(process.StandardError);
                     var outputReadTask = ProcessExtensions.ReadOutput(process.StandardOutput);
 
-                    await Task.WhenAll(new Task[] { errorReadTask, outputReadTask }).ConfigureAwait(false);
+                    await outputReadTask.ConfigureAwait(false);
 
                     Debug.Assert(process.HasExited, "Migrator is still running!");
 
                     if (process.ExitCode == -1)
                     {
-                        await ExitWithException(errorReadTask, null).ConfigureAwait(false);
+                        await ExitWithException(outputReadTask, null).ConfigureAwait(false);
                     }
 
                     try
@@ -545,7 +544,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                     catch (Exception e)
                     {
-                        await ExitWithException(errorReadTask, e).ConfigureAwait(false);
+                        await ExitWithException(outputReadTask, e).ConfigureAwait(false);
                     }
                 }
 
@@ -584,11 +583,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             catch (Exception e)
                             {
-                                var errorString = await ProcessExtensions.ReadOutput(process.StandardError).ConfigureAwait(false);
+                                var errorString = await ProcessExtensions.ReadOutput(process.StandardOutput).ConfigureAwait(false);
                                 result.AddError($"Error occurred during migration. Process error: {errorString}, exception: {e}");
                                 onProgress.Invoke(result.Progress);
                                 var killed = ProcessExtensions.TryKill(process);
-                                throw new InvalidOperationException($"{errorString}, process pid: {process.Id} killed: {killed}");
+                                throw new InvalidOperationException($"{errorString}, process pid: {process.pid} killed: {killed}");
                             }
 
                             return (IOperationResult)result;

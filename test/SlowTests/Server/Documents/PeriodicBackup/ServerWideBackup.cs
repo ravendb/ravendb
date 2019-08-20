@@ -210,7 +210,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public async Task CanCreateBackupUsingConfigurationFromBackupScript()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

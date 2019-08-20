@@ -20,6 +20,8 @@ using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
+using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -323,7 +325,7 @@ namespace Raven.Server.ServerWide
 
         public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
-            Process process;
+            RavenProcess process;
 
             var startInfo = new ProcessStartInfo
             {
@@ -339,7 +341,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                process = Process.Start(startInfo);
+                process = RavenProcess.Start(startInfo);
             }
             catch (Exception e)
             {
@@ -347,51 +349,55 @@ namespace Raven.Server.ServerWide
             }
 
             var ms = new MemoryStream();
-            var readErrors = process.StandardError.ReadToEndAsync();
+
             var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
 
-            string GetStdError()
+            string GetStdOut()
             {
+                string additional = null;
                 try
                 {
-                    return readErrors.Result;
+                    readStdOut.Wait();
                 }
                 catch 
                 {
-                    return "Unable to get stderr";
+                    additional = Environment.NewLine + "Unable to get stdout";
                 }
+                return Encodings.Utf8.GetString(ms.ToArray()) + additional;
             }
             
             if (process.WaitForExit((int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
-                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stdout: {GetStdOut()}");
             }
             try
             {
                 readStdOut.Wait(_config.CertificateExecTimeout.AsTimeSpan);
-                readErrors.Wait(_config.CertificateExecTimeout.AsTimeSpan);
             }
             catch (Exception e)
             {
+                var stdout = GetStdOut();
+                if (Logger.IsOperationsEnabled)
+                {
+                    
+                    Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
+                    if (!string.IsNullOrWhiteSpace(stdout))
+                        Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Stdout: {stdout}");
+                }
+
                 throw new InvalidOperationException(
-                    $"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}",
+                    $"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stdout: {stdout}",
                     e);
 
             }
 
-            if (Logger.IsOperationsEnabled)
-            {
-                var errors = GetStdError();
-                Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
-                if (!string.IsNullOrWhiteSpace(errors))
-                    Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
-            }
+            
 
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"Unable to get certificate by executing {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                    $"Unable to get certificate by executing {executable} {args}, the exit code was {process.ExitCode}. Stdout: {GetStdOut()}");
             }
 
             var rawData = ms.ToArray();
@@ -421,7 +427,7 @@ namespace Raven.Server.ServerWide
 
         public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64, ServerStore serverStore)
         {
-            Process process;
+            RavenProcess process;
 
             var startInfo = new ProcessStartInfo
             {
@@ -437,7 +443,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                process = Process.Start(startInfo);
+                process = RavenProcess.Start(startInfo);
             }
             catch (Exception e)
             {
@@ -447,38 +453,40 @@ namespace Raven.Server.ServerWide
             process.StandardInput.WriteLine(newCertificateBase64);
             process.StandardInput.Flush();
 
-            var readErrors = process.StandardError.ReadToEndAsync();
+            var readOutput = process.StandardOutput.ReadToEndAsync();
 
-            string GetStdError()
+            string GetStdOut()
             {
+                string additional = string.Empty;
                 try
                 {
-                    return readErrors.Result;
+                    readOutput.Wait();
                 }
                 catch
                 {
-                    return "Unable to get stderr";
+                    additional = Environment.NewLine + "Unable to get stdout";
                 }
+                return readOutput.Result + additional;
             }
 
             if (process.WaitForExit((int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
-                throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stdout: {GetStdOut()}");
             }
 
             try
             {
-                readErrors.Wait(_config.CertificateExecTimeout.AsTimeSpan);
+                readOutput.Wait(_config.CertificateExecTimeout.AsTimeSpan);
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                throw new InvalidOperationException($"Unable to execute {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stdout: {GetStdOut()}", e);
             }
 
             if (Logger.IsOperationsEnabled)
             {
-                var errors = GetStdError();
+                var errors = GetStdOut();
                 Logger.Operations($"Executing {executable} {args} took {sw.ElapsedMilliseconds:#,#;;0} ms");
                 if (!string.IsNullOrWhiteSpace(errors))
                     Logger.Operations($"Executing {executable} {args} finished with exit code: {process.ExitCode}. Errors: {errors}");
@@ -487,13 +495,13 @@ namespace Raven.Server.ServerWide
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                    $"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stdout: {GetStdOut()}");
             }
         }
 
         private byte[] LoadMasterKeyWithExecutable()
         {
-            Process process;
+            RavenProcess process;
 
             var startInfo = new ProcessStartInfo
             {
@@ -509,7 +517,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                process = Process.Start(startInfo);
+                process = RavenProcess.Start(startInfo);
             }
             catch (Exception e)
             {
@@ -517,47 +525,47 @@ namespace Raven.Server.ServerWide
             }
 
             var ms = new MemoryStream();
-            var readErrors = process.StandardError.ReadToEndAsync();
             var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
 
-            string GetStdError()
+            string GetStdOut()
             {
+                string additional = null;
                 try
                 {
-                   return readErrors.Result;
+                    readStdOut.Wait();
                 }
                 catch
                 {
-                    return "Unable to get stdout";
+                    additional = Environment.NewLine + "Unable to get stdout";
                 }
+                return Encodings.Utf8.GetString(ms.ToArray()) + additional;
             }
             
             if (process.WaitForExit((int)_config.MasterKeyExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
                
-                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stdout: {GetStdOut()}");
             }
             try
             {
                 readStdOut.Wait(_config.MasterKeyExecTimeout.AsTimeSpan);
-                readErrors.Wait(_config.MasterKeyExecTimeout.AsTimeSpan);
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stdout: {GetStdOut()}", e);
             }
 
             if (Logger.IsOperationsEnabled)
             {
-                var errors = GetStdError();
-                Logger.Operations($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stderr: {errors}");
+                var errors = GetStdOut();
+                Logger.Operations($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stdout: {errors}");
             }
 
             if (process.ExitCode != 0)
             {
                 throw new InvalidOperationException(
-                    $"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                    $"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the exit code was {process.ExitCode}. Stdout: {GetStdOut()}");
             }
 
             var rawData = ms.ToArray();

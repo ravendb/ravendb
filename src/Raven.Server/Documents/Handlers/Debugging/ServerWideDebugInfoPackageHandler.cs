@@ -229,16 +229,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var sp = Stopwatch.StartNew();
             
             using (var stackTraceStream = zipArchiveEntry.Open())
-            using (var sw = new StringWriter())
             {
                 try
                 {
                     if (Debugger.IsAttached)
                         throw new InvalidOperationException("Cannot get stack traces when debugger is attached");
 
-                    ThreadsHandler.OutputResultToStream(sw);
+                    var r = ThreadsHandler.OutputResultToStream();
                     
-                    var result = JObject.Parse(sw.GetStringBuilder().ToString());
+                    var result = JObject.Parse(r);
 
                     var wait = 100 - sp.ElapsedMilliseconds;
                     if (wait > 0)

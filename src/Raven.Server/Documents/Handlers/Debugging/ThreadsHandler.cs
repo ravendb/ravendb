@@ -33,27 +33,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var sp = Stopwatch.StartNew();
             var threadsUsage = new ThreadsUsage();
 
-            using (var sw = new StringWriter())
+            var r = OutputResultToStream(threadIds.ToHashSet(), includeStackObjects);
+
+            var result = JObject.Parse(r);
+
+            var wait = 100 - sp.ElapsedMilliseconds;
+            if (wait > 0)
             {
-                OutputResultToStream(sw, threadIds.ToHashSet(), includeStackObjects);
+                // I expect this to be _rare_, but we need to wait to get a correct measure of the cpu
+                Thread.Sleep((int)wait);
+            }
 
-                var result = JObject.Parse(sw.GetStringBuilder().ToString());
+            var threadStats = threadsUsage.Calculate();
+            result["Threads"] = JArray.FromObject(threadStats.List);
 
-                var wait = 100 - sp.ElapsedMilliseconds;
-                if (wait > 0)
-                {
-                    // I expect this to be _rare_, but we need to wait to get a correct measure of the cpu
-                    Thread.Sleep((int)wait);
-                }
-
-                var threadStats = threadsUsage.Calculate();
-                result["Threads"] = JArray.FromObject(threadStats.List);
-
-                using (var writer = new StreamWriter(ResponseBodyStream()))
-                {
-                    result.WriteTo(new JsonTextWriter(writer) { Indentation = 4 });
-                    writer.Flush();
-                }
+            using (var writer = new StreamWriter(ResponseBodyStream()))
+            {
+                result.WriteTo(new JsonTextWriter(writer) {Indentation = 4});
+                writer.Flush();
             }
 
             return Task.CompletedTask;
@@ -95,7 +92,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void OutputResultToStream(TextWriter sw, HashSet<string> threadIds = null, bool includeStackObjects = false)
+        public static unsafe string OutputResultToStream(HashSet<string> threadIds = null, bool includeStackObjects = false)
         {
             var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
                 PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
@@ -138,33 +135,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (PlatformDetails.RunningOnPosix == false)
                     startup.LoadUserProfile = false;
 
-                var process = new Process
-                {
-                    StartInfo = startup,
-                    EnableRaisingEvents = true
-                };
+                var process = RavenProcess.Start(startup);
 
                 sb.Clear();
-                process.OutputDataReceived += (sender, args) => sw.Write(args.Data);
-                process.ErrorDataReceived += (sender, args) => sb.Append(args.Data);
-
-                process.Start();
-
-                process.BeginErrorReadLine();
-                process.BeginOutputReadLine();
 
                 if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
                 {
                     // enable this process to attach to us
-                    prctl(PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                    prctl(PR_SET_PTRACER, (UIntPtr)process.Pid.ToPointer(), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
 
                     process.StandardInput.WriteLine("go");// value is meaningless, just need a new line
-                    process.StandardInput.Flush();
                 }
+
+                var read = process.StandardOutput.ReadToEndAsync();
 
                 try
                 {
-                    process.WaitForExit();
+                    //TODO: here we're leaving a process hanging and we need to account for server shutdown
+                    while (process.WaitForExit() == false);
                 }
                 finally
                 {
@@ -177,6 +165,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (process.ExitCode != 0)
                     throw new InvalidOperationException("Could not read stack traces, " +
                                                         $"exit code: {process.ExitCode}, error: {sb}");
+
+                return read.Result;
             }
         }
 

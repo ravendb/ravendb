@@ -310,11 +310,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 CreateNoWindow = true
             };
 
-            Process process;
+            RavenProcess process;
 
             try
             {
-                process = Process.Start(startInfo);
+                process = RavenProcess.Start(startInfo);
             }
             catch (Exception e)
             {
@@ -323,42 +323,43 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             using (var ms = new MemoryStream())
             {
-                var readErrors = process.StandardError.ReadToEndAsync();
                 var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
                 var timeoutInMs = backupSettings.GetBackupConfigurationScript.TimeoutInMs;
 
-                string GetStdError()
+                string GetStdOut()
                 {
+                    string additional = null;
                     try
                     {
-                        return readErrors.Result;
+                        readStdOut.Wait();
                     }
                     catch
                     {
-                        return "Unable to get stdout";
+                        additional = Environment.NewLine +  "Unable to get stdout";
                     }
+
+                    return Encodings.Utf8.GetString(ms.ToArray()) + additional;
                 }
 
                 try
                 {
                     readStdOut.Wait(timeoutInMs);
-                    readErrors.Wait(timeoutInMs);
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Output: {GetStdOut()}", e);
                 }
 
                 if (process.WaitForExit(timeoutInMs) == false)
                 {
                     process.Kill();
 
-                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Output: {GetStdOut()}");
                 }
 
                 if (process.ExitCode != 0)
                 {
-                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+                    throw new InvalidOperationException($"Unable to get backup configuration by executing {command} {arguments}, the exit code was {process.ExitCode}. Output: {GetStdOut()}");
                 }
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))

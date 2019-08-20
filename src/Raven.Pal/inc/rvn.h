@@ -101,7 +101,7 @@ EXPORT int32_t
 rvn_get_path_disk_space(const char * path, uint64_t* total_free_bytes, uint64_t* total_size_bytes, int32_t* detailed_error_code);
 
 EXPORT int32_t
-rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void* stdin, void* stdout, void* stderr, int32_t* detailed_error_code);
+rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void** stdin, void** stdout, int32_t* detailed_error_code);
 
 EXPORT int32_t
 rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, int32_t* detailed_error_code);

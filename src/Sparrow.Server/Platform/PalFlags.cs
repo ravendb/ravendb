@@ -45,7 +45,10 @@ namespace Sparrow.Server.Platform
             FailCreatePipe = 35,
             FailVFork = 36,
             FailFcnl = 37,
-            FailCreateProcess = 38
+            FailCreateProcess = 38,
+            FailWaitPid = 39,
+            FailTimeout = 40,
+            FailKill = 41,
         };
 
         [Flags]

@@ -22,6 +22,18 @@ namespace Raven.Server.Utils
             }
         }
 
+        public static bool TryKill(RavenProcess process)
+        {
+            try
+            {
+                process?.Kill();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         public static bool TryClose(Process process)
         {
             try

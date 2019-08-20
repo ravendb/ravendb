@@ -3,9 +3,10 @@
 #endif
 
 #include <Windows.h>
-
 #include "rvn.h"
 #include "status_codes.h"
+#include <stdio.h>
+
 
 
 EXPORT int32_t
@@ -39,22 +40,39 @@ rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, in
 }
 
 EXPORT int32_t
-rvn_spawn_process(const char* filename, const char* cmdline, void* pid, void* stdin, void* stdout, void* stderr, int32_t* detailed_error_code) {
+rvn_spawn_process(const char* filename, const char* cmdline, void** pid, void** standard_in, void** standard_out, int32_t* detailed_error_code) {    
     int rc = SUCCESS;
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     SECURITY_ATTRIBUTES sa;
 
-    HANDLE stdin_read = NULL;
-    HANDLE stdin_write = NULL;
-    HANDLE stdout_read = NULL;
-    HANDLE stdout_write = NULL;
-    HANDLE stderr_read = NULL;
-    HANDLE stderr_write = NULL;
+    HANDLE stdin_read = INVALID_HANDLE_VALUE;
+    HANDLE stdin_write = INVALID_HANDLE_VALUE;
+    HANDLE stdout_read = INVALID_HANDLE_VALUE;
+    HANDLE stdout_write = INVALID_HANDLE_VALUE;
 
+    int filename_len = strlen(filename);
+    int cmdline_len = strlen(cmdline);
+    int line_len = filename_len + cmdline_len + 2;// space + null
     ZeroMemory(&si, sizeof(STARTUPINFO));
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
     ZeroMemory(&sa, sizeof(SECURITY_ATTRIBUTES));
+
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.lpSecurityDescriptor = NULL;
+    /* Pipe handles are inherited*/
+    sa.bInheritHandle = true;
+
+    char* line = malloc(line_len); 
+    if(line == NULL)
+    {
+        rc = FAIL_NOMEM;
+        goto error;
+    }
+    memcpy(line, filename, filename_len);
+    line[filename_len] = ' ';
+    memcpy(line + filename_len + 1, cmdline, cmdline_len);
+    line[line_len - 1] = '\0';
 
     if (!CreatePipe(&stdin_read, &stdin_write, &sa, 0)) {
         rc = FAIL_CREATE_PIPE;
@@ -64,17 +82,8 @@ rvn_spawn_process(const char* filename, const char* cmdline, void* pid, void* st
         rc = FAIL_CREATE_PIPE;
         goto error;
     }
-    if (!CreatePipe(&stderr_read, &stderr_write, &sa, 0)) {
-        rc = FAIL_CREATE_PIPE;
-        goto error;
-    }
 
     if (!SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0)) {
-        rc = FAIL_FCNTL;
-        goto error;
-    }
-
-    if (!SetHandleInformation(stderr_read, HANDLE_FLAG_INHERIT, 0)) {
         rc = FAIL_FCNTL;
         goto error;
     }
@@ -86,57 +95,51 @@ rvn_spawn_process(const char* filename, const char* cmdline, void* pid, void* st
 
 
     si.cb = sizeof(STARTUPINFO);
-    si.hStdError = stderr_write;
+    si.hStdError = stdout_write;
     si.hStdOutput = stdout_write;
     si.hStdInput = stdin_read;
     si.dwFlags |= STARTF_USESTDHANDLES;
 
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = NULL;
-    // Pipe handles are inherited
-    sa.bInheritHandle = true;
-
-    // Creates a child process
+    /* Creates a child process*/
     if (!CreateProcess(
-        filename,     // Module
-        cmdline,                                       // Command-line
-        NULL,                                       // Process security attributes
-        NULL,                                       // Primary thread security attributes
-        true,                                       // Handles are inherited
-        CREATE_NEW_CONSOLE,                         // Creation flags
-        NULL,                                       // Environment (use parent)
-        NULL,                                       // Current directory (use parent)
-        &si,                                        // STARTUPINFO pointer
-        &pi                                         // PROCESS_INFORMATION pointer
+        NULL,     /* Module*/
+        line,                                    /* Command-line*/
+        NULL,                                       /* Process security attributes*/
+        NULL,                                       /* Primary thread security attributes*/
+        true,                                       /* Handles are inherited*/
+        CREATE_NEW_CONSOLE,                         /* Creation flags*/
+        NULL,                                       /* Environment (use parent)*/
+        NULL,                                       /* Current directory (use parent)*/
+        &si,                                        /* STARTUPINFO pointer*/
+        &pi                                         /* PROCESS_INFORMATION pointer*/
     )) {
         rc = FAIL_CREATE_PROCESS;
         goto error;
     }
 
+    *standard_in = stdin_write;
+    *standard_out = stdout_read;
+    *pid = pi.hProcess;
+
     goto success;
 
 error:
-    detailed_error_code = GetLastError();
-
-    if (stdin_read != NULL)
-        CloseHandle(stdin_read);
-    if (stdin_write != NULL)
+    *detailed_error_code = GetLastError();
+    if (stdin_write != INVALID_HANDLE_VALUE)
         CloseHandle(stdin_write);
-    if (stdout_read != NULL)
+    if (stdout_read != INVALID_HANDLE_VALUE)
         CloseHandle(stdout_read);
-    if (stdout_write != NULL)
-        CloseHandle(stdout_write);
-    if (stderr_read != NULL)
-        CloseHandle(stderr_read);
-    if (stderr_write != NULL)
-        CloseHandle(stderr_write);
 
 success:
+    if (stdin_read != INVALID_HANDLE_VALUE)
+        CloseHandle(stdin_read);
+    if (stdout_write != INVALID_HANDLE_VALUE)
+        CloseHandle(stdout_write);
 
-    *stdin = stdin_write;
-    *stdout = stdout_read;
-    *stderr = stderr_read;
-    *pid = pi.hProcess;
+    if(line != NULL)
+        free(line);
+    if (pi.hThread != INVALID_HANDLE_VALUE)
+        CloseHandle(pi.hThread);
 
-    return 0;
+    return rc;
 }
