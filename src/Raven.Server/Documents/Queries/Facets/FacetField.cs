@@ -45,10 +45,10 @@ namespace Raven.Server.Documents.Queries.Facets
 
         public void AddAggregation(FacetAggregation aggregation, QueryFieldName name)
         {
-            if (Aggregations.ContainsKey(aggregation))
-                throw new InvalidOperationException($"Detected duplicate facet aggregation operation '{aggregation}'. Each facet can only contain one of each available operations.");
+            if (Aggregations.TryGetValue(aggregation, out var values) == false)
+                Aggregations[aggregation] = values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            Aggregations.Add(aggregation, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { name });
+            values.Add(name);
         }
 
         public void AddOptions(string optionsAsStringOrParameterName, ValueTokenType type)
