@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Queries.Facets
         public IFacetOperations<T> SumOn(Expression<Func<T, object>> path)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Sum, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Sum] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Facet.Aggregations[FacetAggregation.Sum] = aggregations = new HashSet<string>();
 
             aggregations.Add(path.ToPropertyPath());
             return this;
@@ -122,7 +122,7 @@ namespace Raven.Client.Documents.Queries.Facets
         public IFacetOperations<T> MinOn(Expression<Func<T, object>> path)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Min, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Min] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Facet.Aggregations[FacetAggregation.Min] = aggregations = new HashSet<string>();
 
             aggregations.Add(path.ToPropertyPath());
             return this;
@@ -131,7 +131,7 @@ namespace Raven.Client.Documents.Queries.Facets
         public IFacetOperations<T> MaxOn(Expression<Func<T, object>> path)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Max, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Max] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Facet.Aggregations[FacetAggregation.Max] = aggregations = new HashSet<string>();
 
             aggregations.Add(path.ToPropertyPath());
             return this;
@@ -140,7 +140,7 @@ namespace Raven.Client.Documents.Queries.Facets
         public IFacetOperations<T> AverageOn(Expression<Func<T, object>> path)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Average, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Average] = aggregations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Facet.Aggregations[FacetAggregation.Average] = aggregations = new HashSet<string>();
 
             aggregations.Add(path.ToPropertyPath());
             return this;
