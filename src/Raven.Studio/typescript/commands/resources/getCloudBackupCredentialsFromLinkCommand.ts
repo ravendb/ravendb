@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 
-class getCloudCredentialsFromLinkCommand extends commandBase {
+class getCloudBackupCredentialsFromLinkCommand extends commandBase {
 
     constructor(private link: string) {
         super();
@@ -16,4 +16,4 @@ class getCloudCredentialsFromLinkCommand extends commandBase {
     }
 }
 
-export = getCloudCredentialsFromLinkCommand;
+export = getCloudBackupCredentialsFromLinkCommand;
