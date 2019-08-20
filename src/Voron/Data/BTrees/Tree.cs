@@ -656,26 +656,7 @@ namespace Voron.Data.BTrees
 
                 if (key.Options == SliceOptions.Key)
                 {
-                    if (p.Search(_llt, key) != null)
-                    {
-                        nodePos = p.LastSearchPosition;
-                        if (p.LastMatch != 0)
-                        {
-                            nodePos--;
-                            p.LastSearchPosition--;
-                        }
-
-                        if (nodePos != 0)
-                            leftmostPage = false;
-
-                        rightmostPage = false;
-                    }
-                    else
-                    {
-                        nodePos = (ushort)(p.LastSearchPosition - 1);
-
-                        leftmostPage = false;
-                    }
+                    nodePos = SetLastSearchPosition(key, p, ref leftmostPage, ref rightmostPage);
                 }
                 else if (key.Options == SliceOptions.BeforeAllKeys)
                 {
@@ -709,6 +690,31 @@ namespace Voron.Data.BTrees
             return p;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int SetLastSearchPosition(Slice key, TreePage p, ref bool leftmostPage, ref bool rightmostPage)
+        {
+            if (p.Search(_llt, key) != null)
+            {
+                if (p.LastMatch != 0)
+                {
+                    p.LastSearchPosition--;
+                }
+
+                if (p.LastSearchPosition != 0)
+                    leftmostPage = false;
+
+                rightmostPage = false;
+            }
+            else
+            {
+                p.LastSearchPosition--;
+
+                leftmostPage = false;
+            }
+
+            return p.LastSearchPosition;
+        }
+
         private TreePage SearchForPage(Slice key, bool allowCompressed, out TreeCursorConstructor cursorConstructor, out TreeNodeHeader* node, bool addToRecentlyFoundPages = true)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
@@ -734,26 +740,7 @@ namespace Voron.Data.BTrees
                 }
                 else
                 {
-                    if (p.Search(_llt, key) != null)
-                    {
-                        nodePos = p.LastSearchPosition;
-                        if (p.LastMatch != 0)
-                        {
-                            nodePos--;
-                            p.LastSearchPosition--;
-                        }
-
-                        if (nodePos != 0)
-                            leftmostPage = false;
-
-                        rightmostPage = false;
-                    }
-                    else
-                    {
-                        nodePos = (ushort)(p.LastSearchPosition - 1);
-
-                        leftmostPage = false;
-                    }
+                    nodePos = SetLastSearchPosition(key, p, ref leftmostPage, ref rightmostPage);
                 }
 
                 var pageNode = p.GetNode(nodePos);
