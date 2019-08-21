@@ -831,22 +831,15 @@ namespace Voron.Data.Tables
                 var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
                 using (var it = fstIndex.Iterate())
                 {
-                    if (it is FixedSizeTree.LargeIterator)
-                    {
-                        if (it.SeekToLast() == false)
-                            yield break;
-                    }
-                    else
-                    {
-                        it.Seek(long.MaxValue);
-                    }
+                    if (it.SeekToLast() == false)
+                        yield break;
 
                     var result = new TableValueHolder();
-                    while (it.MovePrev())
+                    do
                     {
                         ReadById(it.CurrentKey, out result.Reader);
                         yield return result;
-                    }
+                    } while (it.MovePrev());
                 }
             }
             finally
