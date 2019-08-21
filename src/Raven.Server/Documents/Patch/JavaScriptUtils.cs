@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Patch
                 return lcs.ToString();
             if (o is LazyNumberValue lnv)
             {
-                return BlittableObjectInstance.BlittableObjectProperty.GetJSValueForLazyNumber(engine, lnv);
+                return BlittableObjectInstance.BlittableObjectProperty.GetJsValueForLazyNumber(engine, lnv);
             }
             if (o is JsValue js)
                 return js;

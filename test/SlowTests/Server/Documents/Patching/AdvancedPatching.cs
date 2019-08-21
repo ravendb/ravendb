@@ -11,7 +11,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Patching;
 using Sparrow.Json;
 using Xunit;
-//using Raven.Server.Documents.Patch;
 
 namespace SlowTests.Server.Documents.Patching
 {

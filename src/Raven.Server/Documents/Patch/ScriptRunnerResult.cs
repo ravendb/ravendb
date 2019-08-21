@@ -9,26 +9,20 @@ namespace Raven.Server.Documents.Patch
     public class ScriptRunnerResult : IDisposable
     {
         private readonly ScriptRunner.SingleRun _parent;
-        private readonly JsValue _instance;
 
         public ScriptRunnerResult(ScriptRunner.SingleRun parent, JsValue instance)
         {
             _parent = parent;
-            _instance = instance;
+            Instance = instance;
         }
 
-        public JsValue Instance => _instance;
-
-        public void Set(string name, string value)
-        {
-            ((BlittableObjectInstance)_instance.AsObject()).Put(name, value, false);
-        }
+        public readonly JsValue Instance;
 
         public ObjectInstance GetOrCreate(Key name)
         {
-            if (_instance.AsObject() is BlittableObjectInstance b)
+            if (Instance.AsObject() is BlittableObjectInstance b)
                 return b.GetOrCreate(name);
-            var parent = _instance.AsObject();
+            var parent = Instance.AsObject();
             var o = parent.Get(name);
             if (o == null || o.IsUndefined() || o.IsNull())
             {
@@ -38,23 +32,23 @@ namespace Raven.Server.Documents.Patch
             return o.AsObject();
         }
 
-        public bool? BooleanValue => _instance.IsBoolean() ? _instance.AsBoolean() : (bool?)null;
+        public bool? BooleanValue => Instance.IsBoolean() ? Instance.AsBoolean() : (bool?)null;
 
-        public bool IsNull => _instance == null || _instance.IsNull() || _instance.IsUndefined();
-        public string StringValue => _instance.IsString() ? _instance.AsString() : null;
-        public JsValue RawJsValue => _instance;
+        public bool IsNull => Instance == null || Instance.IsNull() || Instance.IsUndefined();
+        public string StringValue => Instance.IsString() ? Instance.AsString() : null;
+        public JsValue RawJsValue => Instance;
 
         public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (IsNull)
                 return null;
 
-            var obj = _instance.AsObject();
+            var obj = Instance.AsObject();
             return JsBlittableBridge.Translate(context, _parent.ScriptEngine, obj, modifier, usageMode);
         }
 
         public void Dispose()
-        {            
+        {
             _parent?.JavaScriptUtils.Clear();
         }
     }
