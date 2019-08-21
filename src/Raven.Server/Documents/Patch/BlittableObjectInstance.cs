@@ -9,7 +9,6 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Server.Documents.Queries.Results;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -189,30 +188,32 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
 
-            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
+            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray array, BlittableObjectInstance parent)
             {
-                bjra.NoCache = true;
+                array.NoCache = true;
 
-                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
-                for (var i = 0; i < bjra.Length; i++)
+                PropertyDescriptor[] items = new PropertyDescriptor[array.Length];
+                for (var i = 0; i < array.Length; i++)
                 {
-                    var blit = bjra.GetValueTokenTupleByIndex(i);
-                    BlittableJsonToken itemType = blit.Item2 & BlittableJsonReaderBase.TypesMask;
+                    var json = array.GetValueTokenTupleByIndex(i);
+                    BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
                     JsValue item;
                     if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
                     {
-                        item = TranslateToJs(null, null, blit.Item2, blit.Item1);
+                        item = TranslateToJs(null, null, json.Item2, json.Item1);
                     }
                     else
                     {
-                        item = TranslateToJs(parent, null, blit.Item2, blit.Item1);
+                        item = TranslateToJs(parent, null, json.Item2, json.Item1);
                     }
                     items[i] = new PropertyDescriptor(item, true, true, true);
                 }
 
-                var jsArray = new ArrayInstance(e, items);
-                jsArray.Prototype = e.Array.PrototypeObject;
-                jsArray.Extensible = true;
+                var jsArray = new ArrayInstance(e, items)
+                {
+                    Prototype = e.Array.PrototypeObject,
+                    Extensible = true
+                };
 
                 return jsArray;
             }
@@ -231,7 +232,7 @@ namespace Raven.Server.Documents.Patch
                         return (long)value;
                     case BlittableJsonToken.LazyNumber:
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
-                        return GetJSValueForLazyNumber(owner.Engine, (LazyNumberValue)value);
+                        return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
                     case BlittableJsonToken.String:
 
                         return value.ToString();
@@ -248,14 +249,14 @@ namespace Raven.Server.Documents.Patch
                     case BlittableJsonToken.StartArray:
                         Changed = true;
                         _parent.MarkChanged();
-                        var bjra = (BlittableJsonReaderArray)value;
-                        return GetArrayInstanceFromBlittableArray(owner.Engine, bjra, owner);
+                        var array = (BlittableJsonReaderArray)value;
+                        return GetArrayInstanceFromBlittableArray(owner.Engine, array, owner);
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());
                 }
             }
 
-            public static JsValue GetJSValueForLazyNumber(Engine engine, LazyNumberValue value)
+            public static JsValue GetJsValueForLazyNumber(Engine engine, LazyNumberValue value)
             {
                 // First, try and see if the number is withing double boundaries.
                 // We use double's tryParse and it actually may round the number, 
