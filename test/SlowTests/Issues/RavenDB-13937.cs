@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
                                 Disabled = false
                             }
                         }
-                    }, database.Name);
+                    }, database.Name, RaftIdGenerator.NewId());
 
                     var (index, _) = await database.ServerStore.SendToLeaderAsync(editRevisions);
                     await database.RachisLogIndexNotifications.WaitForIndexNotification(index, database.ServerStore.Engine.OperationTimeout);
