@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -185,6 +186,27 @@ namespace SlowTests.Tests.Faceted
                     Assert.Null(range2.Max);
                     Assert.Null(range1.Min);
                     Assert.Null(range2.Min);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Orders_All().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    using (store.GetRequestExecutor().UsingClientVersion("4.2.3.42"))
+                    {
+                        var e = Assert.Throws<InvalidQueryException>(() => session.Advanced
+                            .RawQuery<dynamic>("from index 'Orders/All' select facet(playerId, sum(goals), sum(errors), sum(assists))")
+                            .ToList());
+
+                        Assert.Contains("Detected duplicate facet aggregation", e.Message);
+                    }
                 }
             }
         }

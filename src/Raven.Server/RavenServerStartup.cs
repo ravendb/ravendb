@@ -178,15 +178,6 @@ namespace Raven.Server
                 sp?.Stop();
                 exception = e;
 
-                if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
-                {
-                    var version = versions.ToString();
-                    if (version.Length > 0 && version[0] != RavenVersionAttribute.Instance.MajorVersionAsChar)
-                        e = new ClientVersionMismatchException(
-                            $"RavenDB does not support interaction between Client API and Server when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}",
-                            e);
-                }
-
                 MaybeSetExceptionStatusCode(context, _server.ServerStore, e);
 
                 if (context.RequestAborted.IsCancellationRequested)
