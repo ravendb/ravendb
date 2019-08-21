@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Patch
             _parent?.MarkChanged();
         }
 
-        public ObjectInstance GetOrCreate(Key key)
+        public ObjectInstance GetOrCreate(in Key key)
         {
             if (OwnValues.TryGetValue(key, out var property) == false)
             {
