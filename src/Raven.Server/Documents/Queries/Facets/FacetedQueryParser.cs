@@ -162,6 +162,9 @@ namespace Raven.Server.Documents.Queries.Facets
 
             foreach (var kvp in facet.Aggregations)
             {
+                if (query.Legacy && kvp.Value.Count > 1)
+                    throw new InvalidQueryException($"Detected duplicate facet aggregation operation '{kvp.Key}'. Each facet can only contain one of each available operations.");
+
                 foreach (string v in kvp.Value)
                 {
                     if (result.Aggregations.TryGetValue(v, out var value) == false)
