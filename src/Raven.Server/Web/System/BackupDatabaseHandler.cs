@@ -17,7 +17,7 @@ namespace Raven.Server.Web.System
             if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
                 return Task.CompletedTask;
 
-            var taskId = GetLongQueryString("taskId", required: true);
+            var taskId = GetLongQueryString("taskId", required: true).Value;
             if (taskId == 0)
                 throw new ArgumentException("Task ID cannot be 0");
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Web.System
                 if (periodicBackup == null)
                     throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
 
-                context.Write(writer, periodicBackup);
+                context.Write(writer, periodicBackup.ToJson());
                 writer.Flush();
             }
 
