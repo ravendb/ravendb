@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
 using System.Security.Authentication;
 using System.Security.Cryptography;
@@ -51,11 +52,16 @@ namespace Raven.Client.Http
 
         private readonly ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> _failedNodesTimers = new ConcurrentDictionary<ServerNode, Lazy<NodeStatus>>();
 
+        private readonly AsyncLocal<RequestContext> _requestContexts = new AsyncLocal<RequestContext>();
+
+        private readonly ReturnContext _doNotClearContext;
+        private readonly ReturnContext _clearContext;
+
         public X509Certificate2 Certificate { get; }
         private readonly string _databaseName;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
-        private DateTime _lastReturnedResponse;                
+        private DateTime _lastReturnedResponse;
 
         public readonly JsonContextPool ContextPool;
 
@@ -67,7 +73,19 @@ namespace Raven.Client.Http
 
         private ServerNode _topologyTakenFromNode;
 
-        public HttpClient HttpClient { get; }
+        private HttpClient _httpClient;
+
+        public HttpClient HttpClient
+        {
+            get
+            {
+                var httpClient = _httpClient;
+                if (httpClient != null)
+                    return httpClient;
+
+                return _httpClient = GetHttpClient();
+            }
+        }
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
@@ -129,8 +147,51 @@ namespace Raven.Client.Http
             FailedRequest?.Invoke(url, e);
         }
 
-        private HttpClient GetCachedOrCreateHttpClient(ConcurrentDictionary<string, Lazy<HttpClient>> httpClientCache) =>
-            httpClientCache.GetOrAdd(Certificate?.Thumbprint ?? string.Empty, new Lazy<HttpClient>(CreateClient)).Value;
+        private HttpClient GetHttpClient()
+        {
+            var httpClientCache = GetHttpClientCache();
+
+            var name = GetHttpClientName();
+
+            return httpClientCache.GetOrAdd(name, new Lazy<HttpClient>(CreateClient)).Value;
+        }
+
+        private void RemoveHttpClient()
+        {
+            var httpClientCache = GetHttpClientCache();
+
+            var name = GetHttpClientName();
+
+            httpClientCache.TryRemove(name, out _);
+
+            _httpClient = null;
+        }
+
+        private string GetHttpClientName()
+        {
+            return Certificate?.Thumbprint ?? string.Empty;
+        }
+
+        private static bool ShouldRemoveHttpClient(SocketException exception)
+        {
+            switch (exception.SocketErrorCode)
+            {
+                case SocketError.HostDown:
+                case SocketError.HostNotFound:
+                case SocketError.HostUnreachable:
+                case SocketError.ConnectionRefused:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private ConcurrentDictionary<string, Lazy<HttpClient>> GetHttpClientCache()
+        {
+            return Conventions.UseCompression ?
+                GlobalHttpClientWithCompression :
+                GlobalHttpClientWithoutCompression;
+        }
 
         private static readonly Exception ServerCertificateCustomValidationCallbackRegistrationException;
 
@@ -149,6 +210,9 @@ namespace Raven.Client.Http
 
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
         {
+            _clearContext = new ReturnContext(_requestContexts, dispose: false);
+            _doNotClearContext = new ReturnContext(_requestContexts, dispose: true);
+
             Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
@@ -160,7 +224,7 @@ namespace Raven.Client.Http
                 // shared instance, cannot dispose!
                 //_httpClient.Dispose();
             });
-            
+
             _databaseName = databaseName;
             Certificate = certificate;
 
@@ -169,17 +233,6 @@ namespace Raven.Client.Http
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
-
-            var thumbprint = string.Empty;
-            if (certificate != null)
-                thumbprint = certificate.Thumbprint;
-
-            var httpClientCache = conventions.UseCompression ?
-                GlobalHttpClientWithCompression :
-                GlobalHttpClientWithoutCompression;
-
-            HttpClient = httpClientCache.TryGetValue(thumbprint, out var lazyClient) == false ?
-                GetCachedOrCreateHttpClient(httpClientCache) : lazyClient.Value;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
@@ -423,7 +476,7 @@ namespace Raven.Client.Http
                 if (topologyUpdate == null ||
                     // if we previous have a topology error, let's see if we can refresh this
                     // can happen if user tried a request to a db that didn't exist, created it, then try immediately
-                    topologyUpdate.IsFaulted) 
+                    topologyUpdate.IsFaulted)
                 {
                     lock (this)
                     {
@@ -750,7 +803,7 @@ namespace Raven.Client.Http
                                     if (sessionInfo != null)
                                         sessionInfo.AsyncCommandRunning = false;
 
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, shouldRetry, requestContext: null, token: token).ConfigureAwait(false) == false)
                                         ThrowFailedToContactAllNodes(command, request);
 
                                     return;
@@ -777,22 +830,38 @@ namespace Raven.Client.Http
                 }
                 catch (HttpRequestException e) // server down, network down
                 {
-                    if (shouldRetry == false)
-                        throw;
-
-                    sp.Stop();
-
-                    if (sessionInfo != null)
-                        sessionInfo.AsyncCommandRunning = false;
-
-
-                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, shouldRetry, token).ConfigureAwait(false) == false)
+                    using (GetContext(out var requestContext))
                     {
-                        ThrowIfClientException(response, e);
-                        ThrowFailedToContactAllNodes(command, request);
-                    }
+                        if (e.InnerException is SocketException se && ShouldRemoveHttpClient(se))
+                        {
+                            if (requestContext.HttpClientRemoved == false)
+                            {
+                                RemoveHttpClient();
+                                requestContext.HttpClientRemoved = true;
+                            }
+                            else
+                            {
+                                requestContext.HttpClientRemoved = false;
+                            }
+                        }
 
-                    return;
+                        if (shouldRetry == false)
+                            throw;
+
+                        sp.Stop();
+
+                        if (sessionInfo != null)
+                            sessionInfo.AsyncCommandRunning = false;
+
+                        if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, shouldRetry, requestContext, token)
+                                .ConfigureAwait(false) == false)
+                        {
+                            ThrowIfClientException(response, e);
+                            ThrowFailedToContactAllNodes(command, request);
+                        }
+
+                        return;
+                    }
                 }
                 finally
                 {
@@ -863,6 +932,16 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private IDisposable GetContext(out RequestContext context)
+        {
+            context = _requestContexts.Value;
+            var isNull = context == null;
+            if (isNull)
+                context = _requestContexts.Value = new RequestContext();
+
+            return isNull ? _clearContext : _doNotClearContext;
         }
 
         private static bool TryGetServerVersion(HttpResponseMessage response, out string version)
@@ -1047,7 +1126,7 @@ namespace Raven.Client.Http
 
             if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
                 request.Headers.Add(Constants.Headers.ClientVersion, ClientVersion);
-            
+
             return request;
         }
 
@@ -1108,7 +1187,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, shouldRetry, token).ConfigureAwait(false);
+                    return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, shouldRetry, requestContext: null, token: token).ConfigureAwait(false);
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
@@ -1151,7 +1230,7 @@ namespace Raven.Client.Http
         }
 
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, CancellationToken token = default)
+            HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
@@ -1174,7 +1253,8 @@ namespace Raven.Client.Http
             var (currentIndex, currentNode) = _nodeSelector.GetPreferredNode();
             if (command.FailedNodes.ContainsKey(currentNode))
             {
-                return false; //we tried all the nodes...nothing left to do
+                if (requestContext == null || requestContext.HttpClientRemoved == false)
+                    return false; //we tried all the nodes...nothing left to do
             }
 
             OnFailedRequest(url, e);
@@ -1295,31 +1375,31 @@ namespace Raven.Client.Http
                     ms.Position = 0;
                     using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
                     {
-                        command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e));
+                        command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
                     }
                 }
                 catch
                 {
                     // we failed to parse the error
                     ms.Position = 0;
-                    command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
+                    command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
                     {
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
                         Error = new StreamReader(ms).ReadToEnd(),
                         Type = "Unparseable Server Response"
-                    }, response.StatusCode, e));
+                    }, response.StatusCode, e);
                 }
                 return;
             }
             //this would be connections that didn't have response, such as "couldn't connect to remote server"
-            command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
+            command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {
                 Url = request.RequestUri.ToString(),
                 Message = e.Message,
                 Error = $"An exception occurred while contacting {request.RequestUri}.{Environment.NewLine}{e}.",
                 Type = e.GetType().FullName
-            }, HttpStatusCode.ServiceUnavailable, e));
+            }, HttpStatusCode.ServiceUnavailable, e);
         }
 
         protected Task _firstTopologyUpdate;
@@ -1707,6 +1787,31 @@ namespace Raven.Client.Http
                     break;
                 default:
                     return;
+            }
+        }
+
+        private class RequestContext
+        {
+            public bool HttpClientRemoved;
+        }
+
+        private class ReturnContext : IDisposable
+        {
+            private readonly AsyncLocal<RequestContext> _contexts;
+            private readonly bool _dispose;
+
+            public ReturnContext(AsyncLocal<RequestContext> contexts, bool dispose)
+            {
+                _contexts = contexts;
+                _dispose = dispose;
+            }
+
+            public void Dispose()
+            {
+                if (_dispose == false)
+                    return;
+
+                _contexts.Value = null;
             }
         }
     }
