@@ -712,6 +712,7 @@ namespace Voron.Data.BTrees
                 leftmostPage = false;
             }
 
+            Debug.Assert(p.LastSearchPosition >= 0, $"Page LastSearchPosition should be positive, LastSearchPosition: {p.LastSearchPosition}, PageNumber: {p.PageNumber}");
             return p.LastSearchPosition;
         }
 
