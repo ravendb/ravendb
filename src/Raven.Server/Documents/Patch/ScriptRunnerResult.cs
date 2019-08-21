@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Patch
             ((BlittableObjectInstance)_instance.AsObject()).Put(name, value, false);
         }
 
-        public ObjectInstance GetOrCreate(string name)
+        public ObjectInstance GetOrCreate(Key name)
         {
             if (_instance.AsObject() is BlittableObjectInstance b)
                 return b.GetOrCreate(name);

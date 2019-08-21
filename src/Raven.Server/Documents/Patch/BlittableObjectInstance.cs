@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Patch
             _parent?.MarkChanged();
         }
 
-        public ObjectInstance GetOrCreate(string key)
+        public ObjectInstance GetOrCreate(Key key)
         {
             if (OwnValues.TryGetValue(key, out var property) == false)
             {
@@ -108,7 +108,6 @@ namespace Raven.Server.Documents.Patch
                                     var field = propertyFields[i];
                                     var stringValue = field.StringValue(parent.LuceneState);
 
-                                    var maxByteSize = Encodings.Utf8.GetByteCount(stringValue);
                                     var itemAsBlittable = parent.Blittable._context.ReadForMemory(stringValue, field.Name);
 
                                     arrayItems[i] = TranslateToJs(_parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
@@ -341,13 +340,14 @@ namespace Raven.Server.Documents.Patch
                 yield break;
             foreach (var prop in Blittable.GetPropertyNames())
             {
-                if (Deletes?.Contains(prop) == true)
+                Key key = prop;
+                if (Deletes?.Contains(key) == true)
                     continue;
-                if (OwnValues.ContainsKey(prop))
+                if (OwnValues.ContainsKey(key))
                     continue;
                 yield return new KeyValuePair<string, PropertyDescriptor>(
                     prop,
-                    GetOwnProperty(prop)
+                    GetOwnProperty(key)
                     );
             }
         }
