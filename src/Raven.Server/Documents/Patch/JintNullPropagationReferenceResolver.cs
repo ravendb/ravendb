@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Patch
             var key = reference.GetReferencedName();
             if (_args == null || key.Name == null || key.Name.StartsWith('$') == false)
             {
-                value = key == "length" ? 0 : Null.Instance;
+                value = key.Name == "length" ? 0 : Null.Instance;
                 return true;
             }
 
