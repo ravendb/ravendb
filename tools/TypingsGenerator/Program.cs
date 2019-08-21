@@ -160,6 +160,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
             
+            // restore database from cloud backup
+            scripter.AddType(typeof(S3Settings));
+            
             // footer
             scripter.AddType(typeof(FooterStatistics));
             scripter.AddType(typeof(IndexDefinition));

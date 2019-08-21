@@ -316,45 +316,47 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && cloudCredentials() && backupLink.isValid()">
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Backup Storage Type</label>
+            <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && backupLink.isValid()">
+                <div data-bind="with: cloudBackupCredentials">
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Backup Storage Type</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info" data-bind="text: backupStorageTypeText"></label>
+                        </div>
                     </div>
-                    <div class="col-md-8">
-                        <label class="control-label text-info" data-bind="text: cloudCredentials().BackupStorageType"></label>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Region Name</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info text-left" data-bind="text: awsRegionName"></label>
+                        </div>
                     </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Aws Region Name</label>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Bucket Name</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info text-left" data-bind="text: bucketName"></label>
+                        </div>
                     </div>
-                    <div class="col-md-8">
-                        <label class="control-label text-info text-left" data-bind="text: cloudCredentials().AwsRegionName"></label>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Remote Folder Name</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info text-left" data-bind="text: remoteFolderName"></label>
+                        </div>
                     </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Bucket Name</label>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="control-label text-info text-left" data-bind="text: cloudCredentials().BucketName"></label>
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Remote Folder Name</label>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="control-label text-info text-left" data-bind="text: cloudCredentials().RemoteFolderName"></label>
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label class="control-label">Link Expiration (Local)</label>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="control-label text-info" data-bind="text: cloudCredentials().Expires"></label>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Link will expire in</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info" data-bind="text: timeLeftText"></label>
+                        </div>
                     </div>
                 </div>
             </div>
