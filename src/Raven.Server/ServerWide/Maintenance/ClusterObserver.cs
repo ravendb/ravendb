@@ -429,19 +429,19 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private long GetMaxTombstonesEtagToDelete(TransactionOperationContext context, string dbName)
         {
-            List<PeriodicBackupConfiguration> periodicBackups;
+            List<long> periodicBackupTaskIds;
             var maxEtag = long.MaxValue;
 
             using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(context, dbName))
             {
-                periodicBackups = rawRecord.GetPeriodicBackups();
-                if (periodicBackups == null || periodicBackups.Count == 0)
+                periodicBackupTaskIds = rawRecord.GetPeriodicBackupsTaskIds();
+                if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
                     return 0;
             }
 
-            foreach (var pb in periodicBackups)
+            foreach (var taskId in periodicBackupTaskIds)
             {
-                var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, pb.TaskId));
+                var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, taskId));
                 if (singleBackupStatus == null)
                     continue;
 
