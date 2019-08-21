@@ -26,11 +26,11 @@ namespace Raven.Server.Web.System
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name))
             {
-                var periodicBackups = rawRecord.GetPeriodicBackups();
-                if (periodicBackups == null || periodicBackups.Count == 0 || periodicBackups.FirstOrDefault(x => x.TaskId == taskId) == null)
+                var periodicBackup = rawRecord.GetPeriodicBackupConfiguration(taskId);
+                if (periodicBackup == null)
                     throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
 
-                context.Write(writer, rawRecord.GetRecord());
+                context.Write(writer, periodicBackup);
                 writer.Flush();
             }
 
