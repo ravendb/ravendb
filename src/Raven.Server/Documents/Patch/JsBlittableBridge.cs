@@ -438,10 +438,11 @@ namespace Raven.Server.Documents.Patch
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
                     var propIndex = propertiesByInsertionOrder.Properties[i];
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
-                    
-                    var existInObject = obj.OwnValues.TryGetValue(prop.Name, out var modifiedValue);
 
-                    if (existInObject == false && obj.Deletes?.Contains(prop.Name) == true)
+                    var key = new Key(prop.Name);
+                    var existInObject = obj.OwnValues.TryGetValue(key, out var modifiedValue);
+
+                    if (existInObject == false && obj.Deletes?.Contains(key) == true)
                         continue;
 
                     if (existInObject)

@@ -25,18 +25,17 @@ namespace Raven.Server.Documents.Patch
         public readonly string ChangeVector;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
-        public HashSet<string> Deletes;
-        public Dictionary<string, BlittableObjectProperty> OwnValues = 
-            new Dictionary<string, BlittableObjectProperty>();
+        public HashSet<Key> Deletes;
+        public Dictionary<Key, BlittableObjectProperty> OwnValues = new Dictionary<Key, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
-        public IState LuceneState;        
+        public IState LuceneState;
 
         private void MarkChanged()
         {
             Changed = true;
             _parent?.MarkChanged();
-        }        
+        }
 
         public ObjectInstance GetOrCreate(string key)
         {
@@ -46,12 +45,12 @@ namespace Raven.Server.Documents.Patch
 
                 OwnValues[key] = property;
                 Deletes?.Remove(key);
-            }           
-            
+            }
+
             return property.Value.AsObject();
 
             BlittableObjectProperty GenerateProperty(string propertyName)
-            {                
+            {
                 var propertyIndex = Blittable.GetPropertyIndex(propertyName);
 
                 var prop = new BlittableObjectProperty(this, propertyName);
@@ -65,27 +64,27 @@ namespace Raven.Server.Documents.Patch
 
                 return prop;
             }
-        }        
+        }
 
         public sealed class BlittableObjectProperty : PropertyDescriptor
         {
             private readonly BlittableObjectInstance _parent;
             private readonly string _property;
             private JsValue _value;
-            public bool Changed;            
+            public bool Changed;
 
             public override string ToString()
             {
                 return _property;
             }
 
-            public BlittableObjectProperty(BlittableObjectInstance parent, string property)             
-                : base(PropertyFlag.CustomJsValue|PropertyFlag.Writable|PropertyFlag.WritableSet | PropertyFlag.Enumerable | PropertyFlag.EnumerableSet)
-            {                
+            public BlittableObjectProperty(BlittableObjectInstance parent, string property)
+                : base(PropertyFlag.CustomJsValue | PropertyFlag.Writable | PropertyFlag.WritableSet | PropertyFlag.Enumerable | PropertyFlag.EnumerableSet)
+            {
                 _parent = parent;
                 _property = property;
                 var index = _parent.Blittable?.GetPropertyIndex(_property);
-                
+
                 if (index == null || index == -1)
                 {
                     if (_parent.LuceneDocument != null)
@@ -98,17 +97,17 @@ namespace Raven.Server.Documents.Patch
                             // here we need to perform a manipulation in order to generate the object from the
                             // data
                             if (fieldType.IsJson)
-                            {                             
+                            {
                                 Lucene.Net.Documents.Field[] propertyFields = _parent.LuceneDocument.GetFields(property);
 
-                                JsValue[] arrayItems = 
+                                JsValue[] arrayItems =
                                     new JsValue[propertyFields.Length];
 
                                 for (int i = 0; i < propertyFields.Length; i++)
                                 {
                                     var field = propertyFields[i];
                                     var stringValue = field.StringValue(parent.LuceneState);
-                                    
+
                                     var maxByteSize = Encodings.Utf8.GetByteCount(stringValue);
                                     var itemAsBlittable = parent.Blittable._context.ReadForMemory(stringValue, field.Name);
 
@@ -142,7 +141,7 @@ namespace Raven.Server.Documents.Patch
                                         value = string.Empty;
                                         break;
                                 }
-                                
+
                                 if (double.TryParse(value, out var valueAsDouble))
                                 {
                                     _value = valueAsDouble;
@@ -151,7 +150,7 @@ namespace Raven.Server.Documents.Patch
                                 {
                                     _value = value;
                                 }
-                            }                            
+                            }
                         }
                         else
                         {
@@ -190,11 +189,11 @@ namespace Raven.Server.Documents.Patch
 
                 return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
-                
+
             private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
-            {                
+            {
                 bjra.NoCache = true;
-                
+
                 PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
                 for (var i = 0; i < bjra.Length; i++)
                 {
@@ -209,13 +208,13 @@ namespace Raven.Server.Documents.Patch
                     {
                         item = TranslateToJs(parent, null, blit.Item2, blit.Item1);
                     }
-                    items[i] = new PropertyDescriptor(item, true,true,true);
+                    items[i] = new PropertyDescriptor(item, true, true, true);
                 }
 
                 var jsArray = new ArrayInstance(e, items);
                 jsArray.Prototype = e.Array.PrototypeObject;
                 jsArray.Extensible = true;
-                                
+
                 return jsArray;
             }
 
@@ -235,9 +234,9 @@ namespace Raven.Server.Documents.Patch
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                         return GetJSValueForLazyNumber(owner.Engine, (LazyNumberValue)value);
                     case BlittableJsonToken.String:
-                                                
+
                         return value.ToString();
-                    case BlittableJsonToken.CompressedString:                        
+                    case BlittableJsonToken.CompressedString:
                         return value.ToString();
                     case BlittableJsonToken.StartObject:
                         Changed = true;
@@ -288,18 +287,17 @@ namespace Raven.Server.Documents.Patch
             Prototype = engine.Object.PrototypeObject;
         }
 
-
-        public override bool Delete(string propertyName, bool throwOnError)
+        public override bool Delete(in Key propertyName, bool throwOnError)
         {
             if (Deletes == null)
-                Deletes = new HashSet<string>();
+                Deletes = new HashSet<Key>();
 
             MarkChanged();
             Deletes.Add(propertyName);
             return OwnValues.Remove(propertyName);
         }
 
-        public override PropertyDescriptor GetOwnProperty(string propertyName)
+        public override PropertyDescriptor GetOwnProperty(in Key propertyName)
         {
             if (OwnValues.TryGetValue(propertyName, out var val))
                 return val;
@@ -308,7 +306,7 @@ namespace Raven.Server.Documents.Patch
 
             val = new BlittableObjectProperty(this, propertyName);
 
-            if (val.Value.IsUndefined() && 
+            if (val.Value.IsUndefined() &&
                 DocumentId == null &&
                 _put == false)
             {
@@ -320,7 +318,7 @@ namespace Raven.Server.Documents.Patch
             return val;
         }
 
-        public override void Put(string propertyName, JsValue value, bool throwOnError)
+        public override void Put(in Key propertyName, JsValue value, bool throwOnError)
         {
             _put = true;
             try
@@ -359,6 +357,6 @@ namespace Raven.Server.Documents.Patch
             if (OriginalPropertiesTypes == null)
                 OriginalPropertiesTypes = new Dictionary<string, BlittableJsonToken>();
             OriginalPropertiesTypes[key] = type;
-        }       
+        }
     }
 }
