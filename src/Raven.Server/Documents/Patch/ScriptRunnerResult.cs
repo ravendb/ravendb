@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Patch
 
         public readonly JsValue Instance;
 
-        public ObjectInstance GetOrCreate(Key name)
+        public ObjectInstance GetOrCreate(in Key name)
         {
             if (Instance.AsObject() is BlittableObjectInstance b)
                 return b.GetOrCreate(name);
