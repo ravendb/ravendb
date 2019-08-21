@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -9,7 +7,6 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -153,14 +150,13 @@ namespace Raven.Server.Documents.Handlers
 
             public string LastChangeVector;
 
-            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, DocumentTimeSeriesOperation batch, bool fromEtl, Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> appendDictionary = null)
+            public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, DocumentTimeSeriesOperation batch, bool fromEtl)
             {
                 _database = database;
                 _batch = batch;
                 _fromEtl = fromEtl;
 
-                ConvertBatch(batch, ref appendDictionary, ref _singleValue);
-                _appendDictionary = appendDictionary;
+                ConvertBatch(batch, out _appendDictionary, out _singleValue);
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -172,7 +168,6 @@ namespace Raven.Server.Documents.Handlers
                     return 0;
 
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
-                var holder = new TimeSeriesStorage.Reader.SingleResult();
 
                 if (_appendDictionary != null)
                 {
@@ -182,16 +177,10 @@ namespace Raven.Server.Documents.Handlers
                             _batch.Id,
                             docCollection,
                             kvp.Key,
-                            kvp.Value.Values.Select(x =>
-                            {
-                                holder.Values = x.Values;
-                                holder.Tag = context.GetLazyString(x.Tag);
-                                holder.TimeStamp = x.Timestamp;
-                                return holder;
-                            })
+                            kvp.Value.Values
                         );
 
-                        changes += kvp.Value.Count;
+                        changes += kvp.Value.Values.Count;
                     }
 
                     _appendDictionary.Clear();
@@ -202,17 +191,12 @@ namespace Raven.Server.Documents.Handlers
                         _batch.Id,
                         docCollection,
                         _singleValue.Name,
-                        Single(_singleValue));
+                        new []
+                        {
+                            _singleValue
+                        });
 
                     changes++;
-
-                    IEnumerable<TimeSeriesStorage.Reader.SingleResult> Single(AppendTimeSeriesOperation element)
-                    {
-                        holder.Values = element.Values;
-                        holder.Tag = context.GetLazyString(element.Tag);
-                        holder.TimeStamp = element.Timestamp;
-                        yield return holder;
-                    }
                 }
 
                 if (_batch.Removals != null)
@@ -231,9 +215,9 @@ namespace Raven.Server.Documents.Handlers
                 }
                 return changes;
             }
-            private void ConvertBatch(DocumentTimeSeriesOperation batch, ref Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> appendDictionary, ref AppendTimeSeriesOperation singleValue)
+            private void ConvertBatch(DocumentTimeSeriesOperation batch, out Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> appendDictionary, out AppendTimeSeriesOperation singleValue)
             {
-                appendDictionary?.Clear();
+                appendDictionary = null;
                 singleValue = null;
 
                 if (batch.Appends == null || batch.Appends.Count == 0)
@@ -247,16 +231,17 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                if (appendDictionary == null)
-                    appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
+                appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
 
                 foreach (var item in batch.Appends)
                 {
                     if (appendDictionary.TryGetValue(item.Name, out var sorted) == false)
+                    {
                         sorted = new SortedList<long, AppendTimeSeriesOperation>();
+                        appendDictionary[item.Name] = sorted;
+                    }
 
                     sorted[item.Timestamp.Ticks] = item;
-                    appendDictionary[item.Name] = sorted;
                 }
             }
 

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
@@ -874,6 +876,27 @@ namespace Raven.Server.Documents.TimeSeries
                 *(long*)(Allocator.TimeSeriesKeyBuffer.Ptr + Allocator.TimeSeriesKeyBuffer.Length - sizeof(long)) = Bits.SwapBytes(BaselineMilliseconds);
                 _key = Allocator.TimeSeriesKeyBuffer.Ptr;
                 _keySize = Allocator.TimeSeriesKeyBuffer.Length;
+            }
+        }
+
+        public string AppendTimestamp(
+            DocumentsOperationContext context,
+            string documentId,
+            string collection,
+            string name,
+            IEnumerable<AppendTimeSeriesOperation> toAppend,
+            string changeVectorFromReplication = null)
+        {
+            var holder = new Reader.SingleResult();
+
+            return AppendTimestamp(context, documentId, collection, name, toAppend.Select(ToResult), changeVectorFromReplication);
+
+            Reader.SingleResult ToResult(AppendTimeSeriesOperation element)
+            {
+                holder.Values = element.Values;
+                holder.Tag = context.GetLazyString(element.Tag);
+                holder.TimeStamp = element.Timestamp;
+                return holder;
             }
         }
 
