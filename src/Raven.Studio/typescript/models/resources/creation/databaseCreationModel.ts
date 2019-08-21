@@ -11,6 +11,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
 import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
+import cloudBackupCredentials = require("models/resources/creation/cloudBackupCredentials");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -71,7 +72,7 @@ class databaseCreationModel {
     restore = {
         source: ko.observable<restoreSource>("serverLocal"),
         backupLink: ko.observable<string>(),
-        cloudCredentials: ko.observable<backupCredentials>(),
+        cloudBackupCredentials: ko.observable<cloudBackupCredentials>(), 
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
         backupDirectoryError: ko.observable<string>(null),
         lastFailedBackupDirectory: null as string,
@@ -220,8 +221,8 @@ class databaseCreationModel {
             }
         });
         
-        this.restore.cloudCredentials.subscribe((credentials) => {
-            this.tryDecodeS3Credentials(credentials);
+        this.restore.cloudBackupCredentials.subscribe((cloudBackupCredentials) => {
+            this.tryDecodeS3Credentials(cloudBackupCredentials.toDto());
         });
 
         let isFirst = true;
@@ -299,11 +300,8 @@ class databaseCreationModel {
         
         new getCloudBackupCredentialsFromLinkCommand(link)
             .execute()
-            .fail(() => this.restore.cloudCredentials(null))
-            .done(credentials => {
-                credentials.Expires = generalUtils.formatUtcDateAsLocal(credentials.Expires);                
-                this.restore.cloudCredentials(credentials);
-            })
+            .fail(() => this.restore.cloudBackupCredentials(null))
+            .done(cloudCredentials => this.restore.cloudBackupCredentials(new cloudBackupCredentials(cloudCredentials)))
             .always(() => this.spinners.backupCredentialsLoading(false));
     }
     

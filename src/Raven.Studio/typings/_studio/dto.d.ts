@@ -192,7 +192,8 @@ interface restoreTypeAware {
     Type: Raven.Client.Documents.Operations.Backups.RestoreType;
 }
 
-interface backupCredentials {
+// Matching interface from Cloud Project 
+interface federatedCredentials extends Raven.Client.Documents.Operations.Backups.S3Settings {
     BackupStorageType: string,
     Expires: string
 }
