@@ -301,6 +301,9 @@
                     <li>
                         <a href="#" data-bind="click: _.partial(source, 'azure'), text: $root.findRestoreSourceLabel('azure')">Azure</a>
                     </li>
+                    <li>
+                        <a href="#" data-bind="click: _.partial(source, 'googleCloud'), text: $root.findRestoreSourceLabel('googleCloud')">Google Cloud Platform</a>
+                    </li>
                 </ul>
                 <span class="help-block" data-bind="validationMessage: source"></span>
             </div>
@@ -386,43 +389,103 @@
         </div>
         
         <div class="form-group row" data-bind="visible: source() === 'azure'">
-                <div class="col-md-4">
-                    <label class="control-label">Account Name</label>
-                </div>
-
-                <div class="col-md-8">
-                     <input class="form-control" data-bind="textInput: azureCredentials.AccountName" />
-                </div>
+            <div class="col-md-4">
+                <label class="control-label">Account Name<i class="required"></i></label>
             </div>
 
-            <div class="form-group row" data-bind="visible: source() === 'azure'">
-                    <div class="col-md-4">
-                        <label class="control-label">Account Key</label>
-                    </div>
-                    <div class="col-md-8">
-                         <input class="form-control" data-bind="textInput: azureCredentials.AccountKey" />
-                    </div>
-                </div>
- 
-                <div class="form-group row" data-bind="visible: source() === 'azure'">
-                    <div class="col-md-4">
-                        <label class="control-label">Container</label>
-                    </div>
-                    <div class="col-md-8">
-                         <input class="form-control" data-bind="textInput: azureCredentials.StorageContainer" />
-                    </div>
-                </div>
+            <div class="col-md-8">
+                <input class="form-control" data-bind="textInput: azureCredentials.AccountName" />
+            </div>
+        </div>
 
-        <div class="form-group row" data-bind="validationElement: backupDirectory, visible: source() === 'azure'">
+            <div class="form-group row" data-bind="visible: source() === 'azure'">
+                <div class="col-md-4">
+                    <label class="control-label">Account Key<i class="required"></i></label>
+                </div>
+                <div class="col-md-8">
+                    <input class="form-control" data-bind="textInput: azureCredentials.AccountKey" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind=" visible: source() === 'azure'">
+            <div class="col-md-4">
+                <label class="control-label">Container<i class="required"></i></label>
+            </div>
+            <div class="col-md-8">
+                <input class="form-control" data-bind="textInput: azureCredentials.StorageContainer" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="visible: source() === 'amazonS3'">
+            <div class="col-md-4">
+                <label class="control-label">Aws Access Key<i class="required"></i></label>
+            </div>
+
+            <div class="col-md-8">
+                <input class="form-control" data-bind="textInput: amazonS3Credentials.AwsAccessKey" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind=" visible: source() === 'amazonS3' || source() === 'cloud'">
+            <div class="col-md-4">
+                <label class="control-label">Aws Secret Key<i class="required"></i></label>
+            </div>
+            <div class="col-md-8">
+                <input class="form-control" data-bind="textInput: amazonS3Credentials.AwsSecretKey" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="visible: source() === 'amazonS3'">
+            <div class="col-md-4">
+                <label class="control-label">Aws Region Name<i class="required"></i></label>
+            </div>
+            <div class="col-md-8">
+                <input class="form-control" data-bind="textInput: amazonS3Credentials.AwsRegionName" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="visible: source() === 'amazonS3' || source() === 'googleCloud'">
+            <div class="col-md-4">
+                <label class="control-label">Bucket Name<i class="required"></i></label>
+            </div>
+            <div class="col-md-8">
+                    <input class="form-control" data-bind="textInput: amazonS3Credentials.BucketName" />
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind=" visible: source() === 'googleCloud'">
+            <div class="col-md-4">
+                <label class="control-label">Google Credentials<i class="required"></i></label>
+            </div>
+            <div class="col-xs-12 col-sm-6 col-lg-8">
+            <textarea rows="9" data-bind="textInput: googleCloudCredentials.GoogleCredentialsJson" class="form-control" placeholder=
+                    'e.g.
+                    {
+                    "type": "service_account",
+                    "project_id": "test-raven-237012",
+                    "private_key_id": "12345678123412341234123456789101",
+                    "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
+                    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
+                    "client_id": "111390682349634407434",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
+                    }
+                    '></textarea>
+            </div>
+        </div>
+
+        <div class="form-group row" data-bind="validationElement: remoteFolderName, visible: source() !== 'serverLocal'">
             <div class="col-md-4">
                 <label class="control-label">Remote Folder Name</label>
             </div>
             <div class="col-md-8">
                 <input type="text" class="form-control" id="remoteFolderName"
-                       data-bind="textInput: remoteFolderName, hasFocus: isFocusOnBackupDirectory, disable: $parent.databaseModel.spinners.fetchingRestorePoints()"
-                       placeholder="Enter remote folder name" />
+                        data-bind="textInput: googleCloudCredentials.RemoteFolderName, hasFocus: isFocusOnRemoteFolderName, disable: $parent.databaseModel.spinners.fetchingRestorePoints()"
+                        placeholder="Enter remote folder name" />
                 
-                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupDirectoryPathOptions, autoComplete: '#backupFolderPath'">
+                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupRemoteFolderOptions, autoComplete: '#remoteFolderName'">
                     <li data-bind="click: _.partial($root.databaseModel.backupPathHasChanged, $data)">
                         <a href="#" data-bind="text: $data"></a>
                     </li>
