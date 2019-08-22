@@ -290,7 +290,7 @@
                                         </div>
                                     </div>
                                     <div class="flex-noshrink">
-                                        <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: !isServerWide(),
+                                        <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
                                              attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
                                             <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
