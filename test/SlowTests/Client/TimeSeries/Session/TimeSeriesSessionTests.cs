@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -548,46 +549,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public void ShouldGetTimeSeriesValueFromCache()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var baseline = DateTime.Today;
 
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new { Name = "Oren" }, "users/ayende");
-                    session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new[] { 59d });
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var val = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
-                        .Single();
-
-                    Assert.Equal(new[] { 59d }, val.Values);
-                    Assert.Equal("watches/fitbit", val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
-
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
-
-                    // should load from cache
-                    val = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
-                        .Single();
-
-                    Assert.Equal(new[] { 59d }, val.Values);
-                    Assert.Equal("watches/fitbit", val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp);
-
-                    Assert.Equal(1, session.Advanced.NumberOfRequests);
-                }
-            }
-        }
 
         [Fact]
         public void DocumentsChangeVectorShouldBeUpdatedAfterAddingNewTimeSeries()
@@ -716,5 +678,6 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
+
     }
 }
