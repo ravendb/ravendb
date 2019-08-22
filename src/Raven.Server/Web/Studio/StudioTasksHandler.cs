@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -94,7 +95,7 @@ namespace Raven.Server.Web.Studio
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                FolderPathOptions folderPathOptions;
+                var folderPathOptions  = new FolderPathOptions();;
                 switch (connectionType)
                 {
                     case PeriodicBackupConnectionType.Local:
@@ -112,6 +113,12 @@ namespace Raven.Server.Web.Studio
                         if (s3Settings == null)
                             throw new BadRequestException("No S3Settings were found.");
 
+                        if (string.IsNullOrWhiteSpace(s3Settings.AwsAccessKey) ||
+                            string.IsNullOrWhiteSpace(s3Settings.AwsSecretKey) ||
+                            string.IsNullOrWhiteSpace(s3Settings.BucketName) ||
+                            string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
+                            break;
+
                         using (var client = new RavenAwsS3Client(s3Settings))
                         {
                             // fetching only the first 64 results for the auto complete
@@ -128,7 +135,7 @@ namespace Raven.Server.Web.Studio
                         }
                         break;
                     case PeriodicBackupConnectionType.Azure:
-                        var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                    var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
                         if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -136,10 +143,15 @@ namespace Raven.Server.Web.Studio
                         if (azureSettings == null)
                             throw new BadRequestException("No AzureSettings were found.");
 
-                        using (var client = new RavenAzureClient(azureSettings,null, null ,isTest:true))
+                        if (string.IsNullOrWhiteSpace(azureSettings.AccountName) ||
+                            string.IsNullOrWhiteSpace(azureSettings.AccountKey) ||
+                            string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
+                            break;
+
+                        using (var client = new RavenAzureClient(azureSettings))
                         {
-                            var folders = (await client.ListBlobs( azureSettings.RemoteFolderName,"/",true));
-                            folderPathOptions = new FolderPathOptions();
+                            var folders = (await client.ListBlobs(azureSettings.RemoteFolderName, "/", true));
+
                             foreach (var folder in folders.ListBlob)
                             {
                                 var fullPath = folder.Name;
@@ -151,6 +163,32 @@ namespace Raven.Server.Web.Studio
                         }
                         break;
                     case PeriodicBackupConnectionType.GoogleCloud:
+                        var googleCloudJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        if (connectionType != PeriodicBackupConnectionType.Local && googleCloudJson == null)
+                            throw new BadRequestException("No JSON was posted.");
+
+                        var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(googleCloudJson);
+                        if (googleCloudSettings == null)
+                            throw new BadRequestException("No AzureSettings were found.");
+
+                        if (string.IsNullOrWhiteSpace(googleCloudSettings.BucketName) ||
+                            string.IsNullOrWhiteSpace(googleCloudSettings.GoogleCredentialsJson))
+                            break;
+
+                        using (var client = new RavenGoogleCloudClient(googleCloudSettings))
+                        {
+                            var folders = (await client.ListObjectsAsync(googleCloudSettings.RemoteFolderName));
+
+                            foreach (var folder in folders)
+                            {
+                                var fullPath = folder.Name;
+                                if (string.IsNullOrWhiteSpace(fullPath))
+                                    continue;
+
+                                folderPathOptions.List.Add(fullPath);
+                            }
+                        }
+                        break;
                     case PeriodicBackupConnectionType.FTP:
                     case PeriodicBackupConnectionType.Glacier:
                         throw new NotSupportedException();
