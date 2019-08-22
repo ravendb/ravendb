@@ -135,10 +135,10 @@ namespace Raven.Client.Documents.Session
 
         private Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> _countersByDocId;
 
-        protected internal Dictionary<string, TimeSeriesDetails> TimeSeriesByDocId =>
-            _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, TimeSeriesDetails>(StringComparer.OrdinalIgnoreCase));
+        protected internal Dictionary<string, Dictionary<string, List<TimeSeriesRange>>> TimeSeriesByDocId =>
+            _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, Dictionary<string, List<TimeSeriesRange>>>(StringComparer.OrdinalIgnoreCase));
 
-        private Dictionary<string, TimeSeriesDetails> _timeSeriesByDocId;
+        private Dictionary<string, Dictionary<string, List<TimeSeriesRange>>> _timeSeriesByDocId;
 
         protected readonly DocumentStoreBase _documentStore;
 
