@@ -123,14 +123,16 @@ namespace Raven.Server.Web.Studio
                         {
                             // fetching only the first 64 results for the auto complete
                             var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, 64);
-                            folderPathOptions = new FolderPathOptions();
-                            foreach (var folder in folders.FileInfoDetails)
+                            if (folders != null)
                             {
-                                var fullPath = folder.FullPath;
-                                if (string.IsNullOrWhiteSpace(fullPath))
-                                    continue;
+                                foreach (var folder in folders.FileInfoDetails)
+                                {
+                                    var fullPath = folder.FullPath;
+                                    if (string.IsNullOrWhiteSpace(fullPath))
+                                        continue;
 
-                                folderPathOptions.List.Add(fullPath);
+                                    folderPathOptions.List.Add(fullPath);
+                                }
                             }
                         }
                         break;
@@ -178,14 +180,18 @@ namespace Raven.Server.Web.Studio
                         using (var client = new RavenGoogleCloudClient(googleCloudSettings))
                         {
                             var folders = (await client.ListObjectsAsync(googleCloudSettings.RemoteFolderName));
+                            var requestedPathLength = googleCloudSettings.RemoteFolderName.Split('/').Length;
 
                             foreach (var folder in folders)
                             {
-                                var fullPath = folder.Name;
-                                if (string.IsNullOrWhiteSpace(fullPath))
+                                const char separator = '/';
+                                var splitted = folder.Name.Split(separator);
+                                var result = string.Join(separator, splitted.Take(requestedPathLength)) + separator;
+                                
+                                if (string.IsNullOrWhiteSpace(result))
                                     continue;
 
-                                folderPathOptions.List.Add(fullPath);
+                                folderPathOptions.List.Add(result);
                             }
                         }
                         break;

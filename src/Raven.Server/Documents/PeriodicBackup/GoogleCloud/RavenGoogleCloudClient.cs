@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             }
             catch (Exception e)
             {
-                throw new ArgumentException("Wrong format for account key.", e);
+                throw new ArgumentException("Wrong format for Google Credentials.", e);
             }
 
             var credentialJsonType = JObject.Parse(settings.GoogleCredentialsJson);

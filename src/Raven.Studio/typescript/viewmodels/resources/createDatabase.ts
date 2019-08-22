@@ -66,8 +66,7 @@ class createDatabase extends dialogViewModelBase {
     
     folderPathOptions = ko.observableArray<string>([]);
     dataExporterDirectoryPathOptions = ko.observableArray<string>([]);
-    backupDirectoryPathOptions = ko.observableArray<string>([]);
-    backupRemoteFolderOptions = ko.observableArray<string>([]);
+    backupFolderPathOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
     
     allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
@@ -133,13 +132,9 @@ class createDatabase extends dialogViewModelBase {
 
         const dataPath = this.databaseModel.path.dataPath();
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
-        this.updateFolderPathOptions(dataPath);
-        this.updateBackupDirectoryPathOptions(dataPath);
-
-        const remoteFolderDataPath = this.databaseModel.path.dataPath();
-        this.updateDatabaseLocationInfo(this.databaseModel.name(), remoteFolderDataPath);
-        this.updateFolderPathOptions(remoteFolderDataPath);
-        this.updateBackupDirectoryPathOptions(remoteFolderDataPath);
+        
+        this.updateFolderPathOptions();
+        this.updateBackupDirectoryPathOptions();
         
         if (this.databaseModel.creationMode === "legacyMigration") {
             this.updateLegacyMigrationDataDirectoryPathOptions(this.databaseModel.legacyMigration.dataDirectory());
@@ -199,7 +194,7 @@ class createDatabase extends dialogViewModelBase {
                 // update database encryption key to match backup encryption key
                 this.databaseModel.encryption.key(key);
             }
-        })
+        });
     }
 
     private setDefaultReplicationFactor(topology: clusterTopology) {
@@ -284,7 +279,6 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.path.dataPath.throttle(300).subscribe(newPath => {
             if (this.databaseModel.path.dataPath.isValid()) {
                 this.updateDatabaseLocationInfo(this.databaseModel.name(), newPath);
-                this.updateFolderPathOptions(newPath);
             } else {
                 this.databaseLocationInfo([]);
                 this.spinners.databaseLocationInfoLoading(false);
@@ -305,30 +299,59 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
-        this.databaseModel.restore.source.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        this.databaseModel.restore.azureCredentials().accountKey.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
         });
-
-        this.databaseModel.restore.cloudBackupCredentials.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        this.databaseModel.restore.azureCredentials().accountName.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
         });
-
-        this.databaseModel.restore.remoteFolderName.throttle(300).subscribe(newPath => {
-            this.updateBackupDirectoryPathOptions(newPath);
+        this.databaseModel.restore.azureCredentials().container.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.azureCredentials().remoteFolder.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
         });
         
-        this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
-            this.updateBackupDirectoryPathOptions(newPath);
+        this.databaseModel.restore.googleCloudCredentials().bucketName.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.googleCloudCredentials().googleCredentials.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.googleCloudCredentials().remoteFolder.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+
+        this.databaseModel.restore.amazonS3Credentials().accessKey.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.amazonS3Credentials().secretKey.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.amazonS3Credentials().regionName.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.amazonS3Credentials().bucketName.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        this.databaseModel.restore.amazonS3Credentials().remoteFolder.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        
+        this.databaseModel.restore.localServerCredentials().backupDirectory.throttle(300).subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
+        });
+        
+        this.databaseModel.restore.source.subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
         });
         
         this.databaseModel.legacyMigration.dataDirectory.throttle(300).subscribe(newPath => {
             this.updateLegacyMigrationDataDirectoryPathOptions(newPath);
         });
-        
         this.databaseModel.legacyMigration.dataExporterFullPath.throttle(300).subscribe(newPath => {
            this.updateLegacyDataExporterPath(newPath); 
         });
-        
         this.databaseModel.legacyMigration.journalsPath.throttle(300).subscribe(newPath => {
             this.updateSourceJournalsPathOptions(newPath);
         });
@@ -420,74 +443,85 @@ class createDatabase extends dialogViewModelBase {
             });
         
         generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
+    }  
+
+    updateFolderPathOptions() {
+        switch (this.databaseModel.restore.source()) {
+            case 'local':
+                this.updateLocalFolderPath(this.databaseModel.restore.localServerCredentials().backupDirectory())
+                    .done(result => this.folderPathOptions(result.List));
+                break;
+            case 'azure':
+                this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials().toDto(), "Azure")
+                    .done(result => this.folderPathOptions(result.List));
+                break;
+            case 'amazonS3':
+                this.updateRemoteFolderName(this.databaseModel.restore.amazonS3Credentials().toDto(), "S3")
+                    .done(result => this.folderPathOptions(result.List));
+                break;
+            case 'googleCloud':
+                this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
+                    .done(result => this.folderPathOptions(result.List));
+                break;
+        }
     }
     
-    private updateFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+    private updateLocalFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
-    private updateRemoteFolderName(cred:  Raven.Client.Documents.Operations.Backups.BackupSettings, type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+    private updateRemoteFolderName(cred: Raven.Client.Documents.Operations.Backups.BackupSettings,
+                                   type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType)
+        : JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         return getFolderPathOptionsCommand.forCloudBackup(cred, type)
             .execute();
     }
 
-    updateFolderPathOptions(path: string) {
-        if (this.databaseModel.restore.source() === "serverLocal") {
-            this.updateFolderPath(path)
-                .done(result => this.folderPathOptions(result.List));
-        }
-
-        this.databaseModel.restore.remoteFolderName(path);
-
-        if (this.databaseModel.restore.source() === "azure") {
-
-            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials(), "Azure")
-                .done(result => this.folderPathOptions(result.List));
-        }
-        if (this.databaseModel.restore.source() === "amazonS3") {
-
-            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials(), "S3")
-                .done(result => this.folderPathOptions(result.List));
-        }
-        if (this.databaseModel.restore.source() === "googleCloud") {
-
-            this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
-                .done(result => this.folderPathOptions(result.List));
-        }
-    }
-
-    updateBackupDirectoryPathOptions(path: string = "") {
-        if (this.databaseModel.restore.source() === "serverLocal") {
-            this.updateFolderPath(path, true)
-                .done(result => this.backupDirectoryPathOptions(result.List));
-        }
-
-        if (this.databaseModel.restore.source() === "azure") {
-            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials(), "Azure")
-                .done(result => this.backupRemoteFolderOptions(result.List));
-        }
-        if (this.databaseModel.restore.source() === "amazonS3") {
-            this.updateRemoteFolderName(this.databaseModel.restore.amazonS3Credentials(), "S3")
-                .done(result => this.backupRemoteFolderOptions(result.List));
-        }
-        if (this.databaseModel.restore.source() === "googleCloud") {
-            this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
-                .done(result => this.backupRemoteFolderOptions(result.List));
+    updateBackupDirectoryPathOptions() { 
+        switch (this.databaseModel.restore.source()) {
+            case 'local':
+                this.updateLocalFolderPath(this.databaseModel.restore.localServerCredentials().backupDirectory(), true)
+                    .done(result => this.backupFolderPathOptions(result.List));
+                break;
+            case 'azure':
+                if (this.databaseModel.restore.azureCredentials().isValid()) {
+                    this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials().toDto(), "Azure")
+                        .done(result => this.backupFolderPathOptions(result.List));
+                } else {
+                    this.backupFolderPathOptions([]);   
+                }                
+                break;
+            case 'amazonS3':
+                if (this.databaseModel.restore.amazonS3Credentials().isValid()) {
+                    this.updateRemoteFolderName(this.databaseModel.restore.amazonS3Credentials().toDto(), "S3")
+                        .done(result => this.backupFolderPathOptions(result.List));
+                } else {
+                    this.backupFolderPathOptions([]);
+                }
+                break;
+            case 'googleCloud':
+                if (this.databaseModel.restore.googleCloudCredentials().isValid()) {
+                    this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
+                        .done(result => this.backupFolderPathOptions(result.List));
+                } else {
+                    this.backupFolderPathOptions([]);
+                }
+                break;
         }
     }
     
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {
-        this.updateFolderPath(path)
+        this.updateLocalFolderPath(path)
             .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
     }
     
     updateLegacyDataExporterPath(path: string) {
-        this.updateFolderPath(path)
+        this.updateLocalFolderPath(path)
             .done(result => this.dataExporterDirectoryPathOptions(result.List));
     }
 
     updateSourceJournalsPathOptions(path: string) {
-        this.updateFolderPath(path)
+        this.updateLocalFolderPath(path)
             .done(result => this.sourceJournalsPathOptions(result.List));
     }
 
@@ -634,16 +668,16 @@ class createDatabase extends dialogViewModelBase {
 
     findRestoreSourceLabel(restoreSource: restoreSource) {
         switch (restoreSource) {
+            case "local":
+                return this.databaseModel.restore.localServerCredentials().backupStorageTypeText;
             case "cloud":
-                return "Cloud";
-            case "serverLocal":
-                return "Server local directory";
+                return this.databaseModel.restore.ravenCloudCredentials().backupStorageTypeText;
             case "amazonS3":
-                return "Amazon S3";
+                return this.databaseModel.restore.amazonS3Credentials().backupStorageTypeText;
             case "azure":
-                return "Azure";
+                return this.databaseModel.restore.azureCredentials().backupStorageTypeText;
             case "googleCloud":
-                return "Google Cloud Platform";
+                return this.databaseModel.restore.googleCloudCredentials().backupStorageTypeText;
         }
     }
 
