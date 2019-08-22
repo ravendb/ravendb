@@ -67,6 +67,7 @@ class createDatabase extends dialogViewModelBase {
     folderPathOptions = ko.observableArray<string>([]);
     dataExporterDirectoryPathOptions = ko.observableArray<string>([]);
     backupDirectoryPathOptions = ko.observableArray<string>([]);
+    backupRemoteFolderOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
     
     allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
@@ -134,6 +135,11 @@ class createDatabase extends dialogViewModelBase {
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
         this.updateFolderPathOptions(dataPath);
         this.updateBackupDirectoryPathOptions(dataPath);
+
+        const remoteFolderDataPath = this.databaseModel.path.dataPath();
+        this.updateDatabaseLocationInfo(this.databaseModel.name(), remoteFolderDataPath);
+        this.updateFolderPathOptions(remoteFolderDataPath);
+        this.updateBackupDirectoryPathOptions(remoteFolderDataPath);
         
         if (this.databaseModel.creationMode === "legacyMigration") {
             this.updateLegacyMigrationDataDirectoryPathOptions(this.databaseModel.legacyMigration.dataDirectory());
@@ -307,8 +313,8 @@ class createDatabase extends dialogViewModelBase {
             this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
         });
 
-        this.databaseModel.restore.azureCredentials.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        this.databaseModel.restore.remoteFolderName.throttle(300).subscribe(newPath => {
+            this.updateBackupDirectoryPathOptions(newPath);
         });
         
         this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
@@ -420,8 +426,8 @@ class createDatabase extends dialogViewModelBase {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
-    private updateRemoteFolderName(cred:  Raven.Client.Documents.Operations.Backups.AzureSettings): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return getFolderPathOptionsCommand.forAzureBackup(cred)
+    private updateRemoteFolderName(cred:  Raven.Client.Documents.Operations.Backups.BackupSettings, type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forCloudBackup(cred, type)
             .execute();
     }
 
@@ -430,22 +436,43 @@ class createDatabase extends dialogViewModelBase {
             this.updateFolderPath(path)
                 .done(result => this.folderPathOptions(result.List));
         }
+
+        this.databaseModel.restore.remoteFolderName(path);
+
         if (this.databaseModel.restore.source() === "azure") {
-            this.databaseModel.restore.azureCredentials().RemoteFolderName = path;
-            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials())
-            .done(result => this.folderPathOptions(result.List));
+
+            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials(), "Azure")
+                .done(result => this.folderPathOptions(result.List));
+        }
+        if (this.databaseModel.restore.source() === "amazonS3") {
+
+            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials(), "S3")
+                .done(result => this.folderPathOptions(result.List));
+        }
+        if (this.databaseModel.restore.source() === "googleCloud") {
+
+            this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
+                .done(result => this.folderPathOptions(result.List));
         }
     }
 
-    updateBackupDirectoryPathOptions(path: string) {
+    updateBackupDirectoryPathOptions(path: string = "") {
         if (this.databaseModel.restore.source() === "serverLocal") {
             this.updateFolderPath(path, true)
                 .done(result => this.backupDirectoryPathOptions(result.List));
         }
+
         if (this.databaseModel.restore.source() === "azure") {
-            this.databaseModel.restore.azureCredentials().RemoteFolderName = path;//this line makes error =(
-            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials())
-                .done(result => this.backupDirectoryPathOptions(result.List));
+            this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials(), "Azure")
+                .done(result => this.backupRemoteFolderOptions(result.List));
+        }
+        if (this.databaseModel.restore.source() === "amazonS3") {
+            this.updateRemoteFolderName(this.databaseModel.restore.amazonS3Credentials(), "S3")
+                .done(result => this.backupRemoteFolderOptions(result.List));
+        }
+        if (this.databaseModel.restore.source() === "googleCloud") {
+            this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
+                .done(result => this.backupRemoteFolderOptions(result.List));
         }
     }
     
@@ -615,6 +642,8 @@ class createDatabase extends dialogViewModelBase {
                 return "Amazon S3";
             case "azure":
                 return "Azure";
+            case "googleCloud":
+                return "Google Cloud Platform";
         }
     }
 

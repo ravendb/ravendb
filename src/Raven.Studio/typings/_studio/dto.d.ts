@@ -186,7 +186,7 @@ interface databaseCreatedEventArgs {
 
 type availableConfigurationSectionId =  "restore" | "legacyMigration" | "encryption" | "replication" | "path";
 
-type restoreSource = "serverLocal" | "cloud" | "amazonS3" | "azure";
+type restoreSource = "serverLocal" | "cloud" | "amazonS3" | "azure" | "googleCloud";
 
 interface restoreTypeAware {
     Type: Raven.Client.Documents.Operations.Backups.RestoreType;

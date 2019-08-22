@@ -50,6 +50,10 @@ class getRestorePointsCommand extends commandBase {
     static forAzureBackup(credentials: Raven.Client.Documents.Operations.Backups.AzureSettings, skipReportingError: boolean) {
         return new getRestorePointsCommand("", skipReportingError, "Azure", credentials);
     }
+
+    static forGoogleCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings, skipReportingError: boolean) {
+        return new getRestorePointsCommand("", skipReportingError, "GoogleCloud", credentials);
+    }
 }
 
 export = getRestorePointsCommand; 
