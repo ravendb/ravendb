@@ -32,16 +32,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private readonly byte[] _accountKey;
         private readonly string _containerName;
         private readonly string _serverUrlForContainer;
-        private readonly bool _isTest;
         private const string AzureStorageVersion = "2017-04-17";
         private const int MaxUploadPutBlobInBytes = 256 * 1024 * 1024; // 256MB
         private const int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
         private readonly Logger _logger;
+        public static bool TestMode;
 
-        public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null, bool isTest = false)
+        public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(azureSettings.AccountKey))
+                throw new ArgumentException("Account key cannot be null or empty");
+
+            if (string.IsNullOrWhiteSpace(azureSettings.AccountName))
+                throw new ArgumentException("Account name cannot be null or empty");
+
+            if (string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
+                throw new ArgumentException("Storage container cannot be null or empty");
+
             _accountName = azureSettings.AccountName;
 
             try
@@ -55,20 +64,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             _containerName = azureSettings.StorageContainer;
 
-            _serverUrlForContainer = GetUrlForContainer(azureSettings.StorageContainer.ToLower(), isTest);
-            _isTest = isTest;
             _logger = logger;
+            _serverUrlForContainer = GetUrlForContainer(azureSettings.StorageContainer.ToLower());
         }
 
-        private string GetUrlForContainer(string containerName, bool isTest = false)
+        private string GetUrlForContainer(string containerName)
         {
-            var template = isTest == false ? "https://{0}.blob.core.windows.net/{1}" : "http://localhost:10000/{0}/{1}";
+            var template = TestMode == false ? "https://{0}.blob.core.windows.net/{1}" : "http://localhost:10000/{0}/{1}";
             return string.Format(template, _accountName, containerName);
         }
 
         private string GetBaseServerUrl()
         {
-            var template = _isTest == false ? "https://{0}.blob.core.windows.net" : "http://localhost:10000/{0}";
+            var template = TestMode == false ? "https://{0}.blob.core.windows.net" : "http://localhost:10000/{0}";
             return string.Format(template, _accountName);
         }
 
@@ -186,7 +194,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
                     if (retryCount == MaxRetriesForMultiPartUpload)
                         throw StorageException.FromResponseMessage(response);
-                    
+
                 }
                 catch (Exception)
                 {
@@ -438,7 +446,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             var response = await client.SendAsync(requestMessage, CancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound)
-                return new ListBlobResult();
+                return new ListBlobResult
+                {
+                    ListBlob = new BlobProperties[] { }
+                };
 
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);

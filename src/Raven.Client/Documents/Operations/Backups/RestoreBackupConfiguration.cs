@@ -75,12 +75,27 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(Settings)] = Settings;
             return json;
         }
+    }  
+    
+    public class RestoreFromGoogleCloudConfiguration : RestoreBackupConfigurationBase
+    {
+        public GoogleCloudSettings Settings { get; set; } = new GoogleCloudSettings();
+
+        protected override RestoreType Type => RestoreType.GoogleCloud;
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Settings)] = Settings;
+            return json;
+        }
     }
 
     public enum RestoreType
     {
         Local,
         S3,
-        Azure
+        Azure,
+        GoogleCloud
     }
 }
