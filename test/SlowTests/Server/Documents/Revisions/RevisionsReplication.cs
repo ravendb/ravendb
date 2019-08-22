@@ -21,6 +21,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -246,6 +247,48 @@ namespace SlowTests.Server.Documents.Revisions
                     var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
 
                     Assert.Equal(rev1.Count, rev2.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ConflictedRevisionClearedAfterEnforce()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await PutDocument(store1);
+                await PutDocument(store2);
+
+                await SetupReplicationAsync(store1, store2);
+                WaitForMarker(store1, store2);
+
+                await PutDocument(store1);
+                WaitForMarker(store1, store2);
+
+                await SetupReplicationAsync(store2, store1);
+                WaitForMarker(store2, store1);
+
+                var db = await GetDocumentDatabaseInstanceFor(store1);
+
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+
+                WaitForMarker(store1, store2);
+
+                using (var session1 = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                {
+                    var doc1 = await session1.LoadAsync<User>("foo/bar");
+                    var doc2 = await session2.LoadAsync<User>("foo/bar");
+
+                    Assert.Equal(doc1.Name, doc2.Name);
+
+                    var rev1 = await session1.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+                    var rev2 = await session2.Advanced.Revisions.GetMetadataForAsync("foo/bar", pageSize: int.MaxValue);
+
+                    Assert.Equal(0, rev1.Count);
+                    Assert.Equal(0, rev2.Count);
                 }
             }
         }

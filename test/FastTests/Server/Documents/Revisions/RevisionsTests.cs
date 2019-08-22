@@ -20,6 +20,7 @@ using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Patch;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -116,6 +117,92 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Constants.Documents.Metadata.Flags]);
                     var bar = await session.Advanced.Revisions.GetMetadataForAsync("bar");
                     Assert.Equal(1, bar.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task  EnforceRevisionConfiguration()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        MinimumRevisionsToKeep = 10
+                    }
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                for (int i = 0; i < 10; i++)
+                {
+                    for (int j = i; j >= 0; j--)
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new Product
+                                {
+                                    Description = j.ToString()
+                                }, "bar" + i);
+                            await session.SaveChangesAsync();
+                        }
+                    }
+                }
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+
+                        var product = await session.LoadAsync<Product>("bar"+i);
+                        var metadata = session.Advanced.GetMetadataFor(product);
+                        Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                        var bar = await session.Advanced.Revisions.GetMetadataForAsync("bar" + i);
+                        Assert.Equal(i + 1, bar.Count);
+                    }
+                }
+
+                configuration.Default.MinimumRevisionsToKeep = 5;
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession( new SessionOptions
+                    {
+                        NoCaching = true // we aren't changing the document only it's revisions, so we need to disable caching otherwise we will get 'Not-Modified'
+                    }))
+                    {
+                        var product = await session.LoadAsync<Product>("bar" + i);
+                        var metadata = session.Advanced.GetMetadataFor(product);
+                        Assert.True(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
+                        var foo = await session.Advanced.Revisions.GetMetadataForAsync("bar" + i);
+                        Assert.Equal(Math.Min(i + 1, 5), foo.Count);
+                    }
+                }
+
+                configuration.Default.MinimumRevisionsToKeep = 0;
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var product = await session.LoadAsync<Product>("bar" + i);
+                        var metadata = session.Advanced.GetMetadataFor(product);
+                        Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
+                        var foo = await session.Advanced.Revisions.GetMetadataForAsync("bar" + i);
+                        Assert.Equal(0, foo.Count);
+                    }
                 }
             }
         }
