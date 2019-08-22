@@ -16,7 +16,6 @@ using FastTests.Server.Basic.Entities;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 
-
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     class RestoreFromGoogleCloud : RavenTestBase
@@ -49,7 +48,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 restoreConfiguration.Settings.GoogleCredentialsJson = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Wrong format for account key.", e.InnerException.Message);
+                Assert.Contains("Wrong format for Google Credentials.", e.InnerException.Message);
             }
         }
 

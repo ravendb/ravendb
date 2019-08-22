@@ -22,10 +22,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override async Task FetchRestorePoints(string path)
         {
-            var objects = await _client.ListObjectsAsync(path, "/");
-
             await FetchRestorePointsForPath(path, assertLegacyBackups: true);
-
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)

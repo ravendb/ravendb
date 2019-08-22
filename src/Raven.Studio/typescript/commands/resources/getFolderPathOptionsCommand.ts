@@ -3,7 +3,9 @@ import endpoints = require("endpoints");
 
 class getFolderPathOptionsCommand extends commandBase {
 
-    private constructor(private inputPath: string, private isBackupFolder: boolean = false, private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
+    private constructor(private inputPath: string, 
+                        private isBackupFolder: boolean = false, 
+                        private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
                         private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
         super();
     }
@@ -29,14 +31,7 @@ class getFolderPathOptionsCommand extends commandBase {
 
         const url = endpoints.global.studioTasks.adminStudioTasksFolderPathOptions + this.urlEncodeArgs(args);
         
-        return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), null)
-            .fail((response: JQueryXHR) => {
-                if (response.status === 403) {
-                    return;
-                }
-
-                this.reportError("Failed to get the folder path options", response.responseText, response.statusText);
-            });
+        return this.post<Raven.Server.Web.Studio.FolderPathOptions>(url, this.preparePayload(), null);
     }
     
     static forServerLocal(inputPath: string, isBackupFolder: boolean) {

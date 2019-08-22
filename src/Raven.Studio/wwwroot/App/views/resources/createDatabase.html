@@ -6,7 +6,7 @@
                 <h4 class="modal-title" id="newDatabaseLabel">
                     <i class="icon-new-database"></i>
                     <span>New database 
-                        <span data-bind="visible: databaseModel.creationMode === 'restore'">from backup</span>
+                        <span data-bind="visible: databaseModel.creationMode === 'restore'">from backup (Restore)</span>
                         <span data-bind="visible: databaseModel.creationMode === 'legacyMigration'"> from legacy (v3.x) data files</span>
                     </span>
                 </h4>
@@ -15,7 +15,6 @@
                 <div class="text-center" data-bind="if: operationNotSupported">
                     <h2 class="text-warning">Creating database from legacy files is only supported on servers hosted on Microsoft Windows</h2>
                     <p class="margin-top margin-lg">
-                        
                         You can still import your data using 
                         <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/GBX6MB/' +  $root.clientVersion() }">live import</a> or
                         using <a data-bind="attr: { href: 'https://ravendb.net/l/CCZXCB/' +  $root.clientVersion() }" target="_blank">.ravendump</a> file 
@@ -38,8 +37,7 @@
                             </div>
                             <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled">
                                 <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }, disable: disableToggle">
-                                <label data-bind="text: name, attr: { 'for': 'section_' + $index() }">
-                                </label>
+                                <label data-bind="text: name, attr: { 'for': 'section_' + $index() }"></label>
                                 <button type="button" class="btn pull-right btn-toggle"
                                         data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }, disable: disableToggle() && !enabled()">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
@@ -84,7 +82,6 @@
 <script type="text/html" id="create-db-legacy-migration">
     <div data-bind="with: databaseModel.legacyMigration">
         <h3>Data Source Configuration</h3>
-
         <div class="bg-info margin-bottom">
             <div class="padding padding-sm flex-horizontal">
                 <div>
@@ -97,7 +94,6 @@
                 </div>
             </div>
         </div>
-
         <div class="form-group row" data-bind="validationElement: sourceType">
             <div class="col-md-4">
                 <label class="control-label resource-type-label">
@@ -110,17 +106,16 @@
                 <button class="btn" data-bind="click: _.partial(sourceType, 'ravenfs'), css: { active: sourceType() === 'ravenfs' }">RavenFS</button>
             </div>
         </div>
-
         <div class="form-group row" data-bind="validationElement: dataDirectory">
             <div class="col-md-4">
                 <label class="control-label data-directory-label">
-                    Data directory
+                    Data Directory
                     <small><i class="icon-info text-info"></i></small>
                 </label>
             </div>
             <div class="col-md-8">
                 <div class="has-feedback dropdown" style="display: block;">
-                    <input id="legacyMigrationDataDirectory" type="text" class="form-control" placeholder="Resource data directory (absolute path)"
+                    <input id="legacyMigrationDataDirectory" type="text" class="form-control" placeholder="Absolute path to the resource data directory"
                            data-bind="textInput: dataDirectory, hasFocus: dataDirectoryHasFocus" />
                     <ul class="dropdown-menu max-height" data-bind="foreach: $parent.legacyMigrationDataDirectoryPathOptions, autoComplete: '#legacyMigrationDataDirectory'">
                         <li data-bind="click: _.partial($root.databaseModel.legacyMigrationDataDirectoryHasChanged, $data)">
@@ -132,7 +127,6 @@
                 </div>
             </div>
         </div>
-
         <div class="form-group row">
             <div class="col-md-12">
                 <div class="toggle">
@@ -141,7 +135,6 @@
                 </div>
             </div>
         </div>
-
         <div class="margin-left" data-bind="collapse: showAdvanced">
             <div class="form-group row">
                 <div class="col-md-4">
@@ -157,7 +150,6 @@
                     </ul>
                 </div>
             </div>
-
             <div class="form-group row">
                 <div class="col-md-4">
                     <label class="control-label">Batch size</label>
@@ -166,9 +158,7 @@
                     <input type="number" class="form-control" placeholder="Batch size (optional)" data-bind="numericInput: batchSize" />
                 </div>
             </div>
-
             <h3>Source bundles</h3>
-
             <div class="margin-left">
                 <div class="form-group row">
                     <div class="col-md-12">
@@ -179,17 +169,14 @@
 
                     </div>
                 </div>
-
                 <div class="form-group row">
                     <div class="col-md-12">
                         <div class="toggle">
                             <input id="isEncrypted" type="checkbox" data-bind="checked: isEncrypted">
                             <label for="isEncrypted">Encryption</label>
                         </div>
-
                     </div>
                 </div>
-
                 <div class="margin-left" data-bind="collapse: isEncrypted">
                     <div class="form-group row" data-bind="validationElement: encryptionKey">
                         <div class="col-md-4">
@@ -199,51 +186,44 @@
                             <input type="text" class="form-control" placeholder="Encryption key" data-bind="textInput: encryptionKey" />
                         </div>
                     </div>
-    
                     <div class="form-group row" data-bind="validationElement: encryptionAlgorithm">
                         <div class="col-md-4">
                             <label class="control-label">Encryption algorithm</label>
                         </div>
                         <div class="col-md-8">
-                            <div>
-                                <div class="dropdown btn-block">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                        <span data-bind="text: encryptionAlgorithm() || 'Select encryption algorithm'"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyEncryptionAlgorithms">
-                                        <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionAlgorithm, $data)"></a></li>
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: encryptionAlgorithm"></span>
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: encryptionAlgorithm() || 'Select encryption algorithm'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyEncryptionAlgorithms">
+                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionAlgorithm, $data)"></a></li>
+                                </ul>
                             </div>
+                            <span class="help-block" data-bind="validationMessage: encryptionAlgorithm"></span>
                         </div>
                     </div>
-    
                     <div class="form-group row" data-bind="validationElement: encryptionKeyBitsSize">
                         <div class="col-md-4">
                             <label class="control-label">Encryption key size</label>
                         </div>
                         <div class="col-md-8">
-                            <div>
-                                <div class="dropdown btn-block">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                        <span data-bind="text: encryptionKeyBitsSize() || 'Select encryption key size'"></span>
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyKeySizes">
-                                        <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionKeyBitsSize, $data)"></a></li>
-                                    </ul>
-                                </div>
-                                <span class="help-block" data-bind="validationMessage: encryptionKeyBitsSize"></span>
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                                    <span data-bind="text: encryptionKeyBitsSize() || 'Select encryption key size'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyKeySizes">
+                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionKeyBitsSize, $data)"></a></li>
+                                </ul>
                             </div>
+                            <span class="help-block" data-bind="validationMessage: encryptionKeyBitsSize"></span>
                         </div>
                     </div>
                 </div>
             </div>
             <hr />
         </div>
-
         <div class="form-group row" data-bind="validationElement: dataExporterFullPath">
             <div class="col-md-4">
                 <label class="control-label data-exporter-label">
@@ -253,7 +233,7 @@
             </div>
             <div class="col-md-8">
                 <div class="has-feedback dropdown" style="display: block">
-                    <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath, hasFocus: dataExporterFullPathHasFocus" placeholder="Raven.StorageExporter.exe location (absolute path)" />
+                    <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath, hasFocus: dataExporterFullPathHasFocus" placeholder="Absolute path to Raven.StorageExporter.exe"/>
                     <span class="glyphicon glyphicon-ok text-success form-control-feedback"
                           data-bind="visible: dataExporterFullPath() && dataExporterFullPath.isValid() && !dataExporterFullPath.isValidating()"></span>
                     <ul class="dropdown-menu max-height" role="menu"
@@ -278,7 +258,6 @@
 <script type="text/html" id="create-db-restore">
     <div data-bind="with: databaseModel.restore">
         <h3>Backup Source Configuration</h3>
-
         <div class="form-group row" data-bind="validationElement: source">
             <div class="col-md-4">
                 <label class="control-label">Source</label>
@@ -290,32 +269,52 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li>
-                        <a href="#" data-bind="click: _.partial(source, 'serverLocal'), text: $root.findRestoreSourceLabel('serverLocal')"></a>
+                        <a href="#" data-bind="click: _.partial(source, localServerCredentials().backupStorageType), text: localServerCredentials().backupStorageTypeText"></a>
                     </li>
                     <li>
-                        <a href="#" data-bind="click: _.partial(source, 'cloud'), text: $root.findRestoreSourceLabel('cloud')">Cloud</a>
+                        <a href="#" data-bind="click: _.partial(source, ravenCloudCredentials().backupStorageType), text: ravenCloudCredentials().backupStorageTypeText"></a>
                     </li>
                     <li>
-                        <a href="#" data-bind="click: _.partial(source, 'amazonS3'), text: $root.findRestoreSourceLabel('amazonS3')">Amazon S3</a>
+                        <a href="#" data-bind="click: _.partial(source, amazonS3Credentials().backupStorageType), text: amazonS3Credentials().backupStorageTypeText"></a>
                     </li>
                     <li>
-                        <a href="#" data-bind="click: _.partial(source, 'azure'), text: $root.findRestoreSourceLabel('azure')">Azure</a>
+                        <a href="#" data-bind="click: _.partial(source, azureCredentials().backupStorageType), text: azureCredentials().backupStorageTypeText"></a>
                     </li>
                     <li>
-                        <a href="#" data-bind="click: _.partial(source, 'googleCloud'), text: $root.findRestoreSourceLabel('googleCloud')">Google Cloud Platform</a>
+                        <a href="#" data-bind="click: _.partial(source,googleCloudCredentials().backupStorageType), text: googleCloudCredentials().backupStorageTypeText"></a>
                     </li>
                 </ul>
                 <span class="help-block" data-bind="validationMessage: source"></span>
             </div>
         </div>
 
-        <div data-bind="visible: source() === 'cloud'">
-            <div class="form-group row" data-bind="validationElement: backupLink">
+        <!-- Local Directory -->
+
+        <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: localServerCredentials().backupDirectory, visible: source() === localServerCredentials().backupStorageType">
+            <div class="col-md-4">
+                <label class="control-label">Backup Directory<i class="required"></i></label>
+            </div>
+            <div class="col-md-8">
+                <input type="text" class="form-control" id="backupDirectoryrPath"
+                       data-bind="textInput: localServerCredentials().backupDirectory"
+                       placeholder="Enter backup directory path" />
+                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#backupDirectoryrPath'">
+                    <li data-bind="click: _.partial($root.databaseModel.backupDirectoryHasChanged, $data)">
+                        <a href="#" data-bind="text: $data"></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- RavenDB Cloud -->
+
+        <div data-bind="visible: source() === ravenCloudCredentials().backupStorageType">
+            <div class="form-group row" data-bind="validationElement: ravenCloudCredentials().backupLink">
                 <div class="col-md-4">
-                    <label class="control-label">Backup Link</label>
+                    <label class="control-label">Backup Link<i class="required"></i></label>
                 </div>
                 <div class="col-md-8">
-                     <input class="form-control" data-bind="textInput: backupLink" placeholder="Enter backup link from RavenDB Cloud" />
+                     <input class="form-control" data-bind="textInput: ravenCloudCredentials().backupLink" placeholder="Enter backup link from RavenDB Cloud" />
                 </div>
             </div>
             <div data-bind="if: $root.databaseModel.spinners.backupCredentialsLoading()">
@@ -325,8 +324,11 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && isBackupLinkValid()">
-                <div data-bind="with: cloudBackupCredentials">
+
+            <!-- todo : Only Amazon is now supported from the RavenDB Cloud Link. Add support to other cloud backup types when relevant.... -->
+            
+            <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && ravenCloudCredentials().isValid()">
+                <div data-bind="with: ravenCloudCredentials">
                     <div class="form-group row">
                         <div class="col-md-4">
                             <label class="control-label">Backup Storage Type</label>
@@ -340,7 +342,7 @@
                             <label class="control-label">Region Name</label>
                         </div>
                         <div class="col-md-8">
-                            <label class="control-label text-info text-left" data-bind="text: awsRegionName"></label>
+                            <label class="control-label text-info text-left" data-bind="text: amazonS3().regionName"></label> 
                         </div>
                     </div>
                     <div class="form-group row">
@@ -348,7 +350,7 @@
                             <label class="control-label">Bucket Name</label>
                         </div>
                         <div class="col-md-8">
-                            <label class="control-label text-info text-left" data-bind="text: bucketName"></label>
+                            <label class="control-label text-info text-left" data-bind="text: amazonS3().bucketName"></label>
                         </div>
                     </div>
                     <div class="form-group row">
@@ -356,7 +358,7 @@
                             <label class="control-label">Remote Folder Name</label>
                         </div>
                         <div class="col-md-8">
-                            <label class="control-label text-info text-left" data-bind="text: remoteFolderName"></label>
+                            <label class="control-label text-info text-left" data-bind="text: amazonS3().remoteFolder"></label>
                         </div>
                     </div>
                     <div class="form-group row">
@@ -370,150 +372,168 @@
                 </div>
             </div>
         </div>
-        
-        <div class="form-group row" data-bind="validationElement: backupDirectory, visible: source() === 'serverLocal'">
-            <div class="col-md-4">
-                <label class="control-label">Backup Directory</label>
-            </div>
-            <div class="col-md-8">
-                <input type="text" class="form-control" id="backupFolderPath"
-                       data-bind="textInput: backupDirectory, hasFocus: isFocusOnBackupDirectory, disable: $parent.databaseModel.spinners.fetchingRestorePoints()"
-                       placeholder="Enter backup directory path" />
-                
-                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupDirectoryPathOptions, autoComplete: '#backupFolderPath'">
-                    <li data-bind="click: _.partial($root.databaseModel.backupPathHasChanged, $data)">
-                        <a href="#" data-bind="text: $data"></a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="form-group row" data-bind="visible: source() === 'azure'">
-            <div class="col-md-4">
-                <label class="control-label">Account Name<i class="required"></i></label>
-            </div>
 
-            <div class="col-md-8">
-                <input class="form-control" data-bind="textInput: azureCredentials.AccountName" />
-            </div>
-        </div>
+        <!-- Azure -->
 
-            <div class="form-group row" data-bind="visible: source() === 'azure'">
+        <div data-bind="visible: source() === azureCredentials().backupStorageType">
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Account Name<i class="required"></i></label>
+                </div>
+                <div class="col-md-8">
+                    <input class="form-control" data-bind="textInput: azureCredentials().accountName" />
+                </div>
+            </div>
+            <div class="form-group row">
                 <div class="col-md-4">
                     <label class="control-label">Account Key<i class="required"></i></label>
                 </div>
                 <div class="col-md-8">
-                    <input class="form-control" data-bind="textInput: azureCredentials.AccountKey" />
+                    <input class="form-control" data-bind="textInput: azureCredentials().accountKey" />
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Container<i class="required"></i></label>
+                </div>
+                <div class="col-md-8">
+                    <input class="form-control" data-bind="textInput: azureCredentials().container" />
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Remote Folder Name</label>
+                </div>
+                <div class="col-md-8">
+                    <input type="text" class="form-control" id="remoteFolderAzure" data-bind="textInput: azureCredentials().remoteFolder"/>
+                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#remoteFolderAzure'">
+                        <li data-bind="click: _.partial($root.databaseModel.remoteFolderAzureChanged, $data)">
+                            <a href="#" data-bind="text: $data"></a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
 
-        <div class="form-group row" data-bind=" visible: source() === 'azure'">
-            <div class="col-md-4">
-                <label class="control-label">Container<i class="required"></i></label>
+        <!-- Amazon S3 -->
+        
+       <div data-bind="visible: source() === amazonS3Credentials().backupStorageType">
+           <div class="form-group row" >
+               <div class="col-md-4">
+                   <label class="control-label">Aws Access Key<i class="required"></i></label>
+               </div>
+               <div class="col-md-8">
+                   <input class="form-control" data-bind="textInput: amazonS3Credentials().accessKey" />
+               </div>
+           </div>
+           <div class="form-group row">
+               <div class="col-md-4">
+                   <label class="control-label">Aws Secret Key<i class="required"></i></label>
+               </div>
+               <div class="col-md-8">
+                   <input class="form-control" data-bind="textInput: amazonS3Credentials().secretKey" />
+               </div>
+           </div>
+           <div class="form-group row">
+               <div class="col-md-4">
+                   <label class="control-label">Aws Region Name<i class="required"></i></label>
+               </div>
+               <div class="col-md-8">
+                   <input class="form-control" data-bind="textInput: amazonS3Credentials().regionName" />
+               </div>
+           </div>
+           <div class="form-group row">
+               <div class="col-md-4">
+                   <label class="control-label">Bucket Name<i class="required"></i></label>
+               </div>
+               <div class="col-md-8">
+                   <input class="form-control" data-bind="textInput: amazonS3Credentials().bucketName" />
+               </div>
+           </div>
+           <div class="form-group row">
+               <div class="col-md-4">
+                   <label class="control-label">Remote Folder Name</label>
+               </div>
+               <div class="col-md-8">
+                   <input type="text" class="form-control" id="remoteFolderAmazon" data-bind="textInput: amazonS3Credentials().remoteFolder"/>
+                   <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#remoteFolderAmazon'">
+                       <li data-bind="click: _.partial($root.databaseModel.remoteFolderAmazonChanged, $data)">
+                           <a href="#" data-bind="text: $data"></a>
+                       </li>
+                   </ul>
+               </div>
+           </div>
+       </div>
+
+        <!-- Google Cloud -->
+
+        <div data-bind="visible: source() === googleCloudCredentials().backupStorageType">
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Bucket Name<i class="required"></i></label>
+                </div>
+                <div class="col-md-8">
+                        <input class="form-control" data-bind="textInput: googleCloudCredentials().bucketName" />
+                </div>
             </div>
-            <div class="col-md-8">
-                <input class="form-control" data-bind="textInput: azureCredentials.StorageContainer" />
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Google Credentials<i class="required"></i></label>
+                </div>
+                <div class="col-xs-12 col-sm-6 col-lg-8">
+                <textarea rows="9" data-bind="textInput: googleCloudCredentials().googleCredentials" class="form-control" placeholder=
+    'e.g.
+    {
+        "type": "service_account",
+        "project_id": "test-raven-237012",
+        "private_key_id": "12345678123412341234123456789101",
+        "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
+        "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
+        "client_id": "111390682349634407434",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
+    }'>                
+                </textarea>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col-md-4">
+                    <label class="control-label">Remote Folder Name</label>
+                </div>
+                <div class="col-md-8">
+                    <input type="text" class="form-control" id="remoteFolderGoogleCloud" data-bind="textInput: googleCloudCredentials().remoteFolder"/>
+                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
+                        <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">    
+                            <a href="#" data-bind="text: $data"></a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
-
-        <div class="form-group row" data-bind="visible: source() === 'amazonS3'">
-            <div class="col-md-4">
-                <label class="control-label">Aws Access Key<i class="required"></i></label>
-            </div>
-
-            <div class="col-md-8">
-                <input class="form-control" data-bind="textInput: amazonS3Credentials.AwsAccessKey" />
-            </div>
-        </div>
-
-        <div class="form-group row" data-bind=" visible: source() === 'amazonS3' || source() === 'cloud'">
-            <div class="col-md-4">
-                <label class="control-label">Aws Secret Key<i class="required"></i></label>
-            </div>
-            <div class="col-md-8">
-                <input class="form-control" data-bind="textInput: amazonS3Credentials.AwsSecretKey" />
-            </div>
-        </div>
-
-        <div class="form-group row" data-bind="visible: source() === 'amazonS3'">
-            <div class="col-md-4">
-                <label class="control-label">Aws Region Name<i class="required"></i></label>
-            </div>
-            <div class="col-md-8">
-                <input class="form-control" data-bind="textInput: amazonS3Credentials.AwsRegionName" />
-            </div>
-        </div>
-
-        <div class="form-group row" data-bind="visible: source() === 'amazonS3' || source() === 'googleCloud'">
-            <div class="col-md-4">
-                <label class="control-label">Bucket Name<i class="required"></i></label>
-            </div>
-            <div class="col-md-8">
-                    <input class="form-control" data-bind="textInput: amazonS3Credentials.BucketName" />
-            </div>
-        </div>
-
-        <div class="form-group row" data-bind=" visible: source() === 'googleCloud'">
-            <div class="col-md-4">
-                <label class="control-label">Google Credentials<i class="required"></i></label>
-            </div>
-            <div class="col-xs-12 col-sm-6 col-lg-8">
-            <textarea rows="9" data-bind="textInput: googleCloudCredentials.GoogleCredentialsJson" class="form-control" placeholder=
-                    'e.g.
-                    {
-                    "type": "service_account",
-                    "project_id": "test-raven-237012",
-                    "private_key_id": "12345678123412341234123456789101",
-                    "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
-                    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
-                    "client_id": "111390682349634407434",
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
-                    }
-                    '></textarea>
-            </div>
-        </div>
-
-        <div class="form-group row" data-bind="validationElement: remoteFolderName, visible: source() !== 'serverLocal'">
-            <div class="col-md-4">
-                <label class="control-label">Remote Folder Name</label>
-            </div>
-            <div class="col-md-8">
-                <input type="text" class="form-control" id="remoteFolderName"
-                        data-bind="textInput: googleCloudCredentials.RemoteFolderName, hasFocus: isFocusOnRemoteFolderName, disable: $parent.databaseModel.spinners.fetchingRestorePoints()"
-                        placeholder="Enter remote folder name" />
-                
-                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupRemoteFolderOptions, autoComplete: '#remoteFolderName'">
-                    <li data-bind="click: _.partial($root.databaseModel.backupPathHasChanged, $data)">
-                        <a href="#" data-bind="text: $data"></a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
+        
         <div class="toggle">
             <input class="styled" type="checkbox" id="disable-ongoing-tasks" data-bind="checked: disableOngoingTasks">
             <label for="disable-ongoing-tasks">Disable ongoing tasks after restore</label>
         </div>
-
         <div class="toggle">
             <input class="styled" type="checkbox" id="skip-indexes-import" data-bind="checked: skipIndexes">
             <label for="skip-indexes-import">Skip indexes</label>
         </div>
-
+        
         <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
             <div class="col-md-4">
-                <label class="control-label">Restore point</label>
+                <label class="control-label">Restore Point</label>
             </div>
             <div class="col-md-12">
                 <div>
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                data-bind="disable: restorePoints().length === 0 || $parent.databaseModel.spinners.fetchingRestorePoints(), attr: { title: restorePoints().length == 0 ? 'No restore points in selected directory' : '' }">
-                            <span data-bind="text: restorePoints().length === 0 ? 'Select backup directory' : ( selectedRestorePointText() || 'Select restore point... (' + restorePointsCount().toLocaleString() + ' options)' ), textInput: selectedRestorePoint"></span>
-                            <span class="caret"></span>
+                                data-bind="disable: restorePoints().length === 0 || $parent.databaseModel.spinners.fetchingRestorePoints()">
+                            <span data-bind="text: restorePointButtonText, textInput: selectedRestorePoint"></span>
+                            <span class="caret" data-bind="visible: !$parent.databaseModel.spinners.fetchingRestorePoints() && restorePoints().length > 0"></span>
+                            <span class="btn-spinner" data-bind="visible: $parent.databaseModel.spinners.fetchingRestorePoints" id="restorePointSpinner"></span>
                         </button>
                         <div class="dropdown-menu has-info restore-point-dropdown">
                             <ul class="menu max-height" role="menu" data-bind="foreach: restorePoints">
@@ -523,7 +543,6 @@
                                 <li class="dropdown-header" data-bind="attr: { title: $data.databaseNameTitle }">
                                     <span class="text-success" data-bind="text: $data.databaseName"></span>
                                 </li>
-
                                 <!-- ko foreach: $data.restorePoints -->
                                 <li>
                                     <a href="#" data-bind="click: _.partial($root.databaseModel.useRestorePoint, $data)" title="">
@@ -538,7 +557,6 @@
                                 </li>
                                 <!-- /ko -->
                             </ul>
-
                             <div class="divider"></div>
                             <div class="dropdown-header header bg-info" title="">
                                 <div class="restore-point-row">
@@ -550,13 +568,11 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                     <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
                 </div>
             </div>
         </div>
-        
         <div data-bind="with: selectedRestorePoint">
             <div class="form-group" data-bind="visible: isEncrypted, validationElement: $parent.backupEncryptionKey">
                 <label class="control-label">
@@ -564,19 +580,16 @@
                 </label>
                 <input type="text" class="form-control" placeholder="Key" autocomplete="off"
                        data-bind="textInput: $parent.backupEncryptionKey">
-            </div>            
-            
+            </div> 
             <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && isEncrypted">
                 <i class="icon-info"></i>
-                <div class="margin-left">Selected restore point is encrypted. Backup encryption key will be used as database encryption key.</div>
+                <div class="margin-left">Selected restore point is encrypted. The Backup Encryption Key will be used as the Database Encryption Key.</div>
             </div>
-
             <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && !isEncrypted">
                 <i class="icon-info"></i>
-                <div class="margin-left">Selected restore point is not encrypted. 'Encyption' tab was disabled.</div>
+                <div class="margin-left">Selected restore point is not encrypted. 'Encryption' tab was disabled.</div>
             </div>
         </div>
-
     </div>
 </script>
 
@@ -662,7 +675,6 @@
                 </div>
             </div>
         </div>
-
         <div class="flex-horizontal bg-info padding padding-sm" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
             <div class="margin-right margin-right-sm">
                 <small><i class="icon-info"></i></small>
@@ -674,7 +686,6 @@
                 </small>
             </div>
         </div>
-        
         <div data-bind="css: {'has-warning': $root.showDynamicDatabaseDistributionWarning()}">
             <div class="toggle">
                 <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, enable: $root.canUseDynamicOption() && !$root.showDynamicDatabaseDistributionWarning()">
@@ -685,7 +696,6 @@
                 Your current license doesn't include the dynamic database distribution feature.
             </div>
         </div>
-
         <div data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration">
             <div class="toggle">
                 <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection()">
@@ -695,7 +705,6 @@
             <small class="toggle-caption" data-bind="visible: !$root.enforceManualNodeSelection() && manualMode()">Select replication nodes from the list below.</small>
             <small class="toggle-caption" data-bind="visible: $root.enforceManualNodeSelection">Encryption was enabled. Please choose replication nodes manually.</small>
         </div>
-      
         <div class="bg-info padding no-margin" data-bind="visible: manualMode()">
             <small>Available nodes</small>
             <div class="checkbox">
@@ -719,9 +728,9 @@
 
 <script type="text/html" id="create-db-encryption">
     <h3>Encryption Configuration</h3>
-        <div data-bind="with: encryptionSection">
-            <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
-        </div>
+    <div data-bind="with: encryptionSection">
+        <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+    </div>
 </script>
 
 <script type="text/html" id="authentication-is-off">
