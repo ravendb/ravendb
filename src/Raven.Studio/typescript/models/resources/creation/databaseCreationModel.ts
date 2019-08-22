@@ -72,6 +72,7 @@ class databaseCreationModel {
     restore = {
         source: ko.observable<restoreSource>("serverLocal"),
         backupLink: ko.observable<string>(),
+        isBackupLinkValid: ko.observable<boolean>(true),
         cloudBackupCredentials: ko.observable<cloudBackupCredentials>(), 
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
         backupDirectoryError: ko.observable<string>(null),
@@ -222,7 +223,9 @@ class databaseCreationModel {
         });
         
         this.restore.cloudBackupCredentials.subscribe((cloudBackupCredentials) => {
-            this.tryDecodeS3Credentials(cloudBackupCredentials.toDto());
+            if (!!cloudBackupCredentials) {
+                this.tryDecodeS3Credentials(cloudBackupCredentials.toDto());
+            }
         });
 
         let isFirst = true;
@@ -300,8 +303,14 @@ class databaseCreationModel {
         
         new getCloudBackupCredentialsFromLinkCommand(link)
             .execute()
-            .fail(() => this.restore.cloudBackupCredentials(null))
-            .done(cloudCredentials => this.restore.cloudBackupCredentials(new cloudBackupCredentials(cloudCredentials)))
+            .fail(() =>  {
+                this.restore.cloudBackupCredentials(null);
+                this.restore.isBackupLinkValid(false);
+            })
+            .done((cloudCredentials) => {
+                this.restore.cloudBackupCredentials(new cloudBackupCredentials(cloudCredentials));
+                this.restore.isBackupLinkValid(true);
+            })
             .always(() => this.spinners.backupCredentialsLoading(false));
     }
     
@@ -516,8 +525,15 @@ class databaseCreationModel {
         
         this.restore.backupLink.extend({
             required: {
-                onlyIf: () => this.restore.source() === "cloud"
-            }
+                onlyIf: () => this.creationMode === "restore" && 
+                              this.restore.source() === "cloud"
+            },
+            validation: [
+                {
+                    validator: () => this.restore.isBackupLinkValid(),
+                    message: "Failed to get link credentials"
+                }
+            ]
         });
         
         this.restore.backupDirectory.extend({
