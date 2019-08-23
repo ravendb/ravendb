@@ -11,13 +11,13 @@ namespace Raven.Client.Documents.Queries.Facets
 
         IFacetOperations<T> WithOptions(FacetOptions options);
 
-        IFacetOperations<T> SumOn(Expression<Func<T, object>> path);
+        IFacetOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null);
 
-        IFacetOperations<T> MinOn(Expression<Func<T, object>> path);
+        IFacetOperations<T> MinOn(Expression<Func<T, object>> path, string displayName = null);
 
-        IFacetOperations<T> MaxOn(Expression<Func<T, object>> path);
+        IFacetOperations<T> MaxOn(Expression<Func<T, object>> path, string displayName = null);
 
-        IFacetOperations<T> AverageOn(Expression<Func<T, object>> path);
+        IFacetOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null);
     }
 
     public interface IFacetBuilder<T>
@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
-            if (path == null) 
+            if (path == null)
                 throw new ArgumentNullException(nameof(path));
 
             if (_range == null)
@@ -110,39 +110,56 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
-        public IFacetOperations<T> SumOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Sum, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Sum] = aggregations = new HashSet<string>();
+                Facet.Aggregations[FacetAggregation.Sum] = aggregations = new HashSet<FacetAggregationField>();
 
-            aggregations.Add(path.ToPropertyPath());
+            aggregations.Add(new FacetAggregationField
+            {
+                Name = path.ToPropertyPath(), 
+                DisplayName = displayName
+            });
+
             return this;
         }
 
-        public IFacetOperations<T> MinOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> MinOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Min, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Min] = aggregations = new HashSet<string>();
+                Facet.Aggregations[FacetAggregation.Min] = aggregations = new HashSet<FacetAggregationField>();
 
-            aggregations.Add(path.ToPropertyPath());
+            aggregations.Add(new FacetAggregationField
+            {
+                Name = path.ToPropertyPath(),
+                DisplayName = displayName
+            });
             return this;
         }
 
-        public IFacetOperations<T> MaxOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> MaxOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Max, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Max] = aggregations = new HashSet<string>();
+                Facet.Aggregations[FacetAggregation.Max] = aggregations = new HashSet<FacetAggregationField>();
 
-            aggregations.Add(path.ToPropertyPath());
+            aggregations.Add(new FacetAggregationField
+            {
+                Name = path.ToPropertyPath(),
+                DisplayName = displayName
+            });
             return this;
         }
 
-        public IFacetOperations<T> AverageOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null)
         {
             if (Facet.Aggregations.TryGetValue(FacetAggregation.Average, out var aggregations) == false)
-                Facet.Aggregations[FacetAggregation.Average] = aggregations = new HashSet<string>();
+                Facet.Aggregations[FacetAggregation.Average] = aggregations = new HashSet<FacetAggregationField>();
 
-            aggregations.Add(path.ToPropertyPath());
+            aggregations.Add(new FacetAggregationField
+            {
+                Name = path.ToPropertyPath(),
+                DisplayName = displayName
+            });
             return this;
         }
 

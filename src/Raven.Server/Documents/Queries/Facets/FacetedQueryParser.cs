@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 if (query.Legacy && kvp.Value.Count > 1)
                     throw new InvalidQueryException($"Detected duplicate facet aggregation operation '{kvp.Key}'. Each facet can only contain one of each available operations.");
 
-                foreach (string v in kvp.Value)
+                foreach (var v in kvp.Value)
                 {
                     if (result.Aggregations.TryGetValue(v, out var value) == false)
                         result.Aggregations[v] = value = new FacetResult.Aggregation();
@@ -375,12 +375,12 @@ namespace Raven.Server.Documents.Queries.Facets
         {
             public FacetResult()
             {
-                Aggregations = new Dictionary<string, Aggregation>(StringComparer.OrdinalIgnoreCase);
+                Aggregations = new Dictionary<FacetAggregationField, Aggregation>();
             }
 
             public string AggregateBy;
 
-            public Dictionary<string, Aggregation> Aggregations;
+            public Dictionary<FacetAggregationField, Aggregation> Aggregations;
 
             public RangeType RangeType;
 

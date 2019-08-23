@@ -1,7 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.AST;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Facets
@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
         private ValueTokenType _optionsType;
 
-        public Dictionary<FacetAggregation, HashSet<string>> Aggregations;
+        public Dictionary<FacetAggregation, HashSet<FacetAggregationField>> Aggregations;
 
         public List<QueryExpression> Ranges;
 
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Facets
         public FacetField()
         {
             IsFacet = true;
-            Aggregations = new Dictionary<FacetAggregation, HashSet<string>>();
+            Aggregations = new Dictionary<FacetAggregation, HashSet<FacetAggregationField>>();
             Ranges = new List<QueryExpression>();
         }
 
@@ -43,12 +43,16 @@ namespace Raven.Server.Documents.Queries.Facets
             return options;
         }
 
-        public void AddAggregation(FacetAggregation aggregation, QueryFieldName name)
+        public void AddAggregation(FacetAggregation aggregation, QueryFieldName name, StringSegment displayName)
         {
             if (Aggregations.TryGetValue(aggregation, out var values) == false)
-                Aggregations[aggregation] = values = new HashSet<string>();
+                Aggregations[aggregation] = values = new HashSet<FacetAggregationField>();
 
-            values.Add(name);
+            values.Add(new FacetAggregationField
+            {
+                Name = name,
+                DisplayName = displayName.ToString()
+            });
         }
 
         public void AddOptions(string optionsAsStringOrParameterName, ValueTokenType type)

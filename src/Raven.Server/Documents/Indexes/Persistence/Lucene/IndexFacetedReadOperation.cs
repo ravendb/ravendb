@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             foreach (var range in ranges)
             {
                 var key = range.RangeText;
-                if (facetValues.TryGetValue(key, out var collectionOfFacetValues)) 
+                if (facetValues.TryGetValue(key, out var collectionOfFacetValues))
                     continue;
 
                 collectionOfFacetValues = new FacetValues(legacy);
@@ -163,8 +163,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         private void HandleFacets(
-            List<ReaderFacetInfo> returnedReaders, 
-            KeyValuePair<string, FacetedQueryParser.FacetResult> result, 
+            List<ReaderFacetInfo> returnedReaders,
+            KeyValuePair<string, FacetedQueryParser.FacetResult> result,
             Dictionary<string, Dictionary<string, FacetValues>> facetsByName,
             bool legacy)
         {
@@ -298,16 +298,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private static void ApplyAggregation(Dictionary<string, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
+        private static void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             foreach (var kvp in aggregations)
             {
-                if (string.IsNullOrEmpty(kvp.Key)) // Count
+                if (string.IsNullOrEmpty(kvp.Key.Name)) // Count
                     continue;
 
                 var value = values.Get(kvp.Key);
 
-                var name = FieldUtil.ApplyRangeSuffixIfNecessary(kvp.Key, RangeType.Double);
+                var name = FieldUtil.ApplyRangeSuffixIfNecessary(kvp.Key.Name, RangeType.Double);
                 var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
 
                 for (var index = 0; index < docsInQuery.Count; index++)
@@ -604,8 +604,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private class FacetValues
         {
+            private static readonly FacetAggregationField Default = new FacetAggregationField();
+
             private readonly bool _legacy;
-            private readonly Dictionary<string, FacetValue> _values = new Dictionary<string, FacetValue>();
+            private readonly Dictionary<FacetAggregationField, FacetValue> _values = new Dictionary<FacetAggregationField, FacetValue>();
 
             public int Count;
             public bool Any;
@@ -618,10 +620,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public void AddDefault(string range)
             {
                 Any = true;
-                _values[string.Empty] = new FacetValue { Range = range };
+                _values[Default] = new FacetValue { Range = range };
             }
 
-            public void Add(string name, string range)
+            public void Add(FacetAggregationField field, string range)
             {
                 if (_legacy)
                 {
@@ -633,15 +635,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 Any = true;
-                _values[name] = new FacetValue { Range = range, Name = name };
+                _values[field] = new FacetValue { Range = range, Name = string.IsNullOrWhiteSpace(field.DisplayName) ? field.Name : field.DisplayName };
             }
 
-            public FacetValue Get(string name)
+            public FacetValue Get(FacetAggregationField field)
             {
                 if (_legacy)
-                    return _values[string.Empty];
+                    return _values[Default];
 
-                return _values[name];
+                return _values[field];
             }
 
             public IEnumerable<FacetValue> GetAll()
