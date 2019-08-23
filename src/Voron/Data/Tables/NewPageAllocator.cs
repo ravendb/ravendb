@@ -63,6 +63,16 @@ namespace Voron.Data.Tables
         {
             _llt = llt;
             _parentTree = parentTree;
+            var fixedSizeTreeSize = _parentTree.FixedTreeFor(AllocationStorageSize, valSize: sizeof(int));
+            _numberOfPagesToAllocate = NumberOfPagesInSection;
+
+            using (fixedSizeTreeSize.Read(0, out var slice))
+            {
+                if (slice.HasValue)
+                {
+                    _numberOfPagesToAllocate = slice.CreateReader().ReadLittleEndianInt32();
+                }
+            }
         }
 
         public void Create()
