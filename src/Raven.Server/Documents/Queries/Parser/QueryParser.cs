@@ -1975,8 +1975,26 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
 
                 if (args.Count != 0)
+                {
+                    if (Scanner.TryScan("as"))
+                    {
+                        if (Scanner.Identifier() == false)
+                            ThrowInvalidQueryException("Missing alias for method after 'as'");
+
+                        var lastArg = args[args.Count - 1];
+                        if (lastArg.Type != ExpressionType.Method)
+                            ThrowInvalidQueryException("Alias can only be applied on method");
+
+                        var method = (MethodExpression)lastArg;
+                        method.Alias = Scanner.Token;
+
+                        if (Scanner.TryScan(')'))
+                            break;
+                    }
+
                     if (Scanner.TryScan(',') == false)
                         ThrowParseException("parsing method expression, expected ','");
+                }
 
                 var maybeExpression = false;
                 if (Value(out var argVal))

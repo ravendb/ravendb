@@ -147,22 +147,22 @@ namespace Raven.Client.Documents.Session.Tokens
         {
             foreach (var aggregation in facet.Aggregations)
             {
-                foreach (string value in aggregation.Value)
+                foreach (var value in aggregation.Value)
                 {
                     FacetAggregationToken aggregationToken;
                     switch (aggregation.Key)
                     {
                         case FacetAggregation.Max:
-                            aggregationToken = FacetAggregationToken.Max(value);
+                            aggregationToken = FacetAggregationToken.Max(value.Name, value.DisplayName);
                             break;
                         case FacetAggregation.Min:
-                            aggregationToken = FacetAggregationToken.Min(value);
+                            aggregationToken = FacetAggregationToken.Min(value.Name, value.DisplayName);
                             break;
                         case FacetAggregation.Average:
-                            aggregationToken = FacetAggregationToken.Average(value);
+                            aggregationToken = FacetAggregationToken.Average(value.Name, value.DisplayName);
                             break;
                         case FacetAggregation.Sum:
-                            aggregationToken = FacetAggregationToken.Sum(value);
+                            aggregationToken = FacetAggregationToken.Sum(value.Name, value.DisplayName);
                             break;
                         default:
                             throw new NotSupportedException($"Unsupported aggregation method: {aggregation.Key}");
@@ -181,11 +181,13 @@ namespace Raven.Client.Documents.Session.Tokens
         private class FacetAggregationToken : QueryToken
         {
             private readonly string _fieldName;
+            private readonly string _fieldDisplayName;
             private readonly FacetAggregation _aggregation;
 
-            private FacetAggregationToken(string fieldName, FacetAggregation aggregation)
+            private FacetAggregationToken(string fieldName, string fieldDisplayName, FacetAggregation aggregation)
             {
                 _fieldName = fieldName;
+                _fieldDisplayName = fieldDisplayName;
                 _aggregation = aggregation;
             }
 
@@ -220,38 +222,44 @@ namespace Raven.Client.Documents.Session.Tokens
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+
+                if (string.IsNullOrWhiteSpace(_fieldDisplayName))
+                    return;
+
+                writer.Append(" as ");
+                WriteField(writer, _fieldDisplayName);
             }
 
-            public static FacetAggregationToken Max(string fieldName)
+            public static FacetAggregationToken Max(string fieldName, string fieldDisplayName = null)
             {
                 if (string.IsNullOrWhiteSpace(fieldName))
                     throw new ArgumentNullException(nameof(fieldName));
 
-                return new FacetAggregationToken(fieldName, FacetAggregation.Max);
+                return new FacetAggregationToken(fieldName, fieldDisplayName, FacetAggregation.Max);
             }
 
-            public static FacetAggregationToken Min(string fieldName)
+            public static FacetAggregationToken Min(string fieldName, string fieldDisplayName = null)
             {
                 if (string.IsNullOrWhiteSpace(fieldName))
                     throw new ArgumentNullException(nameof(fieldName));
 
-                return new FacetAggregationToken(fieldName, FacetAggregation.Min);
+                return new FacetAggregationToken(fieldName, fieldDisplayName, FacetAggregation.Min);
             }
 
-            public static FacetAggregationToken Average(string fieldName)
+            public static FacetAggregationToken Average(string fieldName, string fieldDisplayName = null)
             {
                 if (string.IsNullOrWhiteSpace(fieldName))
                     throw new ArgumentNullException(nameof(fieldName));
 
-                return new FacetAggregationToken(fieldName, FacetAggregation.Average);
+                return new FacetAggregationToken(fieldName, fieldDisplayName, FacetAggregation.Average);
             }
 
-            public static FacetAggregationToken Sum(string fieldName)
+            public static FacetAggregationToken Sum(string fieldName, string fieldDisplayName = null)
             {
                 if (string.IsNullOrWhiteSpace(fieldName))
                     throw new ArgumentNullException(nameof(fieldName));
 
-                return new FacetAggregationToken(fieldName, FacetAggregation.Sum);
+                return new FacetAggregationToken(fieldName, fieldDisplayName, FacetAggregation.Sum);
             }
         }
     }

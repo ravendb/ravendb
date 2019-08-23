@@ -1333,7 +1333,7 @@ namespace Raven.Server.Documents.Queries
 
             try
             {
-                field.AddAggregation(aggregation, methodFieldName);
+                field.AddAggregation(aggregation, methodFieldName, me.Alias);
             }
             catch (Exception e)
             {

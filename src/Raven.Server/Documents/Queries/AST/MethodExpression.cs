@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Queries.AST
         private string _text;
 
         public StringSegment Name;
+        public StringSegment Alias;
         public List<QueryExpression> Arguments;
 
         public MethodExpression(StringSegment name, List<QueryExpression> arguments)
@@ -17,7 +18,6 @@ namespace Raven.Server.Documents.Queries.AST
             Arguments = arguments;
             Type = ExpressionType.Method;
         }
-
         public override string ToString()
         {
             return Name + "(" + string.Join(", ", Arguments.Select(x => x.ToString())) + ")";
@@ -34,10 +34,8 @@ namespace Raven.Server.Documents.Queries.AST
             if (!(other is MethodExpression ie))
                 return false;
 
-            if (Name != ie.Name ||
-                Arguments.Count != ie.Arguments.Count)
+            if (Name != ie.Name || Alias != ie.Alias || Arguments.Count != ie.Arguments.Count)
                 return false;
-
 
             for (int i = 0; i < Arguments.Count; i++)
             {

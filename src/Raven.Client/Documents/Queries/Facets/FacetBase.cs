@@ -13,12 +13,12 @@ namespace Raven.Client.Documents.Queries.Facets
 
         protected FacetBase()
         {
-            Aggregations = new Dictionary<FacetAggregation, HashSet<string>>();
+            Aggregations = new Dictionary<FacetAggregation, HashSet<FacetAggregationField>>();
         }
 
         public FacetOptions Options { get; set; }
 
-        public Dictionary<FacetAggregation, HashSet<string>> Aggregations { get; set; }
+        public Dictionary<FacetAggregation, HashSet<FacetAggregationField>> Aggregations { get; set; }
 
         /// <summary>
         /// Displayed field name in facet results
@@ -33,9 +33,9 @@ namespace Raven.Client.Documents.Queries.Facets
 
         internal static void Fill(FacetBase facet, BlittableJsonReaderObject json)
         {
-            if (facet == null) 
+            if (facet == null)
                 throw new ArgumentNullException(nameof(facet));
-            if (json == null) 
+            if (json == null)
                 throw new ArgumentNullException(nameof(json));
 
             if (json.TryGet(nameof(facet.DisplayFieldName), out string displayFieldName))
@@ -53,17 +53,30 @@ namespace Raven.Client.Documents.Queries.Facets
                     var value = aggregations[propertyName];
                     if (value is BlittableJsonReaderArray array)
                     {
-                        var fields = facet.Aggregations[aggregation] = new HashSet<string>();
+                        var fields = facet.Aggregations[aggregation] = new HashSet<FacetAggregationField>();
 
-                        foreach (var field in array)
-                            fields.Add(field.ToString());
+                        foreach (BlittableJsonReaderObject fieldJson in array)
+                        {
+                            var field = new FacetAggregationField();
+                            if (fieldJson.TryGet(nameof(field.Name), out string fieldName))
+                                field.Name = fieldName;
+
+                            if (fieldJson.TryGet(nameof(field.DisplayName), out string fieldDisplayName))
+                                field.DisplayName = fieldDisplayName;
+
+                            fields.Add(field);
+                        }
 
                         continue;
                     }
 
-                    facet.Aggregations[aggregation] = new HashSet<string>
+                    // backward compatibility (e.g. old FacetSetup format)
+                    facet.Aggregations[aggregation] = new HashSet<FacetAggregationField>
                     {
-                        value.ToString()
+                        new FacetAggregationField
+                        {
+                            Name = value.ToString()
+                        }
                     };
                 }
             }
