@@ -173,16 +173,16 @@ namespace Raven.Server.Commercial
             {
                 // license is not active
                 ResetLicense(error: null);
-                
+
                 CreateAgplAlert();
-                
+
                 return;
             }
 
             try
             {
                 SetLicense(license.Id, LicenseValidator.Validate(license, RSAParameters));
-                
+
                 RemoveAgplAlert();
             }
             catch (Exception e)
@@ -463,8 +463,8 @@ namespace Raven.Server.Commercial
             if (forceActivate == false)
             {
                 if (await ContinueActivatingLicense(
-                        license, skipLeaseLicense, raftRequestId, 
-                        ensureNotPassive, 
+                        license, skipLeaseLicense, raftRequestId,
+                        ensureNotPassive,
                         newLicenseStatus).ConfigureAwait(false) == false)
                     return;
             }
@@ -506,7 +506,7 @@ namespace Raven.Server.Commercial
             };
         }
 
-        private void SetLicense(Guid id, Dictionary<string, object>  attributes)
+        private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
             _licenseStatus = new LicenseStatus
             {
@@ -608,8 +608,8 @@ namespace Raven.Server.Commercial
         }
 
         public async Task<License> GetUpdatedLicense(
-            License currentLicense, 
-            Func<HttpResponseMessage, Task> onFailure = null, 
+            License currentLicense,
+            Func<HttpResponseMessage, Task> onFailure = null,
             Func<LeasedLicense, License> onSuccess = null)
         {
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
@@ -623,7 +623,7 @@ namespace Raven.Server.Commercial
                 {
                     await onFailure(response).ConfigureAwait(false);
                 }
-                
+
                 return null;
             }
 
@@ -665,8 +665,8 @@ namespace Raven.Server.Commercial
 
                 var studioConfiguration = JsonDeserializationServer.ServerWideStudioConfiguration(studioConfigurationJson);
 
-                return studioConfiguration.Disabled ? 
-                    StudioConfiguration.StudioEnvironment.None : 
+                return studioConfiguration.Disabled ?
+                    StudioConfiguration.StudioEnvironment.None :
                     studioConfiguration.Environment;
             }
         }
@@ -690,7 +690,7 @@ namespace Raven.Server.Commercial
                         if (string.IsNullOrWhiteSpace(leasedLicense.Message) == false)
                         {
                             var severity =
-                                leasedLicense.NotificationSeverity == NotificationSeverity.None 
+                                leasedLicense.NotificationSeverity == NotificationSeverity.None
                                     ? NotificationSeverity.Info : leasedLicense.NotificationSeverity;
                             var alert = AlertRaised.Create(
                                 null,
@@ -745,7 +745,7 @@ namespace Raven.Server.Commercial
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 throw new InvalidOperationException($"Failed to renew license, error: {responseString}");
-            
+
             return JsonConvert.DeserializeObject<LicenseRenewalResult>(responseString);
         }
 
@@ -944,7 +944,7 @@ namespace Raven.Server.Commercial
             {
                 // we have spare cores to distribute
                 var freeCoresToDistribute = maxCores - utilizedCores;
-                
+
                 foreach (var nodeDetails in detailsPerNode)
                 {
                     if (freeCoresToDistribute == 0)
@@ -1123,7 +1123,7 @@ namespace Raven.Server.Commercial
                 Logger.Info($"Failed to set affinity for {cores} cores, error code: {Marshal.GetLastWin32Error()}", e);
             }
         }
-       
+
         private static void SetMaxWorkingSet(Process process, double ramInGb)
         {
             try
@@ -1163,8 +1163,8 @@ namespace Raven.Server.Commercial
             if (_serverStore.Configuration.Monitoring.Snmp.Enabled &&
                 newLicenseStatus.HasSnmpMonitoring == false)
             {
-                const string message = "SNMP Monitoring is currently enabled. " + 
-                                       "The provided license cannot be activated as it doesn't contain this feature. " + 
+                const string message = "SNMP Monitoring is currently enabled. " +
+                                       "The provided license cannot be activated as it doesn't contain this feature. " +
                                        "In order to use this license please disable SNMP Monitoring in the server configuration";
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
             }
@@ -1473,16 +1473,22 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
 
-        public bool CanUseSnmpMonitoring()
+        public bool CanUseSnmpMonitoring(bool withNotification)
         {
             if (IsValid(out _) == false)
                 return false;
 
-            if (_licenseStatus.HasSnmpMonitoring)
-                return true;
+            var value = _licenseStatus.HasSnmpMonitoring;
+            if (withNotification == false)
+                return value;
 
-            const string details = "Your current license doesn't include " +
-                                   "the SNMP monitoring feature";
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.Snmp);
+                return true;
+            }
+
+            const string details = "Your current license doesn't include the SNMP monitoring feature";
             GenerateLicenseLimit(LimitType.Snmp, details, addNotification: true);
             return false;
         }
@@ -1496,7 +1502,7 @@ namespace Raven.Server.Commercial
                 return true;
 
             const string message = "Your current license doesn't include the dynamic database distribution feature";
-            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true); 
+            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true);
             return false;
         }
 
@@ -1575,6 +1581,11 @@ namespace Raven.Server.Commercial
 
             const string message = "Your current license doesn't include the encryption feature";
             throw GenerateLicenseLimit(LimitType.Encryption, message);
+        }
+
+        private void DismissLicenseLimit(LimitType limitType)
+        {
+            LicenseLimitWarning.DismissLicenseLimitNotification(_serverStore.NotificationCenter, limitType);
         }
 
         private LicenseLimitException GenerateLicenseLimit(

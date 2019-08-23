@@ -58,7 +58,7 @@ namespace Raven.Server.Monitoring.Snmp
                 if (snmpEngine == null) // precaution
                     return;
 
-                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring();
+                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: true);
                 if (activate)
                     snmpEngine.Start();
                 else
@@ -83,7 +83,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                 _snmpEngine = CreateSnmpEngine(_server, _objectStore);
 
-                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring();
+                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: true);
                 if (activate)
                     _snmpEngine.Start();
 
