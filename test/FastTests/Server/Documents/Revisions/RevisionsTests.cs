@@ -208,6 +208,55 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
+        public async Task EnforceEmptyConfigurationWillDeleteAllRevisions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["Dummy"] = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10}
+                    }
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Product(), "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var product = await session.LoadAsync<Product>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(product);
+                    Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var bar = await session.Advanced.Revisions.GetMetadataForAsync("foo/bar");
+                    Assert.Equal(1, bar.Count);
+                }
+
+                configuration.Default = null;
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var product = await session.LoadAsync<Product>("foo/bar");
+                    var metadata = session.Advanced.GetMetadataFor(product);
+                    Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
+                    var foo = await session.Advanced.Revisions.GetMetadataForAsync("foo/bar");
+                    Assert.Equal(0, foo.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanGetNullForNotExistsDocument()
         {
             using (var store = GetDocumentStore())
