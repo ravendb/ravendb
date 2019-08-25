@@ -226,12 +226,12 @@ namespace Raven.Server.Documents.Replication
                                     AssertNotClusterTransactionDocumentForLegacyReplication(item);
                                 }
 
-                                // Include the attachment's document which is right after its latest attachment.
-                                if ((item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
-                                     item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone) &&
-                                    // We want to limit batch sizes to reasonable limits.
-                                    ((maxSizeToSend.HasValue && size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes) > maxSizeToSend.Value.GetValue(SizeUnit.Bytes)) ||
-                                     (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
+                                // We want to limit batch sizes to reasonable limits.
+                                var totalSize =
+                                    size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
+
+                                if (maxSizeToSend.HasValue && totalSize > maxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
+                                    batchSize.HasValue && numberOfItemsSent > batchSize.Value)
                                 {
                                     wasInterrupted = true;
                                     break;
