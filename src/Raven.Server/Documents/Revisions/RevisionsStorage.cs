@@ -1130,7 +1130,7 @@ namespace Raven.Server.Documents.Revisions
             return result;
         }
 
-        private static readonly RevisionsCollectionConfiguration NoConfiguration = new RevisionsCollectionConfiguration
+        private static readonly RevisionsCollectionConfiguration ZeroConfiguration = new RevisionsCollectionConfiguration
         {
             MinimumRevisionsToKeep = 0
         };
@@ -1156,9 +1156,9 @@ namespace Raven.Server.Documents.Revisions
                 var prevRevisionsCount = GetRevisionsCount(context, id);
                 var configuration = GetRevisionsConfiguration(collectionName.Name);
 
-                if (configuration == ConflictConfiguration.Default)
+                if (configuration == ConflictConfiguration.Default || configuration == _emptyConfiguration)
                 {
-                    configuration = NoConfiguration;
+                    configuration = ZeroConfiguration;
                 }
 
                 DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, prevRevisionsCount,
