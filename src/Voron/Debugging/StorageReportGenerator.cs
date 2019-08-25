@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Sparrow;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -50,6 +51,7 @@ namespace Voron.Debugging
         public long LastFlushedTransactionId { get; set; }
         public long LastFlushedJournalId { get; set; }
         public long TotalWrittenButUnsyncedBytes { get; set; }
+        public Size TotalEncryptionBufferSize { get; set; }
     }
 
     public unsafe class StorageReportGenerator
@@ -125,6 +127,7 @@ namespace Voron.Debugging
                 PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.IncludeDetails),
                 ScratchBufferPoolInfo = input.ScratchBufferPoolInfo,
                 TempBuffers = tempBuffers,
+                TotalEncryptionBufferSize = input.TotalEncryptionBufferSize.ToString()
             };
         }
 
