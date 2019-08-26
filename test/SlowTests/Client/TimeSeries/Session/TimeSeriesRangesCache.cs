@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
-using Raven.Server.Utils;
-using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Client.TimeSeries.Session
@@ -562,6 +559,78 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(baseline.AddMinutes(1), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(6), ranges[0].To);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanHandleRangesWithNoValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 60d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddHours(-2), baseline.AddHours(-1))
+                        .ToList();
+
+                    Assert.Equal(0, vals.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddHours(-2), baseline.AddHours(-1))
+                        .ToList();
+
+                    Assert.Equal(0, vals.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(-90), baseline.AddMinutes(-70))
+                        .ToList();
+
+                    Assert.Equal(0, vals.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should go to server to get [-60, 1] and merge with [-120, -60]
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddHours(-1), baseline.AddMinutes(1))
+                        .ToList();
+
+                    Assert.Equal(7, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(1), vals[6].Timestamp);
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
+                    Assert.True(cache.TryGetValue("Heartrate", out var ranges));
+                    Assert.Equal(1, ranges.Count);
+
+                    Assert.Equal(baseline.AddHours(-2), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(1), ranges[0].To);
 
                 }
             }
