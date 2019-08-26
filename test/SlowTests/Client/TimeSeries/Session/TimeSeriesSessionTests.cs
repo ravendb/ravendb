@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

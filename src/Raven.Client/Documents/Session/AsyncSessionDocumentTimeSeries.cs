@@ -40,9 +40,8 @@ namespace Raven.Client.Documents.Session
 
                 if (ranges[0].From > to || ranges[ranges.Count - 1].To < from)
                 {
-                    // the requested range is out of bounds
+                    // the requested range is out of cache bounds
                     // get entire range [from, to] from server
-                    // add it at the beginning or the end of the ranges list
 
                     Session.IncrementRequestCount();
 
@@ -59,12 +58,12 @@ namespace Raven.Client.Documents.Session
                     return details.Values[timeseries].Values;
                 }
 
-                // try to find a range in cache that contains [from, to].
-                // if found, chop just the relevant part from it and return to user.
+                // try to find a range in cache that contains [from, to]
+                // if found, chop just the relevant part from it and return to user
 
                 // otherwise, try to find two ranges (fromRange, toRange),
                 // such that 'fromRange' is the last occurence for which range.From <= from
-                // and 'toRange' is the first occurence where range.To >= to.
+                // and 'toRange' is the first occurence for which range.To >= to.
 
                 var fromRangeIndex = -1;
                 int toRangeIndex;
@@ -97,8 +96,6 @@ namespace Raven.Client.Documents.Session
                     if (toRangeIndex == ranges.Count)
                     {
                         // the requested range [from, to] contains all the ranges that are in cache 
-                        // get entire range [from, to] from server
-                        // remove all the existing ranges in cache, add the new range to cache 
 
                         details = await Session.Operations.SendAsync(
                                 new GetTimeSeriesOperation(DocId, timeseries, from, to), Session.SessionInfo, token: token)
@@ -220,8 +217,6 @@ namespace Raven.Client.Documents.Session
                     return newValues.Skip(toSkip);
                 }
 
-                // found a matching 'fromRange' and 'toRange'
-
                 if (ranges[fromRangeIndex].To < from)
                 {
                     if (ranges[toRangeIndex].From > to)
@@ -298,12 +293,14 @@ namespace Raven.Client.Documents.Session
                         new GetTimeSeriesOperation(DocId, timeseries, ranges[fromRangeIndex].To, ranges[toRangeIndex].From), Session.SessionInfo, token: token)
                     .ConfigureAwait(false);
 
-                var firstMergeSize = ranges[fromRangeIndex].Values.Length + details.Values[timeseries].Values.Length - 1;
-                var values = MergeRanges(ranges[fromRangeIndex].Values, details.Values[timeseries].Values, from, to, out var skip, out _, size : firstMergeSize + ranges[toRangeIndex].Values.Length - 1);
+                var firstMergeSize = (ranges[fromRangeIndex].Values.Length == 0 ? 0 : ranges[fromRangeIndex].Values.Length - 1) + details.Values[timeseries].Values.Length;
+                var size = firstMergeSize + (ranges[toRangeIndex].Values.Length == 0 ? 0 : ranges[toRangeIndex].Values.Length - 1);
+                var values = MergeRanges(ranges[fromRangeIndex].Values, details.Values[timeseries].Values, from, to, out var skip, out _, size);
 
                 var toTake = firstMergeSize - skip;
+                var offset = firstMergeSize == 0 ? 0 : firstMergeSize - 1;
 
-                for (var i = 1; i < ranges[toRangeIndex].Values.Length; i++)
+                for (var i = firstMergeSize == 0 ? 0 : 1; i < ranges[toRangeIndex].Values.Length; i++)
                 {
                     var current = ranges[toRangeIndex].Values[i];
                     if (current.Timestamp <= to)
@@ -311,7 +308,7 @@ namespace Raven.Client.Documents.Session
                         toTake++;
                     }
 
-                    values[i + firstMergeSize - 1] = current;
+                    values[i + offset] = current;
                 }
 
                 if (Session.NoTracking == false)
@@ -343,7 +340,7 @@ namespace Raven.Client.Documents.Session
             {
                 if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)  
                 {
-                    Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRange>>();
+                    Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRange>>(StringComparer.OrdinalIgnoreCase);
                 }
 
                 cache[timeseries] = new List<TimeSeriesRange>
@@ -353,7 +350,6 @@ namespace Raven.Client.Documents.Session
                 
             }
 
-            //TODO: Make sure that we get just the relevant range
             return details.Values[timeseries].Values;
 
         }
@@ -372,10 +368,10 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private TimeSeriesValue[] MergeRanges(TimeSeriesValue[] range1, TimeSeriesValue[] range2, DateTime from, DateTime to, out int skip, out int take, int? size = null)
+        private static TimeSeriesValue[] MergeRanges(TimeSeriesValue[] range1, TimeSeriesValue[] range2, DateTime from, DateTime to, out int skip, out int take, int? size = null)
         {
             skip = 0;
-            var newValues = new TimeSeriesValue[size ?? range1.Length + range2.Length - 1];
+            var newValues = new TimeSeriesValue[size ?? (range1.Length == 0 ? 0 : range1.Length - 1) + range2.Length];
             
             for (var i = 0; i < range1.Length; i++)
             {
@@ -389,15 +385,16 @@ namespace Raven.Client.Documents.Session
             }
 
             take = range1.Length;
+            var offset = range1.Length == 0 ? 0 : range1.Length - 1;
 
-            for (var i = 1; i < range2.Length; i++)
+            for (var i = range1.Length == 0 ? 0 : 1; i < range2.Length; i++)
             {
                 var current = range2[i];
                 if (current.Timestamp <= to)
                 {
                     take++;
                 }
-                newValues[i + range1.Length - 1] = current;
+                newValues[i + offset] = current;
             }
 
             return newValues;
