@@ -1196,7 +1196,7 @@ namespace Raven.Server.ServerWide
             }
 
             // db can be idle when we are deleting it
-            serverStore?.IdleDatabases.Remove(databaseName, out _);
+            serverStore?.IdleDatabases.TryRemove(databaseName, out _);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
