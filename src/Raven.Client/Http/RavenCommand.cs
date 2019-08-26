@@ -51,6 +51,8 @@ namespace Raven.Client.Http
         public bool CanCacheAggressively { get; protected set; }
         public string SelectedNodeTag { get; protected set; }
 
+        public long InitialTopologyEtag = -1;                       
+
         protected RavenCommand()
         {
             ResponseType = RavenCommandResponseType.Object;
