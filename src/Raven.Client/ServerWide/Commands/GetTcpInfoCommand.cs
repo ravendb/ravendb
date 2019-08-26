@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Commands
             _dbName = dbName;
         }
 
-        public GetTcpInfoCommand(string tag, string dbName, string dbId, long etag) : this(tag, dbName)
+        internal GetTcpInfoCommand(string tag, string dbName, string dbId, long etag) : this(tag, dbName)
         {
             _dbId = dbId;
             _etag = etag;

@@ -135,7 +135,7 @@ namespace Raven.Server.Routing
 
         private void ClearIdleDatabase(RequestHandlerContext context, string databaseName)
         {
-            context.RavenServer.ServerStore.IdleDatabases.Remove(databaseName, out _);
+            context.RavenServer.ServerStore.IdleDatabases.TryRemove(databaseName, out _);
         }
 
         private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database,
