@@ -100,6 +100,23 @@ namespace Raven.Client.Http
             return UnlikelyEveryoneFaultedChoice(state);
         }
 
+        public (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
+        {
+            var state = _state;
+            var stateFailures = state.Failures;
+            var serverNodes = state.Nodes;
+            var len = Math.Min(serverNodes.Count, stateFailures.Length);
+            for (int i = 0; i < len; i++)
+            {
+                if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
+                {
+                    return (i, serverNodes[i], state.Topology.Etag);
+                }
+            }
+            var res = UnlikelyEveryoneFaultedChoice(state);
+            return (res.Item1, res.Item2, state.Topology?.Etag??-2);
+        }
+
         private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)
         {
             // if there are all marked as failed, we'll chose the first

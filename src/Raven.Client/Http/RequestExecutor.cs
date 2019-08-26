@@ -1021,7 +1021,7 @@ namespace Raven.Client.Http
         private async Task ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
             CancellationToken token = default)
         {
-            int numberOfFailedTasks = 0;
+            long numberOfFailedTasks = 0;
 
             var nodes = _nodeSelector.Topology.Nodes;
             var tasks = new Task[nodes.Count];
@@ -1063,14 +1063,14 @@ namespace Raven.Client.Http
                 }
                 catch (Exception)
                 {
-                    numberOfFailedTasks++;
+                    Interlocked.Increment(ref numberOfFailedTasks);
                     // nothing we can do about it
                     tasks[i] = NeverEndingRequest;
                     disposable?.Dispose();
                 }
             }
 
-            while (numberOfFailedTasks < tasks.Length)
+            while (Interlocked.Read(ref numberOfFailedTasks )< tasks.Length)
             {
                 // here we rely on WhenAny NOT throwing if the completed
                 // task has failed
@@ -1250,7 +1250,14 @@ namespace Raven.Client.Http
 
             _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
-            var (currentIndex, currentNode) = _nodeSelector.GetPreferredNode();
+            var (currentIndex, currentNode, topologyEtag) = _nodeSelector.GetPreferredNodeWithTopology();
+
+            if (command.InitialTopologyEtag!= topologyEtag)
+            {                
+                command.FailedNodes.Clear();
+                command.InitialTopologyEtag = topologyEtag;
+            }
+
             if (command.FailedNodes.ContainsKey(currentNode))
             {
                 if (requestContext == null || requestContext.HttpClientRemoved == false)
