@@ -700,6 +700,10 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
+            if (command.FailoverTopologyEtag == -2)
+            {                
+                command.FailoverTopologyEtag = _nodeSelector?.GetPreferredNodeWithTopology().TopologyEtag ?? -2;
+            }
             var request = CreateRequest(context, chosenNode, command, out string url);
             var noCaching = sessionInfo?.NoCaching ?? false;
 
@@ -1252,10 +1256,10 @@ namespace Raven.Client.Http
 
             var (currentIndex, currentNode, topologyEtag) = _nodeSelector.GetPreferredNodeWithTopology();
 
-            if (command.InitialTopologyEtag!= topologyEtag)
-            {                
+            if (command.FailoverTopologyEtag!= topologyEtag)
+            {
                 command.FailedNodes.Clear();
-                command.InitialTopologyEtag = topologyEtag;
+                command.FailoverTopologyEtag = topologyEtag;
             }
 
             if (command.FailedNodes.ContainsKey(currentNode))
