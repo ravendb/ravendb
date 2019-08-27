@@ -912,6 +912,8 @@ namespace Voron
             var numberOfAllocatedPages = Math.Max(_dataPager.NumberOfAllocatedPages, NextPageNumber - 1); // async apply to data file task
             var numberOfFreePages = _freeSpaceHandling.AllPages(tx.LowLevelTransaction).Count;
 
+            var totalCryptoBufferSize = GetTotalCryptoBufferSize();
+
             var trees = new List<Tree>();
             var fixedSizeTrees = new List<FixedSizeTree>();
             var tables = new List<Table>();
@@ -972,8 +974,20 @@ namespace Voron
                 IncludeDetails = includeDetails,
                 ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
                 TempPath = Options.TempPath,
-                JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath
+                JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath,
+                TotalEncryptionBufferSize = totalCryptoBufferSize
             });
+        }
+
+        private Size GetTotalCryptoBufferSize()
+        {
+            var sum = Size.Zero;
+            foreach (var transaction in ActiveTransactions.AllTransactionsInstances)
+            {
+                sum += transaction.TotalEncryptionBufferSize;
+            }
+
+            return sum;
         }
 
         public EnvironmentStats Stats()

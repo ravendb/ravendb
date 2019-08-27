@@ -28,6 +28,7 @@ namespace Raven.Server.Rachis
         {
             return $"Elector {_engine.Tag} for {_connection.Source}";
         }
+
         public void HandleVoteRequest()
         {
             try
@@ -239,6 +240,9 @@ namespace Raven.Server.Rachis
                             });
                             continue;
                         }
+
+
+                        _engine.ForTestingPurposes?.BeforeCastingForRealElection();
 
                         HandleVoteResult result;
                         using (context.OpenWriteTransaction())

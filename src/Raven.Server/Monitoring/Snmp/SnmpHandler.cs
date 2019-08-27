@@ -18,7 +18,7 @@ namespace Raven.Server.Monitoring.Snmp
             if (ServerStore.Configuration.Monitoring.Snmp.Enabled == false)
                 throw new InvalidOperationException($"SNMP Monitoring is not enabled. Please set the '{RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Enabled)}' configuration option to true.");
 
-            if (ServerStore.LicenseManager.CanUseSnmpMonitoring() == false)
+            if (ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: false) == false)
                 throw new InvalidOperationException("Your license does not allow SNMP monitoring to be used.");
 
             var oid = GetQueryStringValueAndAssertIfSingleAndNotEmpty("oid");

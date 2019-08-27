@@ -195,7 +195,7 @@ namespace Raven.Server.Rachis
                                     if (_engine.Log.IsInfoEnabled)
                                         _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
-                                    if (rvr.Term > currentElectionTerm)
+                                    if (rvr.Term > _engine.CurrentTerm && rvr.VoteGranted == false)
                                     {
                                         var message =
                                             $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";

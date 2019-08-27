@@ -624,6 +624,52 @@ namespace Raven.Server.Rachis
             }
         }
 
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal ManualResetEventSlim Mre = new ManualResetEventSlim(false);
+
+            public void OnLeaderElect()
+            {
+                if (Mre == null)
+                    return;
+
+                Mre.Reset();
+                if (Mre.Wait(TimeSpan.FromSeconds(60)) == false)
+                {
+                    throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                }
+                Mre.Reset();
+            }
+
+            public void BeforeCastingForRealElection()
+            {
+                Mre?.Set();
+            }
+
+            public void LeaderDispose()
+            {
+                Mre?.Set();
+            }
+
+            public void BeforeNegotiatingWithFollower()
+            {
+                if (Mre?.Wait(TimeSpan.FromSeconds(60)) == false)
+                {
+                    throw new TimeoutException("Something is wrong, throwing to avoid hanging");
+                }
+            }
+        }
+
         internal void SetNewStateInTx(TransactionOperationContext context,
             RachisState rachisState,
             IDisposable parent,
@@ -648,6 +694,8 @@ namespace Raven.Server.Rachis
                     ["Command"] = "noop",
                     [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
                 };
+
+                ForTestingPurposes?.OnLeaderElect();
                 InsertToLeaderLog(context, expectedTerm, context.ReadObject(noopCmd, "noop-cmd"), RachisEntryFlags.Noop);
             }
 
@@ -735,6 +783,8 @@ namespace Raven.Server.Rachis
                     }
                 }
             };
+            
+            
         }
 
         private void ParallelDispose(List<IDisposable> toDispose)
@@ -813,6 +863,7 @@ namespace Raven.Server.Rachis
             {
                 ClusterCommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
+                
             });
             leader.Start(connections);
         }

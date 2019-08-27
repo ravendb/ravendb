@@ -36,6 +36,7 @@ namespace Voron.Debugging
         public List<TableReport> Tables { get; set; }
         public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
+        public string TotalEncryptionBufferSize { get; set; }
     }
 
     public class DataFileReport

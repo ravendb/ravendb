@@ -1435,16 +1435,39 @@ namespace Raven.Server.ServerWide
         public void DeleteSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
+
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                if (rawRecord != null && rawRecord.IsEncrypted() && rawRecord.GetTopology().RelevantFor(NodeTag))
+                if (CanDeleteSecretKey() == false)
                 {
                     throw new InvalidOperationException(
                         $"Can't delete secret key for a database ({name}) that is relevant for this node ({NodeTag}), please delete the database before deleting the secret key.");
                 }
-            }
-            var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
 
+                bool CanDeleteSecretKey()
+                {
+                    if (rawRecord == null)
+                        return true;
+
+                    if (rawRecord.IsEncrypted() == false)
+                        return true;
+
+                    if (rawRecord.GetTopology().RelevantFor(NodeTag) == false)
+                        return true;
+
+                    var deletionInProgress = rawRecord.GetDeletionInProgressStatus();
+                    if (deletionInProgress != null && deletionInProgress.ContainsKey(NodeTag))
+                    {
+                        // we delete the node tag from the topology only after we get a confirmation that the database was actually deleted
+                        // until then, the NodeTag is in DeletionInProgress
+                        return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
             tree.Delete(name);
         }
 

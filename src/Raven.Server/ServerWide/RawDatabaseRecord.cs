@@ -139,21 +139,39 @@ namespace Raven.Server.ServerWide
             return list;
         }
 
-        public List<PeriodicBackupConfiguration> GetPeriodicBackups()
+        public List<long> GetPeriodicBackupsTaskIds()
         {
             if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) == false || bjra == null)
-            {
                 return null;
-            }
 
-            var list = new List<PeriodicBackupConfiguration>();
+            var list = new List<long>();
 
             foreach (BlittableJsonReaderObject element in bjra)
             {
-                list.Add(JsonDeserializationCluster.PeriodicBackupConfiguration(element));
+                if (element.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId) == false)
+                    continue;
+
+                list.Add(taskId);
             }
 
             return list;
+        }
+
+        public PeriodicBackupConfiguration GetPeriodicBackupConfiguration(long taskId)
+        {
+            if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) == false || bjra == null)
+                return null;
+
+            foreach (BlittableJsonReaderObject element in bjra)
+            {
+                if (element.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long configurationTaskId) == false)
+                    continue;
+
+                if (taskId == configurationTaskId)
+                    return JsonDeserializationCluster.PeriodicBackupConfiguration(element);
+            }
+
+            return null;
         }
 
         public List<RavenEtlConfiguration> GetRavenEtls()

@@ -68,9 +68,9 @@ namespace Voron.Impl
             size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (size > Constants.Size.Megabyte * 16)
+            if (size > Constants.Size.Megabyte * 16 || LowMemoryNotification.Instance.LowMemoryState)
             {
-                // We don't want to pool large buffers
+                // We don't want to pool large buffers / clear them up on low memory
                 PlatformSpecific.NativeMemory.Free4KbAlignedMemory(ptr, size, allocatingThread);
                 return;
             }

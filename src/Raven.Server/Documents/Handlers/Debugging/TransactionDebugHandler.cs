@@ -93,7 +93,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
                 [nameof(TxInfoResult.IsLazyTransaction)] = lowLevelTransaction.IsLazyTransaction,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
-                [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed
+                [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed,
+                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.TotalEncryptionBufferSize.ToString(),
             };
         }
     }
@@ -110,5 +111,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public bool IsLazyTransaction;
         public long NumberOfModifiedPages;
         public bool Committed;
+        public string TotalEncryptionBufferSize;
     }
 }

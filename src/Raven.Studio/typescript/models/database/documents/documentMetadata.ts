@@ -51,7 +51,7 @@ class documentMetadata {
             });
             this.lastModifiedInterval = ko.pureComputed(() => {
                 const lastModified = this.lastModified();
-                if (this.lastModified()) {
+                if (lastModified) {
                     const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastModified), true);
                     return `${fromDuration} ago`;
                 }
