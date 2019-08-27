@@ -12,6 +12,7 @@ import timeHelpers = require("common/timeHelpers");
 import notificationCenter = require("common/notifications/notificationCenter");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shell = require("viewmodels/shell");
+import accessManager = require("common/shell/accessManager");
 
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
@@ -39,6 +40,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     isRunningOnAnotherNode: KnockoutComputed<boolean>;
     disabledBackupNowReason = ko.observable<string>();
     isBackupNowEnabled: KnockoutComputed<boolean>;
+    isBackupNowVisible: KnockoutComputed<boolean>;
     neverBackedUp = ko.observable<boolean>(false);
     fullBackupTypeName: KnockoutComputed<string>;
 
@@ -89,6 +91,10 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             return true;
         });
 
+        this.isBackupNowVisible = ko.pureComputed(() => {
+            return  !this.isServerWide() || accessManager.default.clusterAdminOrClusterNode();
+        });
+        
         this.lastFullBackupHumanized = ko.pureComputed(() => {
             const lastFullBackup = this.lastFullBackup();
             if (!lastFullBackup) {

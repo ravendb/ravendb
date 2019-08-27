@@ -38,9 +38,15 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                 licenseLimit.Message,
                 AlertType.LicenseManager_LicenseLimit,
                 NotificationSeverity.Warning,
+                key: licenseLimit.Type.ToString(),
                 details: new LicenseLimitWarning(licenseLimit));
 
-            notificationCenter.Add(alert);
+            notificationCenter.Add(alert, updateExisting: true);
+        }
+
+        public static void DismissLicenseLimitNotification(NotificationCenter notificationCenter, LimitType type)
+        {
+            notificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_LicenseLimit, type.ToString()));
         }
     }
 }

@@ -10,7 +10,8 @@ import validateOfflineMigration = require("commands/resources/validateOfflineMig
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
-import getCloudCredentialsFromLinkCommand = require("commands/resources/getCloudCredentialsFromLinkCommand");
+import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
+import cloudBackupCredentials = require("models/resources/creation/cloudBackupCredentials");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -56,7 +57,8 @@ class databaseCreationModel {
     ];
 
     spinners = {
-        fetchingRestorePoints: ko.observable<boolean>(false)
+        fetchingRestorePoints: ko.observable<boolean>(false),
+        backupCredentialsLoading: ko.observable<boolean>(false)
     };
     
     lockActiveTab = ko.observable<boolean>(false);
@@ -70,7 +72,8 @@ class databaseCreationModel {
     restore = {
         source: ko.observable<restoreSource>("serverLocal"),
         backupLink: ko.observable<string>(),
-        cloudCredentials: ko.observable<string>(),
+        isBackupLinkValid: ko.observable<boolean>(true),
+        cloudBackupCredentials: ko.observable<cloudBackupCredentials>(), 
         backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
         backupDirectoryError: ko.observable<string>(null),
         lastFailedBackupDirectory: null as string,
@@ -214,11 +217,15 @@ class databaseCreationModel {
         });
         
         this.restore.backupLink.subscribe(link => {
-            this.downloadCloudCredentials(link);
+            if (!!_.trim(link)) {
+                this.downloadCloudCredentials(link) 
+            }
         });
         
-        this.restore.cloudCredentials.subscribe((credentials) => {
-            this.tryDecodeS3Credentials(credentials);
+        this.restore.cloudBackupCredentials.subscribe((cloudBackupCredentials) => {
+            if (!!cloudBackupCredentials) {
+                this.tryDecodeS3Credentials(cloudBackupCredentials.toDto());
+            }
         });
 
         let isFirst = true;
@@ -292,11 +299,19 @@ class databaseCreationModel {
     }
 
     downloadCloudCredentials(link: string) {
-        new getCloudCredentialsFromLinkCommand(link)
+        this.spinners.backupCredentialsLoading(true);
+        
+        new getCloudBackupCredentialsFromLinkCommand(link)
             .execute()
-            .then(credentials => {
-                this.restore.cloudCredentials(credentials);
-            });
+            .fail(() =>  {
+                this.restore.cloudBackupCredentials(null);
+                this.restore.isBackupLinkValid(false);
+            })
+            .done((cloudCredentials) => {
+                this.restore.cloudBackupCredentials(new cloudBackupCredentials(cloudCredentials));
+                this.restore.isBackupLinkValid(true);
+            })
+            .always(() => this.spinners.backupCredentialsLoading(false));
     }
     
     dataPathHasChanged(value: string) {
@@ -466,7 +481,6 @@ class databaseCreationModel {
         if (this.creationMode === "legacyMigration") {
             this.setupLegacyMigrationValidation();    
         }
-        
     }
     
     private setupReplicationValidation(maxReplicationFactor: number) {
@@ -511,8 +525,15 @@ class databaseCreationModel {
         
         this.restore.backupLink.extend({
             required: {
-                onlyIf: () => this.restore.source() === "cloud"
-            }
+                onlyIf: () => this.creationMode === "restore" && 
+                              this.restore.source() === "cloud"
+            },
+            validation: [
+                {
+                    validator: () => this.restore.isBackupLinkValid(),
+                    message: "Failed to get link credentials"
+                }
+            ]
         });
         
         this.restore.backupDirectory.extend({

@@ -879,12 +879,12 @@ namespace Raven.Server.Rachis
 
             using (context.OpenReadTransaction())
             {
-                while (midpointTerm > negotiation.PrevLogTerm && midpointIndex > 0)
+                do 
                 {
                     // try to find any log in the previous term
                     midpointIndex--;
                     midpointTerm = _engine.GetTermFor(context, midpointIndex) ?? 0;
-                }
+                } while (midpointTerm >= negotiation.PrevLogTerm && midpointIndex > 0);
 
                 if (midpointTerm == 0 || midpointIndex == 0)
                     return false;
@@ -906,9 +906,6 @@ namespace Raven.Server.Rachis
                     Debug.Assert(false, "This is a safeguard against any potential bug here, so in worst case we request the entire snapshot");
                     return false;
                 }
-
-                if (minIndex == maxIndex && midpointTerm != negotiation.PrevLogTerm)
-                    return false;
             }
 
             return true;

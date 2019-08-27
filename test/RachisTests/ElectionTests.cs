@@ -29,6 +29,127 @@ namespace RachisTests
             Assert.True(condition, $"Node is in state {node.CurrentState} and didn't become leader although he is alone in his cluster.");
         }
 
+
+        [Fact]
+        public async Task RavenDB_13922()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var leader = await CreateNetworkAndGetLeader(2);
+            var follower = GetFollowers().Single();
+
+            leader.ForTestingPurposesOnly();
+            follower.ForTestingPurposesOnly();
+
+            DisconnectBiDirectionalFromNode(leader);
+
+            await leader.WaitForState(RachisState.Candidate, CancellationToken.None);
+            await follower.WaitForState(RachisState.Candidate, CancellationToken.None);
+
+            var le1 = leader.WaitForState(RachisState.LeaderElect, CancellationToken.None);
+            var le2 = follower.WaitForState(RachisState.LeaderElect, CancellationToken.None);
+
+            ReconnectBiDirectionalFromNode(leader);
+
+            await Task.WhenAny(le1, le2);
+
+            await leader.WaitForState(RachisState.Candidate, CancellationToken.None);
+            await follower.WaitForState(RachisState.Candidate, CancellationToken.None);
+
+
+            var mre1 = leader.ForTestingPurposesOnly().Mre;
+            leader.ForTestingPurposesOnly().Mre = null;
+            mre1.Set();
+
+            var mre2 = follower.ForTestingPurposesOnly().Mre;
+            follower.ForTestingPurposesOnly().Mre = null;
+            mre2.Set();
+
+            var lastIndex = await IssueCommandsAndWaitForCommit(3, "test", 1);
+
+            var t1 = leader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            var t2 = follower.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            if (await Task.WhenAll(t1, t2).WaitAsync(5000) == false)
+            {
+                throw new TimeoutException();
+            }
+        }
+
+        [Fact]
+        public async Task CanElectOnDivergence()
+        {
+            var firstLeader = await CreateNetworkAndGetLeader(3);
+            var followers = GetFollowers();
+
+            var timeToWait = TimeSpan.FromMilliseconds(3000);
+            await IssueCommandsAndWaitForCommit(3, "test", 1);
+            var currentTerm = firstLeader.CurrentTerm;
+            DisconnectBiDirectionalFromNode(firstLeader);
+
+
+            using (firstLeader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            {
+                var cmd = new TestCommand
+                {
+                    Name = "bar",
+                    Value = 1,
+                    UniqueRequestId = Guid.NewGuid().ToString()
+                };
+
+
+                firstLeader.InsertToLeaderLog(ctx, currentTerm, ctx.ReadObject(cmd.ToJson(ctx), "bar"), RachisEntryFlags.StateMachineCommand);
+                tx.Commit();
+            }
+            Assert.True(await firstLeader.WaitForLeaveState(RachisState.Leader, CancellationToken.None).WaitAsync(timeToWait));
+
+            List<Task> waitingList = new List<Task>();
+            while (true)
+            {
+                using (var cts = new CancellationTokenSource())
+                {
+                    foreach (var follower in followers)
+                    {
+                        waitingList.Add(follower.WaitForState(RachisState.Leader, cts.Token));
+                    }
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Started waiting for new leader");
+                    }
+                    var done = await Task.WhenAny(waitingList).WaitAsync(timeToWait);
+                    if (done)
+                    {
+                        break;
+                    }
+                    var maxTerm = followers.Max(f => f.CurrentTerm);
+                    Assert.True(currentTerm + 1 < maxTerm, $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})");
+                    Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
+                    currentTerm = maxTerm;
+                    waitingList.Clear();
+                }
+            }
+
+
+            var newLeaderLastIndex = await IssueCommandsAndWaitForCommit(5, "test", 1);
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info("Reconnect old leader");
+            }
+            ReconnectBiDirectionalFromNode(firstLeader);
+            var retries = 3;
+            do
+            {
+                var waitForCommitIndexChange = firstLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newLeaderLastIndex);
+                if (await waitForCommitIndexChange.WaitAsync(timeToWait))
+                {
+                    break;
+                }
+            } while (retries-- > 0);
+
+            Assert.True(retries > 0,
+                $"Old leader is in {firstLeader.CurrentState} state and didn't rollback his log to the new leader log (last index: {GetLastCommittedIndex(firstLeader)}, expected: {newLeaderLastIndex})");
+            Assert.Equal(3, RachisConsensuses.Count);
+        }
+
         [Theory]
         [InlineData(2)]
         [InlineData(3)]

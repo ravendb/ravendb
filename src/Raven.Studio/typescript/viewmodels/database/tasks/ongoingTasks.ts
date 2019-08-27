@@ -293,8 +293,15 @@ class ongoingTasks extends viewModelBase {
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => new ongoingTaskBackupListModel(dto, task => this.watchBackupCompletion(task)));
         
         // Sort backup tasks 
-        const groupedBackupTasks = _.groupBy(this.backupTasks(), x => x.isServerWide()); 
-        this.backupTasks(groupedBackupTasks.false.concat(groupedBackupTasks.true));
+        const groupedBackupTasks = _.groupBy(this.backupTasks(), x => x.isServerWide());
+        const serverWideBackupTasks = groupedBackupTasks.true;
+        const ongoingBackupTasks = groupedBackupTasks.false;
+
+        if (ongoingBackupTasks) {
+            this.backupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);            
+        } else if (serverWideBackupTasks) {
+            this.backupTasks(serverWideBackupTasks);
+        }
         
         this.mergeTasks(this.etlTasks, 
             groupedTasks['RavenEtl' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 

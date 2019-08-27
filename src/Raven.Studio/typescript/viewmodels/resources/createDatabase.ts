@@ -303,7 +303,7 @@ class createDatabase extends dialogViewModelBase {
             this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
         });
 
-        this.databaseModel.restore.cloudCredentials.throttle(300).subscribe(() => {
+        this.databaseModel.restore.cloudBackupCredentials.throttle(300).subscribe(() => {
             this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
         });
         

@@ -300,18 +300,71 @@
             </div>
         </div>
 
-        <div class="form-group row" data-bind="validationElement: backupLink, visible: source() === 'cloud'">
-            <div class="col-md-4">
-                <label class="control-label">Backup Link</label>
+        <div data-bind="visible: source() === 'cloud'">
+            <div class="form-group row" data-bind="validationElement: backupLink">
+                <div class="col-md-4">
+                    <label class="control-label">Backup Link</label>
+                </div>
+                <div class="col-md-8">
+                     <input class="form-control" data-bind="textInput: backupLink" placeholder="Enter backup link from RavenDB Cloud" />
+                </div>
             </div>
-            <div class="col-md-8">
-                 <input class="form-control" data-bind="textInput: backupLink" />
+            <div data-bind="if: $root.databaseModel.spinners.backupCredentialsLoading()">
+                <div class="form-group row">
+                    <div class="col-md-offset-4 col-md-8">
+                        <label class="control-label global-spinner spinner-sm"></label>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="if: !$root.databaseModel.spinners.backupCredentialsLoading() && isBackupLinkValid()">
+                <div data-bind="with: cloudBackupCredentials">
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Backup Storage Type</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info" data-bind="text: backupStorageTypeText"></label>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Region Name</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info text-left" data-bind="text: awsRegionName"></label>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Bucket Name</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info text-left" data-bind="text: bucketName"></label>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Remote Folder Name</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info text-left" data-bind="text: remoteFolderName"></label>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-md-4">
+                            <label class="control-label">Link will expire in</label>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="control-label text-info" data-bind="text: timeLeftText"></label>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
         <div class="form-group row" data-bind="validationElement: backupDirectory, visible: source() !== 'cloud'">
             <div class="col-md-4">
-                <label class="control-label">Backup directory</label>
+                <label class="control-label">Backup Directory</label>
             </div>
             <div class="col-md-8">
                 <input type="text" class="form-control" id="backupFolderPath"

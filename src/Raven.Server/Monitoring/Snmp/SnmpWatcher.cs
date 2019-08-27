@@ -58,7 +58,7 @@ namespace Raven.Server.Monitoring.Snmp
                 if (snmpEngine == null) // precaution
                     return;
 
-                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring();
+                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: true);
                 if (activate)
                     snmpEngine.Start();
                 else
@@ -83,7 +83,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                 _snmpEngine = CreateSnmpEngine(_server, _objectStore);
 
-                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring();
+                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: true);
                 if (activate)
                     _snmpEngine.Start();
 
@@ -304,6 +304,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new CpuCreditsAlertRaised(server.CpuCreditsBalance));
 
             store.Add(new ServerTotalMemory());
+            store.Add(new ServerLowMemoryFlag());
 
             store.Add(new ServerLastRequestTime(server.Statistics));
 
@@ -320,6 +321,11 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerLicenseType(server.ServerStore));
             store.Add(new ServerLicenseExpiration(server.ServerStore));
             store.Add(new ServerLicenseExpirationLeft(server.ServerStore));
+
+            store.Add(new ServerStorageUsedSize(server.ServerStore));
+            store.Add(new ServerStorageTotalSize(server.ServerStore));
+            store.Add(new ServerStorageDiskRemainingSpace(server.ServerStore));
+            store.Add(new ServerStorageDiskRemainingSpacePercentage(server.ServerStore));
 
             return store;
         }
