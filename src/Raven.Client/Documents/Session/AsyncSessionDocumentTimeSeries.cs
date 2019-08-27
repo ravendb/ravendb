@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,18 +27,10 @@ namespace Raven.Client.Documents.Session
         public async Task<IEnumerable<TimeSeriesValue>> GetAsync(string timeseries, DateTime from, DateTime to, CancellationToken token = default)
         {
             TimeSeriesDetails details;
-
+            
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
                 cache.TryGetValue(timeseries, out var ranges))
             {
-                if (ranges[0].FullRange)
-                {
-                    // TODO support this
-
-                    // we have all values, chop relevant part
-                    return ChopRelevantRange(ranges[0], from, to);
-                }
-
                 if (ranges[0].From > to || ranges[ranges.Count - 1].To < from)
                 {
                     // the requested range is out of cache bounds
@@ -64,9 +57,12 @@ namespace Raven.Client.Documents.Session
                 // otherwise, try to find two ranges (fromRange, toRange),
                 // such that 'fromRange' is the last occurence for which range.From <= from
                 // and 'toRange' is the first occurence for which range.To >= to.
+                // At the same time, figure out the missing partial ranges that we need to get from server.
 
                 var fromRangeIndex = -1;
                 int toRangeIndex;
+
+                var rangesToGetFromServer = new List<(DateTime From, DateTime To)>();
 
                 for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
                 {
@@ -82,12 +78,38 @@ namespace Raven.Client.Documents.Session
                         continue;
                     }
 
+                    var (f, t) = (toRangeIndex == 0 || ranges[toRangeIndex - 1].To < from ? from : ranges[toRangeIndex - 1].To,
+                        ranges[toRangeIndex].From <= to ? ranges[toRangeIndex].From : to);
+
+                    rangesToGetFromServer.Add((f, t));
+
                     if (ranges[toRangeIndex].To >= to)
                         break;
                 }
 
                 // can't get the entire range from cache
                 Session.IncrementRequestCount();
+
+                if (toRangeIndex == ranges.Count)
+                {
+                    rangesToGetFromServer.Add((ranges[ranges.Count - 1].To, to));
+                }
+
+                var resultFromServer = new TimeSeriesDetails[rangesToGetFromServer.Count];
+
+                for (var index = 0; index < rangesToGetFromServer.Count; index++)
+                {
+                    resultFromServer[index] = await Session.Operations.SendAsync(
+                            new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer[index].From, rangesToGetFromServer[index].To), Session.SessionInfo, token: token)
+                        .ConfigureAwait(false);
+                }
+
+                var values = MergeRangesWithResult(
+                    fromRangeIndex, 
+                    toRangeIndex == ranges.Count ? ranges.Count - 1 : toRangeIndex, 
+                    resultFromServer, 
+                    out var skip, 
+                    out var trim);
 
                 if (fromRangeIndex == -1)
                 {
@@ -96,10 +118,6 @@ namespace Raven.Client.Documents.Session
                     if (toRangeIndex == ranges.Count)
                     {
                         // the requested range [from, to] contains all the ranges that are in cache 
-
-                        details = await Session.Operations.SendAsync(
-                                new GetTimeSeriesOperation(DocId, timeseries, from, to), Session.SessionInfo, token: token)
-                            .ConfigureAwait(false);
 
                         if (Session.NoTracking == false)
                         {
@@ -110,216 +128,154 @@ namespace Raven.Client.Documents.Session
                                     Name = timeseries,
                                     From = from,
                                     To = to,
-                                    FullRange = false,
-                                    Values = details.Values[timeseries].Values
+                                    Values = values
                                 }
                             };
                         }
 
-                        return details.Values[timeseries].Values;
+                        return values;
+
                     }
 
-                    if (ranges[toRangeIndex].From >= to)
+                    if (ranges[toRangeIndex].From > to)
                     {
-                        // get entire range [from, to] from server
-                        // remove all ranges that come before 'toRange' from cache
-                        // add the new range at the beginning of the list
-
-                        details = await Session.Operations.SendAsync(
-                                new GetTimeSeriesOperation(DocId, timeseries, from, to), Session.SessionInfo, token: token)
-                            .ConfigureAwait(false);
+                        // requested range ends before 'toRange'
 
                         if (Session.NoTracking == false)
                         {
+                            // remove all ranges that come before 'toRange' from cache
+                            // add the new range at the beginning of the list
+
                             ranges.RemoveRange(0, toRangeIndex);
                             ranges.Insert(0, new TimeSeriesRange
                             {
                                 Name = timeseries,
                                 From = from,
                                 To = to,
-                                FullRange = false,
-                                Values = details.Values[timeseries].Values
+                                Values = values
                             });
                         }
 
-                        return details.Values[timeseries].Values;
+                        return values;
                     }
-
-                    // get partial range [from, toRange.From] from server
-                    // merge the new range into 'toRange'
-                    // remove all ranges that come before 'toRange' from cache
-
-                    details = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, from, ranges[toRangeIndex].From), Session.SessionInfo, token: token)
-                        .ConfigureAwait(false);
-
-                    var newValues = MergeRanges(details.Values[timeseries].Values, ranges[toRangeIndex].Values, from, to, out _, out var take);
-
+                   
                     if (Session.NoTracking == false)
                     {
+                        // merge the result from server into 'toRange'
+                        // remove all ranges that come before 'toRange' from cache
+
                         ranges[toRangeIndex].From = from;
-                        ranges[toRangeIndex].Values = newValues;
+                        ranges[toRangeIndex].Values = values;
                         ranges.RemoveRange(0, toRangeIndex);
                     }
 
-                    return newValues.Take(take);
-                }
+                    return values.Take(values.Length - trim);
 
+                }
+                
                 if (toRangeIndex == ranges.Count)
                 {
-                    // found a matching 'fromRange'
                     // all the ranges in cache end before 'to'
 
                     if (ranges[fromRangeIndex].To < from)
                     {
-                        // get entire range [from, to] from server
-                        // remove all the ranges that come after 'fromRange' from cache 
-                        // add new range to the end of the list
-
-                        details = await Session.Operations.SendAsync(
-                                new GetTimeSeriesOperation(DocId, timeseries, from, to), Session.SessionInfo, token: token)
-                            .ConfigureAwait(false);
-
                         if (Session.NoTracking == false)
                         {
-                            ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex -1);
+                            // remove all the ranges that come after 'fromRange' from cache 
+                            // add the merged values as a new range at the end of the list
 
+                            ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
                             ranges.Add(new TimeSeriesRange
                             {
                                 From = from,
                                 To = to,
-                                FullRange = false,
                                 Name = timeseries,
-                                Values = details.Values[timeseries].Values
+                                Values = values
                             });
                         }
 
-                        return details.Values[timeseries].Values;
+                        return values;
                     }
-
-                    // get partial range [fromRange.To, to] from server
-                    // merge it into 'fromRange'
-                    // remove all the ranges from cache that come after 'fromRange' 
-
-                    details = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, ranges[fromRangeIndex].To, to), Session.SessionInfo, token: token)
-                        .ConfigureAwait(false);
-
-                    var newValues = MergeRanges(ranges[fromRangeIndex].Values, details.Values[timeseries].Values, from, to, out var toSkip, out _);
 
                     if (Session.NoTracking == false)
                     {
+                        // merge result into 'fromRange'
+                        // remove all the ranges from cache that come after 'fromRange' 
+
                         ranges[fromRangeIndex].To = to;
-                        ranges[fromRangeIndex].Values = newValues;
+                        ranges[fromRangeIndex].Values = values;
                         ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
                     }
 
-                    return newValues.Skip(toSkip);
+                    return values.Skip(skip);
+
                 }
+
+                // the requested range is inside cache bounds 
 
                 if (ranges[fromRangeIndex].To < from)
                 {
                     if (ranges[toRangeIndex].From > to)
                     {
-                        // get entire range [from, to] from server
-                        // remove all ranges in between fromRange and toRange
-                        // place new range in between fromRange and toRange
-
-                        details = await Session.Operations.SendAsync(
-                                new GetTimeSeriesOperation(DocId, timeseries, from, to), Session.SessionInfo, token: token)
-                            .ConfigureAwait(false);
-
                         if (Session.NoTracking == false)
                         {
+                            // remove all ranges in between 'fromRange' and 'toRange'
+                            // place new range in between 'fromRange' and 'toRange'
+
                             ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                             ranges.Insert(fromRangeIndex + 1, new TimeSeriesRange
                             {
                                 Name = timeseries,
                                 From = from,
                                 To = to,
-                                Values = details.Values[timeseries].Values
+                                Values = values
                             });
                         }
 
-                        return details.Values[timeseries].Values;
+                        return values;
                     }
-
-                    // get range [from, toRange.From] from server
-                    // merge the new range into 'toRange'
-                    // remove all ranges in between 'fromRange' and 'toRange'
-
-                    details = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, from, ranges[toRangeIndex].From), Session.SessionInfo, token: token)
-                        .ConfigureAwait(false);
-
-                    var newValues = MergeRanges(details.Values[timeseries].Values, ranges[toRangeIndex].Values, from, to, out _, out var take);
 
                     if (Session.NoTracking == false)
                     {
+                        // merge the new range into 'toRange'
+                        // remove all ranges in between 'fromRange' and 'toRange'
+
                         ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                         ranges[toRangeIndex].From = from;
-                        ranges[toRangeIndex].Values = newValues;
+                        ranges[toRangeIndex].Values = values;
                     }
 
-                    return newValues.Take(take);
+                    return values.Take(values.Length - trim);
                 }
 
                 if (ranges[toRangeIndex].From > to)
                 {
-                    // get partial range [fromRange.To, to] from server
-                    // remove all ranges in between 'fromRange' and 'toRange'
-                    // merge new range into 'fromRange'
-
-                    details = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, ranges[fromRangeIndex].To, to), Session.SessionInfo, token: token)
-                        .ConfigureAwait(false);
-
-                    var newValues = MergeRanges(ranges[fromRangeIndex].Values, details.Values[timeseries].Values, from, to, out var toSkip, out _);
-
                     if (Session.NoTracking == false)
                     {
+                        // remove all ranges in between 'fromRange' and 'toRange'
+                        // merge new range into 'fromRange'
+
                         ranges[fromRangeIndex].To = to;
-                        ranges[fromRangeIndex].Values = newValues;
+                        ranges[fromRangeIndex].Values = values;
                         ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
                     }
 
-                    return newValues.Skip(toSkip);
-                }
-
-                // get range [fromRange.To, toRange.From] from server and merge all 
-                // ranges in between 'fromRange' and 'toRange' into a single range [fromRange.From, toRange.To]
-
-                details = await Session.Operations.SendAsync(
-                        new GetTimeSeriesOperation(DocId, timeseries, ranges[fromRangeIndex].To, ranges[toRangeIndex].From), Session.SessionInfo, token: token)
-                    .ConfigureAwait(false);
-
-                var firstMergeSize = (ranges[fromRangeIndex].Values.Length == 0 ? 0 : ranges[fromRangeIndex].Values.Length - 1) + details.Values[timeseries].Values.Length;
-                var size = firstMergeSize + (ranges[toRangeIndex].Values.Length == 0 ? 0 : ranges[toRangeIndex].Values.Length - 1);
-                var values = MergeRanges(ranges[fromRangeIndex].Values, details.Values[timeseries].Values, from, to, out var skip, out _, size);
-
-                var toTake = firstMergeSize - skip;
-                var offset = firstMergeSize == 0 ? 0 : firstMergeSize - 1;
-
-                for (var i = firstMergeSize == 0 ? 0 : 1; i < ranges[toRangeIndex].Values.Length; i++)
-                {
-                    var current = ranges[toRangeIndex].Values[i];
-                    if (current.Timestamp <= to)
-                    {
-                        toTake++;
-                    }
-
-                    values[i + offset] = current;
+                    return values.Skip(skip);
                 }
 
                 if (Session.NoTracking == false)
                 {
+                    // merge all ranges in between 'fromRange' and 'toRange'
+                    // into a single range [fromRange.From, toRange.To]
+
                     ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
                     ranges[fromRangeIndex].Values = values;
 
                     ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
                 }
 
-                return values.Skip(skip).Take(toTake);
+                return values.Skip(skip).Take(values.Length - skip - trim);
+                
             }
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
@@ -352,6 +308,69 @@ namespace Raven.Client.Documents.Session
 
             return details.Values[timeseries].Values;
 
+            TimeSeriesValue[] MergeRangesWithResult(int fromRangeIndex, int toRangeIndex, TimeSeriesDetails[] resultFromServer, out int skip, out int trim)
+            {
+                skip = 0;
+                trim = 0;
+                var currentResultIndex = 0;
+                var values = new List<TimeSeriesValue>();
+
+                var hasFromIndex = true;
+                if (fromRangeIndex == -1)
+                {
+                    hasFromIndex = false;
+                    fromRangeIndex = 0;
+                }
+
+                for (int i = fromRangeIndex; i <= toRangeIndex; i++)
+                {                    
+                    if (i == fromRangeIndex && hasFromIndex)
+                    {
+                        if (ranges[i].From <= from && ranges[i].To >= from)
+                        {
+                            foreach (var v in ranges[i].Values)
+                            {
+                                values.Add(v);
+                                if (v.Timestamp < from)
+                                    skip++;
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    if (currentResultIndex < resultFromServer.Length &&
+                        resultFromServer[currentResultIndex].Values[timeseries].From < ranges[i].From)
+                    {
+                        values.AddRange(resultFromServer[currentResultIndex++].Values[timeseries].Values.Skip(values.Count == 0 ? 0 : 1));
+                    }
+
+                    if (i == toRangeIndex)
+                    {
+                        if (ranges[i].From <= to)
+                        {
+                            for (var index = values.Count == 0 ? 0 : 1; index < ranges[i].Values.Length; index++)
+                            {
+                                values.Add(ranges[i].Values[index]);
+                                if (ranges[i].Values[index].Timestamp > to)
+                                    trim++;
+                            }
+                        }
+                        continue;
+                    }
+
+                    values.AddRange(ranges[i].Values.Skip(values.Count == 0 ? 0 : 1));
+                }
+
+                if (currentResultIndex < resultFromServer.Length)
+                {
+                    values.AddRange(resultFromServer[currentResultIndex++].Values[timeseries].Values.Skip(values.Count == 0 ? 0 : 1));
+                }
+
+                Debug.Assert(currentResultIndex == resultFromServer.Length);
+
+                return values.ToArray();
+            }
         }
 
         private static IEnumerable<TimeSeriesValue> ChopRelevantRange(TimeSeriesRange range, DateTime from, DateTime to)

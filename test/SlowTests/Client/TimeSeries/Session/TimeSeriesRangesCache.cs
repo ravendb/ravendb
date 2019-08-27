@@ -397,7 +397,6 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddHours(1), vals[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(90), vals[1].Timestamp);
 
-
                     Assert.True(cache.TryGetValue("Heartrate2", out var ranges2));
                     Assert.Equal(1, ranges2.Count);
                     Assert.Equal(baseline, ranges2[0].From);
