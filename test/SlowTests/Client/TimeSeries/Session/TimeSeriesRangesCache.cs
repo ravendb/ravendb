@@ -350,7 +350,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(22), ranges[1].From);
                     Assert.Equal(baseline.AddMinutes(35), ranges[1].To);
 
-                    // should go to server
+                    // should go to server to get [20, 22] and [35, 40]
+                    // and merge them with [22, 35] into a single range [20, 40]
                     vals = session.TimeSeriesFor("users/ayende")
                         .Get("Heartrate", baseline.AddMinutes(20), baseline.AddMinutes(40))
                         .ToList();
@@ -433,7 +434,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(42), ranges[2].From);
                     Assert.Equal(baseline.AddMinutes(43), ranges[2].To);
 
-                    // should go to server and merge all ranges into [0, 45]
+                    // should go to server and to get the missing parts and merge all ranges into [0, 45]
                     vals = session.TimeSeriesFor("users/ayende")
                         .Get("Heartrate", baseline, baseline.AddMinutes(45))
                         .ToList();
