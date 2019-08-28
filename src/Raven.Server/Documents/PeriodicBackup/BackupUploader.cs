@@ -1,0 +1,322 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
+using Raven.Server.Documents.PeriodicBackup.Retention;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils;
+using Raven.Server.Utils.Metrics;
+using Sparrow;
+using Sparrow.Collections;
+using Sparrow.Logging;
+using Sparrow.Utils;
+using Size = Sparrow.Size;
+
+namespace Raven.Server.Documents.PeriodicBackup
+{
+    public class BackupUploader
+    {
+        private readonly BackupUploaderSettings _backupUploaderSettings;
+        private readonly List<PoolOfThreads.LongRunningWork> _threads;
+        private readonly ConcurrentSet<Exception> _exceptions;
+
+        private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
+        private readonly bool _isFullBackup;
+
+        public readonly OperationCancelToken TaskCancelToken;
+
+        private readonly Logger _logger;
+        private readonly BackupResult _backupResult;
+        private readonly Action<IOperationProgress> _onProgress;
+
+        public BackupUploader(BackupUploaderSettings backupUploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
+        {
+            _backupUploaderSettings = backupUploaderSettings;
+            _threads = new List<PoolOfThreads.LongRunningWork>();
+            _exceptions = new ConcurrentSet<Exception>();
+
+            _retentionPolicyParameters = retentionPolicyParameters;
+            _isFullBackup = retentionPolicyParameters.IsFullBackup;
+
+            TaskCancelToken = taskCancelToken;
+            _logger = logger;
+            _backupResult = backupResult;
+            _onProgress = onProgress;
+        }
+
+        public void Execute()
+        {
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.AzureSettings, UploadToAzure, _backupResult.AzureBackup);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup);
+
+            _threads.ForEach(x => x.Join(int.MaxValue));
+
+            if (_exceptions.Count > 0)
+            {
+                if (_exceptions.Count == 1)
+                    throw _exceptions.First();
+
+                throw new AggregateException(_exceptions);
+            }
+        }
+
+        private void UploadToS3(S3Settings settings, Stream stream, Progress progress)
+        {
+            using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName);
+                client.PutObject(key, stream, new Dictionary<string, string>
+                {
+                    { "Description", GetArchiveDescription() }
+                });
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportSuccess(settings.Name)} bucket named: {settings.BucketName}, with key: {key}");
+
+                var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
+                runner.Execute();
+            }
+        }
+
+        private void UploadToGlacier(GlacierSettings settings, Stream stream, Progress progress)
+        {
+            using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName ?? _backupUploaderSettings.DatabaseName);
+                var archiveId = client.UploadArchive(stream, key);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportSuccess(settings.Name)}, archive ID: {archiveId}");
+
+                var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
+                runner.Execute();
+            }
+        }
+
+        private void UploadToFtp(FtpSettings settings, Stream stream, Progress progress)
+        {
+            using (var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token))
+            {
+                client.UploadFile(_backupUploaderSettings.FolderName, _backupUploaderSettings.FileName, stream);
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportSuccess(settings.Name)} server");
+
+                var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
+                runner.Execute();
+            }
+        }
+
+        private void UploadToAzure(AzureSettings settings, Stream stream, Progress progress)
+        {
+            using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName);
+                client.PutBlob(key, stream, new Dictionary<string, string>
+                {
+                    { "Description", GetArchiveDescription() }
+                });
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportSuccess(settings.Name)} container: {settings.StorageContainer}, with key: {key}");
+
+                var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
+                runner.Execute();
+            }
+        }
+
+        private void UploadToGoogleCloud(GoogleCloudSettings settings, Stream stream, Progress progress)
+        {
+            using (var client = new RavenGoogleCloudClient(settings, progress, TaskCancelToken.Token))
+            {
+                var key = CombinePathAndKey(settings.RemoteFolderName);
+                client.UploadObject(key, stream, new Dictionary<string, string>
+                {
+                    { "Description", GetArchiveDescription() }
+                });
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"{ReportSuccess(settings.Name)} storage bucket: {settings.BucketName}");
+
+                var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
+                runner.Execute();
+            }
+        }
+
+        private string CombinePathAndKey(string path)
+        {
+            var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
+            return $"{prefix}{_backupUploaderSettings.FolderName}/{_backupUploaderSettings.FileName}";
+        }
+
+        private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus)
+            where S : BackupSettings
+            where T : CloudUploadStatus
+        {
+            if (PeriodicBackupConfiguration.CanBackupUsing(settings) == false)
+                return;
+
+            Debug.Assert(uploadStatus != null);
+
+            var localUploadStatus = uploadStatus;
+            var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                    NativeMemory.EnsureRegistered();
+
+                    using (localUploadStatus.UpdateStats(_isFullBackup))
+                    using (var fileStream = File.OpenRead(_backupUploaderSettings.BackupPath))
+                    {
+                        var uploadProgress = localUploadStatus.UploadProgress;
+                        try
+                        {
+                            localUploadStatus.Skipped = false;
+                            uploadProgress.ChangeState(UploadState.PendingUpload);
+                            uploadProgress.SetTotal(fileStream.Length);
+
+                            AddInfo($"Starting {uploadStatus.GetType().AssemblyQualifiedName}");
+
+                            var bytesPutsPerSec = new MeterMetric();
+
+                            long lastUploadedInBytes = 0;
+                            var totalToUpload = new Size(uploadProgress.TotalInBytes, SizeUnit.Bytes).ToString();
+                            var sw = Stopwatch.StartNew();
+                            var progress = new Progress(uploadProgress)
+                            {
+                                OnUploadProgress = () =>
+                                {
+                                    if (sw.ElapsedMilliseconds <= 1000)
+                                        return;
+
+                                    var totalUploadedInBytes = uploadProgress.UploadedInBytes;
+                                    bytesPutsPerSec.MarkSingleThreaded(totalUploadedInBytes - lastUploadedInBytes);
+                                    lastUploadedInBytes = totalUploadedInBytes;
+                                    var uploaded = new Size(totalUploadedInBytes, SizeUnit.Bytes);
+                                    uploadProgress.BytesPutsPerSec = bytesPutsPerSec.MeanRate;
+                                    AddInfo($"Uploaded: {uploaded} / {totalToUpload}");
+                                    sw.Restart();
+                                }
+                            };
+
+                            uploadToServer(settings, fileStream, progress);
+
+                            AddInfo($"Total uploaded: {totalToUpload}, took: {MsToHumanReadableString(uploadProgress.UploadTimeInMs)}");
+                        }
+                        finally
+                        {
+                            uploadProgress.ChangeState(UploadState.Done);
+                        }
+                    }
+                }
+                catch (OperationCanceledException e)
+                {
+                    // shutting down
+                    localUploadStatus.Exception = e.ToString();
+                    _exceptions.Add(e);
+                }
+                catch (Exception e)
+                {
+                    localUploadStatus.Exception = e.ToString();
+                    _exceptions.Add(new InvalidOperationException($"Failed to backup to {uploadStatus.GetType().FullName}", e));
+                }
+            }, null, $"Upload backup of database '{_backupUploaderSettings.DatabaseName}' to {settings.Name} (task: {_backupUploaderSettings.TaskName})");
+
+            _threads.Add(thread);
+        }
+
+        private void AddInfo(string message)
+        {
+            lock (this)
+            {
+                _backupResult.AddInfo(message);
+                _onProgress.Invoke(_backupResult.Progress);
+            }
+        }
+
+        private string GetArchiveDescription()
+        {
+            var fullBackupText = _backupUploaderSettings.BackupType == BackupType.Backup ? "Full backup" : "A snapshot";
+            return $"{(_isFullBackup ? fullBackupText : "Incremental backup")} for db {_backupUploaderSettings.DatabaseName} at {SystemTime.UtcNow}";
+        }
+
+        private static string MsToHumanReadableString(long milliseconds)
+        {
+            var durationsList = new List<string>();
+            var timeSpan = TimeSpan.FromMilliseconds(milliseconds);
+            var totalDays = (int)timeSpan.TotalDays;
+            if (totalDays >= 1)
+            {
+                durationsList.Add($"{totalDays:#,#;;0} day{Pluralize(totalDays)}");
+                timeSpan = timeSpan.Add(TimeSpan.FromDays(-1 * totalDays));
+            }
+
+            var totalHours = (int)timeSpan.TotalHours;
+            if (totalHours >= 1)
+            {
+                durationsList.Add($"{totalHours:#,#;;0} hour{Pluralize(totalHours)}");
+                timeSpan = timeSpan.Add(TimeSpan.FromHours(-1 * totalHours));
+            }
+
+            var totalMinutes = (int)timeSpan.TotalMinutes;
+            if (totalMinutes >= 1)
+            {
+                durationsList.Add($"{totalMinutes:#,#;;0} minute{Pluralize(totalMinutes)}");
+                timeSpan = timeSpan.Add(TimeSpan.FromMinutes(-1 * totalMinutes));
+            }
+
+            var totalSeconds = (int)timeSpan.TotalSeconds;
+            if (totalSeconds >= 1)
+            {
+                durationsList.Add($"{totalSeconds:#,#;;0} second{Pluralize(totalSeconds)}");
+                timeSpan = timeSpan.Add(TimeSpan.FromSeconds(-1 * totalSeconds));
+            }
+
+            var totalMilliseconds = (int)timeSpan.TotalMilliseconds;
+            if (totalMilliseconds > 0)
+            {
+                durationsList.Add($"{totalMilliseconds:#,#;;0} ms");
+            }
+
+            return string.Join(' ', durationsList.Take(2));
+        }
+
+        private static string Pluralize(int number)
+        {
+            return number > 1 ? "s" : string.Empty;
+        }
+
+        private string ReportSuccess(string name)
+        {
+            return $"Successfully uploaded backup file '{_backupUploaderSettings.FileName}' to {name}";
+        }
+    }
+
+    public class BackupUploaderSettings
+    {
+        public S3Settings S3Settings;
+        public GlacierSettings GlacierSettings;
+        public AzureSettings AzureSettings;
+        public GoogleCloudSettings GoogleCloudSettings;
+        public FtpSettings FtpSettings;
+
+        public string BackupPath;
+        public string FolderName;
+        public string FileName;
+        public string DatabaseName;
+        public string TaskName;
+
+        public BackupType BackupType;
+    }
+}

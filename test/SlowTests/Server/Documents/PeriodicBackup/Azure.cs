@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -18,7 +17,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
         [AzureStorageEmulatorFact]
-        public async Task put_blob()
+        public void put_blob()
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
@@ -27,15 +26,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 try
                 {
-                    await client.DeleteContainer();
-                    await client.PutContainer();
+                    client.DeleteContainer();
+                    client.PutContainer();
 
-                    await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                     {
                         {"property1", "value1"},
                         {"property2", "value2"}
                     });
-                    var blob = await client.GetBlob(blobKey);
+                    var blob = client.GetBlob(blobKey);
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
@@ -49,13 +48,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    await client.DeleteContainer();
+                    client.DeleteContainer();
                 }
             }
         }
 
         [AzureStorageEmulatorFact]
-        public async Task put_blob_in_folder()
+        public void put_blob_in_folder()
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
@@ -64,16 +63,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 try
                 {
-                    await client.DeleteContainer();
-                    await client.PutContainer();
+                    client.DeleteContainer();
+                    client.PutContainer();
 
-                    await client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
+                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                     {
                         {"property1", "value1"},
                         {"property2", "value2"}
                     });
 
-                    var blob = await client.GetBlob(blobKey);
+                    var blob = client.GetBlob(blobKey);
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
@@ -87,7 +86,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    await client.DeleteContainer();
+                    client.DeleteContainer();
                 }
             }
         }

@@ -1,22 +1,16 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
-using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.Json;
@@ -31,8 +25,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -101,7 +93,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public async Task<IOperationResult> RunPeriodicBackup(Action<IOperationProgress> onProgress)
+        public IOperationResult RunPeriodicBackup(Action<IOperationProgress> onProgress)
         {
             _onProgress = onProgress;
             AddInfo($"Started task: '{_configuration.Name}'");
@@ -172,7 +164,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 // update the local configuration before starting the local backup
-                var localSettings = await GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
+                var localSettings = GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
+                    settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
 
                 GenerateFolderNameAndBackupDirectory(localSettings, out var now, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
@@ -180,7 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 var isEncrypted = CheckIfEncrypted();
                 var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, isEncrypted, out string backupFilePath);
-                var internalBackupResult = await CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex);
+                var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
                 runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
@@ -188,7 +181,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    await UploadToServer(backupFilePath, folderName, fileName);
+                    UploadToServer(backupFilePath, folderName, fileName);
                 }
                 finally
                 {
@@ -280,13 +273,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _periodicBackup.BackupStatus = runningBackupStatus;
 
                     // save the backup status
-                    await WriteStatus(runningBackupStatus);
+                    WriteStatus(runningBackupStatus);
                 }
             }
         }
 
-        private async Task<T> GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc, Action<T> updateServerWideSettingsFunc)
-                where T : BackupSettings
+        private T GetBackupConfigurationFromScript<T>(T backupSettings, Func<BlittableJsonReaderObject, T> deserializeSettingsFunc,
+            Action<T> updateServerWideSettingsFunc)
+            where T : BackupSettings
         {
             if (backupSettings == null)
                 return null;
@@ -364,7 +358,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     ms.Position = 0;
-                    var configuration = await context.ReadForMemoryAsync(ms, "backup-configuration-from-script");
+                    var configuration = context.ReadForMemory(ms, "backup-configuration-from-script");
                     var result = deserializeSettingsFunc(configuration);
                     if (_isServerWide)
                         updateServerWideSettingsFunc?.Invoke(result);
@@ -546,7 +540,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             public long LastRaftIndex { get; set; }
         }
 
-        private async Task<InternalBackupResult> CreateLocalBackupOrSnapshot(
+        private InternalBackupResult CreateLocalBackupOrSnapshot(
             PeriodicBackupStatus status, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
         {
             var internalBackupResult = new InternalBackupResult();
@@ -641,7 +635,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_backupToLocalFolder)
             {
                 var localRetentionPolicy = new LocalRetentionPolicyRunner(_retentionPolicyParameters, _configuration.LocalSettings.FolderPath);
-                await localRetentionPolicy.Execute();
+                localRetentionPolicy.Execute();
             }
 
             return internalBackupResult;
@@ -733,6 +727,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     default:
                         throw new InvalidOperationException($" {outputStream.GetType()} not supported");
                 }
+
                 currentBackupResults.LastDocumentEtag = smugglerSource.LastEtag;
                 currentBackupResults.LastRaftIndex = smugglerSource.LastRaftIndex;
 
@@ -767,303 +762,40 @@ namespace Raven.Server.Documents.PeriodicBackup
                 Convert.FromBase64String(key));
         }
 
-        private async Task UploadToServer(string backupPath, string folderName, string fileName)
+        private void UploadToServer(string backupPath, string folderName, string fileName)
         {
-            var s3Settings = await GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
-            var glacierSettings = await GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, _database.Name));
-            var azureSettings = await GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
-            var googleCloudSettings = await GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
-            var ftpSettings = await GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x), settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
+            var s3Settings = GetBackupConfigurationFromScript(_configuration.S3Settings, x => JsonDeserializationServer.S3Settings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForS3(settings, _database.Name));
+            var glacierSettings = GetBackupConfigurationFromScript(_configuration.GlacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGlacier(settings, _database.Name));
+            var azureSettings = GetBackupConfigurationFromScript(_configuration.AzureSettings, x => JsonDeserializationServer.AzureSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForAzure(settings, _database.Name));
+            var googleCloudSettings = GetBackupConfigurationFromScript(_configuration.GoogleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForGoogleCloud(settings, _database.Name));
+            var ftpSettings = GetBackupConfigurationFromScript(_configuration.FtpSettings, x => JsonDeserializationServer.FtpSettings(x),
+                settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForFtp(settings, _database.Name));
 
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
-
-            var tasks = new List<Task>();
-
-            CreateUploadTaskIfNeeded(s3Settings, tasks, backupPath, _isFullBackup,
-                async (settings, stream, progress) =>
-                {
-                    var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
-                    await UploadToS3(settings, stream, folderName, fileName, progress, archiveDescription);
-                },
-                _backupResult.S3Backup);
-
-            CreateUploadTaskIfNeeded(glacierSettings, tasks, backupPath, _isFullBackup,
-                async (settings, stream, progress) =>
-                    await UploadToGlacier(settings, stream, folderName, fileName, progress),
-                _backupResult.GlacierBackup);
-
-            CreateUploadTaskIfNeeded(azureSettings, tasks, backupPath, _isFullBackup,
-                async (settings, stream, progress) =>
-                {
-                    var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
-                    await UploadToAzure(settings, stream, folderName, fileName, progress, archiveDescription);
-                },
-                _backupResult.AzureBackup);
-
-            CreateUploadTaskIfNeeded(googleCloudSettings, tasks, backupPath, _isFullBackup,
-                async (settings, stream, progress) =>
-                {
-                    var archiveDescription = GetArchiveDescription(_isFullBackup, _configuration.BackupType);
-                    await UploadToGoogleCloud(settings, stream, folderName, fileName, progress, archiveDescription);
-                },
-                _backupResult.GoogleCloudBackup);
-
-            CreateUploadTaskIfNeeded(ftpSettings, tasks, backupPath, _isFullBackup,
-                async (settings, stream, progress) =>
-                    await UploadToFtp(settings, stream, folderName, fileName, progress),
-                _backupResult.FtpBackup);
-
-            await Task.WhenAll(tasks);
-        }
-
-        private void CreateUploadTaskIfNeeded<S, T>(
-            S settings,
-            List<Task> tasks,
-            string backupPath,
-            bool isFullBackup,
-            Func<S, FileStream, Progress, Task> uploadToServer,
-            T uploadStatus)
-            where S : BackupSettings
-            where T : CloudUploadStatus
-        {
-            if (PeriodicBackupConfiguration.CanBackupUsing(settings) == false)
-                return;
-
-            Debug.Assert(uploadStatus != null);
-
-            var localUploadStatus = uploadStatus;
-
-            tasks.Add(Task.Run(async () =>
+            var uploaderSettings = new BackupUploaderSettings
             {
-                using (localUploadStatus.UpdateStats(isFullBackup))
-                using (var fileStream = File.OpenRead(backupPath))
-                {
-                    var uploadProgress = localUploadStatus.UploadProgress;
-                    localUploadStatus.Skipped = false;
-                    uploadProgress.ChangeState(UploadState.PendingUpload);
-                    uploadProgress.SetTotal(fileStream.Length);
+                S3Settings = s3Settings,
+                GlacierSettings = glacierSettings,
+                AzureSettings = azureSettings,
+                GoogleCloudSettings = googleCloudSettings,
+                FtpSettings = ftpSettings,
 
-                    AddInfo($"Starting {uploadStatus.GetType().AssemblyQualifiedName}");
+                BackupPath = backupPath,
+                FolderName = folderName,
+                FileName = fileName,
+                DatabaseName = _database.Name,
+                TaskName = _configuration.Name,
 
-                    try
-                    {
-                        var bytesPutsPerSec = new MeterMetric();
+                BackupType = _configuration.BackupType
+            };
 
-                        long lastUploadedInBytes = 0;
-                        var totalToUpload = new Sparrow.Size(uploadProgress.TotalInBytes, SizeUnit.Bytes).ToString();
-                        var sw = Stopwatch.StartNew();
-                        var progress = new Progress(uploadProgress)
-                        {
-                            OnUploadProgress = () =>
-                            {
-                                if (sw.ElapsedMilliseconds <= 1000)
-                                    return;
-
-                                var totalUploadedInBytes = uploadProgress.UploadedInBytes;
-                                bytesPutsPerSec.MarkSingleThreaded(totalUploadedInBytes - lastUploadedInBytes);
-                                lastUploadedInBytes = totalUploadedInBytes;
-                                var uploaded = new Sparrow.Size(totalUploadedInBytes, SizeUnit.Bytes);
-                                uploadProgress.BytesPutsPerSec = bytesPutsPerSec.MeanRate;
-                                AddInfo($"Uploaded: {uploaded} / {totalToUpload}");
-                                sw.Restart();
-                            }
-                        };
-
-                        await uploadToServer(settings, fileStream, progress);
-
-                        AddInfo($"Total uploaded: {totalToUpload}, " +
-                                $"took: {MsToHumanReadableString(uploadProgress.UploadTimeInMs)}");
-                    }
-                    catch (OperationCanceledException e)
-                    {
-                        // shutting down
-                        localUploadStatus.Exception = e.ToString();
-                        throw;
-                    }
-                    catch (Exception e)
-                    {
-                        localUploadStatus.Exception = e.ToString();
-                        throw new InvalidOperationException($"Failed to backup to {uploadStatus.GetType().FullName}", e);
-                    }
-                    finally
-                    {
-                        uploadProgress.ChangeState(UploadState.Done);
-                    }
-                }
-            }));
-        }
-
-        private static string MsToHumanReadableString(long milliseconds)
-        {
-            var durationsList = new List<string>();
-            var timeSpan = TimeSpan.FromMilliseconds(milliseconds);
-            var totalDays = (int)timeSpan.TotalDays;
-            if (totalDays >= 1)
-            {
-                durationsList.Add($"{totalDays:#,#;;0} day{Pluralize(totalDays)}");
-                timeSpan = timeSpan.Add(TimeSpan.FromDays(-1 * totalDays));
-            }
-
-            var totalHours = (int)timeSpan.TotalHours;
-            if (totalHours >= 1)
-            {
-                durationsList.Add($"{totalHours:#,#;;0} hour{Pluralize(totalHours)}");
-                timeSpan = timeSpan.Add(TimeSpan.FromHours(-1 * totalHours));
-            }
-
-            var totalMinutes = (int)timeSpan.TotalMinutes;
-            if (totalMinutes >= 1)
-            {
-                durationsList.Add($"{totalMinutes:#,#;;0} minute{Pluralize(totalMinutes)}");
-                timeSpan = timeSpan.Add(TimeSpan.FromMinutes(-1 * totalMinutes));
-            }
-
-            var totalSeconds = (int)timeSpan.TotalSeconds;
-            if (totalSeconds >= 1)
-            {
-                durationsList.Add($"{totalSeconds:#,#;;0} second{Pluralize(totalSeconds)}");
-                timeSpan = timeSpan.Add(TimeSpan.FromSeconds(-1 * totalSeconds));
-            }
-
-            var totalMilliseconds = (int)timeSpan.TotalMilliseconds;
-            if (totalMilliseconds > 0)
-            {
-                durationsList.Add($"{totalMilliseconds:#,#;;0} ms");
-            }
-
-            return string.Join(' ', durationsList.Take(2));
-        }
-
-        private static string Pluralize(int number)
-        {
-            return number > 1 ? "s" : string.Empty;
-        }
-
-        private async Task UploadToS3(
-            S3Settings settings,
-            Stream stream,
-            string folderName,
-            string fileName,
-            Progress progress,
-            string archiveDescription)
-        {
-            using (var client = new RavenAwsS3Client(settings, progress, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
-                await client.PutObject(key, stream, new Dictionary<string, string>
-                {
-                    {"Description", archiveDescription}
-                });
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup file '{fileName}' " +
-                                               $"to S3 bucket named: {settings.BucketName}, " +
-                                               $"with key: {key}");
-
-                var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
-                await runner.Execute();
-            }
-        }
-
-        private async Task UploadToGlacier(
-            GlacierSettings settings,
-            Stream stream,
-            string folderName,
-            string fileName,
-            Progress progress)
-        {
-            using (var client = new RavenAwsGlacierClient(settings, progress, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _database.Name, folderName, fileName);
-                var archiveId = await client.UploadArchive(stream, key);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup file '{fileName}' to Glacier, archive ID: {archiveId}");
-
-                var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
-                await runner.Execute();
-            }
-        }
-
-        private async Task UploadToFtp(
-            FtpSettings settings,
-            Stream stream,
-            string folderName,
-            string fileName,
-            Progress progress)
-        {
-            using (var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token))
-            {
-                await client.UploadFile(folderName, fileName, stream);
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup file '{fileName}' to an ftp server");
-
-                var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
-                await runner.Execute();
-            }
-        }
-
-        private async Task UploadToAzure(
-            AzureSettings settings,
-            Stream stream,
-            string folderName,
-            string fileName,
-            Progress progress,
-            string archiveDescription)
-        {
-            using (var client = new RavenAzureClient(settings, progress, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
-                await client.PutBlob(key, stream, new Dictionary<string, string>
-                {
-                    {"Description", archiveDescription}
-                });
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup file '{fileName}' " +
-                                 $"to Azure container: {settings.StorageContainer}, with key: {key}");
-
-                var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
-                await runner.Execute();
-            }
-        }
-
-        private async Task UploadToGoogleCloud(
-            GoogleCloudSettings settings,
-            Stream stream,
-            string folderName,
-            string fileName,
-            Progress progress,
-            string archiveDescription)
-        {
-            using (var client = new RavenGoogleCloudClient(settings, TaskCancelToken.Token, progress))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
-                await client.UploadObjectAsync(key, stream, new Dictionary<string, string>
-                {
-                    {"Description", archiveDescription}
-                });
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup file '{fileName}' " +
-                                 $"to Google cloud storage bucket: {settings.BucketName}");
-
-                var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
-                await runner.Execute();
-            }
-        }
-
-        private static string CombinePathAndKey(string path, string folderName, string fileName)
-        {
-            var prefix = string.IsNullOrWhiteSpace(path) == false ? (path + "/") : string.Empty;
-            return $"{prefix}{folderName}/{fileName}";
-        }
-
-        private string GetArchiveDescription(bool isFullBackup, BackupType backupType)
-        {
-            var fullBackupText = backupType == BackupType.Backup ? "Full backup" : "A snapshot";
-            return $"{(isFullBackup ? fullBackupText : "Incremental backup")} for db {_database.Name} at {SystemTime.UtcNow}";
+            var backupUploader = new BackupUploader(uploaderSettings, _retentionPolicyParameters, _logger, _backupResult, _onProgress, TaskCancelToken);
+            backupUploader.Execute();
         }
 
         private void UpdateOperationId(PeriodicBackupStatus runningBackupStatus)
@@ -1078,7 +810,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        private async Task WriteStatus(PeriodicBackupStatus status)
+        private void WriteStatus(PeriodicBackupStatus status)
         {
             AddInfo("Saving backup status");
 
@@ -1089,12 +821,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     PeriodicBackupStatus = status
                 };
 
-                var result = await _serverStore.SendToLeaderAsync(command);
+                var result = AsyncHelpers.RunSync(() => _serverStore.SendToLeaderAsync(command));
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
 
-                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+                AsyncHelpers.RunSync(() => _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index));
             }
             catch (Exception e)
             {

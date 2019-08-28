@@ -383,7 +383,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupStatus = store.Maintenance.Send(operation);
                 using (var client = new RavenAwsS3Client(S3Fact.S3Settings))
                 {
-                    lastFileToRestore = (await client.ListObjects(backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
+                    lastFileToRestore = (await client.ListObjectsAsync(backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
                 }
 
                 using (var session = store.OpenAsyncSession())

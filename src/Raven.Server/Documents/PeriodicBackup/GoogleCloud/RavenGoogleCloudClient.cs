@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         private const string ProjectIdPropertyName = "project_id";
 
-        public RavenGoogleCloudClient(GoogleCloudSettings settings, CancellationToken? cancellationToken = null, Progress progress = null)
+        public RavenGoogleCloudClient(GoogleCloudSettings settings, Progress progress = null, CancellationToken? cancellationToken = null)
         {
             try
             {
@@ -48,6 +48,34 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             CancellationToken = cancellationToken ?? CancellationToken.None;
 
             _progress = progress;
+        }
+
+        public Object UploadObject(string fileName, Stream stream, Dictionary<string, string> metadata = null)
+        {
+            return _client.UploadObject(
+                new Object { Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata }, stream,
+                progress: new Progress<IUploadProgress>(p =>
+                {
+                    if (_progress == null)
+                        return;
+
+                    switch (p.Status)
+                    {
+                        case UploadStatus.Starting:
+                        case UploadStatus.NotStarted:
+                            _progress.UploadProgress.ChangeState(UploadState.PendingUpload);
+                            break;
+                        case UploadStatus.Completed:
+                            _progress.UploadProgress.ChangeState(UploadState.Done);
+                            break;
+                        case UploadStatus.Uploading:
+                            _progress.UploadProgress.ChangeState(UploadState.Uploading);
+                            break;
+                    }
+
+                    _progress.UploadProgress.UploadedInBytes = p.BytesSent;
+                    _progress.OnUploadProgress();
+                }));
         }
 
         public Task<Object> UploadObjectAsync(string fileName, Stream stream, Dictionary<string, string> metadata = null)
