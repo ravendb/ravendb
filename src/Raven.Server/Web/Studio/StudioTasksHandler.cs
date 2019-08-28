@@ -1,28 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using NCrontab.Advanced;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.Utils;
-using Raven.Server.Web.System;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Raven.Server.Config;
-using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Json;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Server.Web.System;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Web.Studio
 {
@@ -115,7 +113,7 @@ namespace Raven.Server.Web.Studio
                         using (var client = new RavenAwsS3Client(s3Settings))
                         {
                             // fetching only the first 64 results for the auto complete
-                            var folders = await client.ListObjects(s3Settings.RemoteFolderName , "/", true, 64);
+                            var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName , "/", true, 64);
                             folderPathOptions = new FolderPathOptions();
                             foreach (var folder in folders.FileInfoDetails)
                             {

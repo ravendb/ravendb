@@ -6,6 +6,8 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public bool Disabled { get; set; }
 
+        public string Name { get; set; }
+
         public GetBackupConfigurationScript GetBackupConfigurationScript { get; set; }
 
         public virtual bool HasSettings()
@@ -129,6 +131,8 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string BucketName { get; set; }
 
+        public new string Name { get; set; } = "S3";
+
         public override bool HasSettings()
         {
             if (base.HasSettings())
@@ -171,6 +175,8 @@ namespace Raven.Client.Documents.Operations.Backups
         /// Amazon Glacier Vault name.
         /// </summary>
         public string VaultName { get; set; }
+
+        public new string Name { get; set; } = "AWS Glacier";
 
         public override bool HasSettings()
         {
@@ -224,6 +230,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string AccountKey { get; set; }
 
+        public new string Name { get; set; } = "Azure";
+
         public override bool HasSettings()
         {
             if (base.HasSettings())
@@ -270,6 +278,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string CertificateFileName { get; set; }
 
+        public new string Name { get; set; } = "FTP";
+
         public override bool HasSettings()
         {
             if (base.HasSettings())
@@ -308,6 +318,8 @@ namespace Raven.Client.Documents.Operations.Backups
         /// Authentication credentials to your Google Cloud Storage.
         /// </summary>
         public string GoogleCredentialsJson { get; set; }
+
+        public new string Name { get; set; } = "Google Cloud";
 
         public override bool HasSettings()
         {

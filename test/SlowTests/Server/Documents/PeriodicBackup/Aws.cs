@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json;
@@ -26,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
-        public async Task put_object(string region)
+        public void put_object(string region)
         {
             var bucketName = $"testing-{Guid.NewGuid()}";
             var key = $"test-key-{Guid.NewGuid()}";
@@ -34,25 +33,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var client = new RavenAwsS3Client(GetS3Settings(region, bucketName)))
             {
                 // make sure that the bucket doesn't exist
-                await client.DeleteBucket();
+                client.DeleteBucket();
 
                 try
                 {
-                    await client.PutBucket();
+                    client.PutBucket();
 
                     var value1 = Guid.NewGuid().ToString();
                     var value2 = Guid.NewGuid().ToString();
-                    await client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
+                    client.PutObject(key, new MemoryStream(Encoding.UTF8.GetBytes("231")), new Dictionary<string, string>
                     {
                         {"property1", value1},
                         {"property2", value2}
                     });
 
                     // can't delete a bucket with existing objects
-                    var e = await Assert.ThrowsAsync<StorageException>(async () => await client.DeleteBucket());
+                    var e = Assert.Throws<StorageException>(() => client.DeleteBucket());
                     Assert.True(e.Message.Contains("The bucket you tried to delete is not empty"));
 
-                    var @object = await client.GetObject(key);
+                    var @object = client.GetObject(key);
                     Assert.NotNull(@object);
 
                     using (var reader = new StreamReader(@object.Data))
@@ -66,8 +65,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    await client.DeleteObject(key);
-                    await client.DeleteBucket();
+                    client.DeleteObject(key);
+                    client.DeleteBucket();
                 }
             }
         }
@@ -75,7 +74,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1, WestRegion2)]
         [InlineData(WestRegion2, EastRegion1)]
-        public async Task can_get_correct_error_s3(string region1, string region2)
+        public void can_get_correct_error_s3(string region1, string region2)
         {
             var bucketName = $"testing-{Guid.NewGuid()}";
             var key = Guid.NewGuid().ToString();
@@ -84,7 +83,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var clientRegion2 = new RavenAwsS3Client(GetS3Settings(region2, bucketName)))
             {
                 // make sure that the bucket doesn't exist
-                await clientRegion1.DeleteBucket();
+                clientRegion1.DeleteBucket();
 
                 try
                 {
@@ -94,24 +93,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         sb.Append("a");
                     }
 
-                    var error1 = await Assert.ThrowsAsync<BucketNotFoundException>(async () =>
+                    var error1 = Assert.Throws<BucketNotFoundException>(() =>
                     {
                         using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                         {
-                            await clientRegion1.PutObject(key,
+                            clientRegion1.PutObject(key,
                                 memoryStream,
                                 new Dictionary<string, string>());
                         }
                     });
                     Assert.Equal($"Bucket name '{bucketName}' doesn't exist!", error1.Message);
 
-                    await clientRegion1.PutBucket();
+                    clientRegion1.PutBucket();
 
-                    var error2 = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                    var error2 = Assert.Throws<InvalidOperationException>(() =>
                     {
                         using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                         {
-                            await clientRegion2.PutObject(key,
+                            clientRegion2.PutObject(key,
                                 memoryStream,
                                 new Dictionary<string, string>());
                         }
@@ -120,7 +119,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    await clientRegion1.DeleteBucket();
+                    clientRegion1.DeleteBucket();
                 }
             }
         }
@@ -147,14 +146,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(EastRegion1, 14, true, UploadType.Chunked)]
         [InlineData(WestRegion2, 14, true, UploadType.Chunked)]
         // ReSharper disable once InconsistentNaming
-        public async Task put_object_multipart(string region, 
+        public void put_object_multipart(string region, 
             int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
-            await PutObject(region, sizeInMB, testBlobKeyAsFolder, uploadType);
+            PutObject(region, sizeInMB, testBlobKeyAsFolder, uploadType);
         }
 
         // ReSharper disable once InconsistentNaming
-        private static async Task PutObject(string region, 
+        private static void PutObject(string region, 
             int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
             var bucketName = $"testing-{Guid.NewGuid()}";
@@ -172,11 +171,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 minOnePartUploadSizeLimitInBytesSetter(client, 7 * 1024 * 1024); // 7MB
 
                 // make sure that the bucket doesn't exist
-                await client.DeleteBucket();
+                client.DeleteBucket();
 
                 try
                 {
-                    await client.PutBucket();
+                    client.PutBucket();
 
                     var value1 = Guid.NewGuid().ToString();
                     var value2 = Guid.NewGuid().ToString();
@@ -191,7 +190,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                     {
                         streamLength = memoryStream.Length;
-                        await client.PutObject(key,
+                        client.PutObject(key,
                             memoryStream,
                             new Dictionary<string, string>
                             {
@@ -200,7 +199,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             });
                     }
 
-                    var @object = await client.GetObject(key);
+                    var @object = client.GetObject(key);
                     Assert.NotNull(@object);
 
                     using (var reader = new StreamReader(@object.Data))
@@ -219,8 +218,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    await client.DeleteObject(key);
-                    await client.DeleteBucket();
+                    client.DeleteObject(key);
+                    client.DeleteBucket();
                 }
             }
         }
@@ -228,15 +227,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
-        public async Task upload_archive(string region)
+        public void upload_archive(string region)
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
             using (var client = new RavenAwsGlacierClient(GetGlacierSettings(region, vaultName)))
             {
-                await client.PutVault();
+                client.PutVault();
 
-                var archiveId = await client.UploadArchive(
+                var archiveId = client.UploadArchive(
                     new MemoryStream(Encoding.UTF8.GetBytes("321")),
                     "sample description");
 
@@ -247,7 +246,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
-        public async Task upload_archive_with_remote_folder_name(string region)
+        public void upload_archive_with_remote_folder_name(string region)
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
 
@@ -255,9 +254,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             glacierSettings.RemoteFolderName = Guid.NewGuid().ToString();
             using (var client = new RavenAwsGlacierClient(glacierSettings))
             {
-                await client.PutVault();
+                client.PutVault();
 
-                var archiveId = await client.UploadArchive(
+                var archiveId = client.UploadArchive(
                     new MemoryStream(Encoding.UTF8.GetBytes("321")),
                     "sample description");
 
@@ -268,7 +267,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1, WestRegion2)]
         [InlineData(WestRegion2, EastRegion1)]
-        public async Task can_get_correct_error_glacier(string region1, string region2)
+        public void can_get_correct_error_glacier(string region1, string region2)
         {
             var vaultName1 = $"testing-{Guid.NewGuid()}";
             var vaultName2 = $"testing-{Guid.NewGuid()}";
@@ -276,17 +275,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var clientRegion1 = new RavenAwsGlacierClient(GetGlacierSettings(region1, vaultName1)))
             using (var clientRegion2 = new RavenAwsGlacierClient(GetGlacierSettings(region2, vaultName2)))
             {
-                var e = await Assert.ThrowsAsync<VaultNotFoundException>(async () =>
+                var e = Assert.Throws<VaultNotFoundException>(() =>
                 {
-                    await clientRegion2.UploadArchive(
+                   clientRegion2.UploadArchive(
                         new MemoryStream(Encoding.UTF8.GetBytes("321")),
                         "sample description");
                 });
                 Assert.Equal(e.Message, $"Vault name '{vaultName2}' doesn't exist in {region2}!");
 
-                e = await Assert.ThrowsAsync<VaultNotFoundException>(async () =>
+                e = Assert.Throws<VaultNotFoundException>(() =>
                 {
-                    await clientRegion1.UploadArchive(
+                    clientRegion1.UploadArchive(
                         new MemoryStream(Encoding.UTF8.GetBytes("321")),
                         "sample description");
                 });
@@ -315,14 +314,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(EastRegion1, 14, 3, UploadType.Chunked)]
         [InlineData(WestRegion2, 14, 2, UploadType.Chunked)]
         [InlineData(WestRegion2, 14, 3, UploadType.Chunked)]
-        public async Task upload_archive_multipart(string region, 
+        public void upload_archive_multipart(string region, 
             int sizeInMB, int minOnePartSizeInMB, UploadType uploadType)
         {
-            await UploadArchive(region, sizeInMB, minOnePartSizeInMB, uploadType);
+            UploadArchive(region, sizeInMB, minOnePartSizeInMB, uploadType);
         }
 
         // ReSharper disable once InconsistentNaming
-        private static async Task UploadArchive(string region, 
+        private static void UploadArchive(string region, 
             int sizeInMB, int minOnePartSizeInMB, UploadType uploadType)
         {
             var vaultName = $"testing-{Guid.NewGuid()}";
@@ -336,7 +335,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 maxUploadArchiveSizeInBytes(client, 10 * 1024 * 1024); // 9MB
                 minOnePartUploadSizeLimitInBytes(client, minOnePartSizeInMB * 1024 * 1024);
 
-                await client.PutVault();
+                client.PutVault();
 
                 var sb = new StringBuilder();
                 for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
@@ -348,7 +347,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
                 {
                     streamLength = memoryStream.Length;
-                    var archiveId = await client.UploadArchive(memoryStream,
+                    var archiveId = client.UploadArchive(memoryStream,
                         $"testing-upload-archive-{Guid.NewGuid()}");
 
                     Assert.NotNull(archiveId);
