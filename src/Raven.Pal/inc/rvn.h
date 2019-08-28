@@ -107,7 +107,7 @@ EXPORT int32_t
 rvn_remap(void *base_address, void **new_address, void *handle, int64_t size, int32_t flags, int64_t offset, int32_t *detailed_error_code);
 
 EXPORT int32_t
-rvn_mmap_file(int64_t sz, int64_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code);
+rvn_mmap_file(int64_t sz, int32_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code);
 
 EXPORT int32_t
 rvn_create_file(const char *path, int64_t initial_file_size, int32_t flags, void **handle, int64_t *actual_file_size, int32_t *detailed_error_code);
