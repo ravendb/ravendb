@@ -290,8 +290,10 @@ rvn_remap(void *base_address, void **new_address, void *handle, int64_t size, in
     return rc;
 }
 
+
+/* ADIADI:: The mfh is illegal (probably passing void ** instead of void*? why fail only on the pi itself? is happening from remap?) */
 EXPORT int32_t
-rvn_mmap_file(int64_t sz, int64_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code)
+rvn_mmap_file(int64_t sz, int32_t flags, void *handle, int64_t offset, void **addr, int32_t *detailed_error_code)
 {
     struct map_file_handle* mfh = (struct map_file_handle *)handle;
     int32_t mmap_flags = 0;
@@ -299,13 +301,14 @@ rvn_mmap_file(int64_t sz, int64_t flags, void *handle, int64_t offset, void **ad
         mmap_flags |= MAP_PRIVATE;
     else
         mmap_flags |= MAP_SHARED;
-   
+
     *addr = rvn_mmap(NULL, sz, PROT_READ | PROT_WRITE, mmap_flags, mfh->fd, offset);
     if (*addr == MAP_FAILED)
     {
         *detailed_error_code = errno;
         return FAIL_MMAP64;
     }
+
     return SUCCESS;
 }
 

@@ -292,10 +292,6 @@ namespace Voron.Impl.Paging
 
                 var startingBaseAddressIntPtr = new IntPtr(startingBaseAddressPtr);
                 NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressIntPtr, size, GetAllocatedInBytes);
-                if (File.Exists("/tmp/debug.tmp"))
-                {
-                    Console.WriteLine(Environment.StackTrace);
-                }
 
                 Interlocked.Add(ref _totalMapped, size);
                 var mappedAddresses = new MappedAddresses
