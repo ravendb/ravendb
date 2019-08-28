@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -22,15 +23,17 @@ namespace Raven.Server.Documents.Handlers
         {
             var documentId = GetStringQueryString("id");
             var name = GetStringQueryString("name");
-            var from = GetDateTimeQueryString("from", required: false) ?? DateTime.MinValue;
-            var to = GetDateTimeQueryString("to", required: false) ?? DateTime.MaxValue;
+            var fromList = GetStringValuesQueryString("from", required: false);
+            var toList = GetStringValuesQueryString("to", required: false);
 
+            if (fromList.Count != toList.Count)
+            {
+                throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
+            }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, name, from, to);
-
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -43,61 +46,25 @@ namespace Raven.Server.Documents.Handlers
                         writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
                         writer.WriteStartObject();
                         {
-
                             writer.WritePropertyName(name);
 
-                            writer.WriteStartObject();
+                            writer.WriteStartArray();
+
+                            if (fromList.Count == 0)
                             {
-
-                                writer.WritePropertyName(nameof(TimeSeriesRange.Name));
-                                writer.WriteString(name);
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(TimeSeriesRange.From));
-                                writer.WriteDateTime(from, true);
-                                writer.WriteComma();
-
-
-                                writer.WritePropertyName(nameof(TimeSeriesRange.To));
-                                writer.WriteDateTime(to, true);
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(TimeSeriesRange.FullRange));
-                                writer.WriteBool(false); // TODO: Need to figure this out
-                                writer.WriteComma();
-
-                                writer.WritePropertyName(nameof(TimeSeriesRange.Values));
-                                writer.WriteStartArray();
-                                {
-                                    var first = true;
-                                    foreach (var item in reader.AllValues())
-                                    {
-                                        if (first)
-                                        {
-                                            first = false;
-                                        }
-                                        else
-                                        {
-                                            writer.WriteComma();
-                                        }
-                                        writer.WriteStartObject();
-
-                                        writer.WritePropertyName(nameof(TimeSeriesValue.Timestamp));
-                                        writer.WriteDateTime(item.TimeStamp, true);
-                                        writer.WriteComma();
-                                        writer.WritePropertyName(nameof(TimeSeriesValue.Tag));
-                                        writer.WriteString(item.Tag);
-                                        writer.WriteComma();
-                                        writer.WriteArray(nameof(TimeSeriesValue.Values), item.Values);
-
-                                        writer.WriteEndObject();
-                                    }
-                                }
-                                writer.WriteEndArray();
-
-
+                                WriteRange(context, writer, documentId, name, DateTime.MinValue, DateTime.MaxValue);
                             }
-                            writer.WriteEndObject();
+                            else
+                            {
+                                for (int i = 0; i < fromList.Count; i++)
+                                {
+                                    var (from, to) = ParseDates(fromList[i], toList[i], name);
+
+                                    WriteRange(context, writer, documentId, name, from, to);
+                                }
+                            }
+
+                            writer.WriteEndArray();
 
                         }
                         writer.WriteEndObject();
@@ -109,6 +76,74 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
             return Task.CompletedTask;
+        }
+
+        private static (DateTime From, DateTime To) ParseDates(string fromStr, string toStr, string name)
+        {
+            if (DateTime.TryParseExact(fromStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
+                    CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var from) == false)
+                ThrowInvalidDateTime(name, fromStr);
+
+            if (DateTime.TryParseExact(toStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
+                    CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var to) == false)
+                ThrowInvalidDateTime(name, toStr);
+
+            return (from, to);
+        }
+
+        private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to)
+        {
+            writer.WriteStartObject();
+            {
+                writer.WritePropertyName(nameof(TimeSeriesRange.Name));
+                writer.WriteString(name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRange.From));
+                writer.WriteDateTime(from, true);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRange.To));
+                writer.WriteDateTime(to, true);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRange.FullRange));
+                writer.WriteBool(false); // TODO: Need to figure this out
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRange.Values));
+                writer.WriteStartArray();
+                {
+                    var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, docId, name, from, to);
+                    var first = true;
+
+                    foreach (var item in reader.AllValues())
+                    {
+                        if (first)
+                        {
+                            first = false;
+                        }
+                        else
+                        {
+                            writer.WriteComma();
+                        }
+
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(TimeSeriesValue.Timestamp));
+                        writer.WriteDateTime(item.TimeStamp, true);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesValue.Tag));
+                        writer.WriteString(item.Tag);
+                        writer.WriteComma();
+                        writer.WriteArray(nameof(TimeSeriesValue.Values), item.Values);
+
+                        writer.WriteEndObject();
+                    }
+                }
+                writer.WriteEndArray();
+            }
+            writer.WriteEndObject();
         }
 
         [RavenAction("/databases/*/timeseries", "POST", AuthorizationStatus.ValidUser)]

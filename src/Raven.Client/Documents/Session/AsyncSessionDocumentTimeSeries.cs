@@ -33,8 +33,7 @@ namespace Raven.Client.Documents.Session
             {
                 if (ranges[0].From > to || ranges[ranges.Count - 1].To < from)
                 {
-                    // the requested range is out of cache bounds
-                    // get entire range [from, to] from server
+                    // the entire range [from, to] is out of cache bounds
 
                     Session.IncrementRequestCount();
 
@@ -45,10 +44,10 @@ namespace Raven.Client.Documents.Session
                     if (Session.NoTracking == false)
                     {
                         var index = ranges[0].From > to ? 0 : ranges.Count;
-                        ranges.Insert(index, details.Values[timeseries]);
+                        ranges.Insert(index, details.Values[timeseries][0]);
                     }
 
-                    return details.Values[timeseries].Values;
+                    return details.Values[timeseries][0].Values;
                 }
 
                 // try to find a range in cache that contains [from, to]
@@ -95,19 +94,14 @@ namespace Raven.Client.Documents.Session
                     rangesToGetFromServer.Add((ranges[ranges.Count - 1].To, to));
                 }
 
-                var resultFromServer = new TimeSeriesDetails[rangesToGetFromServer.Count];
-
-                for (var index = 0; index < rangesToGetFromServer.Count; index++)
-                {
-                    resultFromServer[index] = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer[index].From, rangesToGetFromServer[index].To), Session.SessionInfo, token: token)
-                        .ConfigureAwait(false);
-                }
+                details = await Session.Operations.SendAsync(
+                        new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer), Session.SessionInfo, token: token)
+                    .ConfigureAwait(false);
 
                 var values = MergeRangesWithResult(
                     fromRangeIndex, 
-                    toRangeIndex == ranges.Count ? ranges.Count - 1 : toRangeIndex, 
-                    resultFromServer, 
+                    toRangeIndex == ranges.Count ? ranges.Count - 1 : toRangeIndex,
+                    details.Values[timeseries], 
                     out var skip, 
                     out var trim);
 
@@ -301,14 +295,14 @@ namespace Raven.Client.Documents.Session
 
                 cache[timeseries] = new List<TimeSeriesRange>
                 {
-                    details.Values[timeseries]
+                    details.Values[timeseries][0]
                 };
                 
             }
 
-            return details.Values[timeseries].Values;
+            return details.Values[timeseries][0].Values;
 
-            TimeSeriesValue[] MergeRangesWithResult(int fromRangeIndex, int toRangeIndex, TimeSeriesDetails[] resultFromServer, out int skip, out int trim)
+            TimeSeriesValue[] MergeRangesWithResult(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRange> resultFromServer, out int skip, out int trim)
             {
                 skip = 0;
                 trim = 0;
@@ -339,10 +333,10 @@ namespace Raven.Client.Documents.Session
                         continue;
                     }
 
-                    if (currentResultIndex < resultFromServer.Length &&
-                        resultFromServer[currentResultIndex].Values[timeseries].From < ranges[i].From)
+                    if (currentResultIndex < resultFromServer.Count &&
+                        resultFromServer[currentResultIndex].From < ranges[i].From)
                     {
-                        values.AddRange(resultFromServer[currentResultIndex++].Values[timeseries].Values.Skip(values.Count == 0 ? 0 : 1));
+                        values.AddRange(resultFromServer[currentResultIndex++].Values.Skip(values.Count == 0 ? 0 : 1));
                     }
 
                     if (i == toRangeIndex)
@@ -362,12 +356,12 @@ namespace Raven.Client.Documents.Session
                     values.AddRange(ranges[i].Values.Skip(values.Count == 0 ? 0 : 1));
                 }
 
-                if (currentResultIndex < resultFromServer.Length)
+                if (currentResultIndex < resultFromServer.Count)
                 {
-                    values.AddRange(resultFromServer[currentResultIndex++].Values[timeseries].Values.Skip(values.Count == 0 ? 0 : 1));
+                    values.AddRange(resultFromServer[currentResultIndex++].Values.Skip(values.Count == 0 ? 0 : 1));
                 }
 
-                Debug.Assert(currentResultIndex == resultFromServer.Length);
+                Debug.Assert(currentResultIndex == resultFromServer.Count);
 
                 return values.ToArray();
             }

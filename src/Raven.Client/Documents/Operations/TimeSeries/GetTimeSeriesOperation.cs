@@ -13,44 +13,41 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         private readonly string _docId;
         private readonly string _timeseries;
-        private readonly DateTime _from, _to;
+        private readonly List<(DateTime From, DateTime To)> _ranges;
 
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to)
         {
             _docId = docId;
             _timeseries = timeseries;
-            _from = from;
-            _to = to;
+            _ranges = new List<(DateTime, DateTime)>
+            {
+                (from, to)
+            };
+        }
+
+        public GetTimeSeriesOperation(string docId, string timeseries, List<(DateTime From, DateTime To)> ranges)
+        {
+            _docId = docId;
+            _timeseries = timeseries;
+            _ranges = ranges;
         }
 
         public RavenCommand<TimeSeriesDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetTimeSeriesCommand(_docId, _timeseries, _from, _to);
+            return new GetTimeSeriesCommand(_docId, _timeseries, _ranges);
         }
 
         private class GetTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
         {
             private readonly string _docId;
             private readonly string _timeseries;
-            private readonly DateTime _from, _to;
+            private readonly List<(DateTime From, DateTime To)> _ranges;
 
-            public GetTimeSeriesCommand(string docId, string timeseries, DateTime from, DateTime to)
+            public GetTimeSeriesCommand(string docId, string timeseries, List<(DateTime From, DateTime To)> ranges)
             {
-                _docId = docId;
-                _timeseries = timeseries;
-
-                if (from.Kind == DateTimeKind.Local)
-                {
-                    from = DateTime.SpecifyKind(from, DateTimeKind.Unspecified);
-                }
-
-                if (to.Kind == DateTimeKind.Local)
-                {
-                    to = DateTime.SpecifyKind(to, DateTimeKind.Unspecified);
-                }
-
-                _from = from;
-                _to = to;
+                _docId = docId ?? throw new ArgumentNullException(nameof(docId));
+                _timeseries = timeseries ?? throw new ArgumentNullException(nameof(timeseries));
+                _ranges = ranges;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -62,12 +59,27 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     .Append("id=")
                     .Append(Uri.EscapeDataString(_docId))
                     .Append("&name=")
-                    .Append(Uri.EscapeDataString(_timeseries))
-                    .Append("&from=")
-                    .Append(_from.ToString("o"))
-                    .Append("&to=")
-                    .Append(_to.ToString("o"));
-                
+                    .Append(Uri.EscapeDataString(_timeseries));
+
+                if (_ranges != null)
+                {
+                    foreach (var range in _ranges)
+                    {
+                        var f = range.From.Kind == DateTimeKind.Local
+                            ? DateTime.SpecifyKind(range.From, DateTimeKind.Unspecified)
+                            : range.From;
+
+                        var t = range.To.Kind == DateTimeKind.Local
+                            ? DateTime.SpecifyKind(range.To, DateTimeKind.Unspecified)
+                            : range.To;
+
+                        pathBuilder.Append("&from=")
+                            .Append(f.ToString("o"))
+                            .Append("&to=")
+                            .Append(t.ToString("o"));
+                    }
+                }
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get
@@ -93,6 +105,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class TimeSeriesDetails
     {
         public string Id;
-        public Dictionary<string, TimeSeriesRange> Values = new Dictionary<string, TimeSeriesRange>();
+        public Dictionary<string, List<TimeSeriesRange>> Values = new Dictionary<string, List<TimeSeriesRange>>();
     }
 }
