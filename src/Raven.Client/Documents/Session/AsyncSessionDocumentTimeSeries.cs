@@ -50,226 +50,32 @@ namespace Raven.Client.Documents.Session
                     return details.Values[timeseries][0].Values;
                 }
 
-                // try to find a range in cache that contains [from, to]
-                // if found, chop just the relevant part from it and return to user
-
-                // otherwise, try to find two ranges (fromRange, toRange),
-                // such that 'fromRange' is the last occurence for which range.From <= from
-                // and 'toRange' is the first occurence for which range.To >= to.
-                // At the same time, figure out the missing partial ranges that we need to get from server.
-
-                var fromRangeIndex = -1;
-                int toRangeIndex;
-
-                var rangesToGetFromServer = new List<(DateTime From, DateTime To)>();
-
-                for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
+                if (GetFromCacheOrFigureOutMissingParts(from, to, ranges,
+                    out var fromRangeIndex, out var toRangeIndex,
+                    out var rangesToGetFromServer, out var resultToUser))
                 {
-                    if (ranges[toRangeIndex].From <= from)
-                    {
-                        if (ranges[toRangeIndex].To >= to)
-                        {
-                            // we have the entire range in cache
-                            return ChopRelevantRange(ranges[toRangeIndex], from, to);
-                        }
-
-                        fromRangeIndex = toRangeIndex;
-                        continue;
-                    }
-
-                    var (f, t) = (toRangeIndex == 0 || ranges[toRangeIndex - 1].To < from ? from : ranges[toRangeIndex - 1].To,
-                        ranges[toRangeIndex].From <= to ? ranges[toRangeIndex].From : to);
-
-                    rangesToGetFromServer.Add((f, t));
-
-                    if (ranges[toRangeIndex].To >= to)
-                        break;
+                    return resultToUser;
                 }
 
                 // can't get the entire range from cache
                 Session.IncrementRequestCount();
 
-                if (toRangeIndex == ranges.Count)
-                {
-                    rangesToGetFromServer.Add((ranges[ranges.Count - 1].To, to));
-                }
-
                 details = await Session.Operations.SendAsync(
                         new GetTimeSeriesOperation(DocId, timeseries, rangesToGetFromServer), Session.SessionInfo, token: token)
                     .ConfigureAwait(false);
 
-                var values = MergeRangesWithResult(
+                var values = MergeRangesAndResults(
                     fromRangeIndex, 
                     toRangeIndex == ranges.Count ? ranges.Count - 1 : toRangeIndex,
                     details.Values[timeseries], 
-                    out var skip, 
-                    out var trim);
-
-                if (fromRangeIndex == -1)
-                {
-                    // all ranges in cache start after 'from'
-
-                    if (toRangeIndex == ranges.Count)
-                    {
-                        // the requested range [from, to] contains all the ranges that are in cache 
-
-                        if (Session.NoTracking == false)
-                        {
-                            cache[timeseries] = new List<TimeSeriesRange>
-                            {
-                                new TimeSeriesRange
-                                {
-                                    Name = timeseries,
-                                    From = from,
-                                    To = to,
-                                    Values = values
-                                }
-                            };
-                        }
-
-                        return values;
-
-                    }
-
-                    if (ranges[toRangeIndex].From > to)
-                    {
-                        // requested range ends before 'toRange'
-
-                        if (Session.NoTracking == false)
-                        {
-                            // remove all ranges that come before 'toRange' from cache
-                            // add the new range at the beginning of the list
-
-                            ranges.RemoveRange(0, toRangeIndex);
-                            ranges.Insert(0, new TimeSeriesRange
-                            {
-                                Name = timeseries,
-                                From = from,
-                                To = to,
-                                Values = values
-                            });
-                        }
-
-                        return values;
-                    }
-                   
-                    if (Session.NoTracking == false)
-                    {
-                        // merge the result from server into 'toRange'
-                        // remove all ranges that come before 'toRange' from cache
-
-                        ranges[toRangeIndex].From = from;
-                        ranges[toRangeIndex].Values = values;
-                        ranges.RemoveRange(0, toRangeIndex);
-                    }
-
-                    return values.Take(values.Length - trim);
-
-                }
-                
-                if (toRangeIndex == ranges.Count)
-                {
-                    // all the ranges in cache end before 'to'
-
-                    if (ranges[fromRangeIndex].To < from)
-                    {
-                        if (Session.NoTracking == false)
-                        {
-                            // remove all the ranges that come after 'fromRange' from cache 
-                            // add the merged values as a new range at the end of the list
-
-                            ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
-                            ranges.Add(new TimeSeriesRange
-                            {
-                                From = from,
-                                To = to,
-                                Name = timeseries,
-                                Values = values
-                            });
-                        }
-
-                        return values;
-                    }
-
-                    if (Session.NoTracking == false)
-                    {
-                        // merge result into 'fromRange'
-                        // remove all the ranges from cache that come after 'fromRange' 
-
-                        ranges[fromRangeIndex].To = to;
-                        ranges[fromRangeIndex].Values = values;
-                        ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
-                    }
-
-                    return values.Skip(skip);
-
-                }
-
-                // the requested range is inside cache bounds 
-
-                if (ranges[fromRangeIndex].To < from)
-                {
-                    if (ranges[toRangeIndex].From > to)
-                    {
-                        if (Session.NoTracking == false)
-                        {
-                            // remove all ranges in between 'fromRange' and 'toRange'
-                            // place new range in between 'fromRange' and 'toRange'
-
-                            ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-                            ranges.Insert(fromRangeIndex + 1, new TimeSeriesRange
-                            {
-                                Name = timeseries,
-                                From = from,
-                                To = to,
-                                Values = values
-                            });
-                        }
-
-                        return values;
-                    }
-
-                    if (Session.NoTracking == false)
-                    {
-                        // merge the new range into 'toRange'
-                        // remove all ranges in between 'fromRange' and 'toRange'
-
-                        ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-                        ranges[toRangeIndex].From = from;
-                        ranges[toRangeIndex].Values = values;
-                    }
-
-                    return values.Take(values.Length - trim);
-                }
-
-                if (ranges[toRangeIndex].From > to)
-                {
-                    if (Session.NoTracking == false)
-                    {
-                        // remove all ranges in between 'fromRange' and 'toRange'
-                        // merge new range into 'fromRange'
-
-                        ranges[fromRangeIndex].To = to;
-                        ranges[fromRangeIndex].Values = values;
-                        ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-                    }
-
-                    return values.Skip(skip);
-                }
+                    out resultToUser);
 
                 if (Session.NoTracking == false)
                 {
-                    // merge all ranges in between 'fromRange' and 'toRange'
-                    // into a single range [fromRange.From, toRange.To]
-
-                    ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
-                    ranges[fromRangeIndex].Values = values;
-
-                    ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
+                    AddToCache(timeseries, from, to, fromRangeIndex, toRangeIndex, ranges, cache, values);
                 }
 
-                return values.Skip(skip).Take(values.Length - skip - trim);
-                
+                return resultToUser;
             }
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
@@ -302,10 +108,10 @@ namespace Raven.Client.Documents.Session
 
             return details.Values[timeseries][0].Values;
 
-            TimeSeriesValue[] MergeRangesWithResult(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRange> resultFromServer, out int skip, out int trim)
+            TimeSeriesValue[] MergeRangesAndResults(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRange> resultFromServer, out IEnumerable<TimeSeriesValue> resultToUser)
             {
-                skip = 0;
-                trim = 0;
+                var skip = 0;
+                var trim = 0;
                 var currentResultIndex = 0;
                 var values = new List<TimeSeriesValue>();
 
@@ -326,7 +132,9 @@ namespace Raven.Client.Documents.Session
                             {
                                 values.Add(v);
                                 if (v.Timestamp < from)
+                                {
                                     skip++;
+                                }
                             }
                         }
 
@@ -347,9 +155,12 @@ namespace Raven.Client.Documents.Session
                             {
                                 values.Add(ranges[i].Values[index]);
                                 if (ranges[i].Values[index].Timestamp > to)
+                                {
                                     trim++;
+                                }
                             }
                         }
+
                         continue;
                     }
 
@@ -363,8 +174,244 @@ namespace Raven.Client.Documents.Session
 
                 Debug.Assert(currentResultIndex == resultFromServer.Count);
 
+                resultToUser = SkipAndTrimRangeIfNeeded(from, to, 
+                    fromRange: fromRangeIndex == -1 ? null : ranges[fromRangeIndex], 
+                    toRange: toRangeIndex == ranges.Count ? null : ranges[toRangeIndex], 
+                    values, skip, trim);
+
                 return values.ToArray();
             }
+        }
+
+        private static IEnumerable<TimeSeriesValue> SkipAndTrimRangeIfNeeded(
+            DateTime from, 
+            DateTime to, 
+            TimeSeriesRange fromRange, 
+            TimeSeriesRange toRange, 
+            List<TimeSeriesValue> values, 
+            int skip, 
+            int trim)
+        {
+            if (fromRange != null && fromRange.To >= from)
+            {
+                // need to skip a part of the first range 
+
+                if (toRange != null && toRange.From <= to)
+                {
+                    // also need to trim a part of the last range 
+                    return values.Skip(skip).Take(values.Count - skip - trim);
+                }
+
+                return values.Skip(skip);
+            }
+
+            if (toRange != null && toRange.From <= to)
+            {
+                // trim a part of the last range 
+                return values.Take(values.Count - trim);
+            }
+
+            return values;
+        }
+
+        private static bool GetFromCacheOrFigureOutMissingParts(
+            DateTime from, 
+            DateTime to,
+            List<TimeSeriesRange> ranges, 
+            out int fromRangeIndex, 
+            out int toRangeIndex, 
+            out List<(DateTime, DateTime)> rangesToGetFromServer,
+            out IEnumerable<TimeSeriesValue> result)
+        {
+            // try to find a range in cache that contains [from, to]
+            // if found, chop just the relevant part from it and return to the user.
+
+            // otherwise, try to find two ranges (fromRange, toRange),
+            // such that 'fromRange' is the last occurence for which range.From <= from
+            // and 'toRange' is the first occurence for which range.To >= to.
+            // At the same time, figure out the missing partial ranges that we need to get from the server.
+
+            fromRangeIndex = -1;
+            rangesToGetFromServer = default;
+
+            for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
+            {
+                if (ranges[toRangeIndex].From <= from)
+                {
+                    if (ranges[toRangeIndex].To >= to)
+                    {
+                        // we have the entire range in cache
+
+                        result = ChopRelevantRange(ranges[toRangeIndex], from, to);
+                        return true;                     
+                    }
+
+                    fromRangeIndex = toRangeIndex;
+                    continue;
+                }
+
+                rangesToGetFromServer = rangesToGetFromServer ?? new List<(DateTime, DateTime)>();
+
+                var (f, t) = (toRangeIndex == 0 || ranges[toRangeIndex - 1].To < from ? from : ranges[toRangeIndex - 1].To,
+                    ranges[toRangeIndex].From <= to ? ranges[toRangeIndex].From : to);
+
+                rangesToGetFromServer.Add((f, t));
+
+                if (ranges[toRangeIndex].To >= to)
+                    break;
+            }
+
+            if (toRangeIndex == ranges.Count)
+            {
+                rangesToGetFromServer = rangesToGetFromServer ?? new List<(DateTime, DateTime)>();
+                rangesToGetFromServer.Add((ranges[ranges.Count - 1].To, to));
+            }
+
+            result = null;
+            return false;
+        }
+
+        private static void AddToCache(
+            string timeseries, 
+            DateTime from, 
+            DateTime to, 
+            int fromRangeIndex, 
+            int toRangeIndex, 
+            List<TimeSeriesRange> ranges, 
+            Dictionary<string, List<TimeSeriesRange>> cache, 
+            TimeSeriesValue[] values)
+        {
+            if (fromRangeIndex == -1)
+            {
+                // all ranges in cache start after 'from'
+
+                if (toRangeIndex == ranges.Count)
+                {
+                    // the requested range [from, to] contains all the ranges that are in cache 
+
+                    cache[timeseries] = new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            Name = timeseries,
+                            From = from,
+                            To = to,
+                            Values = values
+                        }
+                    };
+
+                    return;
+                }
+
+                if (ranges[toRangeIndex].From > to)
+                {
+                    // requested range ends before 'toRange'
+                    // remove all ranges that come before 'toRange' from cache
+                    // add the new range at the beginning of the list
+
+                    ranges.RemoveRange(0, toRangeIndex);
+                    ranges.Insert(0, new TimeSeriesRange
+                    {
+                        Name = timeseries,
+                        From = from,
+                        To = to,
+                        Values = values
+                    });
+
+                    return;
+                }
+
+                // merge the result from server into 'toRange'
+                // remove all ranges that come before 'toRange' from cache
+
+                ranges[toRangeIndex].From = from;
+                ranges[toRangeIndex].Values = values;
+                ranges.RemoveRange(0, toRangeIndex);
+
+                return;
+            }
+
+            if (toRangeIndex == ranges.Count)
+            {
+                // all the ranges in cache end before 'to'
+
+                if (ranges[fromRangeIndex].To < from)
+                {
+                    // remove all the ranges that come after 'fromRange' from cache 
+                    // add the merged values as a new range at the end of the list
+
+                    ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
+                    ranges.Add(new TimeSeriesRange
+                    {
+                        From = from,
+                        To = to,
+                        Name = timeseries,
+                        Values = values
+                    });
+
+                    return;
+                }
+
+                // merge result into 'fromRange'
+                // remove all the ranges from cache that come after 'fromRange' 
+
+                ranges[fromRangeIndex].To = to;
+                ranges[fromRangeIndex].Values = values;
+                ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
+
+                return;
+            }
+
+            // the requested range is inside cache bounds 
+
+            if (ranges[fromRangeIndex].To < from)
+            {
+                if (ranges[toRangeIndex].From > to)
+                {
+                    // remove all ranges in between 'fromRange' and 'toRange'
+                    // place new range in between 'fromRange' and 'toRange'
+
+                    ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
+                    ranges.Insert(fromRangeIndex + 1, new TimeSeriesRange
+                    {
+                        Name = timeseries,
+                        From = from,
+                        To = to,
+                        Values = values
+                    });
+
+                    return;
+                }
+
+                // merge the new range into 'toRange'
+                // remove all ranges in between 'fromRange' and 'toRange'
+
+                ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
+                ranges[toRangeIndex].From = from;
+                ranges[toRangeIndex].Values = values;
+
+                return;
+            }
+
+            if (ranges[toRangeIndex].From > to)
+            {
+                // remove all ranges in between 'fromRange' and 'toRange'
+                // merge new range into 'fromRange'
+
+                ranges[fromRangeIndex].To = to;
+                ranges[fromRangeIndex].Values = values;
+                ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
+
+                return;
+            }
+
+            // merge all ranges in between 'fromRange' and 'toRange'
+            // into a single range [fromRange.From, toRange.To]
+
+            ranges[fromRangeIndex].To = ranges[toRangeIndex].To;
+            ranges[fromRangeIndex].Values = values;
+
+            ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
         }
 
         private static IEnumerable<TimeSeriesValue> ChopRelevantRange(TimeSeriesRange range, DateTime from, DateTime to)
@@ -379,39 +426,6 @@ namespace Raven.Client.Documents.Session
 
                 yield return value;
             }
-        }
-
-        private static TimeSeriesValue[] MergeRanges(TimeSeriesValue[] range1, TimeSeriesValue[] range2, DateTime from, DateTime to, out int skip, out int take, int? size = null)
-        {
-            skip = 0;
-            var newValues = new TimeSeriesValue[size ?? (range1.Length == 0 ? 0 : range1.Length - 1) + range2.Length];
-            
-            for (var i = 0; i < range1.Length; i++)
-            {
-                var current = range1[i];
-                if (current.Timestamp < from)
-                {
-                    skip++;
-                }
-
-                newValues[i] = current;
-            }
-
-            take = range1.Length;
-            var offset = range1.Length == 0 ? 0 : range1.Length - 1;
-
-            for (var i = range1.Length == 0 ? 0 : 1; i < range2.Length; i++)
-            {
-                var current = range2[i];
-                if (current.Timestamp <= to)
-                {
-                    take++;
-                }
-                newValues[i + offset] = current;
-            }
-
-            return newValues;
-
         }
     }
 }
