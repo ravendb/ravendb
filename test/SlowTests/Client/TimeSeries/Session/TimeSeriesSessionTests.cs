@@ -505,7 +505,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(0, vals.Count);
 
                     vals = session.TimeSeriesFor("users/ayende")
-                        .Get("Heartrate", baseline.AddMinutes(5), baseline.AddMinutes(10))
+                        .Get("Heartrate", baseline.AddMinutes(5), baseline.AddMinutes(9))
                         .ToList();
 
                     Assert.Equal(0, vals.Count);

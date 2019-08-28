@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         private readonly string _docId;
         private readonly string _timeseries;
-        private readonly List<(DateTime From, DateTime To)> _ranges;
+        private readonly List<(DateTime, DateTime)> _ranges;
 
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to)
         {
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
-        public GetTimeSeriesOperation(string docId, string timeseries, List<(DateTime From, DateTime To)> ranges)
+        public GetTimeSeriesOperation(string docId, string timeseries, List<(DateTime, DateTime)> ranges)
         {
             _docId = docId;
             _timeseries = timeseries;
@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             private readonly string _timeseries;
             private readonly List<(DateTime From, DateTime To)> _ranges;
 
-            public GetTimeSeriesCommand(string docId, string timeseries, List<(DateTime From, DateTime To)> ranges)
+            public GetTimeSeriesCommand(string docId, string timeseries, List<(DateTime, DateTime)> ranges)
             {
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
                 _timeseries = timeseries ?? throw new ArgumentNullException(nameof(timeseries));
