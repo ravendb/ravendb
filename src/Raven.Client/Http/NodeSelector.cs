@@ -105,7 +105,7 @@ namespace Raven.Client.Http
             return UnlikelyEveryoneFaultedChoice(state);
         }
 
-        public (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
+        internal (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
         {
             var state = _state;
             var preferredNode = GetPrefferedNodeInternal(state);

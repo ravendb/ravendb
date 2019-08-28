@@ -38,6 +38,8 @@ namespace Raven.Client.Http
 {
     public class RequestExecutor : IDisposable
     {
+        private const int InitialTopologyEtag = -2;
+
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
@@ -272,7 +274,7 @@ namespace Raven.Client.Http
                         }
                     }
                 }),
-                TopologyEtag = -2,
+                TopologyEtag = InitialTopologyEtag,
                 _disableTopologyUpdates = true,
                 _disableClientConfigurationUpdates = true
             };
@@ -294,7 +296,7 @@ namespace Raven.Client.Http
                     Etag = -1,
                     Nodes = nodes
                 }),
-                TopologyEtag = -2,
+                TopologyEtag = InitialTopologyEtag,
                 _disableTopologyUpdates = true,
                 _disableClientConfigurationUpdates = true
             };
@@ -687,7 +689,7 @@ namespace Raven.Client.Http
                 return false;
 
             _nodeSelector = new NodeSelector(cachedTopology);
-            TopologyEtag = -2;
+            TopologyEtag = InitialTopologyEtag;
             return true;
         }
 
@@ -700,9 +702,9 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
-            if (command.FailoverTopologyEtag == -2)
+            if (command.FailoverTopologyEtag == InitialTopologyEtag)
             {                
-                command.FailoverTopologyEtag = _nodeSelector?.GetPreferredNodeWithTopology().TopologyEtag ?? -2;
+                command.FailoverTopologyEtag = _nodeSelector?.Topology?.Etag ?? InitialTopologyEtag;
             }
             var request = CreateRequest(context, chosenNode, command, out string url);
             var noCaching = sessionInfo?.NoCaching ?? false;
