@@ -114,7 +114,7 @@ namespace Sparrow
             {
                 if ((uint)index >= (uint)Length)
                 {
-                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.index);
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.index, index);
                 }
 
                 return Buffer[Offset + index];
@@ -431,12 +431,12 @@ namespace Sparrow
 
             if (!HasValue || start < 0 || (uint)offset > (uint)Buffer.Length)
             {
-                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
+                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start, start);
             }
 
             if (count < 0)
             {
-                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.count);
+                ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.count, count);
             }
 
             var index = Buffer.IndexOf(c, offset, count);
@@ -493,12 +493,12 @@ namespace Sparrow
             {
                 if (startIndex < 0 || Offset + startIndex > Buffer.Length)
                 {
-                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start);
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.start, startIndex);
                 }
 
                 if (count < 0 || Offset + startIndex + count > Buffer.Length)
                 {
-                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.count);
+                    ThrowHelper.ThrowArgumentOutOfRangeException(ExceptionArgument.count, count);
                 }
 
                 index = Buffer.IndexOfAny(anyOf, Offset + startIndex, count);
@@ -720,9 +720,9 @@ namespace Sparrow
                 throw new ArgumentNullException(GetArgumentName(argument));
             }
 
-            internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument)
+            internal static void ThrowArgumentOutOfRangeException(ExceptionArgument argument, int value)
             {
-                throw new ArgumentOutOfRangeException(GetArgumentName(argument));
+                throw new ArgumentOutOfRangeException(GetArgumentName(argument), value, "Unexpected value: " + value);
             }
 
             internal static ArgumentNullException GetArgumentNullException(ExceptionArgument argument)

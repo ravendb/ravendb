@@ -555,7 +555,7 @@ namespace Sparrow.Json
         private void EnsureBuffer(int len)
         {
             if (len >= JsonOperationContext.ManagedPinnedBuffer.Size)
-                ThrowValueTooBigForBuffer();
+                ThrowValueTooBigForBuffer(len);
             if (_pos + len < JsonOperationContext.ManagedPinnedBuffer.Size)
                 return;
 
@@ -572,10 +572,10 @@ namespace Sparrow.Json
             _pos = 0;
         }
 
-        private static void ThrowValueTooBigForBuffer()
+        private static void ThrowValueTooBigForBuffer(int len)
         {
             // ReSharper disable once NotResolvedInText
-            throw new ArgumentOutOfRangeException("len");
+            throw new ArgumentOutOfRangeException("len", len, "Length value too big: " + len);
         }
 
         private void ThrowStreamClosed()
