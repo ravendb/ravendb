@@ -18,7 +18,7 @@
                     <ul data-bind="foreach: databasesToDelete" style="max-height: 100px; overflow-y: auto;">
                         <li>
                             <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
-                            <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-black"></i></small>
+                            <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-muted"></i></small>
                             <strong data-bind="text: name"></strong>
                         </li>
                     </ul>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -7,7 +8,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Web;
-using Sparrow;
+using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Routing
 {
@@ -86,6 +87,30 @@ namespace Raven.Server.Routing
                 throw new NodeIsPassiveException($"Can't perform actions on the database '{databaseName}' while the node is passive.");
             }
 
+            if (context.RavenServer.ServerStore.IdleDatabases.TryGetValue(databaseName.Value, out var replicationsDictionary))
+            {
+                if (context.HttpContext.Request.Query.TryGetValue("from-outgoing", out var dbId) && context.HttpContext.Request.Query.TryGetValue("etag", out var replicationEtag))
+                {
+                    var hasChanges = false;
+                    var etag = Convert.ToInt64(replicationEtag);
+
+                    if (replicationsDictionary.TryGetValue(dbId, out var storedEtag))
+                    {
+                        if (storedEtag < etag)
+                            hasChanges = true;
+                    }
+                    else
+                    {
+                        if (etag > 0)
+                            hasChanges = true;
+
+                    }
+
+                    if (hasChanges == false)
+                        throw new DatabaseIdleException($"Replication attempt doesn't have changes to database {databaseName.Value}, which is currently idle.");
+                }
+            }
+
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
@@ -96,12 +121,21 @@ namespace Raven.Server.Routing
                 if (context.Database == null)
                     DatabaseDoesNotExistException.Throw(databaseName.Value);
 
-                return context.Database?.DatabaseShutdown.IsCancellationRequested == false
-                    ? Task.CompletedTask
-                    : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
+                if (context.Database?.DatabaseShutdown.IsCancellationRequested == false)
+                {
+                    ClearIdleDatabase(context, context.Database.Name);
+                    return Task.CompletedTask;
+                }
+
+                return UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
             }
 
             return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
+        }
+
+        private void ClearIdleDatabase(RequestHandlerContext context, string databaseName)
+        {
+            context.RavenServer.ServerStore.IdleDatabases.TryRemove(databaseName, out _);
         }
 
         private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database,
@@ -115,7 +149,7 @@ namespace Raven.Server.Routing
             await CreateDatabase(context);
         }
 
-        private static async Task UnlikelyWaitForDatabaseToLoad(RequestHandlerContext context, Task<DocumentDatabase> database,
+        private async Task UnlikelyWaitForDatabaseToLoad(RequestHandlerContext context, Task<DocumentDatabase> database,
             DatabasesLandlord databasesLandlord, StringSegment databaseName)
         {
             var time = databasesLandlord.DatabaseLoadTimeout;
@@ -135,6 +169,8 @@ namespace Raven.Server.Routing
             context.Database = await database;
             if (context.Database == null)
                 DatabaseDoesNotExistException.Throw(databaseName.Value);
+
+            ClearIdleDatabase(context, context.Database.Name);
         }
 
         private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)

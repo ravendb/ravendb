@@ -110,7 +110,8 @@ namespace Raven.Server.Documents
                             flags |= DocumentFlags.HasCounters;
                         }
 
-                        if (oldFlags.Contain(DocumentFlags.HasRevisions))
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false && 
+                            oldFlags.Contain(DocumentFlags.HasRevisions))
                         {
                             flags |= DocumentFlags.HasRevisions;
                         }

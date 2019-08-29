@@ -54,7 +54,6 @@ using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
-using DiskSpaceResult = Raven.Client.ServerWide.Operations.DiskSpaceResult;
 using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
