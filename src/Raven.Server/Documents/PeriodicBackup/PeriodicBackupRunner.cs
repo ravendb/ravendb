@@ -537,21 +537,31 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to run the backup thread: '{periodicBackup.Configuration.Name}'", e);
+
                 tcs.SetException(e);
             }
             finally
             {
-                _serverStore.ConcurrentBackupsSemaphore.Release();
-
-                periodicBackup.RunningTask = null;
-                periodicBackup.RunningBackupTaskId = null;
-                periodicBackup.CancelToken = null;
-                periodicBackup.RunningBackupStatus = null;
-
-                if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
+                try
                 {
-                    var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                    _serverStore.ConcurrentBackupsSemaphore.Release();
+
+                    periodicBackup.RunningTask = null;
+                    periodicBackup.RunningBackupTaskId = null;
+                    periodicBackup.CancelToken = null;
+                    periodicBackup.RunningBackupStatus = null;
+
+                    if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
+                    {
+                        var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
+                        periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                    }
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
                 }
             }
         }

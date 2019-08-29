@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             uploadProgress.ChangeState(UploadState.PendingUpload);
                             uploadProgress.SetTotal(fileStream.Length);
 
-                            AddInfo($"Starting {uploadStatus.GetType().AssemblyQualifiedName}");
+                            AddInfo($"Starting the upload of backup file to {targetName}.");
 
                             var bytesPutsPerSec = new MeterMetric();
 
@@ -235,9 +235,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 catch (Exception e)
                 {
                     localUploadStatus.Exception = e.ToString();
-                    _exceptions.Add(new InvalidOperationException($"Failed to backup to {uploadStatus.GetType().FullName}", e));
+                    _exceptions.Add(new InvalidOperationException($"Failed to upload the backup file to {targetName}.", e));
                 }
-            }, null, $"Upload backup of database '{_backupUploaderSettings.DatabaseName}' to {targetName} (task: {_backupUploaderSettings.TaskName})");
+            }, null, $"Upload backup file of database '{_backupUploaderSettings.DatabaseName}' to {targetName} (task: '{_backupUploaderSettings.TaskName}')");
 
             _threads.Add(thread);
         }
