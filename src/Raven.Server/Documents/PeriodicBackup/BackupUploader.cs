@@ -37,6 +37,12 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly BackupResult _backupResult;
         private readonly Action<IOperationProgress> _onProgress;
 
+        private const string AzureName = "Azure";
+        private const string S3Name = "S3";
+        private const string GlacierName = "Glacier";
+        private const string GoogleCloudName = "Google Cloud";
+        private const string FtpName = "FTP";
+
         public BackupUploader(BackupUploaderSettings backupUploaderSettings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
         {
             _backupUploaderSettings = backupUploaderSettings;
@@ -54,11 +60,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void Execute()
         {
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.AzureSettings, UploadToAzure, _backupResult.AzureBackup);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup);
-            CreateUploadTaskIfNeeded(_backupUploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.S3Settings, UploadToS3, _backupResult.S3Backup, S3Name);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.GlacierSettings, UploadToGlacier, _backupResult.GlacierBackup, GlacierName);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.AzureSettings, UploadToAzure, _backupResult.AzureBackup, AzureName);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.GoogleCloudSettings, UploadToGoogleCloud, _backupResult.GoogleCloudBackup, GoogleCloudName);
+            CreateUploadTaskIfNeeded(_backupUploaderSettings.FtpSettings, UploadToFtp, _backupResult.FtpBackup, FtpName);
 
             _threads.ForEach(x => x.Join(int.MaxValue));
 
@@ -82,7 +88,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 });
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(settings.Name)} bucket named: {settings.BucketName}, with key: {key}");
+                    _logger.Info($"{ReportSuccess(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
 
                 var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -96,7 +102,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var key = CombinePathAndKey(settings.RemoteFolderName ?? _backupUploaderSettings.DatabaseName);
                 var archiveId = client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(settings.Name)}, archive ID: {archiveId}");
+                    _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
 
                 var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -110,7 +116,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 client.UploadFile(_backupUploaderSettings.FolderName, _backupUploaderSettings.FileName, stream);
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(settings.Name)} server");
+                    _logger.Info($"{ReportSuccess(FtpName)} server");
 
                 var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -128,7 +134,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 });
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(settings.Name)} container: {settings.StorageContainer}, with key: {key}");
+                    _logger.Info($"{ReportSuccess(AzureName)} container: {settings.StorageContainer}, with key: {key}");
 
                 var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -146,7 +152,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 });
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(settings.Name)} storage bucket: {settings.BucketName}");
+                    _logger.Info($"{ReportSuccess(GoogleCloudName)} storage bucket: {settings.BucketName}");
 
                 var runner = new GoogleCloudRetentionPolicyRunner(_retentionPolicyParameters, client);
                 runner.Execute();
@@ -159,7 +165,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return $"{prefix}{_backupUploaderSettings.FolderName}/{_backupUploaderSettings.FileName}";
         }
 
-        private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus)
+        private void CreateUploadTaskIfNeeded<S, T>(S settings, Action<S, FileStream, Progress> uploadToServer, T uploadStatus, string targetName)
             where S : BackupSettings
             where T : CloudUploadStatus
         {
@@ -231,7 +237,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = e.ToString();
                     _exceptions.Add(new InvalidOperationException($"Failed to backup to {uploadStatus.GetType().FullName}", e));
                 }
-            }, null, $"Upload backup of database '{_backupUploaderSettings.DatabaseName}' to {settings.Name} (task: {_backupUploaderSettings.TaskName})");
+            }, null, $"Upload backup of database '{_backupUploaderSettings.DatabaseName}' to {targetName} (task: {_backupUploaderSettings.TaskName})");
 
             _threads.Add(thread);
         }

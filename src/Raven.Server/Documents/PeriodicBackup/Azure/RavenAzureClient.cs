@@ -200,8 +200,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             // wait for one second before trying again to send the request
             // maybe there was a network issue?
-            Thread.Sleep(1000);
-
+            CancellationToken.WaitHandle.WaitOne(1000);
             CancellationToken.ThrowIfCancellationRequested();
 
             retryCount++;
