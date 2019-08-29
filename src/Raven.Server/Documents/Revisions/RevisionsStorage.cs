@@ -1149,7 +1149,8 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                var changeVector = _documentsStorage.GetNewChangeVector(context);
+                var newEtag = _documentsStorage.GenerateNextEtag();
+                var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
                 context.LastDatabaseChangeVector = changeVector;
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
@@ -1186,8 +1187,8 @@ namespace Raven.Server.Documents.Revisions
             private readonly OperationCancelToken _token;
 
             public EnforceRevisionConfigurationCommand(
-                RevisionsStorage revisionsStorage, 
-                List<string> ids, 
+                RevisionsStorage revisionsStorage,
+                List<string> ids,
                 EnforceConfigurationResult result,
                 OperationCancelToken token)
             {
@@ -1442,7 +1443,7 @@ namespace Raven.Server.Documents.Revisions
                 return count;
             }
         }
-        
+
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, long start, long take)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
