@@ -747,7 +747,6 @@ namespace Raven.Client.Http
                 if (_disableTopologyUpdates == false)
                     request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
 
-                var sp = Stopwatch.StartNew();
                 HttpResponseMessage response = null;
                 var responseDispose = ResponseDisposeHandling.Automatic;
                 try
@@ -798,8 +797,6 @@ namespace Raven.Client.Http
                                     if (shouldRetry == false)
                                         throw timeoutException;
 
-                                    sp.Stop();
-
                                     if (sessionInfo != null)
                                         sessionInfo.AsyncCommandRunning = false;
 
@@ -826,7 +823,6 @@ namespace Raven.Client.Http
                         if (TryGetServerVersion(response, out var serverVersion))
                             LastServerVersion = serverVersion;
                     }
-                    sp.Stop();
                 }
                 catch (HttpRequestException e) // server down, network down
                 {
@@ -847,8 +843,6 @@ namespace Raven.Client.Http
 
                         if (shouldRetry == false)
                             throw;
-
-                        sp.Stop();
 
                         if (sessionInfo != null)
                             sessionInfo.AsyncCommandRunning = false;
