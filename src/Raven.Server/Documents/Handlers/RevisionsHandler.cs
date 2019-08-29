@@ -92,6 +92,29 @@ namespace Raven.Server.Documents.Handlers
                 });
         }
 
+        [RavenAction("/databases/*/admin/revisions/config/enforce", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task EnforceConfigRevisions()
+        {
+            var token = CreateTimeLimitedOperationToken();
+            var operationId = ServerStore.Operations.GetNextOperationId();
+
+            var t = Database.Operations.AddOperation(
+                Database,
+                $"Enforce revision configuration in database '{Database.Name}'.",
+                Operations.Operations.OperationType.EnforceRevisionConfiguration,
+                onProgress => Database.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress, token),
+                operationId,
+                token: token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/revisions/count", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsCountFor()
         {

@@ -334,23 +334,34 @@
     }
 
     .collection-count {
-        width: 60px;        
+        width: 60px;
         display: flex;
         flex-shrink: 0;
+        justify-content: center;
+        border-radius: 2px;
+        overflow: hidden;
+
+        .label {
+            border-radius: 0;
+            padding: 0;
+            line-height: 15px;
+            font-size: 10px;
+            font-weight: bold;
+        }
 
         .value {
             flex-grow: 1;
-            text-align: center;            
         }
 
         .kilo, .mega {
-            padding: 5px;
-            line-height: 10px;
-            border-radius: 0 1px 1px 0;
+            padding: 0 4px 0 4px;
+            font-weight: 800;
+            line-height: 15px;
+            font-size: 10px;
         }
 
         .kilo {
-            background-color: fadeout(@label-default-bg,70%);
+            background-color: fadeout(@label-default-bg,50%);
 
             &::before {
                 content: 'K';
@@ -358,7 +369,7 @@
         }
 
         .mega {
-            background-color: fadeout(@label-default-bg,70%);
+            background-color: fadeout(@label-default-bg,50%);
 
             &::before {
                 content: 'M';

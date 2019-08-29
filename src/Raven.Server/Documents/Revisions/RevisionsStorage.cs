@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -949,7 +950,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private unsafe Document GetRevisionBefore(DocumentsOperationContext context,
-            RevertParameters parameters,
+            Parameters parameters,
             string id,
             RevertResult progressResult)
         {
@@ -1072,10 +1073,167 @@ namespace Raven.Server.Documents.Revisions
                 return result;
             }
         }
+        public async Task<IOperationResult> EnforceConfiguration(Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            var parameters = new Parameters
+            {
+                Before = DateTime.MinValue,
+                MinimalDate = DateTime.MinValue,
+                EtagBarrier = _documentsStorage.GenerateNextEtag(),
+                OnProgress = onProgress
+            };
+
+            parameters.LastScannedEtag = parameters.EtagBarrier;
+
+            var result = new EnforceConfigurationResult();
+            var ids = new List<string>();
+
+            var hasMore = true;
+            while (hasMore)
+            {
+                hasMore = false;
+                ids.Clear();
+                token.Delay();
+
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                {
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var revisions = new Table(RevisionsSchema, ctx.Transaction.InnerTransaction);
+                        foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
+                            parameters.LastScannedEtag))
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            var state = ShouldProcessNextRevisionId(ctx, ref tvr.Reader, parameters, result, out var id);
+                            if (state == NextRevisionIdResult.Break)
+                                break;
+                            if (state == NextRevisionIdResult.Continue)
+                                continue;
+
+                            ids.Add(id);
+
+                            if (ids.Count > 1024 || ctx.AllocatedMemory > SizeLimit)
+                            {
+                                hasMore = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    token.Delay();
+
+                    await _database.TxMerger.Enqueue(new EnforceRevisionConfigurationCommand(this, ids, result, token));
+                }
+            }
+
+            return result;
+        }
+
+        private static readonly RevisionsCollectionConfiguration ZeroConfiguration = new RevisionsCollectionConfiguration
+        {
+            MinimumRevisionsToKeep = 0
+        };
+
+        private long EnforceConfigurationFor(DocumentsOperationContext context, string id)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+            using (GetKeyPrefix(context, lowerId, out var prefixSlice))
+            {
+                var collectionName = GetCollectionFor(context, prefixSlice);
+                if (collectionName == null)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Tried to delete revisions for '{id}' but no revisions found.");
+                    return 0;
+                }
+
+                var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+                var changeVector = _documentsStorage.GetNewChangeVector(context);
+                context.LastDatabaseChangeVector = changeVector;
+                var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
+
+                var prevRevisionsCount = GetRevisionsCount(context, id);
+                var configuration = GetRevisionsConfiguration(collectionName.Name);
+
+                if (configuration == ConflictConfiguration.Default || configuration == _emptyConfiguration)
+                {
+                    configuration = ZeroConfiguration;
+                }
+
+                DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, prevRevisionsCount,
+                    NonPersistentDocumentFlags.None,
+                    changeVector, lastModifiedTicks);
+
+                var currentRevisionsCount = GetRevisionsCount(context, id);
+
+                if (currentRevisionsCount == 0)
+                {
+                    // need to strip the HasRevisions flag from the document
+                    var document = _documentsStorage.Get(context, id);
+                    _documentsStorage.Put(context, id, null, document.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
+                }
+
+                return prevRevisionsCount - currentRevisionsCount;
+            }
+        }
+
+        private class EnforceRevisionConfigurationCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly RevisionsStorage _revisionsStorage;
+            private readonly List<string> _ids;
+            private readonly EnforceConfigurationResult _result;
+            private readonly OperationCancelToken _token;
+
+            public EnforceRevisionConfigurationCommand(
+                RevisionsStorage revisionsStorage, 
+                List<string> ids, 
+                EnforceConfigurationResult result,
+                OperationCancelToken token)
+            {
+                _revisionsStorage = revisionsStorage;
+                _ids = ids;
+                _result = result;
+                _token = token;
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                foreach (var id in _ids)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    _result.RemovedRevisions += (int)_revisionsStorage.EnforceConfigurationFor(context, id);
+                }
+
+                return _ids.Count;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids);
+            }
+
+            private class EnforceRevisionConfigurationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<EnforceRevisionConfigurationCommand>
+            {
+                private readonly RevisionsStorage _revisionsStorage;
+                private readonly List<string> _ids;
+
+                public EnforceRevisionConfigurationCommandDto(RevisionsStorage revisionsStorage, List<string> ids)
+                {
+                    _revisionsStorage = revisionsStorage;
+                    _ids = ids;
+                }
+
+                public EnforceRevisionConfigurationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids, new EnforceConfigurationResult(), OperationCancelToken.None);
+                }
+            }
+        }
 
         private const long SizeLimit = 32 * 1_024 * 1_024;
 
-        private class RevertParameters
+        private class Parameters
         {
             public DateTime Before;
             public DateTime MinimalDate;
@@ -1090,7 +1248,7 @@ namespace Raven.Server.Documents.Revisions
             var list = new List<Document>();
             var result = new RevertResult();
 
-            var parameters = new RevertParameters
+            var parameters = new Parameters
             {
                 Before = before,
                 MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
@@ -1127,7 +1285,7 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, RevertParameters parameters, RevertResult result, List<Document> list, OperationCancelToken token)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
@@ -1138,37 +1296,13 @@ namespace Raven.Server.Documents.Revisions
                 {
                     token.ThrowIfCancellationRequested();
 
-                    result.ScannedRevisions++;
-
-                    var id = TableValueToId(readCtx, (int)RevisionsTable.Id, ref tvr.Reader);
-                    var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
-                    parameters.LastScannedEtag = etag;
-
-                    if (parameters.ScannedIds.Add(id) == false)
-                        continue;
-
-                    result.ScannedDocuments++;
-
-                    if (etag > parameters.EtagBarrier)
-                    {
-                        result.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
-                        continue;
-                    }
-
-                    if (_documentsStorage.ConflictsStorage.HasConflictsFor(readCtx, id))
-                    {
-                        result.Warn(id, "The document is conflicted and wouldn't be reverted.");
-                        continue;
-                    }
-
-                    var date = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Reader);
-                    if (date < parameters.MinimalDate)
+                    var state = ShouldProcessNextRevisionId(readCtx, ref tvr.Reader, parameters, result, out var id);
+                    if (state == NextRevisionIdResult.Break)
                         break;
+                    if (state == NextRevisionIdResult.Continue)
+                        continue;
 
                     RestoreRevision(readCtx, writeCtx, parameters, id, result, list);
-
-                    if (result.ScannedDocuments % 1024 == 0)
-                        parameters.OnProgress?.Invoke(result);
 
                     if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
                     {
@@ -1180,9 +1314,51 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        private enum NextRevisionIdResult
+        {
+            Break,
+            Continue,
+            Found
+        }
+
+        private NextRevisionIdResult ShouldProcessNextRevisionId(DocumentsOperationContext context, ref TableValueReader reader, Parameters parameters, OperationResult result, out LazyStringValue id)
+        {
+            result.ScannedRevisions++;
+
+            id = TableValueToId(context, (int)RevisionsTable.Id, ref reader);
+            var etag = TableValueToEtag((int)RevisionsTable.Etag, ref reader);
+            parameters.LastScannedEtag = etag;
+
+            if (parameters.ScannedIds.Add(id) == false)
+                return NextRevisionIdResult.Continue;
+
+            result.ScannedDocuments++;
+
+            if (etag > parameters.EtagBarrier)
+            {
+                result.Warn(id, "This document wouldn't be processed, because it changed after the process started.");
+                return NextRevisionIdResult.Continue;
+            }
+
+            if (_documentsStorage.ConflictsStorage.HasConflictsFor(context, id))
+            {
+                result.Warn(id, "The document is conflicted and wouldn't be processed.");
+                return NextRevisionIdResult.Continue;
+            }
+
+            var date = TableValueToDateTime((int)RevisionsTable.LastModified, ref reader);
+            if (date < parameters.MinimalDate)
+                return NextRevisionIdResult.Break;
+
+            if (result.ScannedDocuments % 1024 == 0)
+                parameters.OnProgress?.Invoke(result);
+
+            return NextRevisionIdResult.Found;
+        }
+
         private void RestoreRevision(DocumentsOperationContext readCtx,
             DocumentsOperationContext writeCtx,
-            RevertParameters parameters,
+            Parameters parameters,
             LazyStringValue id,
             RevertResult result,
             List<Document> list)
@@ -1437,13 +1613,17 @@ namespace Raven.Server.Documents.Revisions
                 LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out int size),
-                ChangeVector = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr)
+                ChangeVector = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr),
+                Data = TableValueToData(context, ref tvr)
             };
 
-            var ptr = tvr.Read((int)RevisionsTable.Document, out size);
-            result.Data = new BlittableJsonReaderObject(ptr, size, context);
-
             return result;
+        }
+
+        private static unsafe BlittableJsonReaderObject TableValueToData(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read((int)RevisionsTable.Document, out var size);
+            return new BlittableJsonReaderObject(ptr, size, context);
         }
 
         public static unsafe Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)

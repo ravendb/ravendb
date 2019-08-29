@@ -86,6 +86,11 @@ namespace Raven.Client.Http
         public (int Index, ServerNode Node) GetPreferredNode()
         {
             var state = _state;
+            return GetPrefferedNodeInternal(state);
+        }
+
+        private static (int Index, ServerNode Node) GetPrefferedNodeInternal(NodeSelectorState state)
+        {
             var stateFailures = state.Failures;
             var serverNodes = state.Nodes;
             var len = Math.Min(serverNodes.Count, stateFailures.Length);
@@ -98,6 +103,14 @@ namespace Raven.Client.Http
             }
 
             return UnlikelyEveryoneFaultedChoice(state);
+        }
+
+        internal (int Index, ServerNode Node, long TopologyEtag) GetPreferredNodeWithTopology()
+        {
+            var state = _state;
+            var preferredNode = GetPrefferedNodeInternal(state);
+            return (preferredNode.Index, preferredNode.Node, state.Topology?.Etag??-2);
+            
         }
 
         private static ValueTuple<int, ServerNode> UnlikelyEveryoneFaultedChoice(NodeSelectorState state)

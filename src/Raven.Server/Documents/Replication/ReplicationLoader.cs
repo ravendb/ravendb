@@ -951,7 +951,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", certificate, cts.Token);
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication", certificate, cts.Token);
                     }
                 }
 
@@ -1064,7 +1064,7 @@ namespace Raven.Server.Documents.Replication
                 DocumentConventions.Default))
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                var cmd = new GetTcpInfoCommand("external-replication", database);
+                var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
                     requestExecutor.Execute(cmd, ctx);
