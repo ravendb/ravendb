@@ -1978,14 +1978,22 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (Scanner.TryScan("as"))
                     {
-                        if (Scanner.Identifier() == false)
-                            ThrowInvalidQueryException("Missing alias for method after 'as'");
+                        var readAlias = Scanner.Identifier();
 
                         var lastArg = args[args.Count - 1];
                         if (lastArg.Type != ExpressionType.Method)
-                            ThrowInvalidQueryException("Alias can only be applied on method");
+                        {
+                            if (readAlias)
+                                ThrowInvalidQueryException($"Alias '{Scanner.Token}' can only be applied on method, but was applied on '{lastArg.Type}'");
+
+                            ThrowInvalidQueryException($"Alias can only be applied on method, but was applied on '{lastArg.Type}'");
+                        }
 
                         var method = (MethodExpression)lastArg;
+
+                        if (readAlias == false)
+                            ThrowInvalidQueryException($"Missing alias for method '{method.Name}' after 'as'");
+
                         method.Alias = Scanner.Token;
 
                         if (Scanner.TryScan(')'))
