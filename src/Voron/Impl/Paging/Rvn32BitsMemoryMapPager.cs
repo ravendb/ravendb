@@ -42,19 +42,6 @@ namespace Voron.Impl.Paging
             if (Options.CopyOnWriteMode)
                 ThrowNotSupportedOption(file.FullPath);
 
-
-//            _totalAllocationSize = GetFileSize();
-//
-//            if (_totalAllocationSize == 0 && initialFileSize.HasValue)
-//            {
-//                _totalAllocationSize = NearestSizeToAllocationGranularity(initialFileSize.Value);
-//            }
-//            if (_totalAllocationSize == 0 || _totalAllocationSize % AllocationGranularity != 0 ||
-//                _totalAllocationSize != GetFileSize())
-//            {
-//                _totalAllocationSize = NearestSizeToAllocationGranularity(_totalAllocationSize);
-//            }
-
             var mmapOptions = _copyOnWriteMode ? MmapOptions.CopyOnWrite : MmapOptions.None;
             if (DeleteOnClose)
                 mmapOptions |= MmapOptions.DeleteOnClose;
