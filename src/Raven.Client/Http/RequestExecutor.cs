@@ -580,11 +580,6 @@ namespace Raven.Client.Http
                 }
                 catch (Exception e)
                 {
-                    if (initialUrls.Length == 0)
-                    {
-                        _lastKnownUrls = initialUrls;
-                        throw new InvalidOperationException("Cannot get topology from server: " + url, e);
-                    }
                     list.Add((url, e));
                 }
             }
