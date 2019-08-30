@@ -890,6 +890,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <param name = "value">The value.</param>
         public void WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+        
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
@@ -912,6 +914,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <param name="pattern"> The pattern to match</param>
         public void WhereRegex(string fieldName, string pattern)
         {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+            
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
