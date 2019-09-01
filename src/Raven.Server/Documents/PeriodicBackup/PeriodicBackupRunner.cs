@@ -561,7 +561,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    tcs.SetException(e);
+                    var msg = $"Failed to schedule next backup for backup thread: '{periodicBackup.Configuration.Name}'";
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(msg, e);
+
+                    _database.NotificationCenter.Add(AlertRaised.Create(
+                        _database.Name,
+                        "Couldn't schedule next backup.",
+                        msg,
+                        AlertType.PeriodicBackup,
+                        NotificationSeverity.Warning,
+                        details: new ExceptionDetails(e)));
                 }
             }
         }
