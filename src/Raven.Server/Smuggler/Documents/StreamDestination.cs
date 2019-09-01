@@ -655,8 +655,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteStartObject();
 
-                Writer.WritePropertyName(nameof(TimeSeriesItem.Key));
-                Writer.WriteString(ts.Key, skipEscaping: true);
+                Writer.WritePropertyName(nameof(TimeSeriesItem.DocId));
+                Writer.WriteString(ts.DocId, skipEscaping: true);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
@@ -667,13 +667,17 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteString(ts.Collection);
                 Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(TimeSeriesItem.Values));
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Name));
+                Writer.WriteString(ts.Name);
+                Writer.WriteComma();
+
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Segment));
 
                 Writer.WriteStartArray();
 
                 var firstValue = true;
 
-                foreach (var val in ts.Values)
+                foreach (var val in ts.Segment)
                 {
                     if (firstValue == false)
                         Writer.WriteComma();

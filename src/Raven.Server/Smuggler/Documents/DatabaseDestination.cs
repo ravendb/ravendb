@@ -1564,20 +1564,16 @@ namespace Raven.Server.Smuggler.Documents
         private class TimeSeriesActions : ITimeSeriesActions
         {
             private readonly DocumentDatabase _database;
-            private TimeSeriesHandler.ExecuteTimeSeriesBatchCommand _cmd;
-            private TimeSeriesHandler.ExecuteTimeSeriesBatchCommand _prevCommand;
+            private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _cmd;
+            private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private int _countersCount;
+            private int _segmentsCount;
             private readonly int _maxBatchSize;
-
-            private Dictionary<string, SortedList<long, AppendTimeSeriesOperation>> _appendDictionary; 
 
             public TimeSeriesActions(DocumentDatabase database)
             {
                 _database = database;
-                _cmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(database, new DocumentTimeSeriesOperation(), false);
-
-                _appendDictionary = new Dictionary<string, SortedList<long, AppendTimeSeriesOperation>>();
+                _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(database);
 
                 _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
                     ? 2 * 1024
@@ -1586,20 +1582,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private void AddToBatch(TimeSeriesItem ts)
             {
-                //TimeSeriesValuesSegment.ParseTimeSeriesKey();
-
-                foreach (var v in ts.Values)
-                {
-
-                    _currentBatch.Appends.Add(new AppendTimeSeriesOperation
-                    {
-                        Name = "",
-                        Tag = v.Tag,
-                        Timestamp = v.TimeStamp,
-                        Values = v.Values.ToArray()
-                    });
-                }
-
+                _cmd.AddToDictionary(ts);
+                _segmentsCount++;
             }
 
             public void Dispose()
@@ -1615,7 +1599,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfTimeSeriesIfNecessary()
             {
-                if (_countersCount < _maxBatchSize)
+                if (_segmentsCount < _maxBatchSize)
                     return;
 
                 var prevCommand = _prevCommand;
@@ -1634,9 +1618,9 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                _cmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(_database, new DocumentTimeSeriesOperation(), false);
+                _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(_database);
 
-                _countersCount = 0;
+                _segmentsCount = 0;
             }
 
             private void FinishBatchOfTimeSeries()
@@ -1651,7 +1635,7 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_countersCount > 0)
+                if (_segmentsCount > 0)
                 {
                     //using (_cmd)
                     {

@@ -66,7 +66,9 @@ namespace Raven.Server.Smuggler.Documents
 
     public class TimeSeriesItem
     {
-        public string Key;
+        public string DocId;
+
+        public string Name;
 
         public string ChangeVector;
 

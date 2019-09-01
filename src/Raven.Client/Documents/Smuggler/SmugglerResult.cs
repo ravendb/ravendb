@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Smuggler
             Counters = new CountsWithLastEtag();
             CompareExchangeTombstones = new Counts();
             Subscriptions = new Counts();
+            TimeSeries = new CountsWithLastEtag();
             _progress = new SmugglerProgress(this);
         }
 

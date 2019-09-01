@@ -816,6 +816,103 @@ namespace SlowTests.Smuggler
             }
         }
 
+        [Fact]
+        public async Task CanExportAndImportTimeSeries()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 3/*60*/; i++)
+                        {
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "fitbit", new[] { i % 60d });
+                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "fitbit", new[] { i % 60d, i % 60d + 5});
+                            session.TimeSeriesFor("users/1").Append("Heartrate2", baseline.AddSeconds(i * 10), "apple", new[] { i % 60d, i % 60d + 5, i % 60d + 10});
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    //Assert.Equal(3, stats.CountOfTimeSeries);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var values = await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                        var count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                            Assert.Equal(1, val.Values.Length);
+                            Assert.Equal(count++ % 60, val.Values[0]);
+                        }
+
+                        Assert.Equal(360, count);
+
+
+                        values = await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                        count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                            Assert.Equal(2, val.Values.Length);
+                            Assert.Equal(count % 60, val.Values[0]);
+                            Assert.Equal(count++ % 60 + 5, val.Values[1]);
+                        }
+
+                        Assert.Equal(360, count);
+
+                        values = await session.TimeSeriesFor("users/1").GetAsync("Heartrate2", DateTime.MinValue, DateTime.MaxValue);
+
+                        count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                            Assert.Equal(3, val.Values.Length);
+                            Assert.Equal(count % 60, val.Values[0]);
+                            Assert.Equal(count % 60 + 5, val.Values[1]);
+                            Assert.Equal(count++ % 60 + 10, val.Values[2]);
+                        }
+
+                        Assert.Equal(360, count);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
         private async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())

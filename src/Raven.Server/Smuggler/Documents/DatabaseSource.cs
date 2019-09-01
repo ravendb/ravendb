@@ -51,6 +51,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.CompareExchangeTombstones,
             DatabaseItemType.CounterGroups,
             DatabaseItemType.Subscriptions,
+            DatabaseItemType.TimeSeries,
             DatabaseItemType.None
         };
 

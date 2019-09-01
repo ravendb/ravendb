@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
@@ -8,8 +9,10 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
@@ -234,7 +237,7 @@ namespace Raven.Server.Documents.Handlers
                     changes++;
                 }
 
-                if (_batch.Removals != null)
+                if (_batch?.Removals != null)
                 {
                     foreach (var removal in _batch.Removals)
                     {
@@ -324,6 +327,59 @@ namespace Raven.Server.Documents.Handlers
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
                                                     "Cannot put TimeSeries on artificial documents.");
+            }
+
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new System.NotImplementedException();
+            }
+        }
+
+        internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly DocumentDatabase _database;
+
+            private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
+
+            public string LastChangeVector;
+
+            public SmugglerTimeSeriesBatchCommand(DocumentDatabase database)
+            {
+                _database = database;
+                _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                var changes = 0;
+
+                foreach (var (docId, items) in _dictionary)
+                {
+                    foreach (var item in items)
+                    {
+                        LastChangeVector = _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                            docId,
+                            item.Collection,
+                            item.Name,
+                            item.Segment
+                        );
+                    }
+
+                    changes += items.Count;
+                }
+
+                return changes;
+            }
+
+            public void AddToDictionary(TimeSeriesItem item)
+            {
+                if (_dictionary.TryGetValue(item.DocId, out var itemsList) == false)
+                {
+                    _dictionary[item.DocId] = itemsList = new List<TimeSeriesItem>();
+                }
+
+                itemsList.Add(item);
             }
 
 

@@ -77,6 +77,11 @@ namespace Raven.Client.Documents.Operations
         public long CountOfCounterEntries { get; set; }
 
         /// <summary>
+        /// Total number of counter-group entries in database.
+        /// </summary>
+        public long CountOfTimeSeries { get; set; }
+
+        /// <summary>
         /// List of stale index names in database..
         /// </summary>
         public string[] StaleIndexes => Indexes?.Where(x => x.IsStale).Select(x => x.Name).ToArray();

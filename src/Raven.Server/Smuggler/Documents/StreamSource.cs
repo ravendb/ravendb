@@ -487,10 +487,11 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (reader)
                 {
-                    if (reader.TryGet(nameof(TimeSeriesItem.Key), out string key) == false ||
+                    if (reader.TryGet(nameof(TimeSeriesItem.DocId), out string docId) == false ||
+                        reader.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
                         reader.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
                         reader.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.Values), out BlittableJsonReaderArray segment))
+                        reader.TryGet(nameof(TimeSeriesItem.Segment), out BlittableJsonReaderArray segment) == false)
                     {
                         _result.TimeSeries.ErroredCount++;
                         _result.AddWarning("Could not read time series entry.");
@@ -517,17 +518,18 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             TimeStamp = timeStamp,
                             Tag = tag,
-                            Values = new Memory<double>(values.Select(x => (double)x).ToArray())
+                            Values = new Memory<double>(values.Select(x => (double)(long)x).ToArray())
                         });
 
                     }
 
                     yield return new TimeSeriesItem
                     {
-                        Key = key,
+                        DocId = docId,
+                        Name = name,
                         ChangeVector = cv,
                         Collection = collection,
-                        Values = list
+                        Segment = list
                     };
                 }
             }
@@ -1519,6 +1521,9 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.Counters), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Counters;
 #pragma warning restore 618
+
+            if (type.Equals(nameof(DatabaseItemType.TimeSeries), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.TimeSeries;
 
             if (type.Equals(nameof(DatabaseItemType.CompareExchangeTombstones), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.CompareExchangeTombstones;
