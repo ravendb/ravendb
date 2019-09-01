@@ -330,9 +330,7 @@ namespace Sparrow.Json
 
                 var escapeCharacter = *strBuffer++;
 
-                var auxPos = _pos;
-                WriteEscapeCharacter(buffer, escapeCharacter, ref auxPos);
-                _pos = auxPos;
+                WriteEscapeCharacter(buffer, escapeCharacter);
 
                 size--;
             }
@@ -361,7 +359,7 @@ namespace Sparrow.Json
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
 
-                WriteEscapeCharacter(_buffer, b, ref _pos);
+                WriteEscapeCharacter(_buffer, b);
             }
 
             // write remaining (or full string) to the buffer in one shot
@@ -372,25 +370,25 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteEscapeCharacter(byte* buffer, byte b, ref int pos)
+        private void WriteEscapeCharacter(byte* buffer, byte b)
         {
             byte r = EscapeCharacters[b];
             if (r == 0)
             {
                 EnsureBuffer(6);
-                buffer[pos++] = (byte)'\\';
-                buffer[pos++] = (byte)'u';
+                buffer[_pos++] = (byte)'\\';
+                buffer[_pos++] = (byte)'u';
                 fixed (byte* esc = ControlCodeEscapes[b])
-                    Memory.Copy(buffer + pos, esc, 4);
-                pos += 4;
+                    Memory.Copy(buffer + _pos, esc, 4);
+                _pos += 4;
                 return;
             }
 
             if (r != 255)
             {
                 EnsureBuffer(2);
-                buffer[pos++] = (byte)'\\';
-                buffer[pos++] = r;
+                buffer[_pos++] = (byte)'\\';
+                buffer[_pos++] = r;
                 return;
             }
 
@@ -432,9 +430,7 @@ namespace Sparrow.Json
                     size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                     var b = *(strBuffer++);
 
-                    var auxPos = _pos;
-                    WriteEscapeCharacter(_buffer, b, ref auxPos);
-                    _pos = auxPos;
+                    WriteEscapeCharacter(_buffer, b);
                 }
 
                 // write remaining (or full string) to the buffer in one shot
@@ -467,7 +463,7 @@ namespace Sparrow.Json
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
 
-                WriteEscapeCharacter(_buffer, b, ref _pos);
+                WriteEscapeCharacter(_buffer, b);
             }
 
             // write remaining (or full string) to the buffer in one shot
