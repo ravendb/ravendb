@@ -1290,16 +1290,14 @@ namespace Raven.Server.Documents.TimeSeries
             var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
 
-            var baselineMilliseconds = Bits.SwapBytes(
-                *(long*)(keyPtr + keySize - sizeof(long)));
-
-            var baseline = new DateTime(baselineMilliseconds * 10_000);
+            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, out var docId, out var name, out var baseline);
 
             return new TimeSeriesItem
             {
-                Key = Encoding.UTF8.GetString(keyPtr, keySize),
+                DocId = docId,
+                Name = name,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
-                Values = new TimeSeriesValuesSegment(segmentPtr, segmentSize).YieldAllValues(context, baseline),
+                Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize)/*.YieldAllValues(context, baseline)*/,
                 Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
                 //Etag = Bits.SwapBytes(etag),
             };

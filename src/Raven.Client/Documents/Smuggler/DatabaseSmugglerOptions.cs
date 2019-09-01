@@ -8,7 +8,7 @@
                                                               DatabaseItemType.DatabaseRecord |
                                                               DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
                                                               DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
-                                                              DatabaseItemType.Subscriptions;
+                                                              DatabaseItemType.Subscriptions | DatabaseItemType.TimeSeries;
 
         public const DatabaseRecordItemType DefaultOperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
                                                                                   DatabaseRecordItemType.ConflictSolverConfig |
