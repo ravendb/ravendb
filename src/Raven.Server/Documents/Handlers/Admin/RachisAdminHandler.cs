@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.OpenReadTransaction();
-                writer.WriteArray("RachisLogHistory", RachisLogHistory.GetHistoryLogs(context), context);
+                writer.WriteArray("RachisLogHistory", ServerStore.Engine.LogHistory.GetHistoryLogs(context), context);
                 writer.Flush();
             }
             return Task.CompletedTask;

@@ -1392,6 +1392,34 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        public long GetLastRevisionEtag(DocumentsOperationContext context, string collection)
+        {
+            Table.TableValueHolder result = null;
+            if (LastRevision(context, collection, ref result) == false)
+                return 0;
+
+            return TableValueToEtag((int)RevisionsTable.Etag, ref result.Reader);
+        }
+
+        private bool LastRevision(DocumentsOperationContext context, string collection, ref Table.TableValueHolder result)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return false;
+
+            var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+            var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return false;
+
+            result = table.ReadLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+            if (result == null)
+                return false;
+
+            return true;
+        }
+
         public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, CollectionName collectionName, long etag, int take)
         {
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
