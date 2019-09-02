@@ -71,7 +71,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/serverWideBackupList",
             title: "Server-Wide Backup",
             nav: true,
-            css: 'icon-global',
+            css: 'icon-server-wide-backup',
             dynamicHash: appUrl.forServerWideBackupList,
             enabled: access.enableServerWideBackupMenuItem
         }),
