@@ -6,6 +6,9 @@ using FastTests;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -367,6 +370,80 @@ select { Id: id(d.Current), Age: d.Current.Age }
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
 
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RDBCL_801()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                        {
+                            Name = "Karmel"
+                        }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>();
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var configuration = new RevisionsConfiguration
+                    {
+                        Default = new RevisionsCollectionConfiguration
+                        {
+                            Disabled = false,
+                            MinimumRevisionsToKeep = 5,
+                        },
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                        {
+                            ["Users"] = new RevisionsCollectionConfiguration
+                            {
+                                Disabled = false
+                            },
+                            ["Dons"] = new RevisionsCollectionConfiguration
+                            {
+                                Disabled = false
+                            }
+                        }
+                    };
+
+                    await Server.ServerStore.ModifyDatabaseRevisions(context,
+                        store.Database,
+                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                            context), Guid.NewGuid().ToString());
+                }
+
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                }))
+                {
+                    GC.KeepAlive(sub.Run(x =>
+                    {
+                    
+                    }));
+
+                    var acks = 0;
+                    await Task.Delay(5000);
+
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        foreach (var entry in Server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
+                        {
+                            var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
+                            if (type == nameof(AcknowledgeSubscriptionBatchCommand))
+                            {
+                                acks++;
+                            }
+                        }
+                    }
+                   
+                    Assert.True(acks < 50, $"{acks}");
                 }
             }
         }
