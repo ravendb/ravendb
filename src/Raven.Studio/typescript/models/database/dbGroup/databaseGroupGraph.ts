@@ -99,6 +99,8 @@ interface taskNodeWithCache extends taskNode {
 
 class databaseGroupGraph {
 
+    private static serverWideNamePrefixFromServer = "Server Wide Backup";
+
     private static readonly circleRadius = 42;
     private static readonly minDatabaseGroupDrawRadius = 80;
     private static readonly minDistanceBetweenCirclesInDatabaseGroup = 120;
@@ -550,6 +552,11 @@ class databaseGroupGraph {
             .attr("class", x => "task-node " + x.type + " " + x.state);
 
         const taskIcon = (node: taskNode) => {
+            if (node.name.startsWith(databaseGroupGraph.serverWideNamePrefixFromServer)) {
+                // special case: server-wide backup
+                return "&#xea25;";
+            }
+            
             switch (node.type) {
                 case "Backup":
                     return "&#xe9b6;";
