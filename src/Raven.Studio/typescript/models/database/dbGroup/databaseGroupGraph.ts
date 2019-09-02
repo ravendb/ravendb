@@ -2,7 +2,7 @@
 import d3 = require("d3");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import cola = require("cola");
-import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
+import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 
 
 abstract class layoutable {
@@ -98,8 +98,6 @@ interface taskNodeWithCache extends taskNode {
 }
 
 class databaseGroupGraph {
-
-    private static serverWideNamePrefixFromServer = "Server Wide Backup";
 
     private static readonly circleRadius = 42;
     private static readonly minDatabaseGroupDrawRadius = 80;
@@ -552,7 +550,7 @@ class databaseGroupGraph {
             .attr("class", x => "task-node " + x.type + " " + x.state);
 
         const taskIcon = (node: taskNode) => {
-            if (node.name.startsWith(databaseGroupGraph.serverWideNamePrefixFromServer)) {
+            if (node.name.startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer)) {
                 // special case: server-wide backup
                 return "&#xea25;";
             }
