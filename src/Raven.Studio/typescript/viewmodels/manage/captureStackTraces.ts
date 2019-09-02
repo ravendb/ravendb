@@ -37,7 +37,7 @@ class stackInfo {
     x: number;
     y: number;
     cpuUsage: string;
-    threadNamesAndIds: string[] = [];
+    threadNamesAndIds: { short: string; long: string }[] = [];
 
     children: stackInfo[];
     parent: stackInfo;
@@ -368,9 +368,9 @@ class captureStackTraces extends viewModelBase {
                     .attr("class", "frame")
                     .attr('x', -captureStackTraces.maxBoxWidth / 2 + stackInfo.boxPadding)
                     .attr('y', (d, i) => -offsetTop + stackInfo.lineHeight * i)
-                    .text(d => d)
+                    .text(d => d.short)
                     .append("title")
-                    .text(d => d);
+                    .text(d => d.long);
             }
         });
 
@@ -548,14 +548,22 @@ class captureStackTraces extends viewModelBase {
         }
     }
 
-    private getThreadNamesAndIds(threadIds: number[]): string[] {
+    private getThreadNamesAndIds(threadIds: number[]): { short: string; long: string }[] {
         const threadInfo = this.getThreadInfo(threadIds);
 
         if (threadInfo.length) {
             const groupByName = _.groupBy(threadInfo, x => x.Name);
             return Object.keys(groupByName).map(key => {
                 const ids = groupByName[key].map(x => x.Id);
-                return key + " [" + ids.join(",") + "]";
+                
+                const shortName = ids.length > 2 ? (
+                    "[" + ids[0] + "," + ids[1] + " and " + (ids.length - 2) + " more] " + key
+                ) : "[" + ids.join(",") + "] " + key;
+                
+                return {
+                    short: shortName,
+                    long: "[" + ids.join(",") + "] " + key
+                }
             });
         }
 
