@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Raven.Client.Documents;
@@ -431,6 +432,84 @@ namespace FastTests.Client
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
+        }
+
+        [Fact]
+        public void Can_Include_Nested_Dictionary_Property()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string userId1 = "users/1";
+                const string userId2 = "users/2";
+                string testId;
+
+                using (var session = store.OpenSession())
+                {
+                    var user1 = new User { Name = "name1", Age = 1 };
+                    session.Store(user1, userId1);
+
+                    var user2 = new User { Name = "name2", Age = 1 };
+                    session.Store(user2, userId2);
+
+                    var test = new Test
+                    {
+                        Dictionary = new Dictionary<string, IdClass>
+                        {
+                            { userId1, new IdClass {UserId = userId1} },
+                            { userId2, new IdClass {UserId = userId2} }
+                        }
+                    };
+
+                    session.Store(test);
+                    testId = test.Id;
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var test = session
+                        .Include<Test, User>(x => x.Dictionary.Select(d => d.Value.UserId))
+                        .Load<Test>(testId);
+
+                    Assert.NotNull(test);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.Load<User>(userId1);
+                    session.Load<User>(userId2);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var test = session
+                        .Include<Test>(x => x.Dictionary.Values.Select(d => d.UserId))
+                        .Load<Test>(testId);
+
+                    Assert.NotNull(test);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    session.Load<User>(userId1);
+                    session.Load<User>(userId2);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        private class Test
+        {
+            public string Id { get; set; }
+
+            public Dictionary<string, IdClass> Dictionary { get; set; }
+        }
+
+        private class IdClass
+        {
+            public string UserId { get; set; }
         }
 
         private class Order
