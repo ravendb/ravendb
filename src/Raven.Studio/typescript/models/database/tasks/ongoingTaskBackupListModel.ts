@@ -17,7 +17,7 @@ import accessManager = require("common/shell/accessManager");
 class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
     
-    private static serverWideNamePrefixFromServer = "Server Wide Backup";
+    static serverWideNamePrefixFromServer = "Server Wide Backup";
     isServerWide: KnockoutComputed<boolean>;
     
     editUrl: KnockoutComputed<string>;
