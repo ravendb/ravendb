@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Logging;
 using Raven.Database.Config;
@@ -11,6 +12,7 @@ using Raven.Database.Server.Connections;
 using Raven.Database.Server.Security;
 using Raven.Database.Server.Tenancy;
 using Raven.Database.Server.WebApi;
+using Raven.Database.Storage.Esent;
 
 namespace Raven.Database.Server
 {
@@ -43,7 +45,11 @@ namespace Raven.Database.Server
                 HttpEndpointRegistration.RegisterAdminLogsTarget();
                 if (db == null)
                 {
-                    configuration.UpdateDataDirForLegacySystemDb();                    
+                    configuration.UpdateDataDirForLegacySystemDb();
+
+                    // initialize before starting the first esent instance
+                    SetMaxInstances(configuration);
+
                     systemDatabase = new DocumentDatabase(configuration, null, null, (sender, exception) =>
                     {
                         if (log.IsInfoEnabled)
@@ -199,6 +205,25 @@ namespace Raven.Database.Server
             public InMemoryRavenConfiguration SystemConfiguration
             {
                 get { return systemConfiguration; }
+            }
+        }
+
+        private static void SetMaxInstances(InMemoryRavenConfiguration configuration)
+        {
+            try
+            {
+                var maxInstances = configuration.Storage.Esent.MaxInstances;
+                SystemParameters.MaxInstances = maxInstances;
+            }
+            catch (EsentErrorException e)
+            {
+                // this is expected if we had done something like recycling the app domain
+                // because the engine state is actually at the process level (unmanaged)
+                // so we ignore this error
+                if (e.Error == JET_err.AlreadyInitialized)
+                    return;
+
+                throw;
             }
         }
     }

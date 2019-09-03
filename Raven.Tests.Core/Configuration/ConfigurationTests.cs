@@ -216,6 +216,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Esent.CircularLog.Value, actual => actual.Storage.Esent.CircularLog);
             configurationComparer.Assert(expected => expected.Esent.MaxSessions.Value, actual => actual.Storage.Esent.MaxSessions);
             configurationComparer.Assert(expected => expected.Esent.CheckpointDepthMax.Value, actual => actual.Storage.Esent.CheckpointDepthMax);
+            configurationComparer.Assert(expected => expected.Esent.MaxInstances.Value, actual => actual.Storage.Esent.MaxInstances);
             configurationComparer.Assert(expected => expected.FileSystem.MaximumSynchronizationInterval.Value, actual => actual.FileSystem.MaximumSynchronizationInterval);
             configurationComparer.Assert(expected => expected.Encryption.EncryptionKeyBitsPreference.Value, actual => actual.Encryption.EncryptionKeyBitsPreference);
             configurationComparer.Assert(expected => expected.Encryption.UseFips.Value, actual => actual.Encryption.UseFips);

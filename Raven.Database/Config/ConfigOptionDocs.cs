@@ -97,6 +97,7 @@ namespace Raven.Database.Config
             {"Raven/Esent/MaxCursors", "int", null, "The maximum number of cursors allowed concurrently. Default: 2048."},
             {"Raven/Esent/DbExtensionSize", "int", null, "The size that the database file will be enlarged with when the file is full. The value is in megabytes. Lower values result in smaller file size, but slower performance when the database size grows. Default: 8."},
             {"Raven/Esent/CircularLog", "bool", "true / false", "Whatever circular logs will be used, defaults to true. If you want to use incremental backups, you need to turn this off, but logs will only be truncated on backup."},
+            {"Raven/Esent/MaxInstances", "int", null, "The max number of concurrently running Esent instances. Default: 1024."},
 
             //Voron	
             {"Raven/Voron/AllowIncrementalBackups", "bool", "true / false", "If you want to use incremental backups, you need to turn this to true, but then journal files will not be deleted after applying them to the data file. They will be deleted only after a successful backup. Default: false."},

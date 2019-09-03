@@ -390,6 +390,8 @@ namespace Raven.Abstractions.Data
 
         public static class Esent
         {
+            public const string MaxInstances = "Raven/Esent/MaxInstances";
+
             public const string CheckpointDepthMax = "Raven/Esent/CheckpointDepthMax";
 
             public const string CircularLog = "Raven/Esent/CircularLog";
@@ -534,3 +536,4 @@ namespace Raven.Abstractions.Data
         public const string TempPath = "Raven/TempPath";
         
 }}
+
