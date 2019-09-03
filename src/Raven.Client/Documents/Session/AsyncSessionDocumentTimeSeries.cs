@@ -150,7 +150,7 @@ namespace Raven.Client.Documents.Session
             int toRangeIndex;
             var fromRangeIndex = -1;
 
-            List<(DateTime, DateTime)> rangesToGetFromServer = default;
+            List<TimeSeriesRange> rangesToGetFromServer = default;
             IEnumerable<TimeSeriesValue> resultToUser;
 
             for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
@@ -171,20 +171,21 @@ namespace Raven.Client.Documents.Session
 
                 // can't get the entire range from cache
 
-                rangesToGetFromServer = rangesToGetFromServer ?? new List<(DateTime, DateTime)>();
+                rangesToGetFromServer = rangesToGetFromServer ?? new List<TimeSeriesRange>();
 
                 // add the missing part [f, t] between current range start (or 'from')
                 // and previous range end (or 'to') to the list of ranges we need to get from server
 
-                var f = toRangeIndex == 0 || ranges[toRangeIndex - 1].To < from
-                    ? from
-                    : ranges[toRangeIndex - 1].To;
 
-                var t = ranges[toRangeIndex].From <= to
-                    ? ranges[toRangeIndex].From
-                    : to;
-
-                rangesToGetFromServer.Add((f, t));
+                rangesToGetFromServer.Add(new TimeSeriesRange
+                {
+                    From = toRangeIndex == 0 || ranges[toRangeIndex - 1].To < from
+                        ? from
+                        : ranges[toRangeIndex - 1].To,
+                    To = ranges[toRangeIndex].From <= to
+                        ? ranges[toRangeIndex].From
+                        : to
+                });
 
                 if (ranges[toRangeIndex].To >= to)
                     break;
@@ -196,8 +197,12 @@ namespace Raven.Client.Documents.Session
                 // add the missing part between the last range end and 'to'
                 // to the list of ranges we need to get from server
 
-                rangesToGetFromServer = rangesToGetFromServer ?? new List<(DateTime, DateTime)>();
-                rangesToGetFromServer.Add((ranges[ranges.Count - 1].To, to));
+                rangesToGetFromServer = rangesToGetFromServer ?? new List<TimeSeriesRange>();
+                rangesToGetFromServer.Add(new TimeSeriesRange
+                {
+                    From = ranges[ranges.Count - 1].To,
+                    To = to
+                });
             }
 
             // get all the missing parts from server
