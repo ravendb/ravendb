@@ -52,19 +52,6 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
         private static readonly object UpdateLocker = new object();
 
-        static TransactionalStorage()
-        {
-            try
-            {
-                SystemParameters.MaxInstances = 1024;
-            }
-            catch (EsentErrorException e)
-            {
-                if (e.Error != JET_err.AlreadyInitialized)
-                    throw;
-            }
-        }
-
         public TransactionalStorage(InMemoryRavenConfiguration configuration)
         {
             configuration.Container.SatisfyImportsOnce(this);

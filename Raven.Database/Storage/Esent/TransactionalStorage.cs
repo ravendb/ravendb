@@ -66,23 +66,6 @@ namespace Raven.Storage.Esent
 
         private static readonly object UpdateLocker = new object();
 
-        static TransactionalStorage()
-        {
-            try
-            {
-                SystemParameters.MaxInstances = 1024;
-            }
-            catch (EsentErrorException e)
-            {
-                // this is expected if we had done something like recycling the app domain
-                // because the engine state is actually at the process level (unmanaged)
-                // so we ignore this error
-                if (e.Error == JET_err.AlreadyInitialized)
-                    return;
-                throw;
-            }
-        }
-
         public TransactionalStorage(InMemoryRavenConfiguration configuration, Action onCommit, Action onStorageInaccessible, Action onNestedTransactionEnter, Action onNestedTransactionExit)
         {
             configuration.Container.SatisfyImportsOnce(this);
