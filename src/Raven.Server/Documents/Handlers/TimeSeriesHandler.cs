@@ -95,23 +95,23 @@ namespace Raven.Server.Documents.Handlers
         {
             writer.WriteStartObject();
             {
-                writer.WritePropertyName(nameof(TimeSeriesRange.Name));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Name));
                 writer.WriteString(name);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(TimeSeriesRange.From));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.From));
                 writer.WriteDateTime(from, true);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(TimeSeriesRange.To));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.To));
                 writer.WriteDateTime(to, true);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(TimeSeriesRange.FullRange));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.FullRange));
                 writer.WriteBool(false); // TODO: Need to figure this out
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(TimeSeriesRange.Values));
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Values));
                 writer.WriteStartArray();
                 {
                     var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, docId, name, from, to);
