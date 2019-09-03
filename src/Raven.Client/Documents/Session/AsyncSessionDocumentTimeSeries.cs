@@ -88,10 +88,10 @@ namespace Raven.Client.Documents.Session
             {
                 if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)  
                 {
-                    Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRange>>(StringComparer.OrdinalIgnoreCase);
+                    Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
                 }
 
-                cache[timeseries] = new List<TimeSeriesRange>
+                cache[timeseries] = new List<TimeSeriesRangeResult>
                 {
                     details.Values[timeseries][0]
                 };
@@ -103,8 +103,8 @@ namespace Raven.Client.Documents.Session
         private static IEnumerable<TimeSeriesValue> SkipAndTrimRangeIfNeeded(
             DateTime from, 
             DateTime to, 
-            TimeSeriesRange fromRange, 
-            TimeSeriesRange toRange, 
+            TimeSeriesRangeResult fromRange, 
+            TimeSeriesRangeResult toRange, 
             List<TimeSeriesValue> values, 
             int skip, 
             int trim)
@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Session
                 string timeseries,
                 DateTime from,
                 DateTime to,
-                List<TimeSeriesRange> ranges,
+                List<TimeSeriesRangeResult> ranges,
                 CancellationToken token)
         {
             // try to find a range in cache that contains [from, to]
@@ -223,7 +223,7 @@ namespace Raven.Client.Documents.Session
 
         }
 
-        private static TimeSeriesValue[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRange> ranges, int fromRangeIndex, int toRangeIndex, List<TimeSeriesRange> resultFromServer, out IEnumerable<TimeSeriesValue> resultToUser)
+        private static TimeSeriesValue[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges, int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> resultFromServer, out IEnumerable<TimeSeriesValue> resultToUser)
         {
             var skip = 0;
             var trim = 0;
@@ -319,8 +319,8 @@ namespace Raven.Client.Documents.Session
             DateTime to, 
             int fromRangeIndex, 
             int toRangeIndex, 
-            List<TimeSeriesRange> ranges, 
-            Dictionary<string, List<TimeSeriesRange>> cache, 
+            List<TimeSeriesRangeResult> ranges, 
+            Dictionary<string, List<TimeSeriesRangeResult>> cache, 
             TimeSeriesValue[] values)
         {
             if (fromRangeIndex == -1)
@@ -335,9 +335,9 @@ namespace Raven.Client.Documents.Session
                     // and the requested range is : [1, 15]
                     // after this action cache will be : [[1, 15]]
 
-                    cache[timeseries] = new List<TimeSeriesRange>
+                    cache[timeseries] = new List<TimeSeriesRangeResult>
                     {
-                        new TimeSeriesRange
+                        new TimeSeriesRangeResult
                         {
                             Name = timeseries,
                             From = from,
@@ -360,7 +360,7 @@ namespace Raven.Client.Documents.Session
                     // after this action cache will be : [[1,6], [7,10]]
 
                     ranges.RemoveRange(0, toRangeIndex);
-                    ranges.Insert(0, new TimeSeriesRange
+                    ranges.Insert(0, new TimeSeriesRangeResult
                     {
                         Name = timeseries,
                         From = from,
@@ -405,7 +405,7 @@ namespace Raven.Client.Documents.Session
                     // after this action cache will be : [[2,3], [4,12]]
 
                     ranges.RemoveRange(fromRangeIndex + 1, ranges.Count - fromRangeIndex - 1);
-                    ranges.Add(new TimeSeriesRange
+                    ranges.Add(new TimeSeriesRangeResult
                     {
                         From = from,
                         To = to,
@@ -452,7 +452,7 @@ namespace Raven.Client.Documents.Session
                     // after this action cache will be : [[2,3], [4,9], [10,12]]
 
                     ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex - 1);
-                    ranges.Insert(fromRangeIndex + 1, new TimeSeriesRange
+                    ranges.Insert(fromRangeIndex + 1, new TimeSeriesRangeResult
                     {
                         Name = timeseries,
                         From = from,
@@ -518,7 +518,7 @@ namespace Raven.Client.Documents.Session
             ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
         }
 
-        private static IEnumerable<TimeSeriesValue> ChopRelevantRange(TimeSeriesRange range, DateTime from, DateTime to)
+        private static IEnumerable<TimeSeriesValue> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
         {
             foreach (var value in range.Values)
             {

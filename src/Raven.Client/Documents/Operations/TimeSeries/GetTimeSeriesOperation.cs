@@ -102,6 +102,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class TimeSeriesDetails
     {
         public string Id;
-        public Dictionary<string, List<TimeSeriesRange>> Values = new Dictionary<string, List<TimeSeriesRange>>();
+        public Dictionary<string, List<TimeSeriesRangeResult>> Values = new Dictionary<string, List<TimeSeriesRangeResult>>();
     }
 }
