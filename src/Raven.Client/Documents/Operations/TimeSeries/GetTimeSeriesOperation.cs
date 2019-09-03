@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -13,19 +14,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         private readonly string _docId;
         private readonly string _timeseries;
-        private readonly List<(DateTime, DateTime)> _ranges;
+        private readonly IEnumerable<TimeSeriesRange> _ranges;
 
         public GetTimeSeriesOperation(string docId, string timeseries, DateTime from, DateTime to)
         {
             _docId = docId;
             _timeseries = timeseries;
-            _ranges = new List<(DateTime, DateTime)>
+            _ranges = new List<TimeSeriesRange>
             {
-                (from, to)
+                new TimeSeriesRange
+                {
+                    From = from,
+                    To = to
+                }
             };
         }
 
-        public GetTimeSeriesOperation(string docId, string timeseries, List<(DateTime, DateTime)> ranges)
+        public GetTimeSeriesOperation(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges)
         {
             _docId = docId;
             _timeseries = timeseries;
@@ -41,9 +46,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             private readonly string _docId;
             private readonly string _timeseries;
-            private readonly List<(DateTime From, DateTime To)> _ranges;
+            private readonly IEnumerable<TimeSeriesRange> _ranges;
 
-            public GetTimeSeriesCommand(string docId, string timeseries, List<(DateTime, DateTime)> ranges)
+            public GetTimeSeriesCommand(string docId, string timeseries, IEnumerable<TimeSeriesRange> ranges)
             {
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
                 _timeseries = timeseries ?? throw new ArgumentNullException(nameof(timeseries));
@@ -65,18 +70,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 {
                     foreach (var range in _ranges)
                     {
-                        var f = range.From.Kind == DateTimeKind.Local
-                            ? DateTime.SpecifyKind(range.From, DateTimeKind.Unspecified)
-                            : range.From;
-
-                        var t = range.To.Kind == DateTimeKind.Local
-                            ? DateTime.SpecifyKind(range.To, DateTimeKind.Unspecified)
-                            : range.To;
-
                         pathBuilder.Append("&from=")
-                            .Append(f.ToString("o"))
+                            .Append(range.From.GetDefaultRavenFormat(range.From.Kind == DateTimeKind.Utc))
                             .Append("&to=")
-                            .Append(t.ToString("o"));
+                            .Append(range.To.GetDefaultRavenFormat(range.To.Kind == DateTimeKind.Utc));
                     }
                 }
 

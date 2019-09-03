@@ -559,11 +559,25 @@ namespace SlowTests.Client.TimeSeries.Operations
                 store.Operations.Send(timeSeriesBatch);
 
                 var timesSeriesDetails = store.Operations.Send(
-                    new GetTimeSeriesOperation("users/ayende", "Heartrate", new List<(DateTime, DateTime)>
-                    {                      
-                        (baseline.AddMinutes(5), baseline.AddMinutes(10)),
-                        (baseline.AddMinutes(15), baseline.AddMinutes(30)),
-                        (baseline.AddMinutes(40), baseline.AddMinutes(60))
+                    new GetTimeSeriesOperation("users/ayende", "Heartrate", new List<TimeSeriesRange>
+                    {
+                        new TimeSeriesRange
+                        {
+                            From = baseline.AddMinutes(5),
+                            To = baseline.AddMinutes(10)
+                        },
+
+                        new TimeSeriesRange
+                        {
+                            From = baseline.AddMinutes(15),
+                            To = baseline.AddMinutes(30)
+                        },
+
+                        new TimeSeriesRange
+                        {
+                            From = baseline.AddMinutes(40),
+                            To = baseline.AddMinutes(60)
+                        }
                     }));
 
                 Assert.Equal("users/ayende", timesSeriesDetails.Id);
