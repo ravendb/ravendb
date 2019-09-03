@@ -104,7 +104,7 @@ namespace Raven.Client.Extensions
                     }
                 }
 
-                if (curValue.Length == 6 && curValue == "$Value" && i != stackLength - 1)
+                if (curValue == "$Value" && i != stackLength - 1)
                 {
                     // Dictionary[].$Value.PropertyName => Dictionary[].PropertyName
                     continue;
