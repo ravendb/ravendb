@@ -10,7 +10,7 @@ namespace Sparrow.Json
 {
     public unsafe class BlittableJsonReaderArray : BlittableJsonReaderBase, IEnumerable<object>, IDisposable
     {
-        private readonly bool _disposeParent;
+        private bool _disposeParent;
         private readonly int _count;
         private readonly byte* _metadataPtr;
         private readonly byte* _dataStart;
@@ -21,10 +21,11 @@ namespace Sparrow.Json
 
         public BlittableJsonReaderObject Parent => _parent;
 
-        public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type, bool disposeParent)
+        internal void ArrayIsRoot() => _disposeParent = true;
+
+        public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
             : base(parent._context)
         {
-            _disposeParent = disposeParent;
             _parent = parent;
 
             _count = parent.ReadVariableSizeInt(pos, out byte arraySizeOffset);
@@ -106,6 +107,9 @@ namespace Sparrow.Json
         public void Dispose()
         {
             AssertContextNotDisposed();
+
+            // this is required only in cases that we get a BlittableJsonReaderArray, which is an only child of an BlittableJsonReaderObject and we lose track of it's parent, 
+            // like in BlittableJsonDocumentBuilder.CreateArrayReader.
             if (_disposeParent)
                 _parent?.Dispose();
         }
