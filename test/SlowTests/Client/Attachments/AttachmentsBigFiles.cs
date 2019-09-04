@@ -10,10 +10,14 @@ namespace SlowTests.Client.Attachments
     public class AttachmentsBigFiles : RavenTestBase
     {
         [Theory]
-        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
-        public async Task BatchRequestWithLongMultiPartSections(long size, string hash)
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
+        public async Task BatchRequestWithLongMultiPartSections(long size, string hash, bool encrypted)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                Encrypted = encrypted
+            }))
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store, dbId1);
@@ -50,10 +54,14 @@ namespace SlowTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
-        public async Task SupportHugeAttachment(long size, string hash)
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
+        public async Task SupportHugeAttachment(long size, string hash, bool encrypted)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                Encrypted = encrypted
+            }))
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store, dbId1);
