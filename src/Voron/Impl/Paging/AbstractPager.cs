@@ -55,7 +55,7 @@ namespace Voron.Impl.Paging
             CanPrefetch = new Lazy<bool>(CanPrefetchQuery);
         }
 
-        public static string StaticLocker = "AbstractPagerStaticLocker";
+        public static object WorkingSetIncreaseLocker = new object();
         public void SetPagerState(PagerState newState)
         {
             if (DisposeOnceRunner.Disposed)
@@ -81,15 +81,12 @@ namespace Voron.Impl.Paging
                                 if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
                                     continue; // okay, can skip this, then
 
-                                Monitor.Enter(StaticLocker);
-
-                                try
+                                lock (WorkingSetIncreaseLocker)
                                 {
-                                    TryHandleFailureToLockMemory(info.BaseAddress, info.Size);
-                                }
-                                finally
-                                {
-                                    Monitor.Exit(StaticLocker);
+                                    // we should check ourselves again after we enter the lock, someone could halve already increased working set enough
+                                    if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) != 0)
+                                        TryHandleFailureToLockMemory(info.BaseAddress, info.Size);
+                                 
                                 }
                             }
                         }
