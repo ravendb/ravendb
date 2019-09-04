@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Logging;
@@ -54,6 +55,7 @@ namespace Voron.Impl.Paging
             CanPrefetch = new Lazy<bool>(CanPrefetchQuery);
         }
 
+        public static string StaticLocker = "AbstractPagerStaticLocker";
         public void SetPagerState(PagerState newState)
         {
             if (DisposeOnceRunner.Disposed)
@@ -79,10 +81,16 @@ namespace Voron.Impl.Paging
                                 if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
                                     continue; // okay, can skip this, then
 
-                                var sumOfAllocations = Bits.PowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
+                                Monitor.Enter(StaticLocker);
 
-                                if (TryHandleFailureToLockMemory(info.BaseAddress, info.Size, sumOfAllocations))
-                                    break;
+                                try
+                                {
+                                    TryHandleFailureToLockMemory(info.BaseAddress, info.Size);
+                                }
+                                finally
+                                {
+                                    Monitor.Exit(StaticLocker);
+                                }
                             }
                         }
                     }
@@ -107,7 +115,7 @@ namespace Voron.Impl.Paging
             return LockMemory;
         }
 
-        protected bool TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock, long sumOfAllocationsInBytes)
+        protected void TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock)
         {
             var currentProcess = Process.GetCurrentProcess();
 
@@ -116,24 +124,25 @@ namespace Voron.Impl.Paging
                 // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                 // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-                var nextSize = Bits.PowerOf2(currentProcess.MinWorkingSet.ToInt64() + sumOfAllocationsInBytes + sizeToLock);
-                if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
+                var nextWorkingSetSize = GetNearestFileSize(currentProcess.MinWorkingSet.ToInt64() + sizeToLock);
+
+                if (nextWorkingSetSize > int.MaxValue && IntPtr.Size == sizeof(int))
                 {
-                    nextSize = int.MaxValue;
+                    nextWorkingSetSize = int.MaxValue;
                 }
 
                 // Minimum working set size must be less than or equal to the maximum working set size.
                 // Let's increase the max as well.
-                if (nextSize > (long)currentProcess.MaxWorkingSet)
+                if (nextWorkingSetSize > (long)currentProcess.MaxWorkingSet)
                 {
                     try
                     {
-                        currentProcess.MaxWorkingSet = new IntPtr(nextSize);
+                        currentProcess.MaxWorkingSet = new IntPtr(nextWorkingSetSize);
                     }
                     catch (Exception e)
                     {
-                        throw new InsufficientMemoryException($"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} to {nextSize:#,#;;0} but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
-                                                              $"Failed to increase the max working set size so we can lock {sizeToLock:#,#;;0} for {FileName}. With encrypted " +
+                        throw new InsufficientMemoryException($"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} bytes to {nextWorkingSetSize:#,#;;0} bytes but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
+                                                              $"Failed to increase the max working set size so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
                                                               "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                               "and aborting the current operation.", e);
                     }
@@ -141,31 +150,31 @@ namespace Voron.Impl.Paging
 
                 try
                 {
-                    currentProcess.MinWorkingSet = new IntPtr(nextSize);
+                    currentProcess.MinWorkingSet = new IntPtr(nextWorkingSetSize);
                 }
                 catch (Exception e)
                 {
-                    throw new InsufficientMemoryException($"Failed to increase the min working set size so we can lock {sizeToLock:#,#;;0} for {FileName}. With encrypted " +
+                    throw new InsufficientMemoryException($"Failed to increase the min working set size to {nextWorkingSetSize:#,#;;0} bytes so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
                                                           "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                           "and aborting the current operation.", e);
                 }
 
                 // now we can try again, after we raised the limit, we only do so once, though
                 if (Sodium.sodium_mlock(addressToLock, (UIntPtr)sizeToLock) == 0)
-                    return false;
+                    return;
             }
 
             var msg =
-                $"Unable to lock memory for {FileName} with size {sizeToLock:#,#;;0}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
+                $"Unable to lock memory for {FileName} with size {sizeToLock:#,#;;0} bytes), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
             if (PlatformDetails.RunningOnPosix)
             {
                 msg +=
-                    $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sumOfAllocationsInBytes}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
+                    $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sizeToLock}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
             }
             else
             {
                 msg +=
-                    $"Already tried to raise the the process min working set to {currentProcess.MinWorkingSet.ToInt64():#,#;;0} but still got a failure.{Environment.NewLine}";
+                    $"Already tried to raise the the process min working set to {currentProcess.MinWorkingSet.ToInt64():#,#;;0} bytes but still got a failure.{Environment.NewLine}";
             }
 
             msg += "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
