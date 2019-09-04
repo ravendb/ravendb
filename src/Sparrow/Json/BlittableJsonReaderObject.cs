@@ -822,7 +822,10 @@ namespace Sparrow.Json
                 case BlittableJsonToken.EmbeddedBlittable:
                     return ReadNestedObject(position);
                 case BlittableJsonToken.StartArray:
-                    return new BlittableJsonReaderArray(position, _parent ?? this, type)
+                    return new BlittableJsonReaderArray(position, _parent ?? this, type,
+                        // we only allow to dispose the parent if the parent is the root, this allow us to handle
+                        // more complex structures, see: RavenDB-13983
+                        ReferenceEquals(_parent, this))
                     {
                         NoCache = NoCache
                     };
