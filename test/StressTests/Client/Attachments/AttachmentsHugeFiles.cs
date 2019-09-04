@@ -11,15 +11,17 @@ namespace StressTests.Client.Attachments
     public class AttachmentsHugeFiles : NoDisposalNeeded
     {
         [NightlyBuildTheory64Bit]
-        [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=")] // 256 MB
-        [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=")] // 2.5 GB
-        public async Task BatchRequestWithLongMultiPartSections(long size, string hash)
+        [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=", false)] // 256 MB
+        [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=", true)] // 256 MB
+        [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", false)] // 2.5 GB
+        [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", true)] // 2.5 GB
+        public async Task BatchRequestWithLongMultiPartSections(long size, string hash, bool encrypted)
         {
             try
             {
                 using (var stress = new AttachmentsBigFiles())
                 {
-                    await stress.BatchRequestWithLongMultiPartSections(size, hash);
+                    await stress.BatchRequestWithLongMultiPartSections(size, hash, encrypted);
                 }
             }
             catch (IOException ioe)
@@ -31,14 +33,15 @@ namespace StressTests.Client.Attachments
         }
 
         [NightlyBuildTheory64Bit]
-        [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=")] // 2.5 GB
-        public async Task SupportHugeAttachment(long size, string hash)
+        [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", false)] // 2.5 GB
+        [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", true)] // 2.5 GB
+        public async Task SupportHugeAttachment(long size, string hash, bool encrypted)
         {
             try
             {
                 using (var stress = new AttachmentsBigFiles())
                 {
-                    await stress.SupportHugeAttachment(size, hash);
+                    await stress.SupportHugeAttachment(size, hash, encrypted);
                 }
             }
             catch (IOException ioe)
