@@ -53,7 +53,7 @@ namespace Sparrow.Server.Platform
                 return allocate4KbAllignedMemory;
             }
 
-            public static void Free4KbAlignedMemory(byte* ptr, int size, Sparrow.Utils.NativeMemory.ThreadStats stats)
+            public static void Free4KbAlignedMemory(byte* ptr, long size, Sparrow.Utils.NativeMemory.ThreadStats stats)
             {
                 Debug.Assert(ptr != null);
 
