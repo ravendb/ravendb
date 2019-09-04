@@ -238,26 +238,18 @@ namespace Voron.Impl.Paging
             return false;
         }
 
-        public static string Windows32BitsMMapPagerStaticLocker = "Windows32BitsMMapPagerStaticLocker";
-        
-
         private void LockMemory32Bits(byte* address, long sizeToLock, TransactionState state)
         {
             try
             {                
                 if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0)
                 {
-                    Monitor.Enter(Windows32BitsMMapPagerStaticLocker);
-                    try
-                    {
-                        if (DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
+                    lock (WorkingSetIncreaseLocker)
+                    { 
+                        if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0 && DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
                         {
                             TryHandleFailureToLockMemory(address, sizeToLock);
-                        }
-                    }
-                    finally
-                    {
-                        Monitor.Exit(Windows32BitsMMapPagerStaticLocker);
+                        }                    
                     }
                 }
             }
