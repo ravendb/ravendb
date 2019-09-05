@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Voron;
+using Voron.Impl;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -61,6 +62,8 @@ namespace Raven.Server.Smuggler.Documents
             _startDocumentEtag = startDocumentEtag;
             _startRaftIndex = startRaftIndex;
         }
+
+        public long NumberOfHeldBytes => _context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize();
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
