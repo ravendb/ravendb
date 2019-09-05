@@ -530,13 +530,13 @@ namespace Voron
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context);
             return new Transaction(newLowLevelTransaction);
         }
-        public Transaction CloneReadTransaction(Transaction previous)
+        public Transaction CloneReadTransaction(Transaction previous, TransactionPersistentContext transactionPersistentContext = null, ByteStringContext context = null)
         {
             if (previous.IsWriteTransaction)
                 throw new ArgumentException("Only read transactions can be cloned");
 
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-            var transactionPersistentContext = new TransactionPersistentContext();
+            transactionPersistentContext = transactionPersistentContext ?? new TransactionPersistentContext();
 
             try
             {
@@ -549,7 +549,7 @@ namespace Voron
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    tx = new LowLevelTransaction(previous.LowLevelTransaction, transactionPersistentContext);
+                    tx = new LowLevelTransaction(previous.LowLevelTransaction, transactionPersistentContext, context);
 
                     ActiveTransactions.Add(tx);
                 }
