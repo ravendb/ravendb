@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -205,6 +206,8 @@ namespace Raven.Server.Monitoring.Snmp
             }
 
             var engineGroup = new EngineGroup();
+            var engineIdField = engineGroup.GetType().GetField("_engineId", BindingFlags.Instance | BindingFlags.NonPublic);
+            engineIdField.SetValue(engineGroup, new OctetString(Guid.NewGuid().ToString("N")));
 
             var engine = new SnmpEngine(factory, listener, engineGroup);
             engine.Listener.AddBinding(new IPEndPoint(IPAddress.Any, server.Configuration.Monitoring.Snmp.Port));
