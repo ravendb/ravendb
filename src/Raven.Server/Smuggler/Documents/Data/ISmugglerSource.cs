@@ -14,6 +14,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerSource
     {
+        long NumberOfHeldBytes { get; }
         IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion);
         DatabaseItemType GetNextType();
         DatabaseRecord GetDatabaseRecord();

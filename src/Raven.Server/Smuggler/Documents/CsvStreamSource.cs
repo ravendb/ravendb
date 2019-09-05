@@ -46,6 +46,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
+        public long NumberOfHeldBytes => 0;
         public CsvStreamSource(DocumentDatabase database, Stream stream, DocumentsOperationContext context, string collection)
         {
             _database = database;

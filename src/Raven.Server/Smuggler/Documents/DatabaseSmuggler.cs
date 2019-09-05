@@ -62,6 +62,10 @@ namespace Raven.Server.Smuggler.Documents
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options, database);
 
+            Debug.Assert(source is DatabaseSource && destination is DatabaseDestination, 
+                "When both source and destination are database, we might get into a delayed write for the dest while the " +
+                "source already pulsed its' read transaction, resulting in bad memory read.");
+            
             _time = time;
             _onProgress = onProgress ?? (progress => { });
         }
@@ -629,6 +633,17 @@ namespace Raven.Server.Smuggler.Documents
                     actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;
+
+
+                    if (result.Documents.ReadCount % 1024 == 0)
+                    {
+                        if (_source.NumberOfHeldBytes > 1024 * 1024 * 16)
+                        {
+                            // pulse to the read transaction
+                            // make sure that collections specific etag is maintained
+                            // retry this
+                        }
+                    }
                 }
             }
 
