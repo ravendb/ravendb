@@ -28,7 +28,7 @@ class retentionPolicy {
             }
 
             const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumBackupAgeToKeep() * 1000, true);
-            return `Bacukups that are older than <strong>${retentionTimeHumane}</strong> will be removed on the next scheduled backup task`;
+            return `Backups that are older than <strong>${retentionTimeHumane}</strong> will be removed on the next scheduled backup task`;
         });
 
         this.dirtyFlag = new ko.DirtyFlag([
