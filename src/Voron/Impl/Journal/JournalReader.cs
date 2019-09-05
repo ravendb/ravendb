@@ -54,15 +54,21 @@ namespace Voron.Impl.Journal
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
 
-            TransactionHeader* current;
-            if (TryReadAndValidateHeader(options, out current) == false)
+            if (TryReadAndValidateHeader(options, out TransactionHeader* current) == false)
             {
                 var lastValid4Kb = _readAt4Kb;
                 _readAt4Kb++;
+
                 while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
                 {
                     if (TryReadAndValidateHeader(options, out current))
                     {
+                        if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        {
+                            SkipCurrentTransaction(current);
+                            return true;
+                        }
+
                         RequireHeaderUpdate = true;
                         break;
                     }
@@ -72,21 +78,16 @@ namespace Voron.Impl.Journal
                 _readAt4Kb = lastValid4Kb;
                 return false;
             }
-            bool performDecompression = current->CompressedSize != -1;
 
-            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
-
-            var transactionSizeIn4Kb =
-                (size + sizeof(TransactionHeader)) / (4*Constants.Size.Kilobyte) +
-                ((size + sizeof(TransactionHeader)) % (4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
-
-
-            if (current->TransactionId <= _journalInfo.LastSyncedTransactionId)
+            if (IsAlreadySyncTransaction(current))
             {
-                _readAt4Kb += transactionSizeIn4Kb;
-                LastTransactionHeader = current;
-                return true; // skipping
+                SkipCurrentTransaction(current);
+                return true;
             }
+
+            var performDecompression = current->CompressedSize != -1;
+
+            var transactionSizeIn4Kb = GetTransactionSizeIn4Kb(current);
 
             _readAt4Kb += transactionSizeIn4Kb;
             
@@ -229,6 +230,29 @@ namespace Voron.Impl.Journal
             return true;
         }
 
+        private void SkipCurrentTransaction(TransactionHeader* current)
+        {
+            var transactionSizeIn4Kb = GetTransactionSizeIn4Kb(current);
+
+            _readAt4Kb += transactionSizeIn4Kb;
+            LastTransactionHeader = current;
+        }
+
+        private bool IsAlreadySyncTransaction(TransactionHeader* current)
+        {
+            return _journalInfo.LastSyncedTransactionId != -1 && current->TransactionId <= _journalInfo.LastSyncedTransactionId;
+        }
+
+        private static long GetTransactionSizeIn4Kb(TransactionHeader* current)
+        {
+            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+
+            var transactionSizeIn4Kb =
+                (size + sizeof(TransactionHeader)) / (4 * Constants.Size.Kilobyte) +
+                ((size + sizeof(TransactionHeader)) % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
+            return transactionSizeIn4Kb;
+        }
+
         private void ThrowInvalidChecksumOnPageFromJournal(long pageNumber, TransactionHeader* current, ulong expectedChecksum, ulong checksum, PageHeader* pageHeader)
         {
             var message =
@@ -333,7 +357,7 @@ namespace Voron.Impl.Journal
 
                 // if the header marker is zero or garbage, we are probably in the area at the end of the log file, and have no additional log records
                 // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
-                // this log file and move to the next one, or it might have happened becuase of reuse of journal file 
+                // this log file and move to the next one, or it might have happened because of reuse of journal file 
 
                 // note : we might encounter a "valid" TransactionHeaderMarker which is still garbage, so we will test that later on
 
@@ -345,7 +369,6 @@ namespace Voron.Impl.Journal
                 return false;
 
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
-
             bool hashIsValid;
             if (options.EncryptionEnabled)
             {
@@ -372,6 +395,9 @@ namespace Voron.Impl.Journal
                 }
                 catch (InvalidOperationException ex)
                 {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        return true;
+
                     RequireHeaderUpdate = true;
                     options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed", ex);
                     return false;
@@ -393,7 +419,12 @@ namespace Voron.Impl.Journal
                 // this is first transaction being processed in the recovery process
 
                 if (_journalInfo.LastSyncedTransactionId == -1 || current->TransactionId <= _journalInfo.LastSyncedTransactionId)
+                {
+                    if (hashIsValid == false && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        return true;
+
                     return hashIsValid;
+                }
 
                 lastTxId = _journalInfo.LastSyncedTransactionId;
             }
@@ -404,13 +435,26 @@ namespace Voron.Impl.Journal
             if (current->TransactionId != 1)
             {
                 if (txIdDiff < 0)
+                {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        return true;
+
                     return false;
+                }
 
                 if (txIdDiff > 1 || txIdDiff == 0)
                 {
                     if (hashIsValid)
                     {
-                        // TxId is bigger then the last one by nore the '1' but has valid hash which mean we lost transactions in the middle
+                        // TxId is bigger then the last one by more than '1' but has valid hash which mean we lost transactions in the middle
+
+                        if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        {
+                            // when running in ignore data integrity errors mode then we could skip corrupted but already sync data
+                            // so it's expected in this case that txIdDiff > 1, let it continue to work then
+
+                            return true;
+                        }
 
                         if (LastTransactionHeader != null)
                         {
@@ -427,16 +471,32 @@ namespace Voron.Impl.Journal
 
                 // if (txIdDiff == 1) :
                 if (current->LastPageNumber <= 0)
+                {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        return true;
+
                     throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+                }
             }
 
             if (hashIsValid == false)
             {
+                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    return true;
+
                 RequireHeaderUpdate = true;
                 return false;
             }
 
             return true;
+        }
+
+        private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(TransactionHeader* currentTx, StorageEnvironmentOptions options)
+        {
+            // if we have a journal which contains transactions that has been synced and this is the case for current transaction 
+            // then we can continue the recovery regardless encountered errors
+
+            return IsAlreadySyncTransaction(currentTx) && options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)

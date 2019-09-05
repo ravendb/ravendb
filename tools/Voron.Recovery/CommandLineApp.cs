@@ -65,6 +65,8 @@ namespace Voron.Recovery
                 var progressIntervalInSecArg = cmd.Option("--ProgressIntervalInSec", "Will set the recovery tool refresh to console rate interval in seconds.", CommandOptionType.SingleValue);
                 var disableCopyOnWriteModeArg = cmd.Option("--DisableCopyOnWriteMode", "Default is false.", CommandOptionType.SingleValue);
                 var ignoreInvalidJournalErrorsArg = cmd.Option("--IgnoreInvalidJournalErrors", "Default is false.", CommandOptionType.SingleValue);
+                var ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg = cmd.Option("--IgnoreInvalidDataErrorsOfAlreadySyncedTransactions", "Default is false.", CommandOptionType.SingleValue);
+
 
                 var loggingModeArg = cmd.Option("--LoggingMode", "Logging mode: Operations or Information.", CommandOptionType.SingleValue);
 
@@ -152,6 +154,15 @@ namespace Voron.Recovery
                             return ExitWithError($"{nameof(config.IgnoreInvalidJournalErrors)} argument value ({value}) is invalid", cmd);
 
                         config.IgnoreInvalidJournalErrors = ignoreInvalidJournalErrors;
+                    }
+
+                    if (ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg.HasValue())
+                    {
+                        var value = ignoreDataIntegrityErrorsOfAlreadySyncedTransactionsArg.Value();
+                        if (bool.TryParse(value, out var ignoreDataIntegrityErrorsOfAlreadySyncedTransactions) == false)
+                            return ExitWithError($"{nameof(config.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions)} argument value ({value}) is invalid", cmd);
+
+                        config.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = ignoreDataIntegrityErrorsOfAlreadySyncedTransactions;
                     }
 
                     if (loggingModeArg.HasValue())

@@ -1191,6 +1191,7 @@ namespace Voron
         internal bool SimulateFailureOnDbCreation { get; set; }
         internal bool ManualSyncing { get; set; } = false;
         public bool? IgnoreInvalidJournalErrors { get; set; }
+        public bool IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions { get; set; }
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
 
         private readonly Logger _log;
