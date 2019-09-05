@@ -16,9 +16,10 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Documents.Iteration;
+using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
 using Voron;
-using Voron.Impl;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -62,8 +63,6 @@ namespace Raven.Server.Smuggler.Documents
             _startDocumentEtag = startDocumentEtag;
             _startRaftIndex = startRaftIndex;
         }
-
-        public long NumberOfHeldBytes => _context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize();
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
@@ -133,16 +132,41 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var documents = collectionsToExport.Count != 0
-                ? _database.DocumentsStorage.GetDocumentsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
-                : _database.DocumentsStorage.GetDocumentsFrom(_context, _startDocumentEtag, 0, int.MaxValue);
+            var enumerator = new PulseTransactionEnumerator<Document, DocumentsIterationState>(_context,
+                state =>
+                {
+                    if (collectionsToExport.Count != 0)
+                        return GetDocumentsFromCollections(_context, collectionsToExport, state);
 
-            foreach (var document in documents)
+                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, int.MaxValue);
+                },
+                new DocumentsIterationState(_context) // initial state
+                {
+                    StartEtag = _startDocumentEtag, 
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
             {
                 yield return new DocumentItem
                 {
-                    Document = document
+                    Document = enumerator.Current
                 };
+            }
+        }
+
+        private IEnumerable<Document> GetDocumentsFromCollections(DocumentsOperationContext context, List<string> collections, DocumentsIterationState state)
+        {
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var document in _database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    yield return document;
+                }
             }
         }
 

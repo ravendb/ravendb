@@ -724,7 +724,6 @@ namespace Raven.Server.Documents
                 }
 
                 yield return doc;
-
             }
         }
 

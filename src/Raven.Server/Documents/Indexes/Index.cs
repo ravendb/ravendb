@@ -97,6 +97,8 @@ namespace Raven.Server.Documents.Indexes
 
         private const int AllocationCleanupRequestsLimit = 10;
 
+        private readonly Size MappedSizeLimitOn32Bits = new Size(8, SizeUnit.Megabytes);
+
         protected Logger _logger;
 
         internal LuceneIndexPersistence IndexPersistence;
@@ -3304,17 +3306,17 @@ namespace Raven.Server.Documents.Indexes
             {
                 IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
-                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#0} kb mapped in docs ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
                     return false;
                 }
 
                 pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
-                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#0} kb mapped in index ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
                     return false;
                 }
             }

@@ -18,20 +18,20 @@ namespace Voron.Impl
         bool IsWriteTransaction { get; }
     }
 
-    public static class PagerLevelTransacionState
+    public static class PagerLevelTransactionState
     {
-        public static long GetTotal32BitsMappedSize(this IPagerLevelTransactionState self)
+        public static Size GetTotal32BitsMappedSize(this IPagerLevelTransactionState self)
         {
             var dic = self?.PagerTransactionState32Bits;
             if (dic == null)
-                return 0;
+                return new Size(0, SizeUnit.Bytes);
             var result = 0L;
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var state in dic)
             {
                 result += state.Value.TotalLoadedSize;
             }
-            return result;
+            return new Size(result, SizeUnit.Bytes);
         }
     }
 }
