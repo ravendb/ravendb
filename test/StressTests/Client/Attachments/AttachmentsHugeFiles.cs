@@ -10,7 +10,7 @@ namespace StressTests.Client.Attachments
 {
     public class AttachmentsHugeFiles : NoDisposalNeeded
     {
-        [NightlyBuildTheory64Bit]
+        [Theory]
         [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=", false)] // 256 MB
         [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=", true)] // 256 MB
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", false)] // 2.5 GB
@@ -32,7 +32,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [NightlyBuildTheory64Bit]
+        [Fact]
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", false)] // 2.5 GB
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=", true)] // 2.5 GB
         public async Task SupportHugeAttachment(long size, string hash, bool encrypted)
