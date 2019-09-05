@@ -153,6 +153,49 @@ namespace Voron.Impl
 
         public ulong Hash => _txHeader->Hash;
 
+        public LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext transactionPersistentContext)
+        {
+            // this is used to clone a read transaction, so we can dispose the old one.
+            // for example, in 32 bits, we may want to have a large transaction, but we 
+            // can't keep around and scanning the whole db. So we clone the transaction,
+            // create a new one, and release all the mappings associated with the old one
+            // the new transaction will create its own mapping, using the existing page translation
+            // table and install itself as the same transaction id as the current one. 
+
+            Debug.Assert(previous.Flags == TransactionFlags.Read);
+
+            PersistentContext = transactionPersistentContext;
+
+            DataPager = previous.DataPager;
+            _env = previous._env;
+            _journal = previous._journal;
+            _id = previous._id;
+            _freeSpaceHandling = previous._freeSpaceHandling;
+            // in order to separate the transactions, we *always* create a new allocator context
+            // when we clone a read transaction
+            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator.AllocationFailed += MarkTransactionAsFailed;
+            _disposeAllocator = true;
+            _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
+            Flags = TransactionFlags.Read;
+
+            foreach (var scratchPagerState in previous._pagerStates)
+            {
+                scratchPagerState.AddRef();
+                _pagerStates.Add(scratchPagerState);
+            }
+            _pageLocator = transactionPersistentContext.AllocatePageLocator(this);
+
+            _scratchPagerStates = previous._scratchPagerStates;
+
+            _state = previous._state.Clone();
+
+            InitializeRoots();
+
+            JournalSnapshots = previous.JournalSnapshots;
+
+        }
+
         private LowLevelTransaction(LowLevelTransaction previous, long txId)
         {
             // this is meant to be used with transaction merging only
