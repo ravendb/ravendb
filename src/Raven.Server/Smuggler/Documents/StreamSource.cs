@@ -65,8 +65,6 @@ namespace Raven.Server.Smuggler.Documents
             _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
         }
 
-        public long NumberOfHeldBytes => 0;
-
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
             _result = result;
