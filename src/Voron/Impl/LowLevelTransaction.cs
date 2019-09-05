@@ -153,7 +153,7 @@ namespace Voron.Impl
 
         public ulong Hash => _txHeader->Hash;
 
-        public LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext transactionPersistentContext)
+        public LowLevelTransaction(LowLevelTransaction previous, TransactionPersistentContext transactionPersistentContext, ByteStringContext allocator = null)
         {
             // this is used to clone a read transaction, so we can dispose the old one.
             // for example, in 32 bits, we may want to have a large transaction, but we 
@@ -171,11 +171,9 @@ namespace Voron.Impl
             _journal = previous._journal;
             _id = previous._id;
             _freeSpaceHandling = previous._freeSpaceHandling;
-            // in order to separate the transactions, we *always* create a new allocator context
-            // when we clone a read transaction
-            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
             _allocator.AllocationFailed += MarkTransactionAsFailed;
-            _disposeAllocator = true;
+            _disposeAllocator = allocator == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
             Flags = TransactionFlags.Read;
 
