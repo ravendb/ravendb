@@ -331,24 +331,39 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            if (collectionsToExport?.Count > 0)
-            {
-                foreach (var collection in collectionsToExport)
+            var enumerator = new PulseTransactionEnumerator<CounterGroupDetail, CountersIterationState>(_context,
+                state =>
                 {
-                    foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, collection, _startDocumentEtag, 0, int.MaxValue))
-                    {
-                        yield return counter;
-                    }
-                }
+                    if (collectionsToExport.Count != 0)
+                        return GetCounterValuesFromCollections(_context, collectionsToExport, state);
 
-                yield break;
-            }
+                    return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, state.StartEtag, 0, int.MaxValue);
+                },
+                new CountersIterationState(_context) // initial state
+                {
+                    StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
 
-            foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue))
+            while (enumerator.MoveNext())
             {
-                yield return counter;
+                yield return enumerator.Current;
             }
-        } 
+        }
+
+        private IEnumerable<CounterGroupDetail> GetCounterValuesFromCollections(DocumentsOperationContext context, List<string> collections, CountersIterationState state)
+        {
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    yield return counter;
+                }
+            }
+        }
 
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
         {
