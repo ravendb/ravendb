@@ -178,16 +178,45 @@ namespace Raven.Server.Smuggler.Documents
             if (revisionsStorage.Configuration == null)
                 yield break;
 
-            var documents = collectionsToExport.Count != 0
-                ? revisionsStorage.GetRevisionsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
-                : revisionsStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
+            var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
+                state =>
+                {
+                    if(collectionsToExport.Count != 0)
+                        return GetRevisionsFromCollections(_context, collectionsToExport, state);
 
-            foreach (var document in documents)
+                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, int.MaxValue);
+                },
+                new DocumentsIterationState(_context) // initial state
+                {
+                    StartEtag = _startDocumentEtag,
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
             {
                 yield return new DocumentItem
                 {
-                    Document = document
+                    Document = enumerator.Current
                 };
+            }
+        }
+
+        private IEnumerable<Document> GetRevisionsFromCollections(DocumentsOperationContext context, List<string> collections, DocumentsIterationState state)
+        {
+            foreach (var collection in collections)
+            {
+                var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    continue;
+
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collectionName, etag, int.MaxValue))
+                {
+                    yield return document.current;
+                }
             }
         }
 
