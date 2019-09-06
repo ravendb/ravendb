@@ -220,13 +220,37 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var tombstones = collectionsToExport.Count > 0
-                ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
-                : _database.DocumentsStorage.GetTombstonesFrom(_context, _startDocumentEtag, 0, int.MaxValue);
-            
-            foreach (var tombstone in tombstones)
+            var enumerator = new PulsedTransactionEnumerator<Tombstone, TombstonesIterationState>(_context,
+                state =>
+                {
+                    if (collectionsToExport.Count != 0)
+                        return GetTombstonesFromCollections(_context, collectionsToExport, state);
+
+                    return _database.DocumentsStorage.GetTombstonesFrom(_context, state.StartEtag, 0, int.MaxValue);
+                },
+                new TombstonesIterationState(_context)
+                {
+                    StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
             {
-                yield return tombstone;
+                yield return enumerator.Current;
+            }
+        }
+
+        private IEnumerable<Tombstone> GetTombstonesFromCollections(DocumentsOperationContext context, List<string> collections, TombstonesIterationState state)
+        {
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var counter in _database.DocumentsStorage.GetTombstonesFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    yield return counter;
+                }
             }
         }
 
@@ -327,6 +351,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.Name);
         }
+
         public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
         {
             Debug.Assert(_context != null);
