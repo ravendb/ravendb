@@ -30,6 +30,8 @@ namespace Voron.Impl.Paging
 
         public static ConcurrentDictionary<string, uint> PhysicalDrivePerMountCache = new ConcurrentDictionary<string, uint>();
 
+        protected static readonly object WorkingSetIncreaseLocker = new object();
+
         protected int MinIncreaseSize => 16 * Constants.Size.Kilobyte;
 
         protected int MaxIncreaseSize => Constants.Size.Gigabyte;
@@ -54,8 +56,7 @@ namespace Voron.Impl.Paging
         {
             CanPrefetch = new Lazy<bool>(CanPrefetchQuery);
         }
-
-        public static object WorkingSetIncreaseLocker = new object();
+        
         public void SetPagerState(PagerState newState)
         {
             if (DisposeOnceRunner.Disposed)
