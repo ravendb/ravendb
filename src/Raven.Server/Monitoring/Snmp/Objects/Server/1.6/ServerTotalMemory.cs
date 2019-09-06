@@ -25,9 +25,12 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Gauge32 GetData()
         {
-            var memoryInfo = MemoryInformation.GetMemoryInfo(_smapsReader?.Value, extended: true);
+            lock (this)
+            {
+                var memoryInfo = MemoryInformation.GetMemoryInfo(_smapsReader?.Value, extended: true);
 
-            return new Gauge32(memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes));
+                return new Gauge32(memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes));
+            }
         }
     }
 }
