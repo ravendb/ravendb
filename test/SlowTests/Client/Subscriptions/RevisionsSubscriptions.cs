@@ -377,6 +377,8 @@ select { Id: id(d.Current), Age: d.Current.Age }
         [Fact]
         public async Task RDBCL_801()
         {
+            DoNotReuseServer();
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
