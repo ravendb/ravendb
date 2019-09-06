@@ -287,23 +287,35 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, _startDocumentEtag);
-
-            if (collectionsToExport.Count > 0)
-            {
-                foreach (var conflict in conflicts)
+            var enumerator = new PulsedTransactionEnumerator<DocumentConflict, DocumentConflictsIterationState>(_context,
+                state =>
                 {
-                    if (collectionsToExport.Contains(conflict.Collection) == false)
-                        continue;
+                    if (collectionsToExport.Count != 0)
+                        return GetConflictsFromCollections(_context, collectionsToExport, state);
 
-                    yield return conflict;
+                    return _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, state.StartEtag);
+                },
+                new DocumentConflictsIterationState(_context)
+                {
+                    StartEtag = _startDocumentEtag,
+                });
+
+            while (enumerator.MoveNext())
+            {
+                yield return enumerator.Current;
+            }
+        }
+
+        private IEnumerable<DocumentConflict> GetConflictsFromCollections(DocumentsOperationContext context, List<string> collections, DocumentConflictsIterationState state)
+        {
+            foreach (var conflict in _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(context, state.StartEtag))
+            {
+                if (collections.Contains(conflict.Collection) == false)
+                {
+                    state.StartEtag = conflict.Etag + 1; // when skipping an item we need to increment StartEtag
+                    continue;
                 }
 
-                yield break;
-            }
-
-            foreach (var conflict in conflicts)
-            {
                 yield return conflict;
             }
         }
