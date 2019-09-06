@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Utils.Enumerators
 {
-    public abstract class PulsatingEnumerationState<T>
+    public abstract class PulsedEnumerationState<T>
     {
         public abstract void OnMoveNext(T current);
 

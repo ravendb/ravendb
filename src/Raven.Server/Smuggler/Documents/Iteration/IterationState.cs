@@ -5,7 +5,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Smuggler.Documents.Iteration
 {
-    public abstract class IterationState<T> : PulsatingEnumerationState<T>
+    public abstract class IterationState<T> : PulsedEnumerationState<T>
     {
         protected IterationState(DocumentsOperationContext context)
         {

@@ -132,7 +132,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var enumerator = new PulseTransactionEnumerator<Document, DocumentsIterationState>(_context,
+            var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
                 {
                     if (collectionsToExport.Count != 0)
@@ -331,7 +331,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var enumerator = new PulseTransactionEnumerator<CounterGroupDetail, CountersIterationState>(_context,
+            var enumerator = new PulsedTransactionEnumerator<CounterGroupDetail, CountersIterationState>(_context,
                 state =>
                 {
                     if (collectionsToExport.Count != 0)

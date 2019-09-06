@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Utils.Enumerators
 {
-    public class PulseTransactionEnumerator<T, TState> : IEnumerator<T> where TState : PulsatingEnumerationState<T>
+    public class PulsedTransactionEnumerator<T, TState> : IEnumerator<T> where TState : PulsedEnumerationState<T>
     {
         private readonly DocumentsOperationContext _context;
         private readonly Func<TState, IEnumerable<T>> _getEnumerator;
@@ -14,7 +14,7 @@ namespace Raven.Server.Utils.Enumerators
 
         private IEnumerator<T> _innerEnumerator;
 
-        public PulseTransactionEnumerator(DocumentsOperationContext context, Func<TState, IEnumerable<T>> getEnumerator, TState state)
+        public PulsedTransactionEnumerator(DocumentsOperationContext context, Func<TState, IEnumerable<T>> getEnumerator, TState state)
         {
             _context = context;
             _getEnumerator = getEnumerator;
@@ -26,7 +26,7 @@ namespace Raven.Server.Utils.Enumerators
         {
             if (_state.ShouldPulseTransaction())
             {
-                Debug.Assert(_context.Transaction.InnerTransaction.IsWriteTransaction == false, $"{nameof(PulseTransactionEnumerator<T, TState>)} is meant to be used with read transactions only");
+                Debug.Assert(_context.Transaction.InnerTransaction.IsWriteTransaction == false, $"{nameof(PulsedTransactionEnumerator<T, TState>)} is meant to be used with read transactions only");
 
                 _context.CloneReadTransaction();
 
