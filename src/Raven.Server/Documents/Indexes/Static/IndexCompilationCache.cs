@@ -8,31 +8,71 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    /// <summary>
-    /// This is a static class because creating indexes is expensive, we want to cache them 
-    /// as much as possible, even across different databases and database instansiation. Per process,
-    /// we are going to have a single cache for all indexes. This also plays nice with testing, which 
-    /// will build up and tear down a server frequently, so we can still reduce the cost of compiling 
-    /// the indexes.
-    /// </summary>
-    public static class IndexCompilationCache
+    public class IndexCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
+        /// <summary>
+        /// This is a static because creating indexes is expensive, we want to cache them 
+        /// as much as possible, even across different databases and database instantiation. Per process,
+        /// we are going to have a single cache for all indexes. This also plays nice with testing, which 
+        /// will build up and tear down a server frequently, so we can still reduce the cost of compiling 
+        /// the indexes.
+        /// </summary>
+        private readonly ConcurrentDictionary<IndexCacheKey, Lazy<StaticIndexBase>> _staticIndexCache = new ConcurrentDictionary<IndexCacheKey, Lazy<StaticIndexBase>>();
 
-        public static StaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        private readonly ConcurrentDictionary<IndexCacheKey, Lazy<StaticIndexBase>> _localIndexCache = new ConcurrentDictionary<IndexCacheKey, Lazy<StaticIndexBase>>();
+
+        public StaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        {
+            var type = definition.DetectStaticIndexType();
+            var key = GetCacheKey(definition, type);
+            var cache = GetCache(type);
+
+            Lazy<StaticIndexBase> result = cache.GetOrAdd(key, k => new Lazy<StaticIndexBase>(() => GenerateIndex(k, definition, configuration, type)));
+
+            try
+            {
+                return result.Value;
+            }
+            catch (Exception)
+            {
+                cache.TryRemove(key, out _);
+                throw;
+            }
+        }
+
+        public void Remove(IndexCacheKey key)
+        {
+            if (key == null)
+                return;
+
+            // we are only interested in removing instances from local cache e.g. JavaScript Indexes
+            _localIndexCache.TryRemove(key, out _);
+        }
+
+        private ConcurrentDictionary<IndexCacheKey, Lazy<StaticIndexBase>> GetCache(IndexType type)
+        {
+            switch (type)
+            {
+                case IndexType.Map:
+                case IndexType.MapReduce:
+                    return _staticIndexCache;
+                case IndexType.JavaScriptMap:
+                case IndexType.JavaScriptMapReduce:
+                    return _localIndexCache;
+                default:
+                    throw new NotSupportedException($"Unknown index type '{type}'.");
+            }
+        }
+
+        private static IndexCacheKey GetCacheKey(IndexDefinition definition, IndexType type)
         {
             var list = new List<string>();
-            var type = definition.DetectStaticIndexType();
 
-            // we do not want to reuse javascript indexes definitions, because they have the Engine, which can't be reused.
-            // we also need to make sure that the same index is not used in two different databases under the same definitions
-            // todo: when porting javascript indexes to use ScriptRunner (RavenDB-10918), check if we can generate and/or pool the single runs, allowing to remove this code
             if (type.IsJavaScript())
             {
                 list.Add(definition.Name);
-                list.Add(configuration.ResourceName);
             }
-            
+
             list.AddRange(definition.Maps);
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
@@ -45,26 +85,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            var key = new CacheKey(list);
-            Lazy<StaticIndexBase> result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
-
-            try
-            {
-                var index = result.Value;
-                if (index is JavaScriptIndex javaScriptIndex)
-                {
-                    javaScriptIndex.TryRemoveFromCache = () => { IndexCache.TryRemove(key, out _); };
-                }
-                return index;
-            }
-            catch (Exception)
-            {
-                IndexCache.TryRemove(key, out _);
-                throw;
-            }
+            return new IndexCacheKey(list);
         }
 
-        internal static StaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
+        private static StaticIndexBase GenerateIndex(IndexCacheKey cacheKey, IndexDefinition definition, RavenConfiguration configuration, IndexType type)
         {
             switch (type)
             {
@@ -74,83 +98,82 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexType.Map:
                 case IndexType.MapReduce:
                 case IndexType.Faulty:
-                    return IndexCompiler.Compile(definition);
+                    return IndexCompiler.Compile(cacheKey, definition);
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return new JavaScriptIndex(definition, configuration);                
+                    return new JavaScriptIndex(cacheKey, definition, configuration);
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
         }
+    }
 
-        private class CacheKey : IEquatable<CacheKey>
+    public class IndexCacheKey : IEquatable<IndexCacheKey>
+    {
+        private readonly int _hash;
+        private readonly List<string> _items;
+
+        public unsafe IndexCacheKey(List<string> items)
         {
-            private readonly int _hash;
-            private readonly List<string> _items;
+            _items = items;
 
-            public unsafe CacheKey(List<string> items)
+            byte[] temp = null;
+            var ctx = Hashing.Streamed.XXHash32.BeginProcess();
+            foreach (var str in items)
             {
-                _items = items;
-
-                byte[] temp = null;
-                var ctx = Hashing.Streamed.XXHash32.BeginProcess();
-                foreach (var str in items)
+                fixed (char* buffer = str)
                 {
-                    fixed (char* buffer = str)
+                    var toProcess = str.Length;
+                    var current = buffer;
+                    do
                     {
-                        var toProcess = str.Length;
-                        var current = buffer;
-                        do
+                        if (toProcess < Hashing.Streamed.XXHash32.Alignment)
                         {
-                            if (toProcess < Hashing.Streamed.XXHash32.Alignment)
+                            if (temp == null)
+                                temp = new byte[Hashing.Streamed.XXHash32.Alignment];
+
+                            fixed (byte* tempBuffer = temp)
                             {
-                                if (temp == null)
-                                    temp = new byte[Hashing.Streamed.XXHash32.Alignment];
+                                Memory.Set(tempBuffer, 0, temp.Length);
+                                Memory.Copy(tempBuffer, (byte*)current, toProcess);
 
-                                fixed (byte* tempBuffer = temp)
-                                {
-                                    Memory.Set(tempBuffer, 0, temp.Length);
-                                    Memory.Copy(tempBuffer, (byte*)current, toProcess);
-
-                                    ctx = Hashing.Streamed.XXHash32.Process(ctx, tempBuffer, temp.Length);
-                                    break;
-                                }
+                                ctx = Hashing.Streamed.XXHash32.Process(ctx, tempBuffer, temp.Length);
+                                break;
                             }
-
-                            ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
-                            toProcess -= Hashing.Streamed.XXHash32.Alignment;
-                            current += Hashing.Streamed.XXHash32.Alignment;
                         }
-                        while (toProcess > 0);
+
+                        ctx = Hashing.Streamed.XXHash32.Process(ctx, (byte*)current, Hashing.Streamed.XXHash32.Alignment);
+                        toProcess -= Hashing.Streamed.XXHash32.Alignment;
+                        current += Hashing.Streamed.XXHash32.Alignment;
                     }
+                    while (toProcess > 0);
                 }
-                _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ctx);
             }
+            _hash = (int)Hashing.Streamed.XXHash32.EndProcess(ctx);
+        }
 
-            public override bool Equals(object obj)
-            {
-                var cacheKey = obj as CacheKey;
-                if (cacheKey != null)
-                    return Equals(cacheKey);
+        public override bool Equals(object obj)
+        {
+            if (obj is IndexCacheKey cacheKey)
+                return Equals(cacheKey);
+            return false;
+        }
+
+        public bool Equals(IndexCacheKey other)
+        {
+            if (_items.Count != other._items.Count)
                 return false;
-            }
-
-            public bool Equals(CacheKey other)
+            for (int i = 0; i < _items.Count; i++)
             {
-                if (_items.Count != other._items.Count)
+                if (_items[i] != other._items[i])
                     return false;
-                for (int i = 0; i < _items.Count; i++)
-                {
-                    if (_items[i] != other._items[i])
-                        return false;
-                }
-                return true;
             }
+            return true;
+        }
 
-            public override int GetHashCode()
-            {
-                return _hash;
-            }
+        public override int GetHashCode()
+        {
+            return _hash;
         }
     }
 }

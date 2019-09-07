@@ -28,8 +28,9 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string AggregateByProperty = "aggregateBy";
         private const string KeyProperty = "key";
 
-        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
+        public JavaScriptIndex(IndexCacheKey cacheKey, IndexDefinition definition, RavenConfiguration configuration)
         {
+            CacheKey = cacheKey;
             _definitions = definition;
 
             // we create the Jint instance directly instead of using SingleRun
@@ -63,13 +64,6 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
-        }
-
-        public Action TryRemoveFromCache { get; set; }
-
-        public override void RemoveIndexFromCache()
-        {
-            TryRemoveFromCache?.Invoke();
         }
 
         private void ProcessFields(IndexDefinition definition, Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)

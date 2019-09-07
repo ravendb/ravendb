@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public ScriptRunnerCache(DocumentDatabase database, [NotNull] RavenConfiguration configuration)
+        public ScriptRunnerCache(DocumentDatabase database, RavenConfiguration configuration)
         {
             _database = database;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
