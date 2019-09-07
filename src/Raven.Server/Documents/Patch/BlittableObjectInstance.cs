@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.Patch
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
         public Dictionary<string, IndexField> LuceneIndexFields;
+        public bool LuceneAnyDynamicIndexFields;
 
         private void MarkChanged()
         {
@@ -88,9 +89,7 @@ namespace Raven.Server.Documents.Patch
                 _parent = parent;
                 _property = property;
 
-                _value = GetValueFromLucene(_parent, _property);
-
-                if (_value == null)
+                if (TryGetValueFromLucene(_parent, _property, out _value) == false)
                 {
                     var index = _parent.Blittable?.GetPropertyIndex(_property);
                     if (index == null || index == -1)
@@ -104,16 +103,20 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private JsValue GetValueFromLucene(BlittableObjectInstance parent, string property)
+            private bool TryGetValueFromLucene(BlittableObjectInstance parent, string property, out JsValue value)
             {
-                if (parent.LuceneDocument == null || parent.LuceneIndexFields == null || parent.LuceneIndexFields.TryGetValue(_property, out var indexField) == false)
-                    return null;
+                value = null;
 
-                if (indexField.Storage == FieldStorage.No)
-                    return null;
+                if (parent.LuceneDocument == null)
+                    return false;
+
+                if (parent.LuceneIndexFields == null || parent.LuceneIndexFields.TryGetValue(_property, out var indexField) == false || indexField.Storage == FieldStorage.No)
+                {
+                    if (parent.LuceneAnyDynamicIndexFields == false)
+                        return false;
+                }
 
                 var fieldType = QueryResultRetrieverBase.GetFieldType(property, parent.LuceneDocument);
-                var values = parent.LuceneDocument.GetValues(property, parent.LuceneState);
                 if (fieldType.IsArray)
                 {
                     // here we need to perform a manipulation in order to generate the object from the data
@@ -134,46 +137,58 @@ namespace Raven.Server.Documents.Patch
                             arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
                         }
 
-                        return JsValue.FromObject(parent.Engine, arrayItems);
+                        value = JsValue.FromObject(parent.Engine, arrayItems);
+                        return true;
                     }
                     else
                     {
-                        return JsValue.FromObject(parent.Engine, values);
+                        var values = parent.LuceneDocument.GetValues(property, parent.LuceneState);
+                        value = JsValue.FromObject(parent.Engine, values);
+                        return true;
                     }
-
                 }
-                else if (values.Length == 1)
+                else 
                 {
+                    var fieldable = _parent.LuceneDocument.GetFieldable(property);
+                    if (fieldable == null)
+                        return false;
+
+                    var val = fieldable.StringValue(_parent.LuceneState);
                     if (fieldType.IsJson)
                     {
-                        BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(values[0], property);
-                        return TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                        BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(val, property);
+                        value = TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                        return true;
                     }
                     else
                     {
-                        var value = values[0];
-                        switch (value)
+                        if (fieldable.IsTokenized == false)
                         {
-                            case Client.Constants.Documents.Indexing.Fields.NullValue:
-                                value = null;
-                                break;
-                            case Client.Constants.Documents.Indexing.Fields.EmptyString:
-                                value = string.Empty;
-                                break;
+                            // NULL_VALUE and EMPTY_STRING fields aren't tokenized
+                            // this will prevent converting fields with a "NULL_VALUE" string to null
+                            switch (val)
+                            {
+                                case Client.Constants.Documents.Indexing.Fields.NullValue:
+                                    value = JsValue.Null;
+                                    return true;
+                                case Client.Constants.Documents.Indexing.Fields.EmptyString:
+                                    value = string.Empty;
+                                    return true;
+                            }
                         }
 
-                        if (double.TryParse(value, out var valueAsDouble))
+                        if (double.TryParse(val, out var valueAsDouble))
                         {
-                            return valueAsDouble;
+                            value = valueAsDouble;
                         }
                         else
                         {
-                            return value;
+                            value = val;
                         }
+
+                        return true;
                     }
                 }
-
-                return null;
             }
 
             protected override JsValue CustomValue

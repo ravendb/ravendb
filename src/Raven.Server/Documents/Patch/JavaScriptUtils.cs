@@ -88,14 +88,15 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
         {
-            if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>> t)
+            if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?> t)
             {
                 var d = t.Item1;
                 return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d.Id, d.LastModified, d.ChangeVector)
                 {
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
-                    LuceneIndexFields = t.Item4
+                    LuceneIndexFields = t.Item4,
+                    LuceneAnyDynamicIndexFields = t.Item5 ?? false
                 };
             }
             if (o is Document doc)
