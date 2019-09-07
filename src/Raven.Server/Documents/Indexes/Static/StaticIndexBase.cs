@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public CompiledIndexField[] GroupByFields;
 
+        public IndexCacheKey CacheKey;
+
         public void AddMap(string collection, IndexingFunc map)
         {
             if (Maps.TryGetValue(collection, out List<IndexingFunc> funcs) == false)
@@ -316,10 +318,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 return lnv.ToDouble(CultureInfo.InvariantCulture);
 
             return Convert.ToDouble(value);
-        }
-
-        public virtual void RemoveIndexFromCache()
-        {
         }
     }
 }

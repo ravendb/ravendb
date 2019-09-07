@@ -53,14 +53,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
 
+        protected override void DisposeIndex()
+        {
+            base.DisposeIndex();
+
+            if (Type.IsJavaScript())
+                DocumentDatabase?.IndexStore?.Cache.Remove(_compiled.CacheKey);
+        }
+
         public override void ResetIsSideBySideAfterReplacement()
         {
             _isSideBySide = null;
-        }
-
-        protected override void RemoveIndexFromCache()
-        {
-            _compiled.RemoveIndexFromCache();
         }
 
         protected override void HandleDocumentChange(DocumentChange change)
@@ -74,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
         {
-            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration, documentDatabase.IndexStore.Cache);
             ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase,
                 checkIfCollectionEmpty: isIndexReset == false);
 
@@ -223,7 +226,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration, documentDatabase.IndexStore.Cache);
 
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -242,9 +245,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration, IndexCompilationCache cache)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = cache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);

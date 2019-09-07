@@ -39,7 +39,7 @@ namespace SlowTests.Tests.Indexes
 #pragma warning restore CS0618 // Type or member is obsolete
 
             indexDefinition.Name = "Index1";
-            var index = IndexCompiler.Compile(indexDefinition);
+            var index = IndexCompiler.Compile(cacheKey: null, indexDefinition);
 
             var map = index.Maps.Values.First().First();
 
@@ -103,7 +103,7 @@ namespace SlowTests.Tests.Indexes
 #pragma warning restore CS0618 // Type or member is obsolete
 
             indexDefinition.Name = "Index1";
-            IndexCompiler.Compile(indexDefinition);
+            IndexCompiler.Compile(cacheKey: null, indexDefinition);
         }
 
         private class Person
