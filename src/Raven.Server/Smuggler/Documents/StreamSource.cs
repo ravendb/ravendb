@@ -929,7 +929,8 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context, new BlittableMetadataModifier(context));
+            var builder = CreateBuilder(context);
+            var modifier = new BlittableMetadataModifier(context);
             try
             {
                 while (true)
@@ -947,7 +948,9 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
-                            builder = CreateBuilder(context, new BlittableMetadataModifier(context));
+                            modifier.Dispose();
+                            modifier = new BlittableMetadataModifier(context);
+                            builder = CreateBuilder(context, modifier);
                         }
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -991,8 +994,8 @@ namespace Raven.Server.Smuggler.Documents
             finally
             {
                 builder.Dispose();
+                modifier.Dispose();
             }
-
         }
 
         private static bool ShouldSkip(LegacyAttachmentDetails attachmentInfo)
@@ -1059,6 +1062,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
+                            modifier.Dispose();
                             modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes)
                             {
                                 FirstEtagOfLegacyRevision = modifier.FirstEtagOfLegacyRevision,
@@ -1126,7 +1130,7 @@ namespace Raven.Server.Smuggler.Documents
                         Document = new Document
                         {
                             Data = data,
-                            Id = modifier.Id,
+                            Id = context.GetLazyString(modifier.Id),
                             ChangeVector = modifier.ChangeVector,
                             Flags = modifier.Flags,
                             NonPersistentFlags = modifier.NonPersistentFlags,
@@ -1140,6 +1144,7 @@ namespace Raven.Server.Smuggler.Documents
             finally
             {
                 builder.Dispose();
+                modifier.Dispose();
             }
         }
 
