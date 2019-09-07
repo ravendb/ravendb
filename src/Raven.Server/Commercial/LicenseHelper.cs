@@ -86,6 +86,8 @@ namespace Raven.Server.Commercial
         public License TryGetLicenseFromPath(bool throwOnFailure)
         {
             var path = _serverStore.Configuration.Licensing.LicensePath;
+            if (File.Exists(path.FullPath) == false)
+                return null;
 
             try
             {
