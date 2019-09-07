@@ -5,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
-using Microsoft.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 
 namespace Raven.Debug
