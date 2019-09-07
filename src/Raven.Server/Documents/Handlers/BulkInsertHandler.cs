@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Handlers
             catch (Exception e)
             {
                 HttpContext.Response.Headers["Connection"] = "close";
-                throw new InvalidOperationException("Failed to process bulk insert " + progress, e);
+                throw new InvalidOperationException("Failed to process bulk insert. " + progress, e);
             }
         }
 
