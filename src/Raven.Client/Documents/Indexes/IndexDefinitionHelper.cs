@@ -12,6 +12,8 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     internal static class IndexDefinitionHelper
     {
+        private static readonly Regex CommentsStripper = new Regex(@"\s+|\/\*[\s\S]*?\*\/|\/\/.*$", RegexOptions.IgnorePatternWhitespace | RegexOptions.Multiline);
+
         /// <summary>
         /// Perform the actual generation
         /// </summary>
@@ -198,6 +200,39 @@ namespace Raven.Client.Documents.Indexes
                 default:
                     return false;
             }
+        }
+
+        internal static IndexType DetectStaticIndexType(string map, string reduce)
+        {
+            if (string.IsNullOrWhiteSpace(map))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(map));
+
+            while (true)
+            {
+                // strip whitespace, comments, etc
+                var m = CommentsStripper.Match(map);
+                if (m.Success == false || m.Index != 0)
+                    break;
+
+                map = map.Substring(m.Length);
+            }
+
+            map = map.Trim();
+
+            if (map.StartsWith("from") || map.StartsWith("docs"))
+            {
+                // C# indexes must start with "from" for query syntax or
+                // "docs" for method syntax
+                if (string.IsNullOrWhiteSpace(reduce))
+                    return IndexType.Map;
+
+                return IndexType.MapReduce;
+            }
+
+            if (string.IsNullOrWhiteSpace(reduce))
+                return IndexType.JavaScriptMap;
+
+            return IndexType.JavaScriptMapReduce;
         }
     }
 }
