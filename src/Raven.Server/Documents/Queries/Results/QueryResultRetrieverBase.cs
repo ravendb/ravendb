@@ -20,6 +20,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -135,7 +136,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (doc == null)
                         continue;
 
-                    if (TryGetValue(fieldToFetch, doc, input, state, out var key, out var fieldVal))
+                    if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, out var key, out var fieldVal))
                     {
                         if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
                         {
@@ -177,7 +178,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal) == false &&
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, out var key, out var fieldVal) == false &&
                     fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)  
                     continue;
                 
@@ -368,7 +369,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, out string key, out object value)
+        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, Dictionary<string, IndexField> indexFields, out string key, out object value)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -382,10 +383,10 @@ namespace Raven.Server.Documents.Queries.Results
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, out key, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, indexFields, out key, out args[i]);
                     if (ReferenceEquals(args[i], document))
                     {
-                        args[i] = Tuple.Create(document, luceneDoc, state);
+                        args[i] = Tuple.Create(document, luceneDoc, state, indexFields);
                     }
                 }
                 value = GetFunctionValue(fieldToFetch, document?.Id, args);
