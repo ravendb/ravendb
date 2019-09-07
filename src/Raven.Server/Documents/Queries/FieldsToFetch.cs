@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Queries
     {
         public readonly Dictionary<string, FieldToFetch> Fields;
 
+        public readonly Dictionary<string, IndexField> IndexFields;
+
         public readonly bool ExtractAllFromIndex;
 
         public readonly bool AnyExtractableFromIndex;
@@ -26,6 +28,7 @@ namespace Raven.Server.Documents.Queries
         {
             Fields = GetFieldsToFetch(query.Metadata, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias);
             IsProjection = Fields != null && Fields.Count > 0;
+            IndexFields = indexDefinition?.IndexFields;
 
             if (extractAllStoredFields)
             {
