@@ -1179,6 +1179,7 @@ namespace Raven.Server.Commercial
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
+            var dynamicNodesDistributionCount = 0;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -1187,6 +1188,9 @@ namespace Raven.Server.Commercial
                 {
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;
+
+                    if (databaseRecord.Topology != null && databaseRecord.Topology.DynamicNodesDistribution)
+                        dynamicNodesDistributionCount++;
 
                     if (databaseRecord.ExternalReplications != null &&
                         databaseRecord.ExternalReplications.Count > 0)
@@ -1292,6 +1296,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(cloudBackupsCount, "encrypted backups");
                 throw GenerateLicenseLimit(LimitType.EncryptedBackup, message);
+            }
+
+            if (dynamicNodesDistributionCount > 0 && newLicenseStatus.HasDynamicNodesDistribution == false)
+            {
+                var message = GenerateDetails(dynamicNodesDistributionCount, "dynamic database distribution");
+                throw GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message);
             }
         }
 
@@ -1493,13 +1503,20 @@ namespace Raven.Server.Commercial
             return false;
         }
 
-        public bool CanDynamicallyDistributeNodes(out LicenseLimitException licenseLimit)
+        public bool CanDynamicallyDistributeNodes(bool withNotification, out LicenseLimitException licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
                 return false;
 
-            if (_licenseStatus.HasDynamicNodesDistribution)
+            var value = _licenseStatus.HasDynamicNodesDistribution;
+            if (withNotification == false)
+                return value;
+
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.DynamicNodeDistribution);
                 return true;
+            }
 
             const string message = "Your current license doesn't include the dynamic database distribution feature";
             GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true);
