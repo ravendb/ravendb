@@ -62,13 +62,20 @@ namespace Raven.Server.Web.Studio
                     {
                         var compiledIndex = Database.IndexStore.Cache.GetIndexInstance(indexDefinition, Database.Configuration);
 
-                        var outputFields = compiledIndex.OutputFields;
-
-                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                        try
                         {
-                            writer.WriteStartObject();
-                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
-                            writer.WriteEndObject();
+                            var outputFields = compiledIndex.OutputFields;
+
+                            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                            {
+                                writer.WriteStartObject();
+                                writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
+                                writer.WriteEndObject();
+                            }
+                        }
+                        finally
+                        {
+                            Database.IndexStore.Cache.Remove(compiledIndex.CacheKey);
                         }
                     }
                     catch (IndexCompilationException)
