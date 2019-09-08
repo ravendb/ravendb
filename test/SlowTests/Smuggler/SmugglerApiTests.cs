@@ -837,25 +837,25 @@ namespace SlowTests.Smuggler
 
                     using (var session = store1.OpenAsyncSession())
                     {
-                        for (int i = 0; i < 3/*60*/; i++)
+                        for (int i = 0; i < 360; i++)
                         {
-                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "fitbit", new[] { i % 60d });
-                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "fitbit", new[] { i % 60d, i % 60d + 5});
-                            session.TimeSeriesFor("users/1").Append("Heartrate2", baseline.AddSeconds(i * 10), "apple", new[] { i % 60d, i % 60d + 5, i % 60d + 10});
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d, i % 60d + 5});
+                            session.TimeSeriesFor("users/1").Append("Heartrate2", baseline.AddSeconds(i * 10), "watches/3", new[] { i % 60d, i % 60d + 5, i % 60d + 10});
                         }
 
                         await session.SaveChangesAsync();
                     }
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
-                    //Assert.Equal(3, stats.CountOfTimeSeries);
+                    Assert.Equal(3, stats.CountOfTimeSeriesSegments);
 
                     using (var session = store2.OpenAsyncSession())
                     {
@@ -904,6 +904,88 @@ namespace SlowTests.Smuggler
                         }
 
                         Assert.Equal(360, count);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+
+        [Fact]
+        public async Task CanExportAndImportTimeSeriesThatSpanMultipleSegments()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                        }
+
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMonths(3).AddSeconds(i * 10), "watches/2", new[] { i % 60d });
+                        }
+
+
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMonths(6).AddSeconds(i * 10), "watches/3", new[] { i % 60d });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(3, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var values = (await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+
+                        Assert.Equal(360 * 3, values.Count);
+
+                        for (int j = 0; j < 3; j++)
+                        {
+                            for (var i = 0; i < 360; i++)
+                            {
+                                var val = values[j * 360 + i];
+                                Assert.Equal(baseline.AddMonths(j * 3).AddSeconds(i * 10), val.Timestamp);
+                                Assert.Equal(i % 60, val.Values[0]);
+                            }
+                        }
+
                     }
                 }
             }
