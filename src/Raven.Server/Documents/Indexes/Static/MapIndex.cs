@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection.Name);
-            }           
+            }
         }
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
@@ -55,10 +55,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void DisposeIndex()
         {
-            base.DisposeIndex();
-
-            if (Type.IsJavaScript())
-                DocumentDatabase?.IndexStore?.Cache.Remove(_compiled.CacheKey);
+            try
+            {
+                base.DisposeIndex();
+            }
+            finally
+            {
+                if (Type.IsJavaScript())
+                    DocumentDatabase?.IndexStore?.Cache.Remove(_compiled.CacheKey);
+            }
         }
 
         public override void ResetIsSideBySideAfterReplacement()
@@ -100,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && 
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false &&
                 _referencedCollections.Contains(change.CollectionName) == false)
                 return;
 

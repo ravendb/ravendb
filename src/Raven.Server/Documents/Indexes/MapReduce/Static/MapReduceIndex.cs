@@ -55,10 +55,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         protected override void DisposeIndex()
         {
-            base.DisposeIndex();
-
-            if (Type.IsJavaScript())
-                DocumentDatabase?.IndexStore?.Cache.Remove(_compiled.CacheKey);
+            try
+            {
+                base.DisposeIndex();
+            }
+            finally
+            {
+                if (Type.IsJavaScript())
+                    DocumentDatabase?.IndexStore?.Cache.Remove(_compiled.CacheKey);
+            }
         }
 
         public override void ResetIsSideBySideAfterReplacement()
