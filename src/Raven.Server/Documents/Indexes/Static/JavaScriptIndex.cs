@@ -28,9 +28,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string AggregateByProperty = "aggregateBy";
         private const string KeyProperty = "key";
 
-        public JavaScriptIndex(IndexCacheKey cacheKey, IndexDefinition definition, RavenConfiguration configuration)
+        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
-            CacheKey = cacheKey;
             _definitions = definition;
 
             // we create the Jint instance directly instead of using SingleRun

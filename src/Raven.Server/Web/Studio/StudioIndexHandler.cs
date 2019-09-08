@@ -24,18 +24,19 @@ namespace Raven.Server.Web.Studio
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
                     var indexType = indexDefinition.DetectStaticIndexType();
-                    
+
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName("IndexType");
                         writer.WriteString(indexType.ToString());
-                        writer.WriteEndObject();;
+                        writer.WriteEndObject();
+                        ;
                     }
                 }
             }
         }
-        
+
         [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostIndexFields()
         {
@@ -60,22 +61,15 @@ namespace Raven.Server.Web.Studio
 
                     try
                     {
-                        var compiledIndex = Database.IndexStore.Cache.GetIndexInstance(indexDefinition, Database.Configuration);
+                        var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, Database.Configuration);
 
-                        try
-                        {
-                            var outputFields = compiledIndex.OutputFields;
+                        var outputFields = compiledIndex.OutputFields;
 
-                            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                            {
-                                writer.WriteStartObject();
-                                writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
-                                writer.WriteEndObject();
-                            }
-                        }
-                        finally
+                        using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
-                            Database.IndexStore.Cache.Remove(compiledIndex.CacheKey);
+                            writer.WriteStartObject();
+                            writer.WriteArray(context, "Results", outputFields, (w, c, field) => { w.WriteString(field); });
+                            writer.WriteEndObject();
                         }
                     }
                     catch (IndexCompilationException)

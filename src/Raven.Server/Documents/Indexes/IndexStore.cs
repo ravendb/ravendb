@@ -56,8 +56,6 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly IndexIdentities Identities = new IndexIdentities();
 
-        public readonly IndexCompilationCache Cache = new IndexCompilationCache();
-
         public Logger Logger => _logger;
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
@@ -569,7 +567,7 @@ namespace Raven.Server.Documents.Indexes
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
-            var instance = Cache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
+            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
 
             if (definition.Type == IndexType.MapReduce)
                 MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
