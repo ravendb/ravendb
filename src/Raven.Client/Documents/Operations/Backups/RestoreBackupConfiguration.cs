@@ -63,6 +63,7 @@ namespace Raven.Client.Documents.Operations.Backups
             return json;
         }
     }
+
     public class RestoreFromAzureConfiguration : RestoreBackupConfigurationBase
     {
         public AzureSettings Settings { get; set; } = new AzureSettings();

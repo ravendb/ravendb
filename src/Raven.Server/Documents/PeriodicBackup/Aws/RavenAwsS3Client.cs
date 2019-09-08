@@ -41,10 +41,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 throw new ArgumentException("AWS Bucket name cannot be null or empty");
 
             if (string.IsNullOrWhiteSpace(s3Settings.AwsAccessKey))
-                throw new ArgumentException("Aws Access Key cannot be null or empty");
+                throw new ArgumentException("AWS Access Key cannot be null or empty");
 
             if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
-                throw new ArgumentException("Aws Region Name cannot be null or empty");
+                throw new ArgumentException("AWS Region Name cannot be null or empty");
 
             _bucketName = s3Settings.BucketName;
             _logger = logger;

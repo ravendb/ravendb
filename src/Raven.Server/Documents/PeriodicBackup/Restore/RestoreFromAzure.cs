@@ -12,7 +12,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    class RestoreFromAzure : RestoreBackupTaskBase
+    public class RestoreFromAzure : RestoreBackupTaskBase
     {
         private readonly RavenAzureClient _client;
         private readonly string _remoteFolderName;

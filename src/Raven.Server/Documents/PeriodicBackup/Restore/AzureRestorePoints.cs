@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    class AzureRestorePoints : RestorePointsBase
+    public class AzureRestorePoints : RestorePointsBase
     {
         private readonly RavenAzureClient _client;
         public AzureRestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, AzureSettings azureSettings) : base(sortedList, context)
