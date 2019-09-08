@@ -6,6 +6,7 @@
 
 #include <sys/param.h>
 #include <sys/mount.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
@@ -66,6 +67,21 @@ rvn_test_storage_durability(
 {
     *detailed_error_code = 0;
     return SUCCESS; /* windows and mac are always true */
+}
+
+PRIVATE int32_t
+rvn_pipe_for_child(int descriptors[])
+{
+    int32_t result = FAIL;
+    while ((result = pipe(descriptors)) < 0 && errno == EINTR);
+    if (result != 0)
+        return FAIL_CREATE_PIPE;
+    
+    while ((result = fcntl(descriptors[0], F_SETFD, FD_CLOEXEC)) < 0 && errno == EINTR);
+    if (result == 0)
+        while ((result = fcntl(descriptors[1], F_SETFD, FD_CLOEXEC)) < 0 && errno == EINTR);
+
+    return result != 0 ? FAIL_FCNTL : SUCCESS;
 }
 
 #endif

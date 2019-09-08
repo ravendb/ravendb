@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Json;
 using Xunit;
@@ -49,29 +51,30 @@ while($TRUE){{
                 File.WriteAllText(tempFileName, bashScript);
                 Process.Start("chmod", $"755 {tempFileName}");
             }
-            
-            using (var extensionPoint = new CpuUsageExtensionPoint(
+
+            var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                Server.ServerStore.NotificationCenter))
-            {
-                extensionPoint.Start();
+                Server.ServerStore.NotificationCenter);
 
-                var startTime = DateTime.Now;
-                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
-                while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(value.ProcessCpuUsage) < 0.1)
+            extensionPoint.Start(Server.ServerStore.ServerShutdown);
+
+
+            var startTime = DateTime.Now;
+            var value = new ExtensionPointData {ProcessCpuUsage = 0, MachineCpuUsage = 0};
+            while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(value.ProcessCpuUsage) < 0.1)
+            {
+                if ((DateTime.Now - startTime).Seconds > 10)
                 {
-                    if ((DateTime.Now - startTime).Seconds > 10)
-                    {
-                        throw new TimeoutException();
-                    }
-                    value = extensionPoint.Data;
+                    throw new TimeoutException();
                 }
 
-                Assert.Equal(57, value.MachineCpuUsage);
-                Assert.Equal(2.5, value.ProcessCpuUsage);
+                value = extensionPoint.Data;
             }
+
+            Assert.Equal(57, value.MachineCpuUsage);
+            Assert.Equal(2.5, value.ProcessCpuUsage);
         }
 
         [Fact(Skip = SkipMsg)]
@@ -105,28 +108,28 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            using (var extensionPoint = new CpuUsageExtensionPoint(
+            var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                Server.ServerStore.NotificationCenter))
+                Server.ServerStore.NotificationCenter);
+
+            extensionPoint.Start(Server.ServerStore.ServerShutdown);
+
+            var startTime = DateTime.Now;
+            var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+            while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(value.ProcessCpuUsage) < 0.1)
             {
-                extensionPoint.Start();
-
-                var startTime = DateTime.Now;
-                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
-                while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(value.ProcessCpuUsage) < 0.1)
+                if ((DateTime.Now - startTime).Seconds > 10)
                 {
-                    if ((DateTime.Now - startTime).Seconds > 10)
-                    {
-                        throw new TimeoutException();
-                    }
-                    value = extensionPoint.Data;
+                    throw new TimeoutException();
                 }
-
-                Assert.Equal(100, value.MachineCpuUsage);
-                Assert.Equal(100, value.ProcessCpuUsage);
+                value = extensionPoint.Data;
             }
+
+            Assert.Equal(100, value.MachineCpuUsage);
+            Assert.Equal(100, value.ProcessCpuUsage);
+
         }
 
         [Fact(Skip = SkipMsg)]
@@ -153,30 +156,28 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            using (var extensionPoint = new CpuUsageExtensionPoint(
+            var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                Server.ServerStore.NotificationCenter))
+                Server.ServerStore.NotificationCenter);
+
+            extensionPoint.Start(Server.ServerStore.ServerShutdown);
+
+            var startTime = DateTime.Now;
+            var value = new ExtensionPointData{ ProcessCpuUsage = 0, MachineCpuUsage = 0};
+            while (Math.Abs(value.MachineCpuUsage) < 0.1)
             {
-                extensionPoint.Start();
-
-                var startTime = DateTime.Now;
-                var value = new ExtensionPointData{ ProcessCpuUsage = 0, MachineCpuUsage = 0};
-                while (Math.Abs(value.MachineCpuUsage) < 0.1)
+                if ((DateTime.Now - startTime).Seconds > 10)
                 {
-                    if ((DateTime.Now - startTime).Seconds > 10)
-                    {
-                        throw new TimeoutException();
-                    }
-                     value = extensionPoint.Data;
+                    throw new TimeoutException();
                 }
-
-                Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
-
-                Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process exited");
+                value = extensionPoint.Data;
             }
+
+            Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
+            Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
+
         }
 
         [Fact(Skip = SkipMsg)]
@@ -198,7 +199,7 @@ while($TRUE){{
                 args = "-NoProfile " + tempFileName;
                 File.WriteAllText(tempFileName, pshScript);
             }
-            else 
+            else
             {
                 var bashScript = "#!/bin/bash \nfor i in {1..100} \ndo \n 	echo David \n	sleep 1 \ndone";
 
@@ -208,30 +209,27 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            using (var extensionPoint = new CpuUsageExtensionPoint(
+            var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                Server.ServerStore.NotificationCenter))
+                Server.ServerStore.NotificationCenter);
+
+            extensionPoint.Start(Server.ServerStore.ServerShutdown);
+
+            var startTime = DateTime.Now;
+            var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+            while (Math.Abs(value.MachineCpuUsage) < 0.1)
             {
-                extensionPoint.Start();
-
-                var startTime = DateTime.Now;
-                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
-                while (Math.Abs(value.MachineCpuUsage) < 0.1)
+                if ((DateTime.Now - startTime).Seconds > 10)
                 {
-                    if ((DateTime.Now - startTime).Seconds > 10)
-                    {
-                        throw new TimeoutException();
-                    }
-                    value = extensionPoint.Data;
+                    throw new TimeoutException();
                 }
-
-                Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
-
-                Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process return invalid data");
+                value = extensionPoint.Data;
             }
+
+            Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
+            Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
         }
 
         [Fact(Skip = SkipMsg)]
@@ -257,7 +255,7 @@ while($TRUE){{
                 args = "-NoProfile " + tempFileName;
                 File.WriteAllText(tempFileName, pshScript);
             }
-            else 
+            else
             {
                 var bashScript = "#!/bin/bash \nfor i in {1..100} \ndo \n 	echo "+ jsonCpuUsage.Replace("\"", "\\\"") + "\n __________ \n	sleep 1 \ndone";
 
@@ -267,30 +265,27 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            using (var extensionPoint = new CpuUsageExtensionPoint(
+            var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                Server.ServerStore.NotificationCenter))
+                Server.ServerStore.NotificationCenter);
+
+            extensionPoint.Start(Server.ServerStore.ServerShutdown);
+
+            var startTime = DateTime.Now;
+            var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+            while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
             {
-                extensionPoint.Start();
-
-                var startTime = DateTime.Now;
-                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
-                while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
+                if ((DateTime.Now - startTime).Seconds > 10)
                 {
-                    if ((DateTime.Now - startTime).Seconds > 10)
-                    {
-                        throw new TimeoutException();
-                    }
-                    value = extensionPoint.Data;
+                    throw new TimeoutException();
                 }
-
-                Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
-
-                Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process exited");
+                value = extensionPoint.Data;
             }
+
+            Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
+            Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
         }
 
         [Fact(Skip = SkipMsg)]
@@ -303,7 +298,7 @@ while($TRUE){{
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 exec = "PowerShell";
-                
+
 
                 var pshScript = string.Format(@"
 while($TRUE){{
@@ -324,30 +319,27 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            using (var extensionPoint = new CpuUsageExtensionPoint(
+            var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                Server.ServerStore.NotificationCenter))
+                Server.ServerStore.NotificationCenter);
+
+            extensionPoint.Start(Server.ServerStore.ServerShutdown);
+
+            var startTime = DateTime.Now;
+            var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+            while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
             {
-                extensionPoint.Start();
-
-                var startTime = DateTime.Now;
-                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
-                while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
+                if ((DateTime.Now - startTime).Seconds > 10)
                 {
-                    if ((DateTime.Now - startTime).Seconds > 10)
-                    {
-                        throw new TimeoutException();
-                    }
-                    value = extensionPoint.Data;
+                    throw new TimeoutException();
                 }
-
-                Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
-
-                Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process send errors");
+                value = extensionPoint.Data;
             }
+
+            Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
+            Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
         }
     }
 }

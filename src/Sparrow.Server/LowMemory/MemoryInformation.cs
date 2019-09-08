@@ -346,6 +346,7 @@ namespace Sparrow.LowMemory
             var cgroupMaxMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMaxMemoryUsage);
             // here we need to deal with _soft_ limit, so we'll take the largest of these values
             var maxMemoryUsage = Math.Max(cgroupMemoryLimit ?? 0, cgroupMaxMemoryUsage ?? 0);
+            Console.WriteLine($"maxMemoryUsage={maxMemoryUsage},{cgroupMemoryLimit},{cgroupMaxMemoryUsage},{totalPhysicalMemoryInBytes}");
             if (maxMemoryUsage != 0 && maxMemoryUsage <= totalPhysicalMemoryInBytes)
             {
                 // running in a limited cgroup
@@ -363,6 +364,7 @@ namespace Sparrow.LowMemory
                     if (realAvailable < 0)
                         realAvailable = 0;
                     fromProcMemInfo.AvailableWithoutTotalCleanMemory.Set(realAvailable, SizeUnit.Bytes);
+                    Console.WriteLine($"updatedTo={fromProcMemInfo.MemAvailable},{fromProcMemInfo.AvailableWithoutTotalCleanMemory}");
                 }
 
                 fromProcMemInfo.TotalMemory.Set(maxMemoryUsage, SizeUnit.Bytes);

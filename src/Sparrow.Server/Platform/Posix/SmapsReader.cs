@@ -121,6 +121,7 @@ namespace Sparrow.Platform.Posix
             var state = SearchState.None;
             var smapResultsObject = new T();
 
+
             using (var currentProcess = Process.GetCurrentProcess())
             using (var fileStream = new FileStream($"/proc/{currentProcess.Id}/smaps", FileMode.Open, FileAccess.Read, FileShare.Read))
             {
@@ -147,6 +148,7 @@ namespace Sparrow.Platform.Posix
                             term = _rssBytes;
                         else if (_smapsBuffer[_currentBuffer][i] == 'S')
                         {
+                            Console.WriteLine($"[S]");
                             term = _sizeBytes; // or SharedDirty or SharedCleanBytes (which ARE longer in length from Size)
                             offset = _sharedCleanBytes.Length - term.Length;
                         }
@@ -197,7 +199,10 @@ namespace Sparrow.Platform.Posix
                                 {
                                     term = _sharedCleanBytes;
                                     if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
+                                    {
+                                        Console.WriteLine($"<{Encoding.UTF8.GetString(_smapsBuffer[searchedBuffer], 0, 1)}>");
                                         continue;
+                                    }
                                 }
 
                                 if (term == _sharedCleanBytes) // didn't find SharedCleanBytes - try to find SharedDirtyBytes
