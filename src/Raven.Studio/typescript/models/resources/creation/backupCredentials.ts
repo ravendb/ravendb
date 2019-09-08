@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
+import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
 
 abstract class restoreSettings {
     abstract backupStorageType: restoreSource;
@@ -36,10 +37,16 @@ export class amazonS3Credentials implements restoreSettings {
     
     toDto() : Raven.Client.Documents.Operations.Backups.S3Settings
     {
+        let selectedRegion = _.trim(this.regionName()).toLowerCase();
+        const foundRegion = amazonSettings.availableAwsRegionEndpointsStatic.find(x => amazonSettings.getDisplayRegionName(x).toLowerCase() === selectedRegion);        
+        if (foundRegion) {
+            selectedRegion = foundRegion.value;            
+        }
+        
         return {
             AwsAccessKey: _.trim(this.accessKey()),
             AwsSecretKey: _.trim(this.secretKey()),
-            AwsRegionName: _.trim(this.regionName()),
+            AwsRegionName: selectedRegion,
             BucketName: _.trim(this.bucketName()),
             AwsSessionToken: "",
             RemoteFolderName: _.trim(this.remoteFolder()),
@@ -54,6 +61,31 @@ export class amazonS3Credentials implements restoreSettings {
 
     isValid() : boolean {
         return !!_.trim(this.accessKey()) && !!_.trim(this.secretKey()) && !!_.trim(this.regionName()) && !!_.trim(this.bucketName());
+    }
+
+    useAwsRegion(awsRegionEndpoint: { label: string, value: string }) {
+        this.regionName(amazonSettings.getDisplayRegionName(awsRegionEndpoint));
+    }
+
+    createAwsRegionAutoCompleter() {
+        return ko.pureComputed(() => {
+            let key = this.regionName();
+
+            const options = amazonSettings.availableAwsRegionEndpointsStatic             
+                .map(x => {
+                    return {
+                        label: x.label,
+                        value: x.value
+                    }
+                });
+
+            if (key) {
+                key = key.toLowerCase();
+                return options.filter(x => amazonSettings.getDisplayRegionName(x).toLowerCase().includes(key));
+            } else {
+                return options;
+            }
+        });
     }
 }
 
