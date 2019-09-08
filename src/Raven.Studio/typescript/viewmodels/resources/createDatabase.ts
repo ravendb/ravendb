@@ -64,7 +64,6 @@ class createDatabase extends dialogViewModelBase {
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
     
-    folderPathOptions = ko.observableArray<string>([]);
     dataExporterDirectoryPathOptions = ko.observableArray<string>([]);
     backupFolderPathOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
@@ -133,7 +132,6 @@ class createDatabase extends dialogViewModelBase {
         const dataPath = this.databaseModel.path.dataPath();
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
         
-        this.updateFolderPathOptions();
         this.updateBackupDirectoryPathOptions();
         
         if (this.databaseModel.creationMode === "legacyMigration") {
@@ -404,7 +402,7 @@ class createDatabase extends dialogViewModelBase {
                 result.push({ path: p, isRecent: true });
             });
 
-            const pathOptions = this.folderPathOptions();
+            const pathOptions = this.backupFolderPathOptions();
             pathOptions.forEach(p => {
                 result.push({ path: p, isRecent: false });
             });
@@ -445,38 +443,6 @@ class createDatabase extends dialogViewModelBase {
         generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
     }  
 
-    updateFolderPathOptions() {
-        switch (this.databaseModel.restore.source()) {
-            case 'local':
-                this.updateLocalFolderPath(this.databaseModel.restore.localServerCredentials().backupDirectory())
-                    .done(result => this.folderPathOptions(result.List));
-                break;
-            case 'azure':
-                this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials().toDto(), "Azure")
-                    .done(result => this.folderPathOptions(result.List));
-                break;
-            case 'amazonS3':
-                this.updateRemoteFolderName(this.databaseModel.restore.amazonS3Credentials().toDto(), "S3")
-                    .done(result => this.folderPathOptions(result.List));
-                break;
-            case 'googleCloud':
-                this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
-                    .done(result => this.folderPathOptions(result.List));
-                break;
-        }
-    }
-    
-    private updateLocalFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
-            .execute();
-    }
-    private updateRemoteFolderName(cred: Raven.Client.Documents.Operations.Backups.BackupSettings,
-                                   type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType)
-        : JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return getFolderPathOptionsCommand.forCloudBackup(cred, type)
-            .execute();
-    }
-
     updateBackupDirectoryPathOptions() { 
         switch (this.databaseModel.restore.source()) {
             case 'local':
@@ -508,6 +474,17 @@ class createDatabase extends dialogViewModelBase {
                 }
                 break;
         }
+    }
+
+    private updateLocalFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
+            .execute();
+    }
+    private updateRemoteFolderName(cred: Raven.Client.Documents.Operations.Backups.BackupSettings,
+                                   type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType)
+                                                         :JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+        return getFolderPathOptionsCommand.forCloudBackup(cred, type)
+            .execute();
     }
     
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {

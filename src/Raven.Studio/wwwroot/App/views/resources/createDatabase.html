@@ -309,18 +309,20 @@
         <!-- RavenDB Cloud -->
 
         <div data-bind="visible: source() === ravenCloudCredentials().backupStorageType">
-            <div class="form-group row" data-bind="validationElement: ravenCloudCredentials().backupLink">
-                <div class="col-md-4">
-                    <label class="control-label">Backup Link<i class="required"></i></label>
+            <div data-bind="with: ravenCloudCredentials">
+                <div class="form-group row" data-bind="validationElement: backupLink">
+                    <div class="col-md-4">
+                        <label class="control-label">Backup Link<i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                         <input class="form-control" data-bind="textInput: backupLink" placeholder="Enter backup link from RavenDB Cloud" />
+                    </div>
                 </div>
-                <div class="col-md-8">
-                     <input class="form-control" data-bind="textInput: ravenCloudCredentials().backupLink" placeholder="Enter backup link from RavenDB Cloud" />
-                </div>
-            </div>
-            <div data-bind="if: $root.databaseModel.spinners.backupCredentialsLoading()">
-                <div class="form-group row">
-                    <div class="col-md-offset-4 col-md-8">
-                        <label class="control-label global-spinner spinner-sm"></label>
+                <div data-bind="if: $root.databaseModel.spinners.backupCredentialsLoading()">
+                    <div class="form-group row">
+                        <div class="col-md-offset-4 col-md-8">
+                            <label class="control-label global-spinner spinner-sm"></label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -337,28 +339,30 @@
                             <label class="control-label text-info" data-bind="text: backupStorageTypeText"></label>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <div class="col-md-4">
-                            <label class="control-label">Region Name</label>
+                    <div data-bind="with: amazonS3">
+                        <div class="form-group row">
+                            <div class="col-md-4">
+                                <label class="control-label">Region Name</label>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="control-label text-info text-left" data-bind="text: regionName"></label> 
+                            </div>
                         </div>
-                        <div class="col-md-8">
-                            <label class="control-label text-info text-left" data-bind="text: amazonS3().regionName"></label> 
+                        <div class="form-group row">
+                            <div class="col-md-4">
+                                <label class="control-label">Bucket Name</label>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="control-label text-info text-left" data-bind="text: bucketName"></label>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group row">
-                        <div class="col-md-4">
-                            <label class="control-label">Bucket Name</label>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="control-label text-info text-left" data-bind="text: amazonS3().bucketName"></label>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <div class="col-md-4">
-                            <label class="control-label">Remote Folder Name</label>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="control-label text-info text-left" data-bind="text: amazonS3().remoteFolder"></label>
+                        <div class="form-group row">
+                            <div class="col-md-4">
+                                <label class="control-label">Remote Folder Name</label>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="control-label text-info text-left" data-bind="text: remoteFolder"></label>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group row">
@@ -376,41 +380,43 @@
         <!-- Azure -->
 
         <div data-bind="visible: source() === azureCredentials().backupStorageType">
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Account Name<i class="required"></i></label>
+            <div data-bind="with: azureCredentials">
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Account Name<i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                        <input class="form-control" data-bind="textInput: accountName" />
+                    </div>
                 </div>
-                <div class="col-md-8">
-                    <input class="form-control" data-bind="textInput: azureCredentials().accountName" />
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Account Key<i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                        <input class="form-control" data-bind="textInput: accountKey" />
+                    </div>
                 </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Account Key<i class="required"></i></label>
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Container<i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                        <input class="form-control" data-bind="textInput: container" />
+                    </div>
                 </div>
-                <div class="col-md-8">
-                    <input class="form-control" data-bind="textInput: azureCredentials().accountKey" />
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Container<i class="required"></i></label>
-                </div>
-                <div class="col-md-8">
-                    <input class="form-control" data-bind="textInput: azureCredentials().container" />
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Remote Folder Name</label>
-                </div>
-                <div class="col-md-8">
-                    <input type="text" class="form-control" id="remoteFolderAzure" data-bind="textInput: azureCredentials().remoteFolder"/>
-                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#remoteFolderAzure'">
-                        <li data-bind="click: _.partial($root.databaseModel.remoteFolderAzureChanged, $data)">
-                            <a href="#" data-bind="text: $data"></a>
-                        </li>
-                    </ul>
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Remote Folder Name</label>
+                    </div>
+                    <div class="col-md-8">
+                        <input type="text" class="form-control" id="remoteFolderAzure" data-bind="textInput: remoteFolder"/>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAzure'">
+                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderAzureChanged, $data)">
+                                <a href="#" data-bind="text: $data"></a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -418,49 +424,60 @@
         <!-- Amazon S3 -->
         
        <div data-bind="visible: source() === amazonS3Credentials().backupStorageType">
-           <div class="form-group row" >
-               <div class="col-md-4">
-                   <label class="control-label">Aws Access Key<i class="required"></i></label>
+           <div data-bind="with: amazonS3Credentials">
+               <div class="form-group row" >
+                   <div class="col-md-4">
+                       <label class="control-label">Aws Access Key<i class="required"></i></label>
+                   </div>
+                   <div class="col-md-8">
+                       <input class="form-control" data-bind="textInput: accessKey" />
+                   </div>
                </div>
-               <div class="col-md-8">
-                   <input class="form-control" data-bind="textInput: amazonS3Credentials().accessKey" />
+               <div class="form-group row">
+                   <div class="col-md-4">
+                       <label class="control-label">Aws Secret Key<i class="required"></i></label>
+                   </div>
+                   <div class="col-md-8">
+                       <input class="form-control" data-bind="textInput: secretKey" />
+                   </div>
                </div>
-           </div>
-           <div class="form-group row">
-               <div class="col-md-4">
-                   <label class="control-label">Aws Secret Key<i class="required"></i></label>
+               <div class="form-group row">
+                   <div class="col-md-4">
+                       <label class="control-label">Aws Region Name<i class="required"></i></label>
+                   </div>
+                   <div class="col-md-8">
+                       <div class="dropdown btn-block">
+                           <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" id="AmazonS3RegionInput"
+                                  data-bind="textInput: regionName" placeholder="Select AWS region">
+                           <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                           <ul class="dropdown-menu max-height" data-bind="foreach: createAwsRegionAutoCompleter(true), autoComplete: '#AmazonS3RegionInput'">
+                               <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
+                                   <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
+                               </li>
+                           </ul>
+                       </div>
+                   </div>
                </div>
-               <div class="col-md-8">
-                   <input class="form-control" data-bind="textInput: amazonS3Credentials().secretKey" />
+               <div class="form-group row">
+                   <div class="col-md-4">
+                       <label class="control-label">Bucket Name<i class="required"></i></label>
+                   </div>
+                   <div class="col-md-8">
+                       <input class="form-control" data-bind="textInput: bucketName" />
+                   </div>
                </div>
-           </div>
-           <div class="form-group row">
-               <div class="col-md-4">
-                   <label class="control-label">Aws Region Name<i class="required"></i></label>
-               </div>
-               <div class="col-md-8">
-                   <input class="form-control" data-bind="textInput: amazonS3Credentials().regionName" />
-               </div>
-           </div>
-           <div class="form-group row">
-               <div class="col-md-4">
-                   <label class="control-label">Bucket Name<i class="required"></i></label>
-               </div>
-               <div class="col-md-8">
-                   <input class="form-control" data-bind="textInput: amazonS3Credentials().bucketName" />
-               </div>
-           </div>
-           <div class="form-group row">
-               <div class="col-md-4">
-                   <label class="control-label">Remote Folder Name</label>
-               </div>
-               <div class="col-md-8">
-                   <input type="text" class="form-control" id="remoteFolderAmazon" data-bind="textInput: amazonS3Credentials().remoteFolder"/>
-                   <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#remoteFolderAmazon'">
-                       <li data-bind="click: _.partial($root.databaseModel.remoteFolderAmazonChanged, $data)">
-                           <a href="#" data-bind="text: $data"></a>
-                       </li>
-                   </ul>
+               <div class="form-group row">
+                   <div class="col-md-4">
+                       <label class="control-label">Remote Folder Name</label>
+                   </div>
+                   <div class="col-md-8">
+                       <input type="text" class="form-control" id="remoteFolderAmazon" data-bind="textInput: remoteFolder"/>
+                       <ul class="dropdown-menu max-height" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAmazon'">
+                           <li data-bind="click: _.partial($root.databaseModel.remoteFolderAmazonChanged, $data)">
+                               <a href="#" data-bind="text: $data"></a>
+                           </li>
+                       </ul>
+                   </div>
                </div>
            </div>
        </div>
@@ -468,47 +485,49 @@
         <!-- Google Cloud -->
 
         <div data-bind="visible: source() === googleCloudCredentials().backupStorageType">
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Bucket Name<i class="required"></i></label>
+            <div data-bind="with: googleCloudCredentials">
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Bucket Name<i class="required"></i></label>
+                    </div>
+                    <div class="col-md-8">
+                            <input class="form-control" data-bind="textInput: bucketName" />
+                    </div>
                 </div>
-                <div class="col-md-8">
-                        <input class="form-control" data-bind="textInput: googleCloudCredentials().bucketName" />
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Google Credentials<i class="required"></i></label>
+                    </div>
+                    <div class="col-xs-12 col-sm-6 col-lg-8">
+                    <textarea rows="9" data-bind="textInput: googleCredentials" class="form-control" placeholder=
+'e.g.
+{
+    "type": "service_account",
+    "project_id": "test-raven-237012",
+    "private_key_id": "12345678123412341234123456789101",
+    "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
+    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
+    "client_id": "111390682349634407434",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
+}'>                
+                    </textarea>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Google Credentials<i class="required"></i></label>
-                </div>
-                <div class="col-xs-12 col-sm-6 col-lg-8">
-                <textarea rows="9" data-bind="textInput: googleCloudCredentials().googleCredentials" class="form-control" placeholder=
-    'e.g.
-    {
-        "type": "service_account",
-        "project_id": "test-raven-237012",
-        "private_key_id": "12345678123412341234123456789101",
-        "private_key": "-----BEGIN PRIVATE KEY-----\abCse=\n-----END PRIVATE KEY-----\n",
-        "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
-        "client_id": "111390682349634407434",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
-    }'>                
-                </textarea>
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Remote Folder Name</label>
-                </div>
-                <div class="col-md-8">
-                    <input type="text" class="form-control" id="remoteFolderGoogleCloud" data-bind="textInput: googleCloudCredentials().remoteFolder"/>
-                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
-                        <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">    
-                            <a href="#" data-bind="text: $data"></a>
-                        </li>
-                    </ul>
+                <div class="form-group row">
+                    <div class="col-md-4">
+                        <label class="control-label">Remote Folder Name</label>
+                    </div>
+                    <div class="col-md-8">
+                        <input type="text" class="form-control" id="remoteFolderGoogleCloud" data-bind="textInput: remoteFolder"/>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
+                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">    
+                                <a href="#" data-bind="text: $data"></a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
