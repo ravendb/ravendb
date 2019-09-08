@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
 
@@ -245,5 +246,26 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int64 rvn_get_current_thread_id();
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_spawn_process(
+            string filename,
+            string cmdline,
+            out IntPtr pid,
+            out SafeFileHandle stdin,
+            out SafeFileHandle stdout, // stdout includes redirection of stderr
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_wait_for_close_process(
+            IntPtr pid,
+            Int32 timeoutInMs,
+            out Int32 exitCode,
+            out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_kill_process(
+            IntPtr pid,
+            out Int32 errorCode);
     }
 }

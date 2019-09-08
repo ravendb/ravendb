@@ -108,5 +108,14 @@ error_cleanup:
     return rc;
 }
 
+PRIVATE int32_t
+rvn_pipe_for_child(int descriptors[])
+{
+    int32_t result = FAIL;
+    while ((result = pipe2(descriptors, O_CLOEXEC)) < 0 && errno == EINTR);
+    if (result != 0)
+      return FAIL_CREATE_PIPE;
+    return SUCCESS;
+}
 
 #endif

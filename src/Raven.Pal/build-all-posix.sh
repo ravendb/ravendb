@@ -1,5 +1,5 @@
 #!/bin/bash
-LOG=build-all-posix.log
+LOG=${PWD}/build-all-posix.log
 if [ $# -ne 1 ] || [ "$1" == "-h" ]; then
 	echo "usage: build-all-posix.sh <setup | build>"
 	echo "		setup - first time use, install packages for arm compiling and build osx compiler"
@@ -28,6 +28,7 @@ if [ "$1" == "setup" ]; then
 	if [ $? -ne 0 ]; then echo "Failed."; popd; exit 1; fi
 	popd >> ${LOG} 2&>1
 	echo "Done."
+	rm -f ${LOG} > /dev/null 2>&1
 	exit 0
 elif [ "$1" != "build" ]; then
 	echo "Invalid usage"
@@ -51,5 +52,5 @@ if [ ${STAT} -ne 0 ]; then
 	exit 1
 fi
 echo "Build Success!"
-rm ${LOG} > /dev/null 2>&1
+rm -f ${LOG} > /dev/null 2>&1
 exit 0

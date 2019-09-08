@@ -42,6 +42,15 @@ namespace Sparrow.Server.Platform
             FailGetRealPath = 32,
             FailGetModuleHandle = 33,
             FailDiscardVirtualMemory = 34,
+            FailCreatePipe = 35,
+            FailVFork = 36,
+            FailFcnl = 37,
+            FailCreateProcess = 38,
+            FailWaitPid = 39,
+            FailTimeout = 40,
+            FailKill = 41,
+            FailExecAccess = 42,
+            FailChildProcessFailure = 43
         };
 
         [Flags]
