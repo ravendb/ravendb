@@ -10,7 +10,7 @@ namespace SlowTests.Server.Documents.Indexing
         [Fact]
         public void Sum_of_elements()
         {
-            IndexCompiler.Compile(cacheKey: null, new IndexDefinition
+            IndexCompiler.Compile(new IndexDefinition
             {
                 Name = "test",
                 Maps =

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-        public static StaticIndexBase Compile(IndexCacheKey cacheKey, IndexDefinition definition)
+        public static StaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
@@ -123,7 +123,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var index = (StaticIndexBase)Activator.CreateInstance(type);
             index.Source = compilationResult.Code;
-            index.CacheKey = cacheKey;
 
             return index;
         }
