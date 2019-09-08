@@ -12,7 +12,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    class RestoreFromGoogleCloud : RestoreBackupTaskBase
+    public class RestoreFromGoogleCloud : RestoreBackupTaskBase
     {
         private readonly RavenGoogleCloudClient _client;
         private readonly string _remoteFolderName;

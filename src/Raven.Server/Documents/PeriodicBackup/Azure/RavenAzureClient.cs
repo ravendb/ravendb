@@ -43,13 +43,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             : base(progress, cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(azureSettings.AccountKey))
-                throw new ArgumentException("Account key cannot be null or empty");
+                throw new ArgumentException("Account Key cannot be null or empty");
 
             if (string.IsNullOrWhiteSpace(azureSettings.AccountName))
-                throw new ArgumentException("Account name cannot be null or empty");
+                throw new ArgumentException("Account Name cannot be null or empty");
 
             if (string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
-                throw new ArgumentException("Storage container cannot be null or empty");
+                throw new ArgumentException("Storage Container cannot be null or empty");
 
             _accountName = azureSettings.AccountName;
 
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
             catch (Exception e)
             {
-                throw new ArgumentException("Wrong format for account key", e);
+                throw new ArgumentException("Wrong format for Account Key", e);
             }
 
             _containerName = azureSettings.StorageContainer;

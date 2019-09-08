@@ -17,14 +17,14 @@ namespace Tests.Infrastructure
 
         static AzureStorageEmulatorFact()
         {
-            //if (RavenTestHelper.IsRunningOnCI == false)
-            //    return;
+            if (RavenTestHelper.IsRunningOnCI == false)
+                return;
 
-            //if (PlatformDetails.RunningOnPosix)
-            //    return;
+            if (PlatformDetails.RunningOnPosix)
+                return;
 
-            //if (File.Exists(AzureStorageEmulatorPath) == false)
-            //    return;
+            if (File.Exists(AzureStorageEmulatorPath) == false)
+                return;
 
             KillAzureStorageEmulator();
             InitializeAzureStorageEmulator();

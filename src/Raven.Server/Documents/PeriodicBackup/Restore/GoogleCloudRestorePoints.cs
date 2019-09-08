@@ -11,7 +11,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    class GoogleCloudRestorePoints : RestorePointsBase
+    public class GoogleCloudRestorePoints : RestorePointsBase
     {
         private readonly RavenGoogleCloudClient _client;
 
