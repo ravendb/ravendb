@@ -1557,7 +1557,7 @@ namespace Raven.Server.Smuggler.Documents
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _cmd;
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private int _segmentsCount;
+            private int _segmentsSize;
             private readonly int _maxBatchSize;
 
             public TimeSeriesActions(DocumentDatabase database)
@@ -1566,14 +1566,14 @@ namespace Raven.Server.Smuggler.Documents
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(database);
 
                 _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
-                    ? 2 * 1024
-                    : 10 * 1024;
+                    ? 500 * 1024
+                    : 1000 * 1024;
             }
 
-            private void AddToBatch(TimeSeriesItem ts)
+            private void AddToBatch(TimeSeriesItem item)
             {
-                _cmd.AddToDictionary(ts);
-                _segmentsCount++;
+                _cmd.AddToDictionary(item);
+                _segmentsSize += item.Segment.NumberOfBytes;
             }
 
             public void Dispose()
@@ -1589,7 +1589,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfTimeSeriesIfNecessary()
             {
-                if (_segmentsCount < _maxBatchSize)
+                if (_segmentsSize < _maxBatchSize)
                     return;
 
                 var prevCommand = _prevCommand;
@@ -1602,35 +1602,25 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (prevCommand != null)
                 {
-                    //using (prevCommand)
-                    {
-                        AsyncHelpers.RunSync(() => prevCommandTask);
-                    }
+                    AsyncHelpers.RunSync(() => prevCommandTask);
                 }
 
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(_database);
 
-                _segmentsCount = 0;
+                _segmentsSize = 0;
             }
 
             private void FinishBatchOfTimeSeries()
             {
                 if (_prevCommand != null)
                 {
-                    //using (_prevCommand)
-                    {
-                        AsyncHelpers.RunSync(() => _prevCommandTask);
-                    }
-
+                    AsyncHelpers.RunSync(() => _prevCommandTask);
                     _prevCommand = null;
                 }
 
-                if (_segmentsCount > 0)
+                if (_segmentsSize > 0)
                 {
-                    //using (_cmd)
-                    {
-                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
-                    }
+                    AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
                 }
 
                 _cmd = null;

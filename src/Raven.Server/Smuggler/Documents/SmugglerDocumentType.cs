@@ -66,14 +66,19 @@ namespace Raven.Server.Smuggler.Documents
 
     public class TimeSeriesItem
     {
-        public string DocId;
+        public string DocId; 
 
         public string Name;
 
         public string ChangeVector;
 
-        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> Segment;
+        public TimeSeriesValuesSegment Segment;
+
+        public int SegmentSize;
 
         public string Collection;
+
+        public DateTime Baseline;
+
     }
 }

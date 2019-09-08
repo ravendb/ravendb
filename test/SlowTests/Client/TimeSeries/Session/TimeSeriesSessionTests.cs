@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -10,6 +11,94 @@ namespace SlowTests.Client.TimeSeries.Session
 {
     public class TimeSeriesSessionTests : RavenTestBase
     {
+
+        [Fact]
+        public async Task TsBug()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Name1"
+                    }, "users/1");
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Name2"
+                    }, "users/2");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watch1", new[] {i % 60d});
+                        session.TimeSeriesFor("users/1").Append("2Heartrate", baseline.AddSeconds(i * 10), "watch3", new[] {i % 60d, i % 60d + 5, i % 60d + 10});
+                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watch2", new[] { i % 60d, i % 60d + 5 });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user1 = await session.LoadAsync<User>("users/1");
+                    var user2 = await session.LoadAsync<User>("users/2");
+
+                    Assert.Equal("Name1", user1.Name);
+                    Assert.Equal("Name2", user2.Name);
+
+                    var values = await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                    var count = 0;
+                    foreach (var val in values)
+                    {
+                        Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                        Assert.Equal(1, val.Values.Length);
+                        Assert.Equal(count++ % 60, val.Values[0]);
+                    }
+
+                    Assert.Equal(360, count);
+
+
+                    values = await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                    count = 0;
+                    foreach (var val in values)
+                    {
+                        Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                        Assert.Equal(2, val.Values.Length);
+                        Assert.Equal(count % 60, val.Values[0]);
+                        Assert.Equal(count++ % 60 + 5, val.Values[1]);
+                    }
+
+                    Assert.Equal(360, count);
+
+                    values = await session.TimeSeriesFor("users/1").GetAsync("2Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                    count = 0;
+                    foreach (var val in values)
+                    {
+                        Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp);
+                        Assert.Equal(3, val.Values.Length);
+                        Assert.Equal(count % 60, val.Values[0]);
+                        Assert.Equal(count % 60 + 5, val.Values[1]);
+                        Assert.Equal(count++ % 60 + 10, val.Values[2]);
+                    }
+
+                    Assert.Equal(360, count);
+                }
+
+            }
+        }
 
         [Fact]
         public void CanCreateSimpleTimeSeries()

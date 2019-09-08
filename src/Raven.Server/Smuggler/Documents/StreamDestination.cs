@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
@@ -28,8 +29,12 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Utils;
+using Voron;
+using Voron.Data.BTrees;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -647,7 +652,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public void WriteTimeSeries(TimeSeriesItem ts)
+            public unsafe void WriteTimeSeries(TimeSeriesItem item)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -656,52 +661,31 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteStartObject();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.DocId));
-                Writer.WriteString(ts.DocId, skipEscaping: true);
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
-                Writer.WriteString(ts.ChangeVector, skipEscaping: true);
-                Writer.WriteComma();
-
-                Writer.WritePropertyName(nameof(TimeSeriesItem.Collection));
-                Writer.WriteString(ts.Collection);
+                Writer.WriteString(item.DocId);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.Name));
-                Writer.WriteString(ts.Name);
+                Writer.WriteString(item.Name);
                 Writer.WriteComma();
 
-                Writer.WritePropertyName(nameof(TimeSeriesItem.Segment));
+                Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
+                Writer.WriteString(item.ChangeVector, skipEscaping: true);
+                Writer.WriteComma();
 
-                Writer.WriteStartArray();
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Collection));
+                Writer.WriteString(item.Collection);
+                Writer.WriteComma();
 
-                var firstValue = true;
+                Writer.WritePropertyName(nameof(TimeSeriesItem.SegmentSize));
+                Writer.WriteInteger(item.Segment.NumberOfBytes);
+                Writer.WriteComma();
 
-                foreach (var val in ts.Segment)
-                {
-                    if (firstValue == false)
-                        Writer.WriteComma();
-
-                    firstValue = false;
-
-                    Writer.WriteStartObject();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesStorage.Reader.SingleResult.TimeStamp));
-                    Writer.WriteDateTime(val.TimeStamp, true);
-                    Writer.WriteComma();
-
-                    Writer.WritePropertyName(nameof(TimeSeriesStorage.Reader.SingleResult.Tag));
-                    Writer.WriteString(val.Tag);
-                    Writer.WriteComma();
-
-                    Writer.WriteArray(nameof(TimeSeriesStorage.Reader.SingleResult.Values), val.Values);
-
-                    Writer.WriteEndObject();
-                }
-
-                Writer.WriteEndArray();
+                Writer.WritePropertyName(nameof(TimeSeriesItem.Baseline));
+                Writer.WriteDateTime(item.Baseline, true);
 
                 Writer.WriteEndObject();
+
+                Writer.WriteMemoryChunk(item.Segment.Ptr, item.Segment.NumberOfBytes);
             }
         }
 

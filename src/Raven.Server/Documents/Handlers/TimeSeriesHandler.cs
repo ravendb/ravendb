@@ -14,7 +14,9 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -175,8 +177,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        
-        
+              
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
@@ -352,20 +353,37 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
+                var tss = _database.DocumentsStorage.TimeSeriesStorage;
+
                 var changes = 0;
+                CollectionName collectionName = default;
 
                 foreach (var (docId, items) in _dictionary)
                 {
                     foreach (var item in items)
                     {
-                        LastChangeVector = _database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
-                            docId,
-                            item.Collection,
-                            item.Name,
-                            item.Segment
-                        );
+                        if (collectionName == default)
+                        {
+                            collectionName = _database.DocumentsStorage.ExtractCollectionName(context, item.Collection);
+                        }
+
+
+                        using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, item.Name, item.Baseline))
+                        //using (tss.CreateTimeSeriesKeySlice(context, docId, item.Name, item.Baseline, out var keySlice))
+                        {
+                            if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item.ChangeVector, item.Segment, item.Baseline))
+                            {
+                                var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+                                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, item.ChangeVector);
+                                continue;
+                            }
+                        }
+
+                        var changeVector = tss.AppendTimestamp(context, docId, item.Collection, item.Name, item.Segment.YieldAllValues(context, item.Baseline), item.ChangeVector);
+                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, item.ChangeVector);
                     }
 
+                    collectionName = default;
                     changes += items.Count;
                 }
 

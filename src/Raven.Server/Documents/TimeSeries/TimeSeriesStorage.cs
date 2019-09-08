@@ -551,17 +551,22 @@ namespace Raven.Server.Documents.TimeSeries
                 );
                 var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
                 readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
+
+
+                TimeSeriesValuesSegment.ParseTimeSeriesKey(key, keySize, out var docId, out var name, out var baseline);
+
+
             }
         }
 
         public bool TryAppendEntireSegment(DocumentsOperationContext context, TimeSeriesReplicationItem item, DateTime baseline)
         {
-            var collection = item.Collection;
-            var key = item.Key;
-            var changeVector = item.ChangeVector;
-            var segment = item.Segment;
+            var collectionName = _documentsStorage.ExtractCollectionName(context, item.Collection);
+            return TryAppendEntireSegment(context, item.Key, collectionName, item.ChangeVector, item.Segment, baseline);
+        }
 
-            var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
+        public bool TryAppendEntireSegment(DocumentsOperationContext context, Slice key, CollectionName collectionName, string changeVector, TimeSeriesValuesSegment segment, DateTime baseline)
+        {
             var table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
             if (table.ReadByKey(key, out var tvr))
@@ -575,7 +580,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (status == ConflictStatus.Update)
                 {
                     // we can put the segment directly only if the incoming segment doesn't overlap with any existing one 
-                    using (Slice.From(context.Allocator,key.Content.Ptr,key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+                    using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
                     {
                         if (IsOverlapWithHigherSegment(prefix) == false)
                         {
@@ -589,7 +594,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             // if this segment isn't overlap with any other we can put it directly
-            using (Slice.From(context.Allocator,key.Content.Ptr,key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
             {
                 if (IsOverlapWithHigherSegment(prefix) || IsOverlapWithLowerSegment(prefix))
                     return false;
@@ -700,6 +705,18 @@ namespace Raven.Server.Documents.TimeSeries
                     out TimeSeriesKeyBuffer));
                 _externalScopesToDispose.Add(CreateTimeSeriesKeyPrefixSlice(context, TimeSeriesKeyBuffer, documentKeyPrefix, TimeSeriesName, out TimeSeriesPrefixSlice));
                 _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice, current.TimeStamp, out TimeSeriesKeySlice));
+                _internalScopesToDispose.Add(context.Allocator.Allocate(MaxSegmentSize, out Buffer));
+            }
+
+            public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, DateTime timestamp)
+            {
+                //_internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, current.Tag, out TagSlice));
+                _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator));
+                _internalScopesToDispose.Add(Slice.From(context.Allocator, name, out TimeSeriesName));
+                _internalScopesToDispose.Add(context.Allocator.Allocate(documentKeyPrefix.Size + TimeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
+                    out TimeSeriesKeyBuffer));
+                _externalScopesToDispose.Add(CreateTimeSeriesKeyPrefixSlice(context, TimeSeriesKeyBuffer, documentKeyPrefix, TimeSeriesName, out TimeSeriesPrefixSlice));
+                _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice, timestamp, out TimeSeriesKeySlice));
                 _internalScopesToDispose.Add(context.Allocator.Allocate(MaxSegmentSize, out Buffer));
             }
 
@@ -1292,15 +1309,19 @@ namespace Raven.Server.Documents.TimeSeries
 
             TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, out var docId, out var name, out var baseline);
 
-            return new TimeSeriesItem
+
+            var item =  new TimeSeriesItem
             {
                 DocId = docId,
                 Name = name,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
-                Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize)/*.YieldAllValues(context, baseline)*/,
+                Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                Baseline = baseline
                 //Etag = Bits.SwapBytes(etag),
             };
+
+            return item;
         }
 
         internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
@@ -1328,6 +1349,13 @@ namespace Raven.Server.Documents.TimeSeries
         {
             if (size > MaxSegmentSize)
                 throw new ArgumentOutOfRangeException("Attempted to write a time series segment that is larger (" + size + ") than the maximum size allowed.");
+        }
+
+        public long GetNumberOfTimeSeriesSegments(DocumentsOperationContext context)
+        {
+            var fstIndex = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            return fst.NumberOfEntries;
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.ExternalScope CreateTimeSeriesKeySlice(DocumentsOperationContext context, ByteString buffer,

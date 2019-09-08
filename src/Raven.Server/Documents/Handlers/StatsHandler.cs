@@ -70,6 +70,8 @@ namespace Raven.Server.Documents.Handlers
                 stats.TempBuffersSizeOnDisk = size.TempBuffers;
                 stats.CountOfCounterEntries = Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context);
 
+                stats.CountOfTimeSeriesSegments = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(context);
+
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;

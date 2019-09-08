@@ -491,7 +491,8 @@ namespace Raven.Server.Smuggler.Documents
                         reader.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
                         reader.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
                         reader.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false ||
-                        reader.TryGet(nameof(TimeSeriesItem.Segment), out BlittableJsonReaderArray segment) == false)
+                        reader.TryGet(nameof(TimeSeriesItem.SegmentSize), out int size) == false ||
+                        reader.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
                     {
                         _result.TimeSeries.ErroredCount++;
                         _result.AddWarning("Could not read time series entry.");
@@ -499,41 +500,40 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    var list = new List<TimeSeriesStorage.Reader.SingleResult>(segment.Length);
-
-                    foreach (var val in segment)
-                    {
-                        if (!(val is BlittableJsonReaderObject bjro) ||
-                            bjro.TryGet(nameof(TimeSeriesStorage.Reader.SingleResult.TimeStamp), out DateTime timeStamp) == false ||
-                            bjro.TryGet(nameof(TimeSeriesStorage.Reader.SingleResult.Tag), out LazyStringValue tag) == false ||
-                            bjro.TryGet(nameof(TimeSeriesStorage.Reader.SingleResult.Values), out BlittableJsonReaderArray values) == false)
-                        {
-                            _result.TimeSeries.ErroredCount++;
-                            _result.AddWarning("Could not read time series entry.");
-
-                            continue;
-                        }
-
-                        list.Add(new TimeSeriesStorage.Reader.SingleResult
-                        {
-                            TimeStamp = timeStamp,
-                            Tag = tag,
-                            Values = new Memory<double>(values.Select(x => (double)(long)x).ToArray())
-                        });
-
-                    }
+                    if (ReadSegment(size, docId, name, out TimeSeriesValuesSegment segment) == false)
+                        continue;
 
                     yield return new TimeSeriesItem
                     {
                         DocId = docId,
                         Name = name,
-                        ChangeVector = cv,
+                        Baseline = baseline,
                         Collection = collection,
-                        Segment = list
+                        ChangeVector = cv,
+                        Segment = segment
                     };
                 }
             }
         }
+
+        private unsafe bool ReadSegment(int size, string docId, string name, out TimeSeriesValuesSegment segment)
+        {
+            segment = default;
+
+            var mem = _context.GetMemory(size);
+            var read = _parser.Copy(mem.Address, size);
+
+            if (read.Done == false || read.BytesRead != size)
+            {
+                _result.TimeSeries.ErroredCount++;
+                _result.AddWarning($"Failed to read time series values segment on document '{docId}', series '{name}'.");
+                return false;
+            }
+
+            segment = new TimeSeriesValuesSegment(mem.Address, size);
+            return true;
+        }
+
 
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
         {
