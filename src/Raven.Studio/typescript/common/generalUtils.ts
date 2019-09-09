@@ -179,8 +179,9 @@ class genUtils {
 
         const formatNumber = (input: number) => _.padStart(input.toString(), 2, '0');
 
-        if (duration.days()) {
-            return `${duration.days()}.${formatNumber(duration.hours())}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
+        const days = Math.floor(duration.asDays());
+        if (days) {
+            return `${days}.${formatNumber(duration.hours())}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
         }
 
         return `${formatNumber(Math.floor(duration.asHours()))}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
