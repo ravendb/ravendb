@@ -107,14 +107,14 @@ namespace Raven.Server.Documents.Patch
             {
                 value = null;
 
-                if (parent.LuceneDocument == null)
+                if (parent.LuceneDocument == null || parent.LuceneIndexFields == null)
                     return false;
 
-                if (parent.LuceneIndexFields == null || parent.LuceneIndexFields.TryGetValue(_property, out var indexField) == false || indexField.Storage == FieldStorage.No)
-                {
-                    if (parent.LuceneAnyDynamicIndexFields == false)
-                        return false;
-                }
+                if (parent.LuceneIndexFields.TryGetValue(_property, out var indexField) == false && parent.LuceneAnyDynamicIndexFields == false)
+                    return false;
+
+                if (indexField != null && indexField.Storage == FieldStorage.No)
+                    return false;
 
                 var fieldType = QueryResultRetrieverBase.GetFieldType(property, parent.LuceneDocument);
                 if (fieldType.IsArray)
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                         return true;
                     }
                 }
-                else 
+                else
                 {
                     var fieldable = _parent.LuceneDocument.GetFieldable(property);
                     if (fieldable == null)
