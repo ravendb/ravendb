@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Patch
                 PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
                 for (var i = 0; i < bjra.Length; i++)
                 {
-                    var json = array.GetValueTokenTupleByIndex(i);
+                    var json = bjra.GetValueTokenTupleByIndex(i);
                     BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
                     JsValue item;
                     if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)
