@@ -43,17 +43,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
 
                 var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Account key cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("Account Key cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.AccountKey = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Account name cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("Account Name cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.AccountName = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Storage container cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("Storage Container cannot be null or empty", e.InnerException.Message);
             }
         }
 
