@@ -230,6 +230,9 @@
                 <div data-bind="if: showBackupSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-backup"></i><span>Backup</span></h5><hr>
+                        <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.serverWideBackupTasksExist">
+                            <a target="_blank" data-bind="attr: { href: $root.serverWideBackupUrl }">&nbsp;Go to Server-Wide Backup View</a>
+                        </h5>
                     </div>
                     <div data-bind="foreach: backupTasks">
                         <div class="panel destination-item periodic-backup" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -581,9 +584,8 @@
     <div class="actions-container">
         <div class="actions">
             <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
-            <button class="btn btn-default" data-bind="click: editTask, attr: { 'title': isServerWide() ? 'Edit Server-Wide Backup task' : 'Edit backup task'}"><i class="icon-edit"></i></button>
+            <button class="btn btn-default" title="Edit backup task" data-bind="visible: !isServerWide(), click: editTask"><i class="icon-edit"></i></button>
             <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
-            <button class="btn btn-default" data-bind="visible: isServerWide(), click: navigateToServerWideBackupsListView" title="Navigate to Server-Wide Backups List View"><i class="icon-global"></i></button>
         </div>
     </div>
 </script>

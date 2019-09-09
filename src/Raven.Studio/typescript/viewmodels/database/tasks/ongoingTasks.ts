@@ -1,5 +1,6 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
+import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
@@ -58,6 +59,9 @@ class ongoingTasks extends viewModelBase {
 
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
+
+    serverWideBackupTasksExist = ko.observable<boolean>();
+    serverWideBackupUrl: string; 
     
     constructor() {
         super();
@@ -68,6 +72,7 @@ class ongoingTasks extends viewModelBase {
 
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
+        this.serverWideBackupUrl = appUrl.forServerWideBackupList();
     }
 
     activate(args: any): JQueryPromise<any> {
@@ -297,6 +302,8 @@ class ongoingTasks extends viewModelBase {
         const serverWideBackupTasks = groupedBackupTasks.true;
         const ongoingBackupTasks = groupedBackupTasks.false;
 
+        this.serverWideBackupTasksExist(!!serverWideBackupTasks);
+        
         if (ongoingBackupTasks) {
             this.backupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);            
         } else if (serverWideBackupTasks) {
