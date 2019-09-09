@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -27,7 +25,7 @@ namespace Raven.Server.Documents.TimeSeries
     {
         public const int MaxSegmentSize = 2048;
 
-        private static readonly Slice AllTimeSeriesEtagSlice;
+        public static readonly Slice AllTimeSeriesEtagSlice;
 
         private static Slice CollectionTimeSeriesEtagsSlice;
 
@@ -934,6 +932,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+            var newSeries = false;
 
             using (var appendEnumerator = toAppend.GetEnumerator())
             {
@@ -960,7 +959,8 @@ namespace Raven.Server.Documents.TimeSeries
                             {
                                 // no matches for this series at all, need to create new segment
                                 segmentHolder.AppendNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice);
-                                AddTimeSeriesNameToMetadata(context, documentId, name);
+                                newSeries = true;
+                                //AddTimeSeriesNameToMetadata(context, documentId, name);
                                 break;
                             }
 
@@ -1008,6 +1008,11 @@ namespace Raven.Server.Documents.TimeSeries
                         }
                     }
                 }
+            }
+
+            if (newSeries)
+            {
+                AddTimeSeriesNameToMetadata(context, documentId, name);
             }
 
             return context.LastDatabaseChangeVector;
@@ -1302,26 +1307,23 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static TimeSeriesItem CreateTimeSeriesItem(DocumentsOperationContext context, TableValueReader reader)
         {
-            //var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
+            var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
             var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
 
             TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, out var docId, out var name, out var baseline);
 
-
-            var item =  new TimeSeriesItem
+            return new TimeSeriesItem
             {
                 DocId = docId,
                 Name = name,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
-                Baseline = baseline
-                //Etag = Bits.SwapBytes(etag),
+                Baseline = baseline,
+                Etag = Bits.SwapBytes(etag),
             };
-
-            return item;
         }
 
         internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)

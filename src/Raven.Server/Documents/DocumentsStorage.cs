@@ -491,6 +491,11 @@ namespace Raven.Server.Documents
             return ReadLastEtagFrom(tx, CountersStorage.AllCountersEtagSlice);
         }
 
+        public static long ReadLastTimeSeriesEtag(Transaction tx)
+        {
+            return ReadLastEtagFrom(tx, TimeSeriesStorage.AllTimeSeriesEtagSlice);
+        }
+
         private static long ReadLastEtagFrom(Transaction tx, Slice name)
         {
             using (var fst = new FixedSizeTree(tx.LowLevelTransaction,
@@ -539,6 +544,10 @@ namespace Raven.Server.Documents
             var lastCounterEtag = ReadLastCountersEtag(tx);
             if (lastCounterEtag > lastEtag)
                 lastEtag = lastCounterEtag;
+
+            var lastTimeSeriesEtag = ReadLastTimeSeriesEtag(tx);
+            if (lastTimeSeriesEtag > lastEtag)
+                lastEtag = lastTimeSeriesEtag;
 
             return lastEtag;
         }

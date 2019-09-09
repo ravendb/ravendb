@@ -146,6 +146,9 @@ namespace Raven.Client.Documents.Smuggler
             if (Counters.LastEtag > lastEtag)
                 lastEtag = Counters.LastEtag;
 
+            if (TimeSeries.LastEtag > lastEtag)
+                lastEtag = TimeSeries.LastEtag;
+
             return lastEtag;
         }
 

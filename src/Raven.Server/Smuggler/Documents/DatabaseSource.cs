@@ -73,7 +73,8 @@ namespace Raven.Server.Smuggler.Documents
                 options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Conflicts) ||
-                options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups))
+                options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.TimeSeries))
             {
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _disposeTransaction = _context.OpenReadTransaction();

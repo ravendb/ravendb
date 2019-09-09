@@ -80,5 +80,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public DateTime Baseline;
 
+        public long Etag;
+
     }
 }
