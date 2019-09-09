@@ -480,13 +480,13 @@ namespace Sparrow.Json
         private void ValidateIndexes(int startIndex, int count)
         {
             if (startIndex < 0 || count < 0)
-                throw new ArgumentOutOfRangeException("count or startIndex is negative.");
+                throw new ArgumentOutOfRangeException($"count ({count}) or startIndex ({startIndex}) is negative.");
 
             if (startIndex > Length)
-                throw new ArgumentOutOfRangeException(nameof(startIndex), "startIndex is greater than the length of this string.");
+                throw new ArgumentOutOfRangeException(nameof(startIndex), startIndex, $"startIndex ({startIndex}) is greater than the length of this string.");
 
             if (count > Length - startIndex)
-                throw new ArgumentOutOfRangeException(nameof(count), "count is greater than the length of this string minus startIndex.");
+                throw new ArgumentOutOfRangeException(nameof(count), count, $"count ({count}) is greater than the length of this string minus startIndex.");
         }
 
         public int IndexOf(char value, int startIndex, int count)

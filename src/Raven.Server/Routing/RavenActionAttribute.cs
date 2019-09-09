@@ -1,10 +1,8 @@
 using System;
-using JetBrains.Annotations;
 
 namespace Raven.Server.Routing
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    [MeansImplicitUse]
     public class RavenActionAttribute : Attribute
     {
         public bool IsDebugInformationEndpoint { get; set; }

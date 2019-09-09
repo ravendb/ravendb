@@ -30,7 +30,7 @@ namespace Raven.Server.Rachis
 
         private Logger _log;
 
-        private enum LogHistoryColumn
+        public enum LogHistoryColumn
         {
             Guid, // string
             Index, // long
@@ -279,7 +279,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public static IEnumerable<DynamicJsonValue> GetHistoryLogs(TransactionOperationContext context)
+        public IEnumerable<DynamicJsonValue> GetHistoryLogs(TransactionOperationContext context)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             foreach (var entryHolder in table.SeekForwardFrom(LogHistoryTable.FixedSizeIndexes[LogHistoryDateTimeSlice], 0, 0))

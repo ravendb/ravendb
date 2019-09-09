@@ -147,7 +147,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (_lastLogs.TryGetValue(message, out var last))
             {
-                if (last + 60 > _iteration) 
+                if (last + 60 > _iteration)
                     // each iteration occur every 500 ms, so we update the log with the _same_ message every 30 sec (60 * 0.5s)
                     return;
             }
@@ -682,7 +682,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    if (_server.LicenseManager.CanDynamicallyDistributeNodes(out _) == false)
+                    if (_server.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out _) == false)
                         continue;
 
                     // replace the bad promotable otherwise we will continue to add more and more nodes.
@@ -736,7 +736,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (goodMembers < databaseTopology.ReplicationFactor &&
                             TryFindFitNode(rehab, dbName, databaseTopology, clusterTopology, current, out var node))
                         {
-                            if (_server.LicenseManager.CanDynamicallyDistributeNodes(out _) == false)
+                            if (_server.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out _) == false)
                                 continue;
 
                             databaseTopology.Promotables.Add(node);
@@ -865,7 +865,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = nodeStats?.ServerReport.OutOfCpuCredits == true ? 
+            topology.PromotablesStatus[member] = nodeStats?.ServerReport.OutOfCpuCredits == true ?
                 DatabasePromotionStatus.OutOfCpuCredits : DatabasePromotionStatus.NotResponding;
 
             LogMessage($"Node {member} of database '{dbName}': {reason}", info: false, database: dbName);
@@ -960,7 +960,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var indexesCatchedUp = CheckIndexProgress(
                 promotablePrevDbStats.LastEtag,
-                promotablePrevDbStats.LastIndexStats, 
+                promotablePrevDbStats.LastIndexStats,
                 promotableDbStats.LastIndexStats,
                 mentorCurrDbStats.LastIndexStats,
                 out var reason);

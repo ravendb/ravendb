@@ -24,18 +24,19 @@ namespace Raven.Server.Web.Studio
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
                     var indexType = indexDefinition.DetectStaticIndexType();
-                    
+
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WritePropertyName("IndexType");
                         writer.WriteString(indexType.ToString());
-                        writer.WriteEndObject();;
+                        writer.WriteEndObject();
+                        ;
                     }
                 }
             }
         }
-        
+
         [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostIndexFields()
         {

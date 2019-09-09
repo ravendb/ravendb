@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
@@ -17,7 +16,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _client = client;
         }
 
-        protected override Task<GetFoldersResult> GetSortedFolders()
+        protected override GetFoldersResult GetSortedFolders()
         {
             throw new NotSupportedException();
         }
@@ -27,12 +26,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             throw new NotSupportedException();
         }
 
-        protected override Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
+        protected override GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
             throw new NotSupportedException();
         }
 
-        protected override Task DeleteFolders(List<string> folders)
+        protected override void DeleteFolders(List<string> folders)
         {
             throw new NotSupportedException();
         }

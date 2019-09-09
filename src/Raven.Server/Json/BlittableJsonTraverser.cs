@@ -14,6 +14,7 @@ namespace Raven.Server.Json
         private const char PropertySeparator = '.';
         private const char CollectionSeparatorStartBracket = '[';
         private const char CollectionSeparatorEndBracket = ']';
+        private const string ValuesProperty = "$Values[]";
         public static readonly char[] CollectionAndPropertySeparators = { CollectionSeparatorStartBracket, CollectionSeparatorEndBracket, PropertySeparator };
 
         public static readonly char[] PropertySeparators =
@@ -58,7 +59,6 @@ namespace Raven.Server.Json
                 return true;
             }
             
-
             switch (path[propertySegmentLength])
             {
                 case PropertySeparator:
@@ -66,6 +66,13 @@ namespace Raven.Server.Json
 
                     if (reader is BlittableJsonReaderObject propertyInnerObject)
                     {
+                        if (pathSegment.Length > ValuesProperty.Length + 1 &&
+                            pathSegment.StartsWith(ValuesProperty, StringComparison.OrdinalIgnoreCase))
+                        {
+                            leftPath = pathSegment.Subsegment(ValuesProperty.Length + 1);
+                            return ReadNestedObjects(propertyInnerObject, leftPath, out result, out leftPath);
+                        }
+
                         if (TryRead(propertyInnerObject, pathSegment, out result, out leftPath))
                             return true;
 

@@ -1,28 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using NCrontab.Advanced;
-using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.Utils;
-using Raven.Server.Web.System;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Raven.Server.Config;
-using Voron.Util.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Json;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Server.Web.System;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Web.Studio
 {
@@ -101,13 +100,13 @@ namespace Raven.Server.Web.Studio
                         var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
                         var path = GetStringQueryString("path", required: false);
                         folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
-                        
+
                         break;
                     case PeriodicBackupConnectionType.S3:
                         var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
                         if (connectionType != PeriodicBackupConnectionType.Local && json == null)
                             throw new BadRequestException("No JSON was posted.");
-                        
+
                         var s3Settings = JsonDeserializationServer.S3Settings(json);
                         if (s3Settings == null)
                             throw new BadRequestException("No S3Settings were found.");
@@ -115,7 +114,7 @@ namespace Raven.Server.Web.Studio
                         using (var client = new RavenAwsS3Client(s3Settings))
                         {
                             // fetching only the first 64 results for the auto complete
-                            var folders = await client.ListObjects(s3Settings.RemoteFolderName , "/", true, 64);
+                            var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, 64);
                             folderPathOptions = new FolderPathOptions();
                             foreach (var folder in folders.FileInfoDetails)
                             {
@@ -135,7 +134,7 @@ namespace Raven.Server.Web.Studio
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-                
+
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -146,7 +145,7 @@ namespace Raven.Server.Web.Studio
                 }
             }
         }
-        
+
         [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
         public Task OfflineMigrationTest()
         {
@@ -156,7 +155,7 @@ namespace Raven.Server.Web.Studio
             {
                 bool isValid = true;
                 string errorMessage = null;
-                
+
                 try
                 {
                     switch (mode)
@@ -176,7 +175,7 @@ namespace Raven.Server.Web.Studio
                     isValid = false;
                     errorMessage = e.Message;
                 }
-                
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
@@ -189,10 +188,10 @@ namespace Raven.Server.Web.Studio
 
             return Task.CompletedTask;
         }
-        
+
         public class OfflineMigrationValidation
         {
-            public bool IsValid { get; set; } 
+            public bool IsValid { get; set; }
             public string ErrorMessage { get; set; }
         }
 
@@ -252,32 +251,50 @@ namespace Raven.Server.Web.Studio
                 if (string.IsNullOrWhiteSpace(expressionAsString))
                     return NoContent();
 
-                using (var workspace = new AdhocWorkspace())
+                var type = IndexDefinitionHelper.DetectStaticIndexType(expressionAsString, reduce: null);
+
+                FormattedExpression formattedExpression;
+                switch (type)
                 {
-                    var expression = SyntaxFactory
-                        .ParseExpression(expressionAsString)
-                        .NormalizeWhitespace();
+                    case IndexType.Map:
+                    case IndexType.MapReduce:
+                        using (var workspace = new AdhocWorkspace())
+                        {
+                            var expression = SyntaxFactory
+                                .ParseExpression(expressionAsString)
+                                .NormalizeWhitespace();
 
-                    var result = Formatter.Format(expression, workspace);
+                            var result = Formatter.Format(expression, workspace);
 
-                    if (result.ToString().IndexOf("Could not format:", StringComparison.Ordinal) > -1)
-                        throw new BadRequestException();
+                            if (result.ToString().IndexOf("Could not format:", StringComparison.Ordinal) > -1)
+                                throw new BadRequestException();
 
-                    var formattedExpression = new FormattedExpression
-                    {
-                        Expression = result.ToString()
-                    };
+                            formattedExpression = new FormattedExpression
+                            {
+                                Expression = result.ToString()
+                            };
+                        }
+                        break;
+                    case IndexType.JavaScriptMap:
+                    case IndexType.JavaScriptMapReduce:
+                        formattedExpression = new FormattedExpression
+                        {
+                            Expression = JSBeautify.Apply(expressionAsString)
+                        };
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unknown index type '{type}'.");
+                }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, formattedExpression.ToJson());
-                    }
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, formattedExpression.ToJson());
                 }
             }
 
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/studio-tasks/next-cron-expression-occurrence", "GET", AuthorizationStatus.ValidUser)]
         public Task GetNextCronExpressionOccurrence()
         {
@@ -330,14 +347,14 @@ namespace Raven.Server.Web.Studio
         public class NextCronExpressionOccurrence
         {
             public bool IsValid { get; set; }
-            
+
             public string ErrorMessage { get; set; }
-            
+
             public DateTime Utc { get; set; }
 
             public DateTime ServerTime { get; set; }
         }
-        
+
 
         public class FormattedExpression : IDynamicJson
         {
@@ -351,7 +368,7 @@ namespace Raven.Server.Web.Studio
                 };
             }
         }
-        
+
         public enum ItemType
         {
             Index,

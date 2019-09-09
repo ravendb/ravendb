@@ -30,7 +30,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.Studio;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -306,23 +305,23 @@ namespace Raven.Server.Web.System
                     {
                         case PeriodicBackupConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(s3Settings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var awsClient = new RavenAwsS3Client(s3Settings, logger: Logger, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await awsClient.TestConnection();
+                                awsClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, logger: Logger, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await glacierClient.TestConnection();
+                                glacierClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(azureSettings, cancellationToken: ServerStore.ServerShutdown))
+                            using (var azureClient = new RavenAzureClient(azureSettings, logger: Logger, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await azureClient.TestConnection();
+                                azureClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.GoogleCloud:
@@ -336,7 +335,7 @@ namespace Raven.Server.Web.System
                             var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
                             using (var ftpClient = new RavenFtpClient(ftpSettings))
                             {
-                                await ftpClient.TestConnection();
+                                ftpClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupConnectionType.Local:

@@ -15,7 +15,7 @@ namespace Voron.Impl
         private class NativeAllocation
         {
             public IntPtr Ptr;
-            public int Size;
+            public long Size;
             public NativeMemory.ThreadStats AllocatingThread;
         }
 
@@ -60,7 +60,7 @@ namespace Voron.Impl
             return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
         }
 
-        public void Return(byte* ptr, int size, NativeMemory.ThreadStats allocatingThread)
+        public void Return(byte* ptr, long size, NativeMemory.ThreadStats allocatingThread)
         {
             if (ptr == null)
                 return;

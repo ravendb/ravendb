@@ -8,6 +8,8 @@ using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
 
@@ -29,6 +31,8 @@ namespace Raven.Server.Documents.Patch
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
+        public Dictionary<string, IndexField> LuceneIndexFields;
+        public bool LuceneAnyDynamicIndexFields;
 
         private void MarkChanged()
         {
@@ -82,87 +86,106 @@ namespace Raven.Server.Documents.Patch
             {
                 _parent = parent;
                 _property = property;
-                var index = _parent.Blittable?.GetPropertyIndex(_property);
 
-                if (index == null || index == -1)
+                if (TryGetValueFromLucene(_parent, _property, out _value) == false)
                 {
-                    if (_parent.LuceneDocument != null)
+                    var index = _parent.Blittable?.GetPropertyIndex(_property);
+                    if (index == null || index == -1)
                     {
-                        // if it isn't on the document, check if it is stored in the index?
-                        var fieldType = QueryResultRetrieverBase.GetFieldType(property, _parent.LuceneDocument);
-                        var values = _parent.LuceneDocument.GetValues(property, _parent.LuceneState);
-                        if (fieldType.IsArray)
-                        {
-                            // here we need to perform a manipulation in order to generate the object from the
-                            // data
-                            if (fieldType.IsJson)
-                            {
-                                Lucene.Net.Documents.Field[] propertyFields = _parent.LuceneDocument.GetFields(property);
-
-                                JsValue[] arrayItems =
-                                    new JsValue[propertyFields.Length];
-
-                                for (int i = 0; i < propertyFields.Length; i++)
-                                {
-                                    var field = propertyFields[i];
-                                    var stringValue = field.StringValue(parent.LuceneState);
-
-                                    var itemAsBlittable = parent.Blittable._context.ReadForMemory(stringValue, field.Name);
-
-                                    arrayItems[i] = TranslateToJs(_parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
-                                }
-
-                                _value = JsValue.FromObject(_parent.Engine, arrayItems);
-                            }
-                            else
-                            {
-                                _value = JsValue.FromObject(_parent.Engine, values);
-                            }
-
-                        }
-                        else if (values.Length == 1)
-                        {
-                            if (fieldType.IsJson)
-                            {
-                                BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(values[0], property);
-                                _value = TranslateToJs(_parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
-                            }
-                            else
-                            {
-                                var value = values[0];
-                                switch (value)
-                                {
-                                    case Client.Constants.Documents.Indexing.Fields.NullValue:
-                                        value = null;
-                                        break;
-                                    case Client.Constants.Documents.Indexing.Fields.EmptyString:
-                                        value = string.Empty;
-                                        break;
-                                }
-
-                                if (double.TryParse(value, out var valueAsDouble))
-                                {
-                                    _value = valueAsDouble;
-                                }
-                                else
-                                {
-                                    _value = value;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            _value = JsValue.Undefined;
-                        }
+                        _value = JsValue.Undefined;
                     }
                     else
                     {
-                        _value = JsValue.Undefined;
+                        _value = GetPropertyValue(_property, index.Value);
+                    }
+                }
+            }
+
+            private bool TryGetValueFromLucene(BlittableObjectInstance parent, string property, out JsValue value)
+            {
+                value = null;
+
+                if (parent.LuceneDocument == null || parent.LuceneIndexFields == null)
+                    return false;
+
+                if (parent.LuceneIndexFields.TryGetValue(_property, out var indexField) == false && parent.LuceneAnyDynamicIndexFields == false)
+                    return false;
+
+                if (indexField != null && indexField.Storage == FieldStorage.No)
+                    return false;
+
+                var fieldType = QueryResultRetrieverBase.GetFieldType(property, parent.LuceneDocument);
+                if (fieldType.IsArray)
+                {
+                    // here we need to perform a manipulation in order to generate the object from the data
+                    if (fieldType.IsJson)
+                    {
+                        Lucene.Net.Documents.Field[] propertyFields = parent.LuceneDocument.GetFields(property);
+
+                        JsValue[] arrayItems =
+                            new JsValue[propertyFields.Length];
+
+                        for (int i = 0; i < propertyFields.Length; i++)
+                        {
+                            var field = propertyFields[i];
+                            var stringValue = field.StringValue(parent.LuceneState);
+
+                            var itemAsBlittable = parent.Blittable._context.ReadForMemory(stringValue, field.Name);
+
+                            arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                        }
+
+                        value = JsValue.FromObject(parent.Engine, arrayItems);
+                        return true;
+                    }
+                    else
+                    {
+                        var values = parent.LuceneDocument.GetValues(property, parent.LuceneState);
+                        value = JsValue.FromObject(parent.Engine, values);
+                        return true;
                     }
                 }
                 else
                 {
-                    _value = GetPropertyValue(_property, index.Value);
+                    var fieldable = _parent.LuceneDocument.GetFieldable(property);
+                    if (fieldable == null)
+                        return false;
+
+                    var val = fieldable.StringValue(_parent.LuceneState);
+                    if (fieldType.IsJson)
+                    {
+                        BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(val, property);
+                        value = TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                        return true;
+                    }
+                    else
+                    {
+                        if (fieldable.IsTokenized == false)
+                        {
+                            // NULL_VALUE and EMPTY_STRING fields aren't tokenized
+                            // this will prevent converting fields with a "NULL_VALUE" string to null
+                            switch (val)
+                            {
+                                case Client.Constants.Documents.Indexing.Fields.NullValue:
+                                    value = JsValue.Null;
+                                    return true;
+                                case Client.Constants.Documents.Indexing.Fields.EmptyString:
+                                    value = string.Empty;
+                                    return true;
+                            }
+                        }
+
+                        if (double.TryParse(val, out var valueAsDouble))
+                        {
+                            value = valueAsDouble;
+                        }
+                        else
+                        {
+                            value = val;
+                        }
+
+                        return true;
+                    }
                 }
             }
 
@@ -188,14 +211,14 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
 
-            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray array, BlittableObjectInstance parent)
+            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
             {
-                array.NoCache = true;
+                bjra.NoCache = true;
 
-                PropertyDescriptor[] items = new PropertyDescriptor[array.Length];
-                for (var i = 0; i < array.Length; i++)
+                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
+                for (var i = 0; i < bjra.Length; i++)
                 {
-                    var json = array.GetValueTokenTupleByIndex(i);
+                    var json = bjra.GetValueTokenTupleByIndex(i);
                     BlittableJsonToken itemType = json.Item2 & BlittableJsonReaderBase.TypesMask;
                     JsValue item;
                     if (itemType == BlittableJsonToken.Integer || itemType == BlittableJsonToken.LazyNumber)

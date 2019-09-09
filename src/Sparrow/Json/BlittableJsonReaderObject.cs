@@ -700,7 +700,7 @@ namespace Sparrow.Json
                 ThrowObjectDisposed();
 
             if (index < 0 || index >= _propCount)
-                ThrowOutOfRangeException();
+                ThrowOutOfRangeException(index);
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
 
@@ -730,10 +730,10 @@ namespace Sparrow.Json
             prop.Value = value;
         }
 
-        private static void ThrowOutOfRangeException()
+        private static void ThrowOutOfRangeException(int indexValue)
         {
             // ReSharper disable once NotResolvedInText
-            throw new ArgumentOutOfRangeException("index");
+            throw new ArgumentOutOfRangeException("index", indexValue, "Unexpected index argument value: " + indexValue);
         }
 
         public int GetPropertyIndex(string name)
@@ -945,7 +945,7 @@ namespace Sparrow.Json
                     return new LazyNumberValue(ReadStringLazily(position));
             }
 
-            throw new ArgumentOutOfRangeException((type).ToString());
+            throw new ArgumentOutOfRangeException(nameof(type), type.ToString(), "Unexpected type: " + type);
         }
 
         public class RawBlob

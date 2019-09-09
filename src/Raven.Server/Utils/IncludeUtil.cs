@@ -82,8 +82,10 @@ namespace Raven.Server.Utils
                 var json = value as BlittableJsonReaderObject;
                 if (json != null)
                 {
-                    var isKey = leftPath == "$Keys"; // include on dictionary.Keys or dictionary.Values
-                    if (isKey || leftPath == "$Values")
+                    // include on dictionary.Keys or dictionary.Values
+                    var isKey = leftPath == "$Keys" || leftPath == "$Key";
+                    var isValue = leftPath == "$Values" || leftPath == "$Value";
+                    if (isKey || isValue)
                     {
                         var property = new BlittableJsonReaderObject.PropertyDetails();
                         for (int i = 0; i < json.Count; i++)

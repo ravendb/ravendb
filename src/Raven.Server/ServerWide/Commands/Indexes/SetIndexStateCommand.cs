@@ -17,7 +17,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             // for deserialization
         }
 
-        public SetIndexStateCommand([NotNull] string name, IndexState state, string databaseName, string uniqueRequestId)
+        public SetIndexStateCommand(string name, IndexState state, string databaseName, string uniqueRequestId)
             : base(databaseName, uniqueRequestId)
         {
             if (string.IsNullOrEmpty(name))

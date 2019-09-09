@@ -51,10 +51,10 @@ namespace Raven.Client.Documents.Operations
 
         public override string ToString()
         {
-            var msg = $"Inserted {Processed} documents in {BatchCount} batches.";
+            var msg = $"Inserted {Processed:#,#;;0} documents in {BatchCount:#,#;;0} batches.";
 
             if (LastProcessedId != null)
-                msg += $" Last document id: '{LastProcessedId}'";
+                msg += $" Last document ID: '{LastProcessedId}'";
 
             return msg;
         }

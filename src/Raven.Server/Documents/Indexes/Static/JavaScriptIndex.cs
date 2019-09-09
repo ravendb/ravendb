@@ -65,13 +65,6 @@ namespace Raven.Server.Documents.Indexes.Static
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
         }
 
-        public Action TryRemoveFromCache { get; set; }
-
-        public override void RemoveIndexFromCache()
-        {
-            TryRemoveFromCache?.Invoke();
-        }
-
         private void ProcessFields(IndexDefinition definition, Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
         {
             var fields = new HashSet<string>();
