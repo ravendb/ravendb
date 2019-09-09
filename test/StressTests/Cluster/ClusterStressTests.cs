@@ -32,7 +32,7 @@ namespace StressTests.Cluster
             return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-13652")]
         public async Task ParallelClusterTransactions()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
