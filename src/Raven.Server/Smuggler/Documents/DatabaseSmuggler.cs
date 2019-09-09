@@ -137,6 +137,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.CompareExchange);
             EnsureStepProcessed(result.CompareExchangeTombstones);
             EnsureStepProcessed(result.Subscriptions);
+            EnsureStepProcessed(result.TimeSeries);
         }
 
         private static void EnsureStepProcessed(SmugglerProgressBase.Counts counts)
@@ -292,6 +293,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
+                    break;
+                case DatabaseItemType.TimeSeries:
+                    counts = result.TimeSeries;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -962,6 +966,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     actions.WriteTimeSeries(ts);
 
+                    result.TimeSeries.LastEtag = ts.Etag;
                 }
             }
 

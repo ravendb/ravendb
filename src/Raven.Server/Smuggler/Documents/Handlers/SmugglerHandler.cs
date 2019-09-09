@@ -343,6 +343,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 finalResult.Counters.ErroredCount += importResult.Counters.ErroredCount;
                 finalResult.Counters.LastEtag = Math.Max(finalResult.Counters.LastEtag, importResult.Counters.LastEtag);
 
+                finalResult.TimeSeries.ReadCount += importResult.TimeSeries.ReadCount;
+                finalResult.TimeSeries.ErroredCount += importResult.TimeSeries.ErroredCount;
+                finalResult.TimeSeries.LastEtag = Math.Max(finalResult.TimeSeries.LastEtag, importResult.TimeSeries.LastEtag);
+
                 finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
                 finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
 
