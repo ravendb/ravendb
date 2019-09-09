@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
-            JsonOperationContext jsonOperationContext,
+            JsonOperationContext context,
             ZipArchive archive,
             string tag,
             string url,
@@ -180,19 +180,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
             bool stacktraces)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
-            using (var responseStream = await GetDebugInfoFromNodeAsync(
-                jsonOperationContext,
-                url,
-                databaseNames ?? EmptyStringArray, certificate,
-                stacktraces))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
             {
-                var entry = archive.CreateEntry($"Node - [{tag}].zip");
-                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+                var timeout = TimeSpan.FromMinutes(1);
+                if (ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan > timeout)
+                    timeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
-                using (var entryStream = entry.Open())
+                requestExecutor.DefaultTimeout = timeout;
+
+                using (var responseStream = await GetDebugInfoFromNodeAsync(
+                    context,
+                    requestExecutor,
+                    databaseNames ?? EmptyStringArray,
+                    stacktraces))
                 {
-                    await responseStream.CopyToAsync(entryStream);
-                    await entryStream.FlushAsync();
+                    var entry = archive.CreateEntry($"Node - [{tag}].zip");
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                    using (var entryStream = entry.Open())
+                    {
+                        await responseStream.CopyToAsync(entryStream);
+                        await entryStream.FlushAsync();
+                    }
                 }
             }
         }
@@ -227,7 +236,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var threadsUsage = new ThreadsUsage();
             var sp = Stopwatch.StartNew();
-            
+
             using (var stackTraceStream = zipArchiveEntry.Open())
             using (var sw = new StringWriter())
             {
@@ -237,7 +246,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         throw new InvalidOperationException("Cannot get stack traces when debugger is attached");
 
                     ThreadsHandler.OutputResultToStream(sw);
-                    
+
                     var result = JObject.Parse(sw.GetStringBuilder().ToString());
 
                     var wait = 100 - sp.ElapsedMilliseconds;
@@ -249,7 +258,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     var threadStats = threadsUsage.Calculate();
                     result["Threads"] = JArray.FromObject(threadStats.List);
-                    
+
                     using (var writer = new StreamWriter(stackTraceStream))
                     {
                         result.WriteTo(new JsonTextWriter(writer) { Indentation = 4 });
@@ -266,18 +275,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         jsonSerializer.Serialize(errorSw, new
                         {
                             Error = e.Message
-                        });    
+                        });
                     }
-                    
+
                 }
             }
         }
 
         private async Task<Stream> GetDebugInfoFromNodeAsync(
-            JsonOperationContext jsonOperationContext,
-            string url,
+            JsonOperationContext context,
+            RequestExecutor requestExecutor,
             IEnumerable<string> databaseNames,
-            X509Certificate2 certificate,
             bool stackTraces)
         {
             var bodyJson = new DynamicJsonValue
@@ -287,18 +295,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             };
 
             using (var ms = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(jsonOperationContext, ms))
+            using (var writer = new BlittableJsonTextWriter(context, ms))
             {
-                jsonOperationContext.Write(writer, bodyJson);
+                context.Write(writer, bodyJson);
                 writer.Flush();
                 ms.Flush();
 
-                var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
-                requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
-
                 var rawStreamCommand = new GetRawStreamResultCommand($"admin/debug/remote-cluster-info-package?stacktraces={stackTraces}", ms);
 
-                await requestExecutor.ExecuteAsync(rawStreamCommand, jsonOperationContext);
+                await requestExecutor.ExecuteAsync(rawStreamCommand, context);
                 rawStreamCommand.Result.Position = 0;
                 return rawStreamCommand.Result;
             }

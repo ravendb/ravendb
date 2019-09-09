@@ -70,8 +70,8 @@ namespace Voron.Impl.Paging
         public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
         public static readonly int HashSizeInt = (int)Sodium.crypto_generichash_bytes();
         public byte* Pointer;
-        public int Size;
-        public int? OriginalSize;
+        public long Size;
+        public long? OriginalSize;
         public byte* Hash;
         public NativeMemory.ThreadStats AllocatingThread;
         public bool SkipOnTxCommit;

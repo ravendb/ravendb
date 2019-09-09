@@ -75,7 +75,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
                         {
-                            var folders = await client.ListObjects($"{client.RemoteFolderName}/", "/", listFolders: true);
+                            var folders = await client.ListObjectsAsync($"{client.RemoteFolderName}/", "/", listFolders: true);
                             return folders.FileInfoDetails.Count;
                         }
                     }, timeout: 120000, checkIncremental);

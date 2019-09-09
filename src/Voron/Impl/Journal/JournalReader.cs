@@ -504,9 +504,9 @@ namespace Voron.Impl.Journal
             return checked((int)(size / Constants.Storage.PageSize) + (size % Constants.Storage.PageSize == 0 ? 0 : 1));
         }
 
-        private static int GetNumberOf4KbFor(long size)
+        private static long GetNumberOf4KbFor(long size)
         {
-            return checked((int)(size / (4*Constants.Size.Kilobyte)) + (size % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1));
+            return checked(size / (4 * Constants.Size.Kilobyte) + (size % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1));
         }
 
         Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits { get; set; }

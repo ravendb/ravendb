@@ -290,7 +290,6 @@ namespace Raven.Server
                     if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec))
                         throw new InvalidOperationException($"CPU credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
 
-                    CpuCreditsBalance.RemainingCpuCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
                     CpuCreditsBalance.BackgroundTasksThreshold = 
@@ -299,6 +298,7 @@ namespace Raven.Server
                     CpuCreditsBalance.FailoverThreshold = 
                         // default to disabled
                         Configuration.Server.CpuCreditsExhaustionFailoverThreshold ?? -1;
+                    CpuCreditsBalance.RemainingCpuCredits = Math.Max(CpuCreditsBalance.BackgroundTasksThreshold, CpuCreditsBalance.FailoverThreshold) + 1;
 
                     _cpuCreditsMonitoring = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
                     {

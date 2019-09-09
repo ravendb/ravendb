@@ -129,7 +129,7 @@ namespace Voron.Impl.Paging
                 _totalAllocationSize = fileLength;
             }
 
-            NumberOfAllocatedPages = _totalAllocationSize/Constants.Storage.PageSize;
+            NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
             SetPagerState(CreatePagerState());
         }
 
@@ -241,12 +241,15 @@ namespace Voron.Impl.Paging
         private void LockMemory32Bits(byte* address, long sizeToLock, TransactionState state)
         {
             try
-            {
+            {                
                 if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0)
                 {
-                    if (DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
-                    {
-                        TryHandleFailureToLockMemory(address, sizeToLock, state.TotalLoadedSize * 2);
+                    lock (WorkingSetIncreaseLocker)
+                    { 
+                        if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0 && DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
+                        {
+                            TryHandleFailureToLockMemory(address, sizeToLock);
+                        }                    
                     }
                 }
             }

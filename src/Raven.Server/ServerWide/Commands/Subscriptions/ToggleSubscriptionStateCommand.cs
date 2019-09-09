@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         // for serialization
         private ToggleSubscriptionStateCommand() { }
 
-        public ToggleSubscriptionStateCommand([NotNull] string subscriptionName, bool disable, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
+        public ToggleSubscriptionStateCommand(string subscriptionName, bool disable, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             if (string.IsNullOrEmpty(subscriptionName))
                 throw new RachisApplyException($"Value cannot be null or empty. Param: {nameof(subscriptionName)}");

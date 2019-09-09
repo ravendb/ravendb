@@ -19,12 +19,12 @@
                     </div>
                 </div>
                  <div class="hr-title" data-bind="if: serverWideBackupTasks().length">
-                     <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-global"></i><span>Server-Wide Backup</span></h5><hr>
+                     <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-server-wide-backup"></i><span>Server-Wide Backup</span></h5><hr>
                  </div>
                  <div data-bind="foreach: serverWideBackupTasks">
                      <div class="panel destination-item periodic-backup">
                          <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }">
-                             <i class="icon-global" id="icon-global-serverwide"></i>
+                             <i class="icon-server-wide-backup"></i>
                          </div>
                          <div class="padding destination-info flex-vertical">
                              <div class="flex-horizontal">

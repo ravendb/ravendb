@@ -222,11 +222,6 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        protected virtual void RemoveIndexFromCache()
-        {
-
-        }
-
         protected virtual void DisposeIndex()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
@@ -266,8 +261,6 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
-
-                exceptionAggregator.Execute(RemoveIndexFromCache);
 
                 exceptionAggregator.ThrowIfNeeded();
             }

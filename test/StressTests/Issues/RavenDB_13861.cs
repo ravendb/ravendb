@@ -3,40 +3,40 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using FastTests;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
-    public class RavenDB_13861: RavenTestBase
+    public class RavenDB_13861 : RavenTestBase
     {
-        
+
         [Fact32Bit]
         public async Task BatchMemorySizeLimitationShouldBeExactIn32Bit()
         {
-            var str = string.Join(string.Empty,Enumerable.Range(0, 1600).Select(x=>x.ToString()).ToArray());
+            var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());
             using (var store = GetDocumentStore())
             {
                 using (var bi = store.BulkInsert())
                 {
                     // with 747 documents, we pass the 4MB limit
-                    for (var i = 0; i < 747*10; i++)
+                    for (var i = 0; i < 747 * 10; i++)
                     {
                         bi.Store(new Order
                         {
-                            Company = str                           
+                            Company = str
                         });
                     }
                 }
 
                 var subsId = store.Subscriptions.Create(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<Order>());
                 var worker = store.Subscriptions.GetSubscriptionWorker<Order>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
-                {                    
+                {
                     CloseWhenNoDocsLeft = true
                 });
 
@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                 {
                     batchLengths.Add(batch.Items.Count);
                 }));
-                Assert.All(batchLengths, x => Assert.Equal(747,x));
+                Assert.All(batchLengths, x => Assert.Equal(747, x));
             }
         }
 
@@ -125,7 +125,7 @@ namespace SlowTests.Issues
                 using (var bi = store.BulkInsert())
                 {
                     // with 747 documents, we pass the 32MB limit
-                    for (var i = 0; i < 5970  * 3; i++)
+                    for (var i = 0; i < 5970 * 3; i++)
                     {
                         bi.Store(new Order
                         {
@@ -206,7 +206,7 @@ namespace SlowTests.Issues
                 var worker = store.Subscriptions.GetSubscriptionWorker<Order>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
                 {
                     MaxDocsPerBatch = int.MaxValue,
-                    CloseWhenNoDocsLeft = true                    
+                    CloseWhenNoDocsLeft = true
                 });
 
                 var batchLengths = new List<int>();
@@ -214,7 +214,7 @@ namespace SlowTests.Issues
                 {
                     batchLengths.Add(batch.Items.Count);
                 }));
-                Assert.All(batchLengths, x => Assert.True(Math.Abs(2425- x)<10));
+                Assert.All(batchLengths, x => Assert.True(Math.Abs(2425 - x) < 10));
             }
         }
     }

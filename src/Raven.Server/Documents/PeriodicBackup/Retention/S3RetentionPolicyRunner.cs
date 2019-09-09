@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Constants = Raven.Client.Constants;
 
@@ -24,10 +23,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             _client = client;
         }
 
-        protected override async Task<GetFoldersResult> GetSortedFolders()
+        protected override GetFoldersResult GetSortedFolders()
         {
             var prefix = $"{_client.RemoteFolderName}{Delimiter}";
-            var result = await _client.ListObjects(prefix, Delimiter, true, continuationToken: _folderContinuationToken);
+            var result = _client.ListObjects(prefix, Delimiter, true, continuationToken: _folderContinuationToken);
             _folderContinuationToken = result.ContinuationToken;
 
             return new GetFoldersResult
@@ -42,22 +41,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return folderPath.Substring(0, folderPath.Length - 1);
         }
 
-        protected override async Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
+        protected override GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
             var backupFiles = new GetBackupFolderFilesResult();
             // backups are ordered in lexicographical order
-            var files = await _client.ListObjects(folder, null, false, 1);
+            var files = _client.ListObjects(folder, null, false, 1);
             backupFiles.FirstFile = files.FileInfoDetails?.Select(x => x.FullPath).FirstOrDefault();
-            
+
             var startAfter = $"{folder}{startDateOfRetentionRange.ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}{Constants.Documents.PeriodicBackup.IncrementalBackupExtension}";
-            files = await _client.ListObjects(folder, null, false, take: 1, startAfter: startAfter);
+            files = _client.ListObjects(folder, null, false, take: 1, startAfter: startAfter);
 
             backupFiles.LastFile = files.FileInfoDetails?.Select(x => x.FullPath).LastOrDefault();
 
             return backupFiles;
         }
 
-        protected override async Task DeleteFolders(List<string> folders)
+        protected override void DeleteFolders(List<string> folders)
         {
             // deleting multiple objects is limited to 1000 in a single batch
             const int numberOfObjectsInBatch = 1000;
@@ -70,13 +69,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 do
                 {
                     // delete all objects in that folder
-                    var objects = await _client.ListObjects(folder, null, false, continuationToken: filesContinuationToken);
+                    var objects = _client.ListObjects(folder, null, false, continuationToken: filesContinuationToken);
 
                     foreach (var file in objects.FileInfoDetails)
                     {
                         if (objectsToDelete.Count == numberOfObjectsInBatch)
                         {
-                            await _client.DeleteMultipleObjects(objectsToDelete);
+                            _client.DeleteMultipleObjects(objectsToDelete);
                             objectsToDelete.Clear();
                         }
 
@@ -91,7 +90,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
 
             if (objectsToDelete.Count > 0)
-                await _client.DeleteMultipleObjects(objectsToDelete);
+                _client.DeleteMultipleObjects(objectsToDelete);
         }
     }
 }

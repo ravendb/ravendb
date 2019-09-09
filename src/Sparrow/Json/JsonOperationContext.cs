@@ -1186,11 +1186,6 @@ namespace Sparrow.Json
             }            
         }
 
-        public void ThrowArgumentOutOfRangeException(string message)
-        {
-            throw new ArgumentOutOfRangeException(message);
-        }        
-
         public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
         {
             EnsureNotDisposed();

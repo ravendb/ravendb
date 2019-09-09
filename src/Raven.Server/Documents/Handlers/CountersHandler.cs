@@ -555,7 +555,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var kvp in dict)
                     {
-                        var sizeToAllocate = CountersStorage.SizeOfCounterValues * kvp.Value.Count;
+                        var sizeToAllocate = CountersStorage.SizeOfCounterValues * (kvp.Value.Count + dbIds.Count);
 
                         counterModificationScopes.Add(context.Allocator.Allocate(sizeToAllocate, out var newVal));
 
@@ -578,7 +578,7 @@ namespace Raven.Server.Documents.Handlers
 
                         lastCv = kvp.Value[kvp.Value.Count - 1].ChangeVector;
 
-                        counters[name] = new BlittableJsonReaderObject.RawBlob { Ptr = newVal.Ptr, Length = newVal.Length };
+                        counters[name] = new BlittableJsonReaderObject.RawBlob { Ptr = newVal.Ptr, Length = CountersStorage.SizeOfCounterValues * kvp.Value.Count };
                     }
 
                     var values = context.ReadObject(new DynamicJsonValue

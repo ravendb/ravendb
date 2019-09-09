@@ -53,52 +53,56 @@ namespace Raven.Server.Documents.Handlers
                             long totalSize = 0;
                             while (true)
                             {
-                                var task = parser.MoveNext(docsCtx, new BlittableMetadataModifier(docsCtx));
-                                if (task == null)
-                                    break;
-
-                                token.ThrowIfCancellationRequested();
-
-                                // if we are going to wait on the network, flush immediately
-                                if ((task.IsCompleted == false && numberOfCommands > 0) ||
-                                    // but don't batch too much anyway
-                                    totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
+                                using (var modifier = new BlittableMetadataModifier(docsCtx))
                                 {
-                                    using (ReplaceContextIfCurrentlyInUse(task, numberOfCommands, array))
+                                    var task = parser.MoveNext(docsCtx, modifier);
+                                    if (task == null)
+                                        break;
+
+                                    token.ThrowIfCancellationRequested();
+
+                                    // if we are going to wait on the network, flush immediately
+                                    if ((task.IsCompleted == false && numberOfCommands > 0) ||
+                                        // but don't batch too much anyway
+                                        totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
                                     {
-                                        await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+                                        using (ReplaceContextIfCurrentlyInUse(task, numberOfCommands, array))
                                         {
-                                            Commands = array,
-                                            NumberOfCommands = numberOfCommands,
-                                            Database = Database,
-                                            Logger = logger,
-                                            TotalSize = totalSize
-                                        });
+                                            await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+                                            {
+                                                Commands = array,
+                                                NumberOfCommands = numberOfCommands,
+                                                Database = Database,
+                                                Logger = logger,
+                                                TotalSize = totalSize
+                                            });
+                                        }
+
+                                        progress.BatchCount++;
+                                        progress.Processed += numberOfCommands;
+                                        progress.LastProcessedId = array[numberOfCommands - 1].Id;
+
+                                        onProgress(progress);
+
+                                        previousCtxReset?.Dispose();
+                                        previousCtxReset = currentCtxReset;
+                                        currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
+
+                                        numberOfCommands = 0;
+                                        totalSize = 0;
                                     }
 
-                                    progress.BatchCount++;
-                                    progress.Processed += numberOfCommands;
-                                    progress.LastProcessedId = array[numberOfCommands-1].Id;
+                                    var commandData = await task;
+                                    if (commandData.Type == CommandType.None)
+                                        break;
 
-                                    onProgress(progress);
-
-                                    previousCtxReset?.Dispose();
-                                    previousCtxReset = currentCtxReset;
-                                    currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
-
-                                    numberOfCommands = 0;
-                                    totalSize = 0;
+                                    totalSize += commandData.Document.Size;
+                                    if (numberOfCommands >= array.Length)
+                                        Array.Resize(ref array, array.Length * 2);
+                                    array[numberOfCommands++] = commandData;
                                 }
-
-                                var commandData = await task;
-                                if (commandData.Type == CommandType.None)
-                                    break;
-
-                                totalSize += commandData.Document.Size;
-                                if (numberOfCommands >= array.Length)
-                                    Array.Resize(ref array, array.Length * 2);
-                                array[numberOfCommands++] = commandData;
                             }
+
                             if (numberOfCommands > 0)
                             {
                                 await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
@@ -112,7 +116,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 progress.BatchCount++;
                                 progress.Processed += numberOfCommands;
-                                progress.LastProcessedId = array[numberOfCommands-1].Id;
+                                progress.LastProcessedId = array[numberOfCommands - 1].Id;
 
                                 onProgress(progress);
                             }
@@ -135,7 +139,7 @@ namespace Raven.Server.Documents.Handlers
             catch (Exception e)
             {
                 HttpContext.Response.Headers["Connection"] = "close";
-                throw new InvalidOperationException("Failed to process bulk insert " + progress, e);
+                throw new InvalidOperationException("Failed to process bulk insert. " + progress, e);
             }
         }
 

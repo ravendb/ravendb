@@ -55,7 +55,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                         CollectionNames = list.ToArray();
 
-                        return node.WithExpression(expr.WithExpression(indexer.Expression));
+                        if (nodeToCheck != node)
+                            nodeAsString = node.Expression.ToString();
+
+                        nodeAsString = nodeAsString.Replace(indexer.ToString(), nodePrefix);
+
+                        return node.WithExpression(SyntaxFactory.ParseExpression(nodeAsString));
                     }
 
                     return node;
