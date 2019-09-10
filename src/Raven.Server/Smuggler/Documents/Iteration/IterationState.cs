@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Documents.Iteration
 
         public override bool ShouldPulseTransaction()
         {
-            if (ReadCount == 3)
+            if (ReadCount % 1024 == 0)
             {
                 var size = Context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize() +
                            Context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
