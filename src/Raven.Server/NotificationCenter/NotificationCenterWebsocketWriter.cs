@@ -21,11 +21,13 @@ namespace Raven.Server.NotificationCenter
         
         private readonly MemoryStream _ms = new MemoryStream();
         public Action AfterTrackActionsRegistration;
+        private readonly IDisposable _returnContext;
+
         public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
         {
             _webSocket = webSocket;
             _notificationsBase = notificationsBase;
-            contextPool.AllocateOperationContext(out _context);
+            _returnContext = contextPool.AllocateOperationContext(out _context);
             _resourceShutdown = resourceShutdown;
         }
 
@@ -102,8 +104,8 @@ namespace Raven.Server.NotificationCenter
 
         public void Dispose()
         {
+            using (_returnContext)
             using (_ms)
-            using (_context)
             {
             }
         }

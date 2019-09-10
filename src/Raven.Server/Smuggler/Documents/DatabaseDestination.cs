@@ -318,10 +318,12 @@ namespace Raven.Server.Smuggler.Documents
                     _prevFixDocumentMetadataCommand = null;
                 }
 
-                if (_fixDocumentMetadataCommand.Ids.Count > 0)
+                using (_fixDocumentMetadataCommand)
                 {
-                    using (_fixDocumentMetadataCommand)
+                    if (_fixDocumentMetadataCommand.Ids.Count > 0)
+                    {
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_fixDocumentMetadataCommand));
+                    }
                 }
 
                 _fixDocumentMetadataCommand = null;
@@ -383,10 +385,12 @@ namespace Raven.Server.Smuggler.Documents
                     _prevRevisionDeleteCommand = null;
                 }
 
-                if (_revisionDeleteCommand.Ids.Count > 0)
+                using (_revisionDeleteCommand)
                 {
-                    using (_revisionDeleteCommand)
+                    if (_revisionDeleteCommand.Ids.Count > 0)
+                    {
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_revisionDeleteCommand));
+                    }
                 }
 
                 _revisionDeleteCommand = null;
@@ -438,10 +442,12 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_command.Documents.Count > 0)
+                using (_command)
                 {
-                    using (_command)
+                    if (_command.Documents.Count > 0)
+                    {
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command));
+                    }
                 }
 
                 _command = null;
@@ -1160,13 +1166,14 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             public DocumentsOperationContext Context => _context;
             private bool _isDisposed;
+            private readonly IDisposable _returnContext;
             public bool IsDisposed => _isDisposed;
 
             public MergedBatchFixDocumentMetadataCommand(DocumentDatabase database, Logger log)
             {
                 _database = database;
                 _log = log;
-                _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -1272,6 +1279,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _isDisposed = true;
                 Ids.Clear();
+                _returnContext.Dispose();
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
@@ -1309,13 +1317,14 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             public DocumentsOperationContext Context => _context;
             private bool _isDisposed;
+            private readonly IDisposable _returnContext;
             public bool IsDisposed => _isDisposed;
 
             public MergedBatchDeleteRevisionCommand(DocumentDatabase database, Logger log)
             {
                 _database = database;
                 _log = log;
-                _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -1352,6 +1361,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _isDisposed = true;
                 Ids.Clear();
+                _returnContext.Dispose();
             }
 
 
@@ -1478,9 +1488,9 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_countersCount > 0)
+                using (_cmd)
                 {
-                    using (_cmd)
+                    if (_countersCount > 0)
                     {
                         AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
                     }
