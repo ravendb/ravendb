@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
@@ -855,7 +856,7 @@ namespace SlowTests.Smuggler
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
-                    Assert.Equal(3, stats.CountOfTimeSeriesSegments);
+                    Assert.Equal(4, stats.CountOfTimeSeriesSegments);
 
                     using (var session = store2.OpenAsyncSession())
                     {
@@ -915,7 +916,7 @@ namespace SlowTests.Smuggler
 
 
         [Fact]
-        public async Task CanExportAndImportTimeSeriesThatSpanMultipleSegments()
+        public async Task CanExportAndImportTimeSeriesWithMultipleSegments()
         {
             var file = GetTempFileName();
             var baseline = DateTime.Today;
@@ -988,6 +989,169 @@ namespace SlowTests.Smuggler
 
                     }
                 }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+
+        [Fact]
+        public async Task CanSkipTimeSeriesOnImport()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d, i % 60d + 5 });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    // import just documents without timeseries,
+                    // verify that the documents don't have timeseries names in their metadata
+
+                    var importOptions = new DatabaseSmugglerImportOptions();
+                    importOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+
+                    operation = await store2.Smuggler.ImportAsync(importOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(0, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var tsNames = session.Advanced.GetTimeSeriesFor(user1);
+                        Assert.Null(tsNames);
+
+                        tsNames = session.Advanced.GetTimeSeriesFor(user2);
+                        Assert.Null(tsNames);
+
+                        var values = await session.TimeSeriesFor(user1)
+                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                        Assert.Empty(values);
+
+                        values = await session.TimeSeriesFor(user2)
+                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                        Assert.Empty(values);
+                    }
+
+                }
+
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanSkipTimeSeriesOnExport()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                            session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d, i % 60d + 5 });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    // export just documents without timeseries,
+
+                    var exportOptions = new DatabaseSmugglerExportOptions();
+                    exportOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+
+                    var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); 
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(0, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        // verify that the documents don't have
+                        // timeseries names in their metadata
+
+                        var tsNames = session.Advanced.GetTimeSeriesFor(user1);
+                        Assert.Null(tsNames);
+
+                        tsNames = session.Advanced.GetTimeSeriesFor(user2);
+                        Assert.Null(tsNames);
+
+                        var values = await session.TimeSeriesFor(user1)
+                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                        Assert.Empty(values);
+
+                        values = await session.TimeSeriesFor(user2)
+                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+
+                        Assert.Empty(values);
+                    }
+
+                }
+
             }
             finally
             {

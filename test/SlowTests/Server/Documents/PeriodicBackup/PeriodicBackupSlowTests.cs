@@ -614,6 +614,220 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_with_timeseries()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/1")
+                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 6);
+                Assert.Equal(6, value);
+
+                var backupStatus = store.Maintenance.Send(operation);
+                var backupOperationId = backupStatus.Status.LastOperationId;
+
+                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+
+                var backupResult = backupOperation.Result as BackupResult;
+                Assert.True(backupResult.TimeSeries.Processed);
+                Assert.Equal(1, backupResult.TimeSeries.ReadCount);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "ayende"
+                    }, "users/2");
+
+                    for (int i = 0; i < 180; i++)
+                    {
+                        session.TimeSeriesFor("users/2")
+                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
+
+                        var values = (await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        Assert.Equal(360, values.Count);
+
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(i % 60, values[i].Values[0]);
+                            Assert.Equal("watches/1", values[i].Tag);
+                        }
+
+                        values = (await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        Assert.Equal(180, values.Count);
+
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(i % 60, values[i].Values[0]);
+                            Assert.Equal("watches/2", values[i].Tag);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_snapshot_with_timeseries()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //create time series segment to backup
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                    } 
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 6);
+                Assert.Equal(6, value);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "ayende" }, "users/2");
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/2", new[] { i % 60d });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                // restore the database with a different name
+                string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = restoredDatabaseName
+                }))
+                {
+                    using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.NotNull(users["users/1"]);
+                        Assert.NotNull(users["users/2"]);
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
+
+                        var values = (await session.TimeSeriesFor("users/1").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        Assert.Equal(360, values.Count);
+
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(i % 60, values[i].Values[0]);
+                            Assert.Equal("watches/1", values[i].Tag);
+                        }
+
+                        values = (await session.TimeSeriesFor("users/2").GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue)).ToList();
+                        Assert.Equal(360, values.Count);
+
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(i % 60, values[i].Values[0]);
+                            Assert.Equal("watches/2", values[i].Tag);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -783,6 +997,135 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var dic = await session.CountersFor(user3).GetAllAsync();
                         Assert.Equal(1, dic.Count);
                         Assert.Equal(300, dic["votes"]);
+                    }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task periodic_backup_with_timeseries_should_export_starting_from_last_etag()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //create time series segment to backup
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 6);
+                Assert.Equal(6, value);
+
+                var exportPath = GetBackupPath(store, backupTaskId, incremental: false);
+
+                using (var store2 = GetDocumentStore())
+                {
+                    var op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
+                    await op.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments);
+                    Assert.Equal(1, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        Assert.Equal("oren", user1.Name);
+
+                        var values = (await session.TimeSeriesFor("users/1")
+                            .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                            .ToList();
+
+                        Assert.Equal(360, values.Count);
+
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(i % 60, values[i].Values[0]);
+                            Assert.Equal("watches/1", values[i].Tag);
+                        }
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "ayende" }, "users/2");
+                    for (int i = 0; i < 180; i++)
+                    {
+                        session.TimeSeriesFor("users/2")
+                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/1", new[] { i % 60d });
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
+
+                exportPath = GetBackupPath(store, backupTaskId);
+
+                using (var store3 = GetDocumentStore())
+                {
+                    // importing to a new database, in order to verify that
+                    // periodic backup imports only the changed documents (and timeseries)
+
+                    var op = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
+                    await op.WaitForCompletionAsync(TimeSpan.FromMinutes(15));
+
+                    var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments);
+
+                    Assert.Equal(1, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store3.OpenAsyncSession())
+                    {
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("ayende", user2.Name);
+
+                        var values = (await session.TimeSeriesFor(user2)
+                                .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                            .ToList();
+
+                        Assert.Equal(180, values.Count);
+
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            Assert.Equal(baseline.AddSeconds(i * 10), values[i].Timestamp);
+                            Assert.Equal(i % 60, values[i].Values[0]);
+                            Assert.Equal("watches/1", values[i].Tag);
+                        }
                     }
                 }
             }
