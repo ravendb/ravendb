@@ -16,52 +16,59 @@ namespace Raven.Bundles.Replication.Impl
 	internal class ReplicationHiLo
 	{
 		private readonly object generatorLock = new object();
-		private volatile Hodler currentMax = new Hodler(0);
+		private volatile ValueHolder valueHolder = new ValueHolder(0);
 		private long capacity = 256;
-		private long current;
 		private DateTime lastRequestedUtc;
 		public DocumentDatabase Database { get; set; }
 
-		private class Hodler
-		{
-			public readonly long Value;
+        public class ValueHolder
+        {
+            public readonly long MaxValue;
 
-			public Hodler(long value)
-			{
-				Value = value;
-			}
-		}
+            public long Current;
 
-		public long NextId()
-		{
-			long incrementedCurrent = Interlocked.Increment(ref current);
-			while (incrementedCurrent > currentMax.Value)
-			{
-				lock (generatorLock)
-				{
-					if (current > currentMax.Value)
-					{
+            public ValueHolder(long maxValue)
+            {
+                MaxValue = maxValue;
+            }
+        }
+
+        public long NextId()
+        {
+            var current = valueHolder;
+            var incrementedCurrent = Interlocked.Increment(ref current.Current);
+
+            while (incrementedCurrent > current.MaxValue)
+            {
+                lock (generatorLock)
+                {
+                    current = valueHolder;
+                    if (current.Current > current.MaxValue)
+                    {
                         using (var locker = Database.DocumentLock.TryLock(250))
                         {
                             if (locker == null)
                                 continue;
-                            currentMax = new Hodler(GetNextMax());
+
+                            current = valueHolder = GetNextMax(current.MaxValue);
                         }
-					}
-					return Interlocked.Increment(ref current);
-				}
-			}
-			return incrementedCurrent;
+                    }
 
-		}
+                    incrementedCurrent = Interlocked.Increment(ref current.Current);
+                }
+            }
 
-		private long GetNextMax()
+            return incrementedCurrent;
+        }
+
+        private ValueHolder GetNextMax(long currentMaxValue)
 		{
 			var span = SystemTime.UtcNow - lastRequestedUtc;
 			if (span.TotalSeconds < 1)
 			{
 				capacity *= 2;
 			}
+
 			lastRequestedUtc = SystemTime.UtcNow;
 
 			while (true)
@@ -72,25 +79,30 @@ namespace Raven.Bundles.Replication.Impl
 				{
 					using (newBatchToRecoverFromConcurrencyException)
 					{
-						var minNextMax = currentMax.Value;
 						var document = Database.Get(Constants.RavenReplicationVersionHiLo, null);
 						if (document == null)
-						{
-							Database.Put(Constants.RavenReplicationVersionHiLo,
+                        {
+                            var newMaxValue = currentMaxValue + capacity;
+
+                            Database.Put(Constants.RavenReplicationVersionHiLo,
 								Etag.Empty,
 								// sending empty etag means - ensure the that the document does NOT exists
-								RavenJObject.FromObject(RavenJObject.FromObject(new {Max = minNextMax + capacity})),
+								RavenJObject.FromObject(RavenJObject.FromObject(new {Max = newMaxValue })),
 								new RavenJObject(),
 								null);
-							return minNextMax + capacity;
+
+							return new ValueHolder(newMaxValue);
 						}
-						var max = GetMaxFromDocument(document, minNextMax);
+						var max = GetMaxFromDocument(document, currentMaxValue);
 						document.DataAsJson["Max"] = max + capacity;
 						Database.Put(Constants.RavenReplicationVersionHiLo, document.Etag,
 							document.DataAsJson,
 							document.Metadata, null);
-						current = max + 1;
-						return max + capacity;
+
+						return new ValueHolder(max + capacity)
+                        {
+                            Current = max
+                        };
 					}
 				}
 				catch (ConcurrencyException)
@@ -116,6 +128,5 @@ namespace Raven.Bundles.Replication.Impl
 			max = document.DataAsJson.Value<long>("Max");
 			return Math.Max(max, minMax);
 		}
-
 	}
 }
