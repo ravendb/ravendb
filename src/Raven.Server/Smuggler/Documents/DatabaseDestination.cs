@@ -1566,8 +1566,8 @@ namespace Raven.Server.Smuggler.Documents
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(database);
 
                 _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
-                    ? 500 * 1024
-                    : 1000 * 1024;
+                    ? 2000 * 1024
+                    : 10_000 * 1024;
             }
 
             private void AddToBatch(TimeSeriesItem item)

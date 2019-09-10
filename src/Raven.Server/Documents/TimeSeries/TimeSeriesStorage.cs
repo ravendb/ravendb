@@ -549,11 +549,6 @@ namespace Raven.Server.Documents.TimeSeries
                 );
                 var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
                 readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
-
-
-                TimeSeriesValuesSegment.ParseTimeSeriesKey(key, keySize, out var docId, out var name, out var baseline);
-
-
             }
         }
 
@@ -694,21 +689,8 @@ namespace Raven.Server.Documents.TimeSeries
             public ByteString Buffer, TimeSeriesKeyBuffer;
             public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, TagSlice, TimeSeriesName;
 
-            public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, Reader.SingleResult current)
+            public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, DateTime timestamp, LazyStringValue tag = null)
             {
-                _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, current.Tag, out TagSlice));
-                _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator));
-                _internalScopesToDispose.Add(Slice.From(context.Allocator, name, out TimeSeriesName));
-                _internalScopesToDispose.Add(context.Allocator.Allocate(documentKeyPrefix.Size + TimeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
-                    out TimeSeriesKeyBuffer));
-                _externalScopesToDispose.Add(CreateTimeSeriesKeyPrefixSlice(context, TimeSeriesKeyBuffer, documentKeyPrefix, TimeSeriesName, out TimeSeriesPrefixSlice));
-                _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice, current.TimeStamp, out TimeSeriesKeySlice));
-                _internalScopesToDispose.Add(context.Allocator.Allocate(MaxSegmentSize, out Buffer));
-            }
-
-            public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, DateTime timestamp)
-            {
-                //_internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, current.Tag, out TagSlice));
                 _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator));
                 _internalScopesToDispose.Add(Slice.From(context.Allocator, name, out TimeSeriesName));
                 _internalScopesToDispose.Add(context.Allocator.Allocate(documentKeyPrefix.Size + TimeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
@@ -716,6 +698,11 @@ namespace Raven.Server.Documents.TimeSeries
                 _externalScopesToDispose.Add(CreateTimeSeriesKeyPrefixSlice(context, TimeSeriesKeyBuffer, documentKeyPrefix, TimeSeriesName, out TimeSeriesPrefixSlice));
                 _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice, timestamp, out TimeSeriesKeySlice));
                 _internalScopesToDispose.Add(context.Allocator.Allocate(MaxSegmentSize, out Buffer));
+
+                if (tag != null)
+                {
+                    _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, tag, out TagSlice));
+                }
             }
 
             public void UpdateTagSlice(DocumentsOperationContext context, LazyStringValue tag)
@@ -945,7 +932,7 @@ namespace Raven.Server.Documents.TimeSeries
                         var current = appendEnumerator.Current;
                         Debug.Assert(current != null);
 
-                        using (var slicer = new TimeSeriesSlicer(context, documentId, name, current))
+                        using (var slicer = new TimeSeriesSlicer(context, documentId, name, current.TimeStamp, current.Tag))
                         {
                             Memory.Set(slicer.Buffer.Ptr, 0, MaxSegmentSize);
 
@@ -960,7 +947,6 @@ namespace Raven.Server.Documents.TimeSeries
                                 // no matches for this series at all, need to create new segment
                                 segmentHolder.AppendNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice);
                                 newSeries = true;
-                                //AddTimeSeriesNameToMetadata(context, documentId, name);
                                 break;
                             }
 
@@ -1295,7 +1281,7 @@ namespace Raven.Server.Documents.TimeSeries
             return item;
         }
 
-        public IEnumerable<TimeSeriesItem> GetAllValuesFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<TimeSeriesItem> GetTimeSeriesFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
