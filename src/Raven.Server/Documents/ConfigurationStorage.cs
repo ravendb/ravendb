@@ -41,6 +41,7 @@ namespace Raven.Server.Documents
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
             options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
+            options.OnIntegrityErrorOfAlreadySyncedData += db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ConfigurationVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);

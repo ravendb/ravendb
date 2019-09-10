@@ -55,6 +55,8 @@ namespace Voron
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
+        public event EventHandler<DataIntegrityErrorEventArgs> OnIntegrityErrorOfAlreadySyncedData;
+
         private long _reuseCounter;
         private long _lastReusedJournalCountOnSync;
 
@@ -86,12 +88,24 @@ namespace Voron
             if (handler == null)
             {
                 throw new InvalidDataException(message + Environment.NewLine +
-                                               "An exception has been thrown because there isn't a listener to the OnRecoveryError event on the storage options.",
-                    e);
+                                               $"An exception has been thrown because there isn't a listener to the {nameof(OnRecoveryError)} event on the storage options.", e);
             }
 
             handler(this, new RecoveryErrorEventArgs(message, e));
         }
+
+        public void InvokeIntegrityErrorOfAlreadySyncedData(object sender, string message, Exception e)
+        {
+            var handler = OnIntegrityErrorOfAlreadySyncedData;
+            if (handler == null)
+            {
+                throw new InvalidDataException(message + Environment.NewLine +
+                                               $"An exception has been thrown because there isn't a listener to the {nameof(OnIntegrityErrorOfAlreadySyncedData)} event on the storage options.", e);
+            }
+
+            handler(this, new DataIntegrityErrorEventArgs(message, e));
+        }
+
 
         public void InvokeNonDurableFileSystemError(object sender, string message, Exception e, string details)
         {
@@ -1123,6 +1137,7 @@ namespace Voron
             SchemaUpgrader = null;
             OnRecoveryError = null;
             OnNonDurableFileSystemError = null;
+            OnIntegrityErrorOfAlreadySyncedData = null;
         }
 
         protected abstract void Disposing();
