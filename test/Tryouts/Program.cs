@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
+using SlowTests.Voron;
 using StressTests.Cluster;
 
 namespace Tryouts
@@ -18,9 +19,9 @@ namespace Tryouts
                 Console.WriteLine($"Starting to run {i}");
                 try
                 {
-                    using (var test = new RavenDB_13796())
+                    using (var test = new RavenDB_13940())
                     {
-                        await test.TopologyUpdateDuringFailoverShouldntFaileCommand();
+                        test.CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet();
                     }
                 }
                 catch (Exception e)

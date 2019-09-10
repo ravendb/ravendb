@@ -1445,6 +1445,51 @@ namespace Raven.Server.Documents
                 key: resourceName));
         }
 
+        internal void HandleOnDatabaseIntegrityErrorOfAlreadySyncedData(object sender, DataIntegrityErrorEventArgs e)
+        {
+            HandleOnIntegrityErrorOfAlreadySyncedData(StorageEnvironmentWithType.StorageEnvironmentType.Documents, Name, sender, e);
+        }
+
+        internal void HandleOnConfigurationIntegrityErrorOfAlreadySyncedData(object sender, DataIntegrityErrorEventArgs e)
+        {
+            HandleOnIntegrityErrorOfAlreadySyncedData(StorageEnvironmentWithType.StorageEnvironmentType.Configuration, Name, sender, e);
+        }
+
+        internal void HandleOnIndexIntegrityErrorOfAlreadySyncedData(string indexName, object sender, DataIntegrityErrorEventArgs e)
+        {
+            HandleOnIntegrityErrorOfAlreadySyncedData(StorageEnvironmentWithType.StorageEnvironmentType.Index, indexName, sender, e);
+        }
+
+        private void HandleOnIntegrityErrorOfAlreadySyncedData(StorageEnvironmentWithType.StorageEnvironmentType type, string resourceName, object environment, DataIntegrityErrorEventArgs e)
+        {
+            NotificationCenter.NotificationCenter nc;
+            string title;
+
+            switch (type)
+            {
+                case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
+                case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                    nc = _serverStore?.NotificationCenter;
+                    title = $"Integrity error of already synced data - {resourceName ?? "Unknown Database"}";
+
+                    if (type == StorageEnvironmentWithType.StorageEnvironmentType.Configuration)
+                        title += " (configuration storage)";
+                    break;
+                case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                    nc = NotificationCenter;
+                    title = $"Integrity error of already synced index data - {resourceName ?? "Unknown Index"}";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type.ToString());
+            }
+
+            nc?.Add(AlertRaised.Create(Name,
+                title,
+                $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}",
+                AlertType.IntegrityErrorOfAlreadySyncedData,
+                NotificationSeverity.Warning,
+                key: resourceName));
+        }
 
         public long GetEnvironmentsHash()
         {
