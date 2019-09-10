@@ -135,8 +135,8 @@ namespace Raven.Server.Smuggler.Documents
             var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
                 {
-                    if (collectionsToExport.Count != 0)
-                        return GetDocumentsFromCollections(_context, collectionsToExport, state);
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetDocumentsFromCollections(_context, state);
 
                     return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, int.MaxValue);
                 },
@@ -155,11 +155,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<Document> GetDocumentsFromCollections(DocumentsOperationContext context, List<string> collections, DocumentsIterationState state)
+        private IEnumerable<Document> GetDocumentsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)
         {
-            foreach (var collection in collections)
+            foreach (var item in state.StartEtagByCollection)
             {
-                var etag = state.StartEtagByCollection[collection];
+                var collection = item.Key;
+                var etag = item.Value;
 
                 state.CurrentCollection = collection;
 
@@ -181,8 +182,8 @@ namespace Raven.Server.Smuggler.Documents
             var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
                 {
-                    if(collectionsToExport.Count != 0)
-                        return GetRevisionsFromCollections(_context, collectionsToExport, state);
+                    if(state.StartEtagByCollection.Count != 0)
+                        return GetRevisionsFromCollections(_context, state);
 
                     return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, int.MaxValue);
                 },
@@ -201,15 +202,16 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<Document> GetRevisionsFromCollections(DocumentsOperationContext context, List<string> collections, DocumentsIterationState state)
+        private IEnumerable<Document> GetRevisionsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)
         {
-            foreach (var collection in collections)
+            foreach (var item in state.StartEtagByCollection)
             {
+                var collection = item.Key;
+                var etag = item.Value;
+
                 var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     continue;
-
-                var etag = state.StartEtagByCollection[collection];
 
                 state.CurrentCollection = collection;
 
@@ -252,8 +254,8 @@ namespace Raven.Server.Smuggler.Documents
             var enumerator = new PulsedTransactionEnumerator<Tombstone, TombstonesIterationState>(_context,
                 state =>
                 {
-                    if (collectionsToExport.Count != 0)
-                        return GetTombstonesFromCollections(_context, collectionsToExport, state);
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetTombstonesFromCollections(_context, state);
 
                     return _database.DocumentsStorage.GetTombstonesFrom(_context, state.StartEtag, 0, int.MaxValue);
                 },
@@ -268,11 +270,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<Tombstone> GetTombstonesFromCollections(DocumentsOperationContext context, List<string> collections, TombstonesIterationState state)
+        private IEnumerable<Tombstone> GetTombstonesFromCollections(DocumentsOperationContext context, TombstonesIterationState state)
         {
-            foreach (var collection in collections)
+            foreach (var item in state.StartEtagByCollection)
             {
-                var etag = state.StartEtagByCollection[collection];
+                var collection = item.Key;
+                var etag = item.Value;
 
                 state.CurrentCollection = collection;
 
@@ -291,7 +294,7 @@ namespace Raven.Server.Smuggler.Documents
                 state =>
                 {
                     if (collectionsToExport.Count != 0)
-                        return GetConflictsFromCollections(_context, collectionsToExport, state);
+                        return GetConflictsFromCollections(_context, collectionsToExport.ToHashSet(), state);
 
                     return _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, state.StartEtag);
                 },
@@ -306,7 +309,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<DocumentConflict> GetConflictsFromCollections(DocumentsOperationContext context, List<string> collections, DocumentConflictsIterationState state)
+        private IEnumerable<DocumentConflict> GetConflictsFromCollections(DocumentsOperationContext context, HashSet<string> collections, DocumentConflictsIterationState state)
         {
             foreach (var conflict in _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(context, state.StartEtag))
             {
@@ -400,8 +403,8 @@ namespace Raven.Server.Smuggler.Documents
             var enumerator = new PulsedTransactionEnumerator<CounterGroupDetail, CountersIterationState>(_context,
                 state =>
                 {
-                    if (collectionsToExport.Count != 0)
-                        return GetCounterValuesFromCollections(_context, collectionsToExport, state);
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetCounterValuesFromCollections(_context, state);
 
                     return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, state.StartEtag, 0, int.MaxValue);
                 },
@@ -416,11 +419,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<CounterGroupDetail> GetCounterValuesFromCollections(DocumentsOperationContext context, List<string> collections, CountersIterationState state)
+        private IEnumerable<CounterGroupDetail> GetCounterValuesFromCollections(DocumentsOperationContext context, CountersIterationState state)
         {
-            foreach (var collection in collections)
+            foreach (var item in state.StartEtagByCollection)
             {
-                var etag = state.StartEtagByCollection[collection];
+                var collection = item.Key;
+                var etag = item.Value;
 
                 state.CurrentCollection = collection;
 

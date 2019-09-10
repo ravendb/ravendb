@@ -1210,6 +1210,7 @@ namespace Raven.Server.Json
             writer.WriteStartArray();
 
             var first = true;
+            
             foreach (var document in documents)
             {
                 numberOfResults++;
