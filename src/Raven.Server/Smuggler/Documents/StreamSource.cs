@@ -695,6 +695,8 @@ namespace Raven.Server.Smuggler.Documents
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
                     return SkipArray(onSkipped, token);
+                case DatabaseItemType.TimeSeries:
+                    return SkipTimeSeries(onSkipped, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
                 default:
@@ -867,6 +869,29 @@ namespace Raven.Server.Smuggler.Documents
 
                     count++; //skipping
                     onSkipped?.Invoke(count);
+                }
+            }
+
+            return count;
+        }
+
+        private long SkipTimeSeries(Action<long> onSkipped, CancellationToken token)
+        {
+            var count = 0L;
+            foreach (var tsItem in ReadArray())
+            {
+                using (tsItem)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    // skip segment blob
+                    tsItem.TryGet(nameof(TimeSeriesItem.SegmentSize), out int size);
+                    _parser.Skip(size);
+
+                    count++; //skipping
+                    onSkipped?.Invoke(count);
+
+
                 }
             }
 

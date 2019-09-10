@@ -118,6 +118,7 @@ namespace Raven.Client.Documents.Smuggler
                 Counters = _result?.Counters;
                 CompareExchangeTombstones = _result?.CompareExchangeTombstones;
                 Subscriptions = _result?.Subscriptions;
+                TimeSeries = _result?.TimeSeries;
             }
 
             private string Message { get; set; }
@@ -202,7 +203,8 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
                 [nameof(Subscriptions)] = Subscriptions.ToJson(),
                 [nameof(Counters)] = Counters.ToJson(),
-                [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson()
+                [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson(),
+                [nameof(TimeSeries)] = TimeSeries.ToJson()
             };
         }
 

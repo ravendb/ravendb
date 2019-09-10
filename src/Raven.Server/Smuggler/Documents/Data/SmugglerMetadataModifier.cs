@@ -25,6 +25,9 @@ namespace Raven.Server.Smuggler.Documents.Data
 
             if (_operateOnTypes.HasFlag(DatabaseItemType.Attachments) == false && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _))
                 modifications.Remove(Constants.Documents.Metadata.Attachments);
+
+            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray _))
+                modifications.Remove(Constants.Documents.Metadata.TimeSeries);
         }
     }
 }
