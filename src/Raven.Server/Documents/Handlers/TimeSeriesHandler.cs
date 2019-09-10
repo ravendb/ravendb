@@ -367,9 +367,7 @@ namespace Raven.Server.Documents.Handlers
                             collectionName = _database.DocumentsStorage.ExtractCollectionName(context, item.Collection);
                         }
 
-
                         using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, item.Name, item.Baseline))
-                        //using (tss.CreateTimeSeriesKeySlice(context, docId, item.Name, item.Baseline, out var keySlice))
                         {
                             if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item.ChangeVector, item.Segment, item.Baseline))
                             {

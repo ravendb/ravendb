@@ -344,7 +344,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            return _database.DocumentsStorage.TimeSeriesStorage.GetAllValuesFrom(_context, _startDocumentEtag);
+            return _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

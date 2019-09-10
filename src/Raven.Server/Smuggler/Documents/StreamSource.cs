@@ -500,8 +500,12 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (ReadSegment(size, docId, name, out TimeSeriesValuesSegment segment) == false)
+                    if (ReadSegment(size, out TimeSeriesValuesSegment segment) == false)
+                    {
+                        _result.TimeSeries.ErroredCount++;
+                        _result.AddWarning($"Failed to read time series values segment on document '{docId}', series '{name}'.");
                         continue;
+                    }
 
                     yield return new TimeSeriesItem
                     {
@@ -516,17 +520,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private unsafe bool ReadSegment(int size, string docId, string name, out TimeSeriesValuesSegment segment)
+        private unsafe bool ReadSegment(int size, out TimeSeriesValuesSegment segment)
         {
-            segment = default;
-
             var mem = _context.GetMemory(size);
             var read = _parser.Copy(mem.Address, size);
 
-            if (read.Done == false || read.BytesRead != size)
+            if (read.BytesRead != size)
             {
-                _result.TimeSeries.ErroredCount++;
-                _result.AddWarning($"Failed to read time series values segment on document '{docId}', series '{name}'.");
+                segment = default;
                 return false;
             }
 
