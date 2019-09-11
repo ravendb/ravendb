@@ -109,7 +109,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static BlittableJsonReaderObject ConvertEntityToBlittableInternal(
             object entity,
@@ -167,7 +166,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Converts a BlittableJsonReaderObject to an entity.        
+        /// Converts a BlittableJsonReaderObject to an entity.
         /// </summary>
         /// <param name="entityType"></param>
         /// <param name="id">The id.</param>
@@ -352,7 +351,7 @@ namespace Raven.Client.Documents.Session
 
                 if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {
-                    simplified |= TrySimplifyJson(propertyArray);
+                    simplified |= TrySimplifyJson(propertyArray, propertyType);
                     continue;
                 }
 
@@ -385,10 +384,58 @@ namespace Raven.Client.Documents.Session
 
                 document.Modifications[propertyName] = values;
 
-                simplified |= TrySimplifyJson(values);
+                simplified |= TrySimplifyJson(values, propertyType);
             }
 
             return simplified;
+        }
+
+        private static bool TrySimplifyJson(BlittableJsonReaderArray array, Type rootType)
+        {
+            var itemType = GetItemType();
+
+            var simplified = false;
+            foreach (var item in array)
+            {
+                var itemObject = item as BlittableJsonReaderObject;
+                if (itemObject == null)
+                    continue;
+
+                simplified |= TrySimplifyJson(itemObject, itemType);
+            }
+
+            return simplified;
+
+            Type GetItemType()
+            {
+                if (rootType == null)
+                    return null;
+
+                if (rootType.IsArray)
+                    return rootType.GetElementType();
+
+                var enumerableInterface = rootType.GetInterface(typeof(IEnumerable<>).Name);
+                if (enumerableInterface == null)
+                    return null;
+
+                return enumerableInterface.GenericTypeArguments[0];
+            }
+        }
+
+        private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
+        {
+            var type = Type.GetType(typeValue);
+
+            if (type == null)
+                return false;
+
+            if (type.IsArray)
+                return true;
+
+            if (type.GetGenericArguments().Length == 0)
+                return type == typeof(Enumerable);
+
+            return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
 
         private static Type GetPropertyType(string propertyName, Type rootType)
@@ -409,37 +456,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private static bool TrySimplifyJson(BlittableJsonReaderArray array)
-        {
-            var simplified = false;
-            foreach (var item in array)
-            {
-                var itemObject = item as BlittableJsonReaderObject;
-                if (itemObject == null)
-                    continue;
-
-                simplified |= TrySimplifyJson(itemObject, item.GetType());
-            }
-
-            return simplified;
-        }
-
-        private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
-        {
-            var type = Type.GetType(typeValue);
-
-            if (type == null)
-                return false;
-
-            if (type.IsArray)
-                return true;
-
-            if (type.GetGenericArguments().Length == 0)
-                return type == typeof(Enumerable);
-
-            return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
-        }
-
         public object ConvertToBlittableIfNeeded(object value)
         {
             if (value is ValueType ||
@@ -451,7 +467,6 @@ namespace Raven.Client.Documents.Session
             if (value is IEnumerable && !(value is IDictionary))
             {
                 return ((IEnumerable)value).Cast<object>().Select(ConvertToBlittableIfNeeded);
-
             }
             return ConvertEntityToBlittable(value, documentInfo: null);
         }
