@@ -43,7 +43,7 @@ namespace Raven.Bundles.Replication.Impl
                 lock (generatorLock)
                 {
                     current = valueHolder;
-                    if (current.Current > current.MaxValue)
+                    if (Interlocked.Read(ref current.Current) > current.MaxValue)
                     {
                         using (var locker = Database.DocumentLock.TryLock(250))
                         {
