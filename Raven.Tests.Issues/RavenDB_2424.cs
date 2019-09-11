@@ -3,13 +3,9 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
-using System;
-using System.Linq;
 
 using Raven.Abstractions.Indexing;
-using Raven.Abstractions.Linq;
 using Raven.Tests.Common;
-
 using Xunit;
 
 namespace Raven.Tests.Issues
@@ -21,8 +17,9 @@ namespace Raven.Tests.Issues
         {
             using (var store = NewDocumentStore())
             {
-                var initialIndexDef = "from doc in docs select new { doc.Date}";
-                Assert.True(store.DatabaseCommands.IndexHasChanged("Index1", new IndexDefinition
+                const string initialIndexDef = "from doc in docs select new { doc.Date}";
+                const string indexName = "Index1";
+                Assert.True(store.DatabaseCommands.IndexHasChanged(indexName, new IndexDefinition
                                                                  {
                                                                      Map = initialIndexDef
                                                                  }));
@@ -33,17 +30,47 @@ namespace Raven.Tests.Issues
                                                     Map = initialIndexDef
                                                 });
 
-                Assert.False(store.DatabaseCommands.IndexHasChanged("Index1", new IndexDefinition
+                Assert.False(store.DatabaseCommands.IndexHasChanged(indexName, new IndexDefinition
                 {
                     Map = initialIndexDef
                 }));
 
-                Assert.True(store.DatabaseCommands.IndexHasChanged("Index1", new IndexDefinition
+                Assert.True(store.DatabaseCommands.IndexHasChanged(indexName, new IndexDefinition
                 {
                     Map = "from doc1 in docs select new { doc1.Date }"
                 }));
 
 
+            }
+        }
+
+        [Fact]
+        public void HasChangedWorkProperly2()
+        {
+            using (var store = NewDocumentStore())
+            {
+                const string initialIndexDef = "from doc in docs select new { doc.Date}";
+                const string indexName = "Index1";
+                Assert.True(store.DatabaseCommands.IndexHasChanged(indexName, new IndexDefinition
+                {
+                    Map = initialIndexDef
+                }));
+
+                store.DatabaseCommands.PutIndex("Index1",
+                    new IndexDefinition
+                    {
+                        Map = initialIndexDef
+                    });
+
+                Assert.False(store.DatabaseCommands.IndexHasChanged(indexName, new IndexDefinition
+                {
+                    Map = initialIndexDef
+                }));
+
+                Assert.False(store.DatabaseCommands.IndexHasChanged(indexName, new IndexDefinition
+                {
+                    Map = "from doc in docs select new {      doc.Date      }"
+                }));
             }
         }
     }

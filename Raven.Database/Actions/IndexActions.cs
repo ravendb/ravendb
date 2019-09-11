@@ -217,7 +217,7 @@ namespace Raven.Database.Actions
                 return true;
 
             var creationOption = FindIndexCreationOptions(definition, ref name);
-            return creationOption != IndexCreationOptions.Noop;
+            return creationOption == IndexCreationOptions.Create || creationOption == IndexCreationOptions.Update;
         }
 
         // only one index can be created at any given time
