@@ -6,24 +6,27 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class X
-    {
-        public string Id { get; set; }
-        public JObject J { get; set; }
-        public List<KeyValuePair<string,string>> A { get; set; }
-    }
-
-    public class UserSelection
-    {
-        public string UserId { get; set; }
-    }
-
     public class RavenDB_14015 : RavenTestBase
     {
+        private class X
+        {
+            public string Id { get; set; }
+            public JObject J { get; set; }
+            public List<KeyValuePair<string, string>> A { get; set; }
+            public List<KeyValuePair<string, JObject>> B { get; set; }
+
+            public KeyValuePair<string, JObject>[] C { get; set; }
+        }
+
+        private class UserSelection
+        {
+            public string UserId { get; set; }
+        }
+
         [Fact]
         public void ShouldNotSimplifyJObjectProperty()
         {
-            var jsonString = 
+            var jsonString =
                 @"{
   ""CrazyField"": {
     ""$type"": ""SlowTests.Issues.UserSelection[], SlowTests"",
@@ -48,8 +51,19 @@ namespace SlowTests.Issues
                     session.Store(new X
                     {
                         J = JObject.Parse(jsonString),
-                        A = new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("beer", "🍺"),
-                            new KeyValuePair<string, string>("moreBeer", "🍻") }
+                        A = new List<KeyValuePair<string, string>>
+                        {
+                            new KeyValuePair<string, string>("beer", "🍺"),
+                            new KeyValuePair<string, string>("moreBeer", "🍻")
+                        },
+                        B = new List<KeyValuePair<string, JObject>>
+                        {
+                            new KeyValuePair<string, JObject>("beer", JObject.Parse(jsonString))
+                        },
+                        C = new KeyValuePair<string, JObject>[]
+                        {
+                            new KeyValuePair<string, JObject>("beer", JObject.Parse(jsonString))
+                        }
                     }, "blah");
 
                     session.SaveChanges();
@@ -68,6 +82,16 @@ namespace SlowTests.Issues
                     kvp = doc.A.Last();
                     Assert.Equal("moreBeer", kvp.Key);
                     Assert.Equal("🍻", kvp.Value);
+
+                    var beerItem = doc.B.First();
+                    Assert.Equal("beer", beerItem.Key);
+                    Assert.NotNull(beerItem.Value["CrazyField"]["$type"]);
+                    Assert.NotNull(beerItem.Value["CrazyField"]["$values"]);
+
+                    beerItem = doc.C.First();
+                    Assert.Equal("beer", beerItem.Key);
+                    Assert.NotNull(beerItem.Value["CrazyField"]["$type"]);
+                    Assert.NotNull(beerItem.Value["CrazyField"]["$values"]);
                 }
             }
         }
