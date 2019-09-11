@@ -25,6 +25,8 @@ namespace Voron.Impl.Journal
         private readonly DiffApplier _diffApplier = new DiffApplier();
         private readonly long _journalPagerNumberOfAllocated4Kb;
         private readonly List<EncryptionBuffer> _encryptionBuffers;
+        private TransactionHeader* _firstValidTransactionHeader = null;
+
 
         public bool RequireHeaderUpdate { get; private set; }
 
@@ -523,6 +525,9 @@ namespace Voron.Impl.Journal
                 return false;
             }
 
+            if (_firstValidTransactionHeader == null) 
+                _firstValidTransactionHeader = current;
+
             return true;
         }
 
@@ -531,7 +536,9 @@ namespace Voron.Impl.Journal
             // if we have a journal which contains transactions that has been synced and this is the case for current transaction 
             // then we can continue the recovery regardless encountered errors
 
-            return IsAlreadySyncTransaction(currentTx) && options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
+            return options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions &&
+                   IsAlreadySyncTransaction(currentTx) &&
+                   (_firstValidTransactionHeader == null || currentTx->TransactionId > _firstValidTransactionHeader->TransactionId); // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal)
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
