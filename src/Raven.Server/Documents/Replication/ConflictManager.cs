@@ -222,6 +222,9 @@ namespace Raven.Server.Documents.Replication
                 if (compareResult.HasFlag(DocumentCompareResult.CountersNotEqual))
                     nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
 
+                if (compareResult.HasFlag(DocumentCompareResult.TimeSeriesNotEqual))
+                    nonPersistentFlags |= NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
+
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
                 return true;
             }

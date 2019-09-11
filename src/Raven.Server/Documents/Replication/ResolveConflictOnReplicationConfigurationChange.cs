@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Replication
 
                 ReplicationUtils.EnsureCollectionTag(clone, resolved.Collection);
                 // we always want to merge the counters and attachments, even if the user specified a script
-                var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict |
+                var nonPersistentFlags = NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict |
                                          NonPersistentDocumentFlags.FromResolver | NonPersistentDocumentFlags.Resolved;
                 _database.DocumentsStorage.Put(context, resolved.Id, null, clone, null, changeVector, resolved.Flags | DocumentFlags.Resolved, nonPersistentFlags: nonPersistentFlags);
             }

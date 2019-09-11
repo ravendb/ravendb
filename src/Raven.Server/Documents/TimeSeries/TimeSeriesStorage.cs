@@ -1410,6 +1410,37 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(TimeSeriesSchema, tableName);
         }
 
+
+      
+
+        public (IEnumerable<object>, int Count) GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
+        {
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var list = new List<string>();
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
+            {
+                var valueSlice = Slices.OutOfScope; // seek for this value will return false, so we will get the last value in the tree
+                var prefix = Slices.AfterAllKeys;
+
+                while (table.SeekOneBackwardByPrimaryKeyPrefix(prefix, valueSlice, out var reader))
+                {
+                    var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out var size);
+                    var name = Encoding.UTF8.GetString(keyPtr + documentKeyPrefix.Size, size - documentKeyPrefix.Size - sizeof(long) - 1);
+                    var ptr = new ByteStringStorage
+                    {
+                        Flags = ByteStringType.Mutable, 
+                        Length = size - sizeof(long), 
+                        Ptr = keyPtr, 
+                        Size = size - sizeof(long)
+                    };
+                    valueSlice = new Slice(new ByteString(&ptr));
+                    prefix = documentKeyPrefix;
+                    list.Add(name);
+                }
+                return (list, list.Count);
+            }
+        }
+
         private enum TimeSeriesTable
         {
             // Format of this is:

@@ -226,6 +226,7 @@ namespace Voron
 
         public static readonly Slice AfterAllKeys;
         public static readonly Slice BeforeAllKeys;
+        public static readonly Slice OutOfScope;
         public static readonly Slice Empty;
 
         static Slices()
@@ -236,6 +237,8 @@ namespace Voron
             BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, before);
             SharedSliceContent.From(string.Empty, out ByteString after);
             AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, after);
+            SharedSliceContent.From(string.Empty, out ByteString outOfScope);
+            OutOfScope = new Slice(SliceOptions.OutOfScope, outOfScope);
         }
     }
 }

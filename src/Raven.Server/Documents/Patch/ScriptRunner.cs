@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Patch
                         _docsCtx.GetLazyString(changeVector),
                         reader,
                         //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
-                        nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict
+                        nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict | NonPersistentDocumentFlags.ResolveTimeSeriesConflict
                         );
 
                     if (DebugMode)

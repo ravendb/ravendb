@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -23,11 +24,18 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentDatabase _documentDatabase;
+        private readonly IRecreationType[] _recreationTypes;
 
         public DocumentPutAction(DocumentsStorage documentsStorage, DocumentDatabase documentDatabase)
         {
             _documentsStorage = documentsStorage;
             _documentDatabase = documentDatabase;
+            _recreationTypes = new IRecreationType[]
+            {
+                new RecreateAttachment(documentsStorage),
+                new RecreateCounters(documentsStorage), 
+                new RecreateTimeSeries(documentsStorage), 
+            };
         }
 
         public PutOperationResults PutDocument(DocumentsOperationContext context, string id,
@@ -110,6 +118,12 @@ namespace Raven.Server.Documents
                             flags |= DocumentFlags.HasCounters;
                         }
 
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByTimeSeriesUpdate) == false &&
+                            oldFlags.Contain(DocumentFlags.HasTimeSeries))
+                        {
+                            flags |= DocumentFlags.HasTimeSeries;
+                        }
+
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false && 
                             oldFlags.Contain(DocumentFlags.HasRevisions))
                         {
@@ -131,23 +145,8 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
-                    if (ShouldRecreateAttachments(context, lowerId, oldDoc, document, ref flags, nonPersistentFlags))
-                    {
-                        ValidateDocumentHash(id, document, documentDebugHash);
 
-                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        ValidateDocument(id, document, ref documentDebugHash);
-                        AttachmentsStorage.AssertAttachments(document, flags);
-                    }
-
-                    if (ShouldRecreateCounters(context, id, oldDoc, document, ref flags, nonPersistentFlags))
-                    {
-                        ValidateDocumentHash(id, document, documentDebugHash);
-
-                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                        ValidateDocument(id, document, ref documentDebugHash);
-                        CountersStorage.AssertCounters(document, flags);
-                    }
+                    Recreate(context, id, oldDoc, ref document, ref flags, nonPersistentFlags, ref documentDebugHash);
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
                         collectionName, nonPersistentFlags, oldDoc, document, context, id, lastModifiedTicks, ref flags, out var configuration);
@@ -390,164 +389,183 @@ namespace Raven.Server.Documents
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
         }
 
-        private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
-            BlittableJsonReaderObject metadata, ref DocumentFlags flags)
+        private void Recreate(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc,
+            ref BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, ref ulong documentDebugHash)
         {
-            var actualAttachments = _documentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerId);
-            if (actualAttachments.Count == 0)
+            for (int i = 0; i < _recreationTypes.Length; i++)
             {
-                if (metadata != null)
+                var type = _recreationTypes[i];
+                if (RecreateIfNeeded(context, id, oldDoc, document, ref flags, nonPersistentFlags, type))
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    ValidateDocumentHash(id, document, documentDebugHash);
+                    document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    ValidateDocument(id, document, ref documentDebugHash);
+#if DEBUG
+                    type.Assert(document, flags);
+#endif
+                }
+            }
+        }
+
+
+        private bool RecreateIfNeeded(DocumentsOperationContext context, string docId, BlittableJsonReaderObject oldDoc,
+            BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, IRecreationType type)
+        {
+            BlittableJsonReaderObject metadata;
+
+            if (nonPersistentFlags.Contain(type.ResolveConflictFlag))
+            {
+                document.TryGet(Constants.Documents.Metadata.Key, out metadata);
+                Recreate(ref flags);
+                return true;
+            }
+
+            if (flags.Contain(type.HasFlag) == false || 
+                nonPersistentFlags.Contain(type.ByUpdateFlag) ||
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
+                return false;
+
+            if (oldDoc == null || 
+                oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) == false ||
+                oldMetadata.TryGet(type.MetadataProperty, out BlittableJsonReaderArray old) == false) 
+                return false;
+
+            // Make sure the user did not changed the value of @attachments in the @metadata
+            // In most cases it won't be changed so we can use this value 
+            // instead of recreating the document's blittable from scratch
+            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
+                metadata.TryGet(type.MetadataProperty, out BlittableJsonReaderArray current) == false ||
+                current.Equals(old) == false)
+            {
+                Recreate(ref flags);
+                return true;
+            }
+
+            return false;
+
+            void Recreate(ref DocumentFlags documentFlags)
+            {
+                var values = type.GetMetadata(context, docId);
+                var items = values.Items;
+
+                if (values.Count == 0)
+                {
+                    if (metadata != null)
+                    {
+                        metadata.Modifications = new DynamicJsonValue(metadata);
+                        metadata.Modifications.Remove(type.MetadataProperty);
+                        document.Modifications = new DynamicJsonValue(document)
+                        {
+                            [Constants.Documents.Metadata.Key] = metadata
+                        };
+                    }
+
+                    documentFlags &= ~type.HasFlag;
+                    return;
+                }
+
+                documentFlags |= type.HasFlag;
+                if (metadata == null)
+                {
+                    document.Modifications = new DynamicJsonValue(document)
+                    {
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [type.MetadataProperty] = items
+                        }
+                    };
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [type.MetadataProperty] = items
+                    };
                     document.Modifications = new DynamicJsonValue(document)
                     {
                         [Constants.Documents.Metadata.Key] = metadata
                     };
                 }
-
-                flags &= ~DocumentFlags.HasAttachments;
-                return;
-            }
-
-            flags |= DocumentFlags.HasAttachments;
-            if (metadata == null)
-            {
-                document.Modifications = new DynamicJsonValue(document)
-                {
-                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                    {
-                        [Constants.Documents.Metadata.Attachments] = actualAttachments
-                    }
-                };
-            }
-            else
-            {
-                metadata.Modifications = new DynamicJsonValue(metadata)
-                {
-                    [Constants.Documents.Metadata.Attachments] = actualAttachments
-                };
-                document.Modifications = new DynamicJsonValue(document)
-                {
-                    [Constants.Documents.Metadata.Key] = metadata
-                };
             }
         }
 
-        private bool ShouldRecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc,
-            BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        private interface IRecreationType
         {
-            if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveAttachmentsConflict) == NonPersistentDocumentFlags.ResolveAttachmentsConflict)
-            {
-                document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                RecreateAttachments(context, lowerId, document, metadata, ref flags);
-                return true;
-            }
+            string MetadataProperty { get; }
+            Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata { get; }
 
-            if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
-            {
-                if (oldDoc != null &&
-                    oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
-                    oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
-                {
-                    // Make sure the user did not changed the value of @attachments in the @metadata
-                    // In most cases it won't be changed so we can use this value 
-                    // instead of recreating the document's blittable from scratch
-                    if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                        metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
-                        attachments.Equals(oldAttachments) == false)
-                    {
-                        RecreateAttachments(context, lowerId, document, metadata, ref flags);
-                        return true;
-                    }
-                }
-            }
+            DocumentFlags HasFlag { get; }
 
-            return false;
+            NonPersistentDocumentFlags ResolveConflictFlag { get; }
+            NonPersistentDocumentFlags ByUpdateFlag { get; }
+
+            Action<BlittableJsonReaderObject, DocumentFlags> Assert { get; }
         }
 
-        private void RecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
-            BlittableJsonReaderObject metadata, ref DocumentFlags flags)
+        private class RecreateAttachment : IRecreationType
         {
-            var onDiskCounters = _documentsStorage.CountersStorage.GetCountersForDocument(context, id).ToList();
-            if (onDiskCounters.Count == 0)
-            {
-                if (metadata != null)
-                {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    document.Modifications = new DynamicJsonValue(document)
-                    {
-                        [Constants.Documents.Metadata.Key] = metadata
-                    };
-                }
+            private readonly DocumentsStorage _storage;
 
-                flags &= ~DocumentFlags.HasCounters;
-                return;
+            public RecreateAttachment(DocumentsStorage storage)
+            {
+                _storage = storage;
             }
 
-            flags |= DocumentFlags.HasCounters;
+            public string MetadataProperty => Constants.Documents.Metadata.Attachments;
 
-            if (metadata == null)
-            {
-                document.Modifications = new DynamicJsonValue(document)
-                {
-                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                    {
-                        [Constants.Documents.Metadata.Counters] = onDiskCounters
-                    }
-                };
-            }
-            else
-            {
-                metadata.Modifications = new DynamicJsonValue(metadata)
-                {
-                    [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(onDiskCounters)
-                };
+            public Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata => _storage.AttachmentsStorage.GetAttachmentsMetadataForDocument;
 
-                document.Modifications = new DynamicJsonValue(document)
-                {
-                    [Constants.Documents.Metadata.Key] = metadata
-                };
+            public DocumentFlags HasFlag => DocumentFlags.HasAttachments;
 
-            }
+            public NonPersistentDocumentFlags ResolveConflictFlag => NonPersistentDocumentFlags.ResolveAttachmentsConflict;
+
+            public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByAttachmentUpdate;
+
+            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => AttachmentsStorage.AssertAttachments(o, flags);
         }
 
-        private bool ShouldRecreateCounters(DocumentsOperationContext context, string id, BlittableJsonReaderObject oldDoc,
-            BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
+        private class RecreateCounters : IRecreationType
         {
-            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ResolveCountersConflict))
+            private readonly DocumentsStorage _storage;
+
+            public RecreateCounters(DocumentsStorage storage)
             {
-                document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                RecreateCounters(context, id, document, metadata, ref flags);
-                return true;
+                _storage = storage;
             }
 
-            if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication &&
-                (nonPersistentFlags & NonPersistentDocumentFlags.ByCountersUpdate) != NonPersistentDocumentFlags.ByCountersUpdate)
+            public string MetadataProperty => Constants.Documents.Metadata.Counters;
+
+            public Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata => _storage.CountersStorage.GetCountersForDocumentList;
+
+            public DocumentFlags HasFlag => DocumentFlags.HasCounters;
+
+            public NonPersistentDocumentFlags ResolveConflictFlag => NonPersistentDocumentFlags.ResolveCountersConflict;
+
+            public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByCountersUpdate;
+
+            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (o, flags) => CountersStorage.AssertCounters(o, flags);
+        }
+
+        private class RecreateTimeSeries : IRecreationType
+        {
+            private readonly DocumentsStorage _storage;
+
+            public RecreateTimeSeries(DocumentsStorage storage)
             {
-                if (oldDoc != null &&
-                    oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
-                    oldMetadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray oldCounters))
-                {
-                    // Make sure the user did not change the value of @counters in the @metadata
-                    // In most cases it won't be changed so we can use this value 
-                    // instead of recreating the document's blittable from scratch
-                    if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                        metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
-                        counters.Length != oldCounters.Length ||
-                        counters.SequenceEqual(oldCounters) == false)
-                    {
-                        RecreateCounters(context, id, document, metadata, ref flags);
-                        return true;
-                    }
-                }
+                _storage = storage;
             }
 
-            return false;
+            public string MetadataProperty => Constants.Documents.Metadata.TimeSeries;
+
+            public Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata => _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument;
+
+            public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;
+
+            public NonPersistentDocumentFlags ResolveConflictFlag => NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
+
+            public NonPersistentDocumentFlags ByUpdateFlag => NonPersistentDocumentFlags.ByTimeSeriesUpdate;
+
+            public Action<BlittableJsonReaderObject, DocumentFlags> Assert => (_, __) => { };
         }
 
         public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
