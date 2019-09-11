@@ -119,6 +119,8 @@ namespace SlowTests.Issues
                 await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: addedNodeTag));
                 val = await WaitForValueAsync(async () => await GetMembersCount(), 1, timeout);
                 Assert.Equal(1, val);
+                val = await WaitForValueAsync(async () => await GetDeletedCount(), 0, timeout);
+                Assert.Equal(0, val);
 
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName, addedNodeTag));
                 val = await WaitForValueAsync(async () => await GetMembersCount(), 2, timeout);
@@ -149,6 +151,15 @@ namespace SlowTests.Issues
                         return -1;
 
                     return res.Topology.Members.Count;
+                }
+
+                async Task<int> GetDeletedCount()
+                {
+                    var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    if (res == null)
+                        return -1;
+
+                    return res.DeletionInProgress?.Count ?? 0;
                 }
             }
         }
