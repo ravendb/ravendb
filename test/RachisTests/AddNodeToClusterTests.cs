@@ -499,6 +499,49 @@ namespace RachisTests
 
         }
 
+        
+        [Fact]
+        public async Task WhoseTaskIsItShouldNotSelectRemovedNode()
+        {
+            var clusterSize = 5;
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            var db = GetDatabaseName();
+
+            var first = cluster.Nodes.First(x => x != cluster.Leader);
+            var firstFollowerTag = first.ServerStore.NodeTag;
+
+            await cluster.Leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+            {
+                Record = new DatabaseRecord(db)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        Members = new List<string> {cluster.Leader.ServerStore.NodeTag,firstFollowerTag},
+                        ReplicationFactor = 2
+                    }
+                },
+                Name = db
+            });
+
+            await DisposeServerAndWaitForFinishOfDisposalAsync(first);
+            var result = await cluster.Leader.ServerStore.SendToLeaderAsync(new DeleteDatabaseCommand(db, Guid.NewGuid().ToString())
+            {
+                FromNodes = new[] {firstFollowerTag}, 
+            });
+
+            await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                var res = cluster.Nodes.First(x =>
+                    x != cluster.Leader && x != first &&
+                    x.ServerStore.LoadDatabaseTopology(db)
+                        .WhoseTaskIsIt(x.ServerStore.Engine.CurrentState, new PromotableTask(x.ServerStore.NodeTag, x.WebUrl, db, firstFollowerTag), null) == firstFollowerTag);
+
+                Assert.True(false,$"removed node was selected :/ Leader: {cluster.Leader.ServerStore.NodeTag}, first: {firstFollowerTag}, second {res.ServerStore.NodeTag}");
+            });
+        }
+
         [Fact]
         public async Task FailOnAddingNodeThatHasPortZero()
         {

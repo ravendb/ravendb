@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands
                     }
 
                     // rehabs will be removed only once the replication sent all the documents to the mentor
-                    if (record.Topology.Promotables.Contains(node)) 
+                    if (record.Topology.Rehabs.Contains(node) == false) 
                         record.Topology.RemoveFromTopology(node);
 
                     if (UpdateReplicationFactor)
