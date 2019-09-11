@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Server.Documents.Replication;
@@ -1198,6 +1199,12 @@ namespace Raven.Server.Documents
                     }
                 }
             }
+        }
+
+        public (IEnumerable<object> Items, int Count) GetCountersForDocumentList(DocumentsOperationContext context, string docId)
+        {
+            var items = GetCountersForDocument(context, docId).ToList();
+            return (items, items.Count);
         }
 
         private static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)

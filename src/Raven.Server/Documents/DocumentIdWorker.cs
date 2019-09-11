@@ -70,7 +70,8 @@ namespace Raven.Server.Documents
                 buffer.Ptr[strLength] = separator.Value;
                 strLength++;
             }
-        Finish:
+
+            Finish:
             buffer.Truncate(strLength);
             return internalScope;
         }

@@ -87,6 +87,9 @@ namespace Raven.Server.Documents
                     if (propertyNames.Contains(Constants.Documents.Metadata.Counters, StringComparer.OrdinalIgnoreCase))
                         result |= DocumentCompareResult.CountersNotEqual;
 
+                    if (propertyNames.Contains(Constants.Documents.Metadata.TimeSeries, StringComparer.OrdinalIgnoreCase))
+                        result |= DocumentCompareResult.TimeSeriesNotEqual;
+
                     if (propertyNames.Contains(Constants.Documents.Metadata.Attachments, StringComparer.OrdinalIgnoreCase))
                     {
                         if (options.ThrowOnAttachmentModifications)
@@ -118,6 +121,7 @@ namespace Raven.Server.Documents
         {
             var resolvedAttachmentConflict = false;
             var resolvedCountersConflict = false;
+            var resolvedTimeSeriesConflict = false;
 
             var properties = new HashSet<string>(current.GetPropertyNames());
             foreach (var propertyName in modified.GetPropertyNames())
@@ -170,6 +174,22 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
+                        else if (property.Equals(Constants.Documents.Metadata.TimeSeries, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (options.TryMergeMetadataConflicts)
+                            {
+                                if (current.TryGetMember(property, out object _) == false ||
+                                    modified.TryGetMember(property, out object _) == false)
+                                {
+                                    // Resolve when just 1 document have time-series
+                                    resolvedTimeSeriesConflict = true;
+                                    continue;
+                                }
+
+                                resolvedTimeSeriesConflict = ShouldResolveTimeSeriesConflict(current, modified);
+                                continue;
+                            }
+                        }
                         else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
                                  property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
@@ -194,8 +214,9 @@ namespace Raven.Server.Documents
 
             var shouldRecreateAttachment = resolvedAttachmentConflict ? DocumentCompareResult.AttachmentsNotEqual : DocumentCompareResult.None;
             var shouldRecreateCounters = resolvedCountersConflict ? DocumentCompareResult.CountersNotEqual : DocumentCompareResult.None;
+            var shouldRecreateTimeSeries = resolvedTimeSeriesConflict ? DocumentCompareResult.TimeSeriesNotEqual : DocumentCompareResult.None;
 
-            return DocumentCompareResult.Equal | shouldRecreateAttachment | shouldRecreateCounters;
+            return DocumentCompareResult.Equal | shouldRecreateAttachment | shouldRecreateCounters | shouldRecreateTimeSeries;
         }
 
         private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata, in DocumentCompareOptions options)
@@ -272,6 +293,19 @@ namespace Raven.Server.Documents
             return currentCounters.Length != modifiedCounters.Length ||
                    !currentCounters.All(modifiedCounters.Contains);
         }
+
+        private static bool ShouldResolveTimeSeriesConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata)
+        {
+            currentMetadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray currentTimeSeries);
+            modifiedMetadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray modifiedTimeSeries);
+            Debug.Assert(currentTimeSeries != null || modifiedTimeSeries != null, "Cannot happen. We verified that we have a conflict in @timeseries.");
+
+            if (currentTimeSeries == null)
+                return true;
+
+            return currentTimeSeries.Length != modifiedTimeSeries.Length ||
+                   !currentTimeSeries.All(modifiedTimeSeries.Contains);
+        }
     }
 
     [Flags]
@@ -284,6 +318,8 @@ namespace Raven.Server.Documents
 
         AttachmentsNotEqual = 0x4,
 
-        CountersNotEqual = 0x8
+        CountersNotEqual = 0x8,
+
+        TimeSeriesNotEqual = 0x10
     }
 }

@@ -5,7 +5,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Sdk;
@@ -428,6 +430,79 @@ namespace SlowTests.Server.Replication
                     }
                 }
 
+            }
+        }
+
+        [Fact]
+        public async Task MergeTimeSeriesOnConflict()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.TimeSeriesFor("users/1").Append("heartbeat", DateTime.Now, "herz", new List<double> {1, 2, 3});
+                    await session.SaveChangesAsync();
+                }
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.TimeSeriesFor("users/1").Append("pulse", DateTime.Now, "bps", new List<double> {1, 2, 3});
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+
+                    var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
+                    Assert.Equal((DocumentFlags.HasTimeSeries).ToString(), flags);
+                    var list = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(2, list.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task MergeTimeSeriesWithCountersOnConflict()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.TimeSeriesFor("users/1").Append("heartbeat", DateTime.Now, "herz", new List<double> {1, 2, 3});
+                    await session.SaveChangesAsync();
+                }
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 10);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+
+                    var flags = session.Advanced.GetMetadataFor(user)[Constants.Documents.Metadata.Flags];
+                    Assert.Equal((DocumentFlags.HasTimeSeries | DocumentFlags.HasCounters).ToString(), flags);
+
+                    var ts = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(1, ts.Count);
+
+                    
+                    var counters = session.Advanced.GetCountersFor(user);
+                    Assert.Equal(1, counters.Count);
+                }
             }
         }
     }
