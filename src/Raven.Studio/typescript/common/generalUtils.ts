@@ -20,7 +20,7 @@ class genUtils {
     
     /***  IP Address Methods  ***/
 
-    static isLocalhostIpAddress(ip: string) : boolean {
+    static isLocalhostIpAddress(ip: string): boolean {
         return ((ip === 'localhost') || (_.split(ip, '.')[0] === '127') || (ip === '::1'));
     }
 
@@ -264,7 +264,7 @@ class genUtils {
         return result;
     };
 
-    static getSizeClass(input: number) : string {
+    static getSizeClass(input: number): string {
         if (input < 100000) {
             return "";
         }

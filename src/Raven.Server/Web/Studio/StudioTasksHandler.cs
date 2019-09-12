@@ -102,7 +102,6 @@ namespace Raven.Server.Web.Studio
                         var isBackupFolder = GetBoolValueQueryString("backupFolder", required: false) ?? false;
                         var path = GetStringQueryString("path", required: false);
                         folderPathOptions = FolderPath.GetOptions(path, isBackupFolder, ServerStore.Configuration);
-
                         break;
                     case PeriodicBackupConnectionType.S3:
                         var json = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
@@ -137,7 +136,8 @@ namespace Raven.Server.Web.Studio
                         }
                         break;
                     case PeriodicBackupConnectionType.Azure:
-                    var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        
                         if (connectionType != PeriodicBackupConnectionType.Local && azureJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -166,6 +166,7 @@ namespace Raven.Server.Web.Studio
                         break;
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
+                        
                         if (connectionType != PeriodicBackupConnectionType.Local && googleCloudJson == null)
                             throw new BadRequestException("No JSON was posted.");
 
@@ -201,7 +202,6 @@ namespace Raven.Server.Web.Studio
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

@@ -2,7 +2,6 @@
 import configuration = require("configuration");
 import restorePoint = require("models/resources/creation/restorePoint");
 import clusterNode = require("models/database/cluster/clusterNode");
-import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 import validateNameCommand = require("commands/resources/validateNameCommand");
@@ -11,11 +10,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
 import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
-import { localServerCredentials, 
-         amazonS3Credentials, 
-         azureCredentials, 
-         googleCloudCredentials, 
-         ravenCloudCredentials } from "models/resources/creation/backupCredentials";
+import backupCredentials = require("models/resources/creation/backupCredentials");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -76,11 +71,11 @@ class databaseCreationModel {
     restore = {
         source: ko.observable<restoreSource>('local'),
         
-        localServerCredentials: ko.observable<localServerCredentials>(localServerCredentials.empty()),
-        azureCredentials: ko.observable<azureCredentials>(azureCredentials.empty()),
-        amazonS3Credentials: ko.observable<amazonS3Credentials>(amazonS3Credentials.empty()),
-        googleCloudCredentials: ko.observable<googleCloudCredentials>(googleCloudCredentials.empty()),
-        ravenCloudCredentials: ko.observable<ravenCloudCredentials>(ravenCloudCredentials.empty()),
+        localServerCredentials: ko.observable<backupCredentials.localServerCredentials>(backupCredentials.localServerCredentials.empty()),
+        azureCredentials: ko.observable<backupCredentials.azureCredentials>(backupCredentials.azureCredentials.empty()),
+        amazonS3Credentials: ko.observable<backupCredentials.amazonS3Credentials>(backupCredentials.amazonS3Credentials.empty()),
+        googleCloudCredentials: ko.observable<backupCredentials.googleCloudCredentials>(backupCredentials.googleCloudCredentials.empty()),
+        ravenCloudCredentials: ko.observable<backupCredentials.ravenCloudCredentials>(backupCredentials.ravenCloudCredentials.empty()),
 
         disableOngoingTasks: ko.observable<boolean>(false),
         skipIndexes: ko.observable<boolean>(false),
@@ -101,21 +96,12 @@ class databaseCreationModel {
                 return "Loading restore points...";
             } else if (count === 0) {
                 // case 2: No restore points fetched yet
-                switch (this.restore.source()) {
-                    case 'local':
-                        return "Enter Backup Directory above to continue";
-                    case 'cloud':
-                        return "Enter Backup Link above to continue";
-                    case 'amazonS3':
-                    case 'azure':
-                    case 'googleCloud':
-                        return 'Enter required fields above to continue';
-                }
+                return `Enter ${this.restoreSourceObject().mandatoryFieldsText} above to continue`;
             } else {
                 // case 3: Restore points found
                 const restorePoint = this.restore.selectedRestorePoint();
                 if (!restorePoint) {
-                    const text : string  = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
+                    const text: string  = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
                     return text;
                 }
                 
@@ -124,6 +110,8 @@ class databaseCreationModel {
             }
         })
     };
+
+    restoreSourceObject: KnockoutComputed<backupCredentials.restoreSettings>; 
     
     restoreValidationGroup = ko.validatedObservable({ 
         selectedRestorePoint: this.restore.selectedRestorePoint,
@@ -199,6 +187,16 @@ class databaseCreationModel {
         this.creationMode = mode;
         this.canCreateEncryptedDatabases = canCreateEncryptedDatabases;
         this.isFromBackupOrFromOfflineMigration = mode !== "newDatabase";
+
+        this.restoreSourceObject = ko.pureComputed(() => {
+            switch (this.restore.source()) {
+                case 'local': return this.restore.localServerCredentials();
+                case 'cloud': return this.restore.ravenCloudCredentials();
+                case 'amazonS3': return this.restore.amazonS3Credentials();
+                case 'azure': return this.restore.azureCredentials();
+                case 'googleCloud': return this.restore.googleCloudCredentials();
+            }
+        });
         
         const legacyMigrationConfig = this.configurationSections.find(x => x.id === "legacyMigration");
         legacyMigrationConfig.validationGroup = this.legacyMigrationValidationGroup;
@@ -231,109 +229,17 @@ class databaseCreationModel {
             }
         });
 
-        this.restore.source.subscribe(() =>  {
-            this.clearRestorePoints(); 
+        this.restoreSourceObject.subscribe(() =>  {
+            this.clearRestorePoints();
             this.restore.restorePointError(null);
-            
-            let getRestorePoints = false;
-            switch(this.restore.source()) {
-                case 'local':
-                    if (this.restore.localServerCredentials().isValid()) {
-                        getRestorePoints = true;
-                    }
-                    break;
-                case 'cloud':
-                    if (this.restore.ravenCloudCredentials().isValid()) {
-                        getRestorePoints = true;
-                    }
-                    break;
-                case 'azure':
-                    if (this.restore.azureCredentials().isValid()) {
-                        getRestorePoints = true; }
-                    break;
-                case 'amazonS3':
-                    if (this.restore.amazonS3Credentials().isValid())
-                        getRestorePoints = true;
-                    break;
-                case 'googleCloud':
-                    if (this.restore.googleCloudCredentials().isValid()) {
-                        getRestorePoints = true;
-                    }
-                    break;
-            }
-            
-            if (getRestorePoints) {
-                this.fetchRestorePoints(true);
-            }
+            this.fetchRestorePoints(true);
         });
         
-        // Local 
-        this.restore.localServerCredentials().backupDirectory.throttle(300).subscribe(() => {            
-            if (this.restore.localServerCredentials().isValid()) {
-                this.fetchRestorePoints(true);
-            }
-            else {
-                // This is mandatory only here because input for 'local' is only the 'folder' - 
-                // as opposed to the other options where the restore points are  calculated based on the other 'inputs'
-                this.clearRestorePoints();
-                this.restore.restorePointError(null);
-            }
-        });
-        
-        // Azure
-        this.restore.azureCredentials().accountName.throttle(300).subscribe(() => {
-            this.fetchAzureRestorePoints();
-        });
-        this.restore.azureCredentials().accountKey.throttle(300).subscribe(() => {
-            this.fetchAzureRestorePoints();
-        });
-        this.restore.azureCredentials().container.throttle(300).subscribe(() => {
-            this.fetchAzureRestorePoints();
-        });
-        this.restore.azureCredentials().remoteFolder.throttle(300).subscribe(() => {
-            if (this.restore.azureCredentials().isValid()) {
-                this.fetchRestorePoints(true);
-            }
-        });
-        
-        // Google Cloud
-        this.restore.googleCloudCredentials().bucketName.throttle(300).subscribe(() => {
-            this.fetchGoogleCloudRestorePoints();
-        });
-        this.restore.googleCloudCredentials().googleCredentials.throttle(300).subscribe(() => {
-            this.fetchGoogleCloudRestorePoints();
-        });
-        this.restore.googleCloudCredentials().remoteFolder.throttle(300).subscribe(() => {
-            if (this.restore.googleCloudCredentials().isValid()) {
-                this.fetchRestorePoints(true);
-            }
-        });
-
-        // Amazon 
-        this.restore.amazonS3Credentials().accessKey.throttle(300).subscribe(() => {
-            this.fetchAmazonRestorePoints();
-        });
-        this.restore.amazonS3Credentials().secretKey.throttle(300).subscribe(() => {
-            this.fetchAmazonRestorePoints();
-        });
-        this.restore.amazonS3Credentials().regionName.throttle(300).subscribe(() => {
-            this.fetchAmazonRestorePoints();            
-        });
-        this.restore.amazonS3Credentials().bucketName.throttle(300).subscribe(() => {
-            this.fetchAmazonRestorePoints();
-        });
-        this.restore.amazonS3Credentials().remoteFolder.throttle(300).subscribe(() => {
-            if (this.restore.amazonS3Credentials().isValid()) {
-                this.fetchRestorePoints(true);
-            }
-        });
-        
-        // Raven Cloud - Backup Link
-        this.restore.ravenCloudCredentials().backupLink.throttle(300).subscribe(link => {
-            if (!!_.trim(link)) {
-                this.downloadCloudCredentials(link) 
-            }
-            else {
+        // Raven Cloud - Backup Link 
+        this.restore.ravenCloudCredentials().onCredentialsChange((backupLinkNewValue) => {
+            if (!!_.trim(backupLinkNewValue)) {
+                this.downloadCloudCredentials(backupLinkNewValue)
+            } else {
                 this.clearRestorePoints();
             }
         });
@@ -381,30 +287,6 @@ class databaseCreationModel {
         
         _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged", "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged", 
             "legacyMigrationDataDirectoryHasChanged", "dataExporterPathHasChanged", "journalsPathHasChanged");
-    }
-
-    private fetchAzureRestorePoints() {
-        if (this.restore.source() === "azure" && this.restore.azureCredentials().isValid()) {
-            this.fetchRestorePoints(true);
-        } else {
-            this.clearRestorePoints();
-        }
-    }
-
-    private fetchGoogleCloudRestorePoints() {
-        if (this.restore.source() === "googleCloud" && this.restore.googleCloudCredentials().isValid()) {
-            this.fetchRestorePoints(true);
-        } else {
-            this.clearRestorePoints();
-        }
-    }
-
-    private fetchAmazonRestorePoints() {
-        if (this.restore.source() === "amazonS3" && this.restore.amazonS3Credentials().isValid()) {
-            this.fetchRestorePoints(true);
-        } else {
-            this.clearRestorePoints();
-        }
     }
     
     downloadCloudCredentials(link: string) {
@@ -465,27 +347,17 @@ class databaseCreationModel {
         //try to continue autocomplete flow
         this.legacyMigration.journalsPathHasFocus(true);
     }
-
-    private createRestorePointCommand(skipReportingError: boolean) {
-        switch (this.restore.source()) {
-            case "local":
-                return getRestorePointsCommand.forServerLocal(this.restore.localServerCredentials().backupDirectory(), skipReportingError);
-            case "cloud":
-                return getRestorePointsCommand.forS3Backup(this.restore.ravenCloudCredentials().toAmazonS3Dto(), skipReportingError);
-            case "azure":
-                return getRestorePointsCommand.forAzureBackup(this.restore.azureCredentials().toDto(), skipReportingError);
-            case "amazonS3":
-                return getRestorePointsCommand.forS3Backup(this.restore.amazonS3Credentials().toDto(), skipReportingError);
-            case "googleCloud":
-                return getRestorePointsCommand.forGoogleCloudBackup(this.restore.googleCloudCredentials().toDto(), skipReportingError);
-        }
-    }
     
-    private fetchRestorePoints(skipReportingError: boolean) {
+    fetchRestorePoints(skipReportingError: boolean) {
+        if (!this.restoreSourceObject().isValid()) {
+            this.clearRestorePoints();
+            return;
+        }
+        
         this.spinners.fetchingRestorePoints(true);
         this.restore.restorePointError(null);
 
-        this.createRestorePointCommand(skipReportingError)
+        this.restoreSourceObject().fetchRestorePointsCommand() 
             .execute()
             .done((restorePoints: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints) => {
                 const groups: Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }> = [];
@@ -509,16 +381,8 @@ class databaseCreationModel {
             })
             .fail((response: JQueryXHR) => {
                 const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
-                this.restore.restorePointError(generalUtils.trimMessage(messageAndOptionalException.message));                
-                
-                switch (this.restore.source()) {
-                    case 'local': this.restore.lastFailedFolderName = this.restore.localServerCredentials().backupDirectory(); break;
-                    case 'cloud': this.restore.lastFailedFolderName = this.restore.ravenCloudCredentials().backupLink(); break;
-                    case 'azure': this.restore.lastFailedFolderName = this.restore.azureCredentials().remoteFolder(); break;
-                    case 'amazonS3': this.restore.lastFailedFolderName = this.restore.amazonS3Credentials().remoteFolder(); break;
-                    case 'googleCloud': this.restore.lastFailedFolderName = this.restore.googleCloudCredentials().remoteFolder(); break;
-                }
-
+                this.restore.restorePointError(generalUtils.trimMessage(messageAndOptionalException.message)); 
+                this.restore.lastFailedFolderName = this.restoreSourceObject().folderContent();
                 this.clearRestorePoints();
                 this.restore.backupEncryptionKey("");
             })
@@ -669,27 +533,11 @@ class databaseCreationModel {
         this.restore.selectedRestorePoint.extend({
             validation: [
                 {
-                    validator: () => {
-                        switch (this.restore.source()) {
-                            case 'local':
-                                return this.restore.localServerCredentials().isValid();
-                            case 'azure':
-                                return this.restore.azureCredentials().isValid();
-                            case 'amazonS3':
-                                return this.restore.amazonS3Credentials().isValid();
-                            case 'cloud':
-                                return this.restore.ravenCloudCredentials().isValid();
-                            case 'googleCloud':
-                                return this.restore.googleCloudCredentials().isValid();
-                        };
-                        return true;
-                    },
+                    validator: () => this.restoreSourceObject().isValid(),
                     message: "Please enter valid source data"
                 },
                 {
-                    validator: () => {
-                        return !this.restore.restorePointError();
-                    },
+                    validator: () => !this.restore.restorePointError(),
                     message: `Couldn't fetch restore points, {0}`,
                     params: this.restore.restorePointError
                 },
@@ -820,7 +668,7 @@ class databaseCreationModel {
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
-    toRestoreDocumentDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase {
+    toRestoreDatabaseDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
 
         const restorePoint = this.restore.selectedRestorePoint();
@@ -863,36 +711,8 @@ class databaseCreationModel {
             EncryptionKey: databaseEncryptionKey,
             BackupEncryptionSettings: encryptionSettings
         } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
-
-        switch (this.restore.source()) {
-            case "local" :
-                const localConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
-                localConfiguration.BackupLocation = restorePoint.location;
-                (localConfiguration as any as restoreTypeAware).Type = "Local" as Raven.Client.Documents.Operations.Backups.RestoreType; 
-                return localConfiguration;
-            case "cloud":
-                const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
-                s3Configuration.Settings = this.restore.ravenCloudCredentials().toAmazonS3Dto();
-                (s3Configuration as any as restoreTypeAware).Type = "S3" as Raven.Client.Documents.Operations.Backups.RestoreType;
-                return s3Configuration;
-            case "azure":
-                const azureConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromAzureConfiguration; 
-                azureConfiguration.Settings = this.restore.azureCredentials().toDto();
-                (azureConfiguration as any as restoreTypeAware).Type = "Azure" as Raven.Client.Documents.Operations.Backups.RestoreType;
-                return azureConfiguration;
-            case "amazonS3":
-                const amazonS3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
-                amazonS3Configuration.Settings = this.restore.amazonS3Credentials().toDto();
-                (amazonS3Configuration as any as restoreTypeAware).Type = "S3" as Raven.Client.Documents.Operations.Backups.RestoreType;
-                return amazonS3Configuration;
-            case "googleCloud":
-                const googleCloudConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromGoogleCloudConfiguration;
-                googleCloudConfiguration.Settings = this.restore.googleCloudCredentials().toDto();
-                (googleCloudConfiguration as any as restoreTypeAware).Type = "GoogleCloud" as Raven.Client.Documents.Operations.Backups.RestoreType;
-                return googleCloudConfiguration;
-            default:
-                throw new Error("Unhandled source: " + this.restore.source());
-        }
+        
+        return this.restoreSourceObject().getConfigurationForRestoreDatabase(baseConfiguration, restorePoint.location);
     }
     
     toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {

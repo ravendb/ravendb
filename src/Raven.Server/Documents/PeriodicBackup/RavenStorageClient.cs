@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public class BlobProperties
         {
             public string Name { get; set; }
-            public DateTime LastModify { get; set; }
+            public DateTime LastModified { get; set; }
         }
     }
 }

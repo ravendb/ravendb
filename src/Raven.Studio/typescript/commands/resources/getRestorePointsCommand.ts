@@ -6,7 +6,7 @@ class getRestorePointsCommand extends commandBase {
     private constructor(private path: string, 
                         private skipReportingError: boolean,
                         private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
-                        private Credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
+                        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
         super();
     }
 
@@ -17,7 +17,7 @@ class getRestorePointsCommand extends commandBase {
                     FolderPath: this.path
                 };
             default:
-                return this.Credentials;
+                return this.credentials;
         }
     }
     
