@@ -356,17 +356,13 @@ namespace Raven.Server.Documents.Handlers
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
                 var changes = 0;
-                CollectionName collectionName = default;
 
                 foreach (var (docId, items) in _dictionary)
                 {
+                    var collectionName = _database.DocumentsStorage.ExtractCollectionName(context, items[0].Collection);
+
                     foreach (var item in items)
                     {
-                        if (collectionName == default)
-                        {
-                            collectionName = _database.DocumentsStorage.ExtractCollectionName(context, item.Collection);
-                        }
-
                         using (var slicer = new TimeSeriesStorage.TimeSeriesSlicer(context, docId, item.Name, item.Baseline))
                         {
                             if (tss.TryAppendEntireSegment(context, slicer.TimeSeriesKeySlice, collectionName, item.ChangeVector, item.Segment, item.Baseline))
@@ -381,7 +377,6 @@ namespace Raven.Server.Documents.Handlers
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, item.ChangeVector);
                     }
 
-                    collectionName = default;
                     changes += items.Count;
                 }
 

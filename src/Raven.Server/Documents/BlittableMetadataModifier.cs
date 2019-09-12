@@ -373,7 +373,6 @@ namespace Raven.Server.Documents
                     break;
 
                 case 9: // @counters
-                    SeenCounters = true;
                     // always remove the @counters metadata
                     // not doing so might cause us to have counter on the document but not in the storage.
                     // the counters will be updated when we import the counters themselves
@@ -384,6 +383,26 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
+                    SeenCounters = true;
+
+                    if (reader.Read() == false)
+                    {
+                        _verifyStartArray = true;
+                        _state = State.IgnoreArray;
+                        aboutToReadPropertyName = false;
+                        return true;
+                    }
+                    goto case -2;
+                case 11: // @timeseries
+                    if (OperateOnTypes.HasFlag(DatabaseItemType.TimeSeries) ||
+                        state.StringBuffer[0] != (byte)'@' ||
+                        *(long*)(state.StringBuffer + 1) != 7598247067624761716)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
+                    // remove timeseries names from metadata
                     if (reader.Read() == false)
                     {
                         _verifyStartArray = true;

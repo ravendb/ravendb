@@ -960,7 +960,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.TimeSeries())
             {
-                foreach (var ts in _source.GetTimeSeries())
+                foreach (var ts in _source.GetTimeSeries(_options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.TimeSeries.ReadCount++;

@@ -669,7 +669,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
-                Writer.WriteString(item.ChangeVector, skipEscaping: true);
+                Writer.WriteString(item.ChangeVector);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.Collection));

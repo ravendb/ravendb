@@ -481,7 +481,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeries()
+        public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
         {
             foreach (var reader in ReadArray())
             {

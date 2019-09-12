@@ -340,11 +340,27 @@ namespace Raven.Server.Smuggler.Documents
             return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue);
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeries()
+        public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
         {
             Debug.Assert(_context != null);
 
-            return _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag);
+            if (collectionsToExport?.Count > 0)
+            {
+                foreach (var collection in collectionsToExport)
+                {
+                    foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, collection, _startDocumentEtag))
+                    {
+                        yield return ts;
+                    }
+                }
+
+                yield break;
+            }
+
+            foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag))
+            {
+                yield return ts;
+            }
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)

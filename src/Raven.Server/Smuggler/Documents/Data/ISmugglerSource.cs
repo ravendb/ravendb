@@ -29,7 +29,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
         IEnumerable<SubscriptionState> GetSubscriptions();
-        IEnumerable<TimeSeriesItem> GetTimeSeries();
+        IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport);
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
         IEnumerable<string> GetCompareExchangeTombstones();

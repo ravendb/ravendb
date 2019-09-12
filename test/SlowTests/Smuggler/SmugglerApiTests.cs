@@ -16,7 +16,6 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
@@ -1159,6 +1158,153 @@ namespace SlowTests.Smuggler
             }
         }
 
+        [Fact]
+        public async Task Timeseries_export_should_respect_collection_selection_1()
+        {
+            var file = GetTempFileName();
+            try
+            {
+                var baseline = DateTime.Today;
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "users/1");
+                        await session.StoreAsync(new User(), "users/2");
+                        await session.StoreAsync(new User(), "users/3");
+
+                        await session.StoreAsync(new Order(), "orders/1");
+                        await session.StoreAsync(new Order(), "orders/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline, "watches/1", new[] { 72d });
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMinutes(1), "watches/1", new[] { 72d });
+                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline, "watches/1", new[] { 70d });
+                        session.TimeSeriesFor("users/3").Append("Heartrate", baseline, "watches/1", new[] { 75d });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var exportOptions = new DatabaseSmugglerExportOptions
+                    {
+                        Collections = new List<string>
+                        {
+                            "Orders"
+                        }
+                    };
+
+                    var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(0, stats.CountOfTimeSeriesSegments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task Timeseries_export_should_respect_collection_selection_2()
+        {
+            var file = GetTempFileName();
+            try
+            {
+                var baseline = DateTime.Today;
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "users/1");
+                        await session.StoreAsync(new User(), "users/2");
+                        await session.StoreAsync(new User(), "users/3");
+
+                        await session.StoreAsync(new Order(), "orders/1");
+                        await session.StoreAsync(new Order(), "orders/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline, "watches/1", new[] { 72d });
+                        session.TimeSeriesFor("users/1").Append("Heartrate", baseline.AddMinutes(1), "watches/2", new[] { 72d });
+                        session.TimeSeriesFor("users/2").Append("Heartrate", baseline, "watches/1", new[] { 70d });
+                        session.TimeSeriesFor("users/3").Append("Heartrate", baseline, "watches/1", new[] { 75d });
+
+                        session.TimeSeriesFor("orders/1").Append("Heartrate", baseline, "watches/1", new[] { 72d });
+                        session.TimeSeriesFor("orders/2").Append("Heartrate", baseline, "watches/2", new[] { 70d, 67d });
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var exportOptions = new DatabaseSmugglerExportOptions
+                    {
+                        Collections = new List<string>
+                        {
+                            "Orders"
+                        }
+                    };
+
+                    var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(2, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenSession())
+                    {
+                        var order = session.Load<Order>("orders/1");
+                        var tsNames = session.Advanced.GetTimeSeriesFor(order);
+                        Assert.Equal(1, tsNames.Count);
+                        Assert.Equal("Heartrate", tsNames[0]);
+
+                        var values = session.TimeSeriesFor(order).Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                        Assert.Equal(1, values.Count);
+                        Assert.Equal(1, values[0].Values.Length);
+                        Assert.Equal(72d, values[0].Values[0]);
+                        Assert.Equal(baseline, values[0].Timestamp);
+                        Assert.Equal("watches/1", values[0].Tag);
+
+                        order = session.Load<Order>("orders/2");
+                        tsNames = session.Advanced.GetTimeSeriesFor(order);
+                        Assert.Equal(1, tsNames.Count);
+                        Assert.Equal("Heartrate", tsNames[0]);
+
+                        values = session.TimeSeriesFor(order).Get("Heartrate", DateTime.MinValue, DateTime.MaxValue).ToList();
+                        Assert.Equal(1, values.Count);
+                        Assert.Equal(2, values[0].Values.Length);
+                        Assert.Equal(70d, values[0].Values[0]);
+                        Assert.Equal(67d, values[0].Values[1]);
+                        Assert.Equal(baseline, values[0].Timestamp);
+                        Assert.Equal("watches/2", values[0].Tag);
+
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
         private async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
