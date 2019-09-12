@@ -341,7 +341,7 @@ namespace Raven.Client.Documents.Session
             foreach (var propertyName in document.GetPropertyNames())
             {
                 var propertyType = GetPropertyType(propertyName, rootType);
-                if (propertyType == typeof(JObject))
+                if (propertyType == typeof(JObject) || propertyType == typeof(JArray) || propertyType == typeof(JValue))
                 {
                     // don't simplify the property if it's a JObject
                     continue;
