@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Operations
         public long CountOfCounterEntries { get; set; }
 
         /// <summary>
-        /// Total number of time-series entries in database.
+        /// Total number of time-series segments in database.
         /// </summary>
         public long CountOfTimeSeriesSegments { get; set; }
 

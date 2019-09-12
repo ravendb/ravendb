@@ -382,7 +382,7 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<SubscriptionState>();
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeries()
+        public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
         {
             return Enumerable.Empty<TimeSeriesItem>();
         }

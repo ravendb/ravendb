@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.TimeSeries
             TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)TimeSeriesTable.Etag,
-                Name = DocumentsStorage.CollectionEtagsSlice
+                Name = CollectionTimeSeriesEtagsSlice
             });
         }
 
@@ -1256,11 +1256,11 @@ namespace Raven.Server.Documents.TimeSeries
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
             {
-                yield return CreateTimeSeriesSegmentItem(context, result.Reader);
+                yield return CreateTimeSeriesSegmentItem(context, ref result.Reader);
             }
         }
 
-        private static ReplicationBatchItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, TableValueReader reader)
+        private static ReplicationBatchItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -1287,11 +1287,28 @@ namespace Raven.Server.Documents.TimeSeries
 
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
             {
-                yield return CreateTimeSeriesItem(context, result.Reader);
+                yield return CreateTimeSeriesItem(context, ref result.Reader);
             }
         }
 
-        private static TimeSeriesItem CreateTimeSeriesItem(DocumentsOperationContext context, TableValueReader reader)
+        public IEnumerable<TimeSeriesItem> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+
+            var table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+                yield break;
+
+            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, skip: 0))
+            {
+                yield return CreateTimeSeriesItem(context, ref result.Reader);
+            }
+        }
+
+        private static TimeSeriesItem CreateTimeSeriesItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);

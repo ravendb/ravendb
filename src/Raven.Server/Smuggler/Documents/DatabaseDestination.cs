@@ -40,6 +40,7 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -1557,23 +1558,27 @@ namespace Raven.Server.Smuggler.Documents
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _cmd;
             private TimeSeriesHandler.SmugglerTimeSeriesBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
-            private int _segmentsSize;
-            private readonly int _maxBatchSize;
+            private Size _segmentsSize;
+            private readonly Size _maxBatchSize;
 
             public TimeSeriesActions(DocumentDatabase database)
             {
                 _database = database;
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(database);
 
-                _maxBatchSize = PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
-                    ? 2000 * 1024
-                    : 10_000 * 1024;
+                _maxBatchSize = new Size(
+                    PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
+                        ? 2
+                        : 10,
+                    SizeUnit.Megabytes);
+
+                _segmentsSize = new Size();
             }
 
             private void AddToBatch(TimeSeriesItem item)
             {
                 _cmd.AddToDictionary(item);
-                _segmentsSize += item.Segment.NumberOfBytes;
+                _segmentsSize.Add(item.Segment.NumberOfBytes, SizeUnit.Bytes);
             }
 
             public void Dispose()
@@ -1607,7 +1612,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(_database);
 
-                _segmentsSize = 0;
+                _segmentsSize.Set(0, SizeUnit.Bytes);
             }
 
             private void FinishBatchOfTimeSeries()
@@ -1618,7 +1623,7 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_segmentsSize > 0)
+                if (_segmentsSize.GetValue(SizeUnit.Bytes) > 0)
                 {
                     AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_cmd));
                 }
