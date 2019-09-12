@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Enumerators;
 
 namespace Raven.Server.Smuggler.Documents.Iteration
 {
-    public abstract class CollectionAwareIterationState<T> : IterationState<T>
+    public abstract class CollectionAwareIterationState<T> : PulsedEnumerationState<T>
     {
         protected CollectionAwareIterationState(DocumentsOperationContext context) : base(context)
         {

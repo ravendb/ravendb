@@ -1,9 +1,10 @@
 ﻿using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Enumerators;
 
 namespace Raven.Server.Smuggler.Documents.Iteration
 {
-    public class DocumentConflictsIterationState : IterationState<DocumentConflict>
+    public class DocumentConflictsIterationState : PulsedEnumerationState<DocumentConflict>
     {
         public DocumentConflictsIterationState(DocumentsOperationContext context) : base(context)
         {
