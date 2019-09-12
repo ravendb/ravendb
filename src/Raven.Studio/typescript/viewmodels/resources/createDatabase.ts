@@ -297,50 +297,24 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
-        this.databaseModel.restore.azureCredentials().accountKey.throttle(300).subscribe(() => {
+        this.databaseModel.restore.azureCredentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
         });
-        this.databaseModel.restore.azureCredentials().accountName.throttle(300).subscribe(() => {
+        this.databaseModel.restore.amazonS3Credentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
         });
-        this.databaseModel.restore.azureCredentials().container.throttle(300).subscribe(() => {
+        this.databaseModel.restore.googleCloudCredentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
         });
-        this.databaseModel.restore.azureCredentials().remoteFolder.throttle(300).subscribe(() => {
+        this.databaseModel.restore.localServerCredentials().onCredentialsChange(() => {
             this.updateBackupDirectoryPathOptions();
-        });
-        
-        this.databaseModel.restore.googleCloudCredentials().bucketName.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        this.databaseModel.restore.googleCloudCredentials().googleCredentials.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        this.databaseModel.restore.googleCloudCredentials().remoteFolder.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-
-        this.databaseModel.restore.amazonS3Credentials().accessKey.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        this.databaseModel.restore.amazonS3Credentials().secretKey.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        this.databaseModel.restore.amazonS3Credentials().regionName.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        this.databaseModel.restore.amazonS3Credentials().bucketName.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        this.databaseModel.restore.amazonS3Credentials().remoteFolder.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
         });
         
-        this.databaseModel.restore.localServerCredentials().backupDirectory.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions();
-        });
-        
-        this.databaseModel.restore.source.subscribe(() => {
+        this.databaseModel.restoreSourceObject.subscribe(() => {
             this.updateBackupDirectoryPathOptions();
         });
         
@@ -443,47 +417,13 @@ class createDatabase extends dialogViewModelBase {
         generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
     }  
 
-    updateBackupDirectoryPathOptions() { 
-        switch (this.databaseModel.restore.source()) {
-            case 'local':
-                this.updateLocalFolderPath(this.databaseModel.restore.localServerCredentials().backupDirectory(), true)
-                    .done(result => this.backupFolderPathOptions(result.List));
-                break;
-            case 'azure':
-                if (this.databaseModel.restore.azureCredentials().isValid()) {
-                    this.updateRemoteFolderName(this.databaseModel.restore.azureCredentials().toDto(), "Azure")
-                        .done(result => this.backupFolderPathOptions(result.List));
-                } else {
-                    this.backupFolderPathOptions([]);   
-                }                
-                break;
-            case 'amazonS3':
-                if (this.databaseModel.restore.amazonS3Credentials().isValid()) {
-                    this.updateRemoteFolderName(this.databaseModel.restore.amazonS3Credentials().toDto(), "S3")
-                        .done(result => this.backupFolderPathOptions(result.List));
-                } else {
-                    this.backupFolderPathOptions([]);
-                }
-                break;
-            case 'googleCloud':
-                if (this.databaseModel.restore.googleCloudCredentials().isValid()) {
-                    this.updateRemoteFolderName(this.databaseModel.restore.googleCloudCredentials().toDto(), "GoogleCloud")
-                        .done(result => this.backupFolderPathOptions(result.List));
-                } else {
-                    this.backupFolderPathOptions([]);
-                }
-                break;
-        }
+    updateBackupDirectoryPathOptions() {
+        this.databaseModel.restoreSourceObject().getFolderPathOptions()
+            .done((optionsList: string[]) => this.backupFolderPathOptions(optionsList));
     }
 
     private updateLocalFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
-            .execute();
-    }
-    private updateRemoteFolderName(cred: Raven.Client.Documents.Operations.Backups.BackupSettings,
-                                   type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType)
-                                                         :JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
-        return getFolderPathOptionsCommand.forCloudBackup(cred, type)
             .execute();
     }
     
@@ -629,9 +569,9 @@ class createDatabase extends dialogViewModelBase {
     private createDatabaseFromBackup(): JQueryPromise<operationIdDto> {
         this.spinners.create(true);
 
-        const restoreDocument = this.databaseModel.toRestoreDocumentDto();
+        const restoreInfo = this.databaseModel.toRestoreDatabaseDto();
 
-        return new restoreDatabaseFromBackupCommand(restoreDocument)
+        return new restoreDatabaseFromBackupCommand(restoreInfo)
             .execute()
             .done((operationIdDto: operationIdDto) => {
                 const operationId = operationIdDto.OperationId;
@@ -644,18 +584,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     findRestoreSourceLabel(restoreSource: restoreSource) {
-        switch (restoreSource) {
-            case "local":
-                return this.databaseModel.restore.localServerCredentials().backupStorageTypeText;
-            case "cloud":
-                return this.databaseModel.restore.ravenCloudCredentials().backupStorageTypeText;
-            case "amazonS3":
-                return this.databaseModel.restore.amazonS3Credentials().backupStorageTypeText;
-            case "azure":
-                return this.databaseModel.restore.azureCredentials().backupStorageTypeText;
-            case "googleCloud":
-                return this.databaseModel.restore.googleCloudCredentials().backupStorageTypeText;
-        }
+        return this.databaseModel.restoreSourceObject().backupStorageTypeText;
     }
 
     toggleSelectAll() {

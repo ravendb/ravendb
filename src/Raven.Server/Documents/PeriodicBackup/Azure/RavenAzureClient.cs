@@ -484,7 +484,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                         yield return new BlobProperties
                         {
                             Name = blob.Element("Name")?.Value,
-                            LastModify = Convert.ToDateTime(blob.Element("Properties")?.Element("Last-Modified")?.Value)
+                            LastModified = Convert.ToDateTime(blob.Element("Properties")?.Element("Last-Modified")?.Value)
                         };
                     }
 

@@ -137,16 +137,9 @@ abstract class amazonSettings extends backupSettings {
     createAwsRegionAutoCompleter(hasS3: boolean) {
         return ko.pureComputed(() => {
             let key = this.selectedAwsRegion();
-
             const options = this.availableAwsRegionEndpoints
                 .filter(x => hasS3 ? x.hasS3 : x.hasGlacier)
-                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.value) : true)
-                .map(x => {
-                    return {
-                        label: x.label,
-                        value: x.value
-                    }
-                });
+                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.value) : true);
 
             if (key) {
                 key = key.toLowerCase();
