@@ -13,6 +13,7 @@ namespace Voron.Recovery
         public int ProgressIntervalInSec { get; set; } = 5;
         public bool DisableCopyOnWriteMode { get; set; }
         public bool? IgnoreInvalidJournalErrors { get; set; }
+        public bool IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions { get; set; }
         public LogMode LoggingMode { get; set; } = LogMode.Operations;
 
         public byte[] MasterKey { get; set; }

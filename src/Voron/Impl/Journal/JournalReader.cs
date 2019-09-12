@@ -25,6 +25,8 @@ namespace Voron.Impl.Journal
         private readonly DiffApplier _diffApplier = new DiffApplier();
         private readonly long _journalPagerNumberOfAllocated4Kb;
         private readonly List<EncryptionBuffer> _encryptionBuffers;
+        private TransactionHeader* _firstValidTransactionHeader = null;
+
 
         public bool RequireHeaderUpdate { get; private set; }
 
@@ -54,15 +56,21 @@ namespace Voron.Impl.Journal
             if (_readAt4Kb >= _journalPagerNumberOfAllocated4Kb)
                 return false;
 
-            TransactionHeader* current;
-            if (TryReadAndValidateHeader(options, out current) == false)
+            if (TryReadAndValidateHeader(options, out TransactionHeader* current) == false)
             {
                 var lastValid4Kb = _readAt4Kb;
                 _readAt4Kb++;
+
                 while (_readAt4Kb < _journalPagerNumberOfAllocated4Kb)
                 {
                     if (TryReadAndValidateHeader(options, out current))
                     {
+                        if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        {
+                            SkipCurrentTransaction(current);
+                            return true;
+                        }
+
                         RequireHeaderUpdate = true;
                         break;
                     }
@@ -72,21 +80,16 @@ namespace Voron.Impl.Journal
                 _readAt4Kb = lastValid4Kb;
                 return false;
             }
-            bool performDecompression = current->CompressedSize != -1;
 
-            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
-
-            var transactionSizeIn4Kb =
-                (size + sizeof(TransactionHeader)) / (4*Constants.Size.Kilobyte) +
-                ((size + sizeof(TransactionHeader)) % (4*Constants.Size.Kilobyte) == 0 ? 0 : 1);
-
-
-            if (current->TransactionId <= _journalInfo.LastSyncedTransactionId)
+            if (IsAlreadySyncTransaction(current))
             {
-                _readAt4Kb += transactionSizeIn4Kb;
-                LastTransactionHeader = current;
-                return true; // skipping
+                SkipCurrentTransaction(current);
+                return true;
             }
+
+            var performDecompression = current->CompressedSize != -1;
+
+            var transactionSizeIn4Kb = GetTransactionSizeIn4Kb(current);
 
             _readAt4Kb += transactionSizeIn4Kb;
             
@@ -229,6 +232,29 @@ namespace Voron.Impl.Journal
             return true;
         }
 
+        private void SkipCurrentTransaction(TransactionHeader* current)
+        {
+            var transactionSizeIn4Kb = GetTransactionSizeIn4Kb(current);
+
+            _readAt4Kb += transactionSizeIn4Kb;
+            LastTransactionHeader = current;
+        }
+
+        private bool IsAlreadySyncTransaction(TransactionHeader* current)
+        {
+            return _journalInfo.LastSyncedTransactionId != -1 && current->TransactionId <= _journalInfo.LastSyncedTransactionId;
+        }
+
+        private static long GetTransactionSizeIn4Kb(TransactionHeader* current)
+        {
+            var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
+
+            var transactionSizeIn4Kb =
+                (size + sizeof(TransactionHeader)) / (4 * Constants.Size.Kilobyte) +
+                ((size + sizeof(TransactionHeader)) % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1);
+            return transactionSizeIn4Kb;
+        }
+
         private void ThrowInvalidChecksumOnPageFromJournal(long pageNumber, TransactionHeader* current, ulong expectedChecksum, ulong checksum, PageHeader* pageHeader)
         {
             var message =
@@ -333,7 +359,7 @@ namespace Voron.Impl.Journal
 
                 // if the header marker is zero or garbage, we are probably in the area at the end of the log file, and have no additional log records
                 // to read from it. This can happen if the next transaction was too big to fit in the current log file. We stop reading
-                // this log file and move to the next one, or it might have happened becuase of reuse of journal file 
+                // this log file and move to the next one, or it might have happened because of reuse of journal file 
 
                 // note : we might encounter a "valid" TransactionHeaderMarker which is still garbage, so we will test that later on
 
@@ -345,7 +371,6 @@ namespace Voron.Impl.Journal
                 return false;
 
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
-
             bool hashIsValid;
             if (options.EncryptionEnabled)
             {
@@ -372,6 +397,16 @@ namespace Voron.Impl.Journal
                 }
                 catch (InvalidOperationException ex)
                 {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    {
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Unable to decrypt data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            "Safely continuing the startup recovery process.",
+                            ex);
+
+                        return true;
+                    }
+
                     RequireHeaderUpdate = true;
                     options.InvokeRecoveryError(this, "Transaction " + current->TransactionId + " was not committed", ex);
                     return false;
@@ -393,7 +428,18 @@ namespace Voron.Impl.Journal
                 // this is first transaction being processed in the recovery process
 
                 if (_journalInfo.LastSyncedTransactionId == -1 || current->TransactionId <= _journalInfo.LastSyncedTransactionId)
+                {
+                    if (hashIsValid == false && CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    {
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Invalid hash of data of first transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            "Safely continuing the startup recovery process.", null);
+
+                        return true;
+                    }
+
                     return hashIsValid;
+                }
 
                 lastTxId = _journalInfo.LastSyncedTransactionId;
             }
@@ -404,13 +450,36 @@ namespace Voron.Impl.Journal
             if (current->TransactionId != 1)
             {
                 if (txIdDiff < 0)
+                {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    {
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            "Safely continuing the startup recovery process.", null);
+
+                        return true;
+                    }
+
                     return false;
+                }
 
                 if (txIdDiff > 1 || txIdDiff == 0)
                 {
                     if (hashIsValid)
                     {
-                        // TxId is bigger then the last one by nore the '1' but has valid hash which mean we lost transactions in the middle
+                        // TxId is bigger then the last one by more than '1' but has valid hash which mean we lost transactions in the middle
+
+                        if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                        {
+                            // when running in ignore data integrity errors mode then we could skip corrupted but already sync data
+                            // so it's expected in this case that txIdDiff > 1, let it continue to work then
+
+                            options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                                $"Encountered integrity error of transaction data which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                                "Safely continuing the startup recovery process.", null);
+
+                            return true;
+                        }
 
                         if (LastTransactionHeader != null)
                         {
@@ -427,16 +496,49 @@ namespace Voron.Impl.Journal
 
                 // if (txIdDiff == 1) :
                 if (current->LastPageNumber <= 0)
+                {
+                    if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                    {
+                        options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                            $"Invalid last page number ({current->LastPageNumber}) in the header of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                            "Safely continuing the startup recovery process.", null);
+
+                        return true;
+                    }
+
                     throw new InvalidDataException("Last page number after committed transaction must be greater than 0");
+                }
             }
 
             if (hashIsValid == false)
             {
+                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options))
+                {
+                    options.InvokeIntegrityErrorOfAlreadySyncedData(this,
+                        $"Invalid hash of data of transaction which has been already synced (tx id: {current->TransactionId}, last synced tx: {_journalInfo.LastSyncedTransactionId}, journal: {_journalInfo.CurrentJournal}). " +
+                        "Safely continuing the startup recovery process.", null);
+
+                    return true;
+                }
+
                 RequireHeaderUpdate = true;
                 return false;
             }
 
+            if (_firstValidTransactionHeader == null) 
+                _firstValidTransactionHeader = current;
+
             return true;
+        }
+
+        private bool CanIgnoreDataIntegrityErrorBecauseTxWasSynced(TransactionHeader* currentTx, StorageEnvironmentOptions options)
+        {
+            // if we have a journal which contains transactions that has been synced and this is the case for current transaction 
+            // then we can continue the recovery regardless encountered errors
+
+            return options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions &&
+                   IsAlreadySyncTransaction(currentTx) &&
+                   (_firstValidTransactionHeader == null || currentTx->TransactionId > _firstValidTransactionHeader->TransactionId); // when reusing journal we might encounter a transaction with valid Id but it comes from already deleted (and reused journal)
         }
 
         private TransactionHeader* EnsureTransactionMapped(TransactionHeader* current, long pageNumber, long positionInsidePage)
@@ -458,25 +560,37 @@ namespace Voron.Impl.Journal
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
             if (size < 0)
             {
-                RequireHeaderUpdate = true;
-                // negative size is not supported
-                options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
+                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options) == false)
+                {
+                    RequireHeaderUpdate = true;
+                    // negative size is not supported
+                    options.InvokeRecoveryError(this, $"Compresses size {current->CompressedSize} is negative", null);
+                }
+               
                 return false;
             }
             if (size > (_journalPagerNumberOfAllocated4Kb - _readAt4Kb) * 4 * Constants.Size.Kilobyte)
             {
-                // we can't read past the end of the journal
-                RequireHeaderUpdate = true;
-                var compressLabel = (current->CompressedSize != -1) ? "Compressed" : "Uncompressed";
-                options.InvokeRecoveryError(this, $"Size {size} ({compressLabel}) is too big for the journal size {_journalPagerNumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte}", null);
+                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options) == false)
+                {
+                    // we can't read past the end of the journal
+                    RequireHeaderUpdate = true;
+                    var compressLabel = (current->CompressedSize != -1) ? "Compressed" : "Uncompressed";
+                    options.InvokeRecoveryError(this,
+                        $"Size {size} ({compressLabel}) is too big for the journal size {_journalPagerNumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte}", null);
+                }
+
                 return false;
             }
 
             ulong hash = Hashing.XXHash64.Calculate(dataPtr, (ulong)size, (ulong)current->TransactionId);
             if (hash != current->Hash)
             {
-                RequireHeaderUpdate = true;
-                options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
+                if (CanIgnoreDataIntegrityErrorBecauseTxWasSynced(current, options) == false)
+                {
+                    RequireHeaderUpdate = true;
+                    options.InvokeRecoveryError(this, "Invalid hash signature for transaction: " + current->ToString(), null);
+                }
 
                 return false;
             }

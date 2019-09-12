@@ -571,6 +571,27 @@ namespace Raven.Server.ServerWide
                     AlertType.RecoveryError,
                     NotificationSeverity.Error,
                     "Recovery Error System");
+
+                if (NotificationCenter.IsInitialized)
+                {
+                    NotificationCenter.Add(alert);
+                }
+                else
+                {
+                    storeAlertForLateRaise.Add(alert);
+                }
+            };
+
+            options.OnIntegrityErrorOfAlreadySyncedData += (obj, e) =>
+            {
+                var alert = AlertRaised.Create(
+                    null,
+                    "Integrity error of already synced data - System Storage",
+                    e.Message,
+                    AlertType.IntegrityErrorOfAlreadySyncedData,
+                    NotificationSeverity.Warning,
+                    "Integrity Error of Synced Data - System");
+
                 if (NotificationCenter.IsInitialized)
                 {
                     NotificationCenter.Add(alert);
@@ -622,6 +643,7 @@ namespace Raven.Server.ServerWide
             options.SyncJournalsCountThreshold = Configuration.Storage.SyncJournalsCountThreshold;
             options.IgnoreInvalidJournalErrors = Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 

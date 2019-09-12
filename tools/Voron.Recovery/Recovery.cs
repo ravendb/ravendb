@@ -67,6 +67,7 @@ namespace Voron.Recovery
             result.ManualFlushing = true;
             result.ManualSyncing = true;
             result.IgnoreInvalidJournalErrors = _config.IgnoreInvalidJournalErrors;
+            result.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = _config.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
             result.MasterKey = _masterKey;
             return result;
         }

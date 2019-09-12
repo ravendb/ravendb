@@ -1,34 +1,36 @@
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.Indexes.Static.Extensions;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromS3 : RestoreBackupTaskBase
+    public class RestoreFromAzure : RestoreBackupTaskBase
     {
-        private readonly RavenAwsS3Client _client;
+        private readonly RavenAzureClient _client;
         private readonly string _remoteFolderName;
-
-        public RestoreFromS3(ServerStore serverStore, RestoreFromS3Configuration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
+        public RestoreFromAzure(ServerStore serverStore, RestoreFromAzureConfiguration restoreFromConfiguration, string nodeTag, OperationCancelToken operationCancelToken) : base(serverStore, restoreFromConfiguration, nodeTag, operationCancelToken)
         {
-            _client = new RavenAwsS3Client(restoreFromConfiguration.Settings);
+            _client = new RavenAzureClient(restoreFromConfiguration.Settings);
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 
         protected override async Task<Stream> GetStream(string path)
         {
-            var blob = await _client.GetObjectAsync(path);
+            var blob = await _client.GetBlobAsync(path);
             return blob.Data;
         }
 
         protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
-            var blob = await _client.GetObjectAsync(path);
+            var blob = await _client.GetBlobAsync(path);
             return new ZipArchive(blob.Data, ZipArchiveMode.Read);
         }
 
@@ -39,9 +41,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<List<string>> GetFilesForRestore()
         {
-            var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName.TrimEnd('/') + "/";
-            var allObjects = await _client.ListAllObjectsAsync(prefix, string.Empty, false);
-            return allObjects.Select(x => x.FullPath).ToList();
+            var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName;
+            var allObjects = await _client.ListBlobs(prefix, string.Empty, false);
+            return allObjects.ListBlob.Select(x => new string(x.Name)).ToList();
         }
 
         protected override string GetBackupPath(string fileName)
@@ -58,7 +60,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             return _remoteFolderName;
         }
-
         protected override void Dispose()
         {
             using (_client)

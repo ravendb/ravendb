@@ -2,7 +2,6 @@
 import configuration = require("configuration");
 import restorePoint = require("models/resources/creation/restorePoint");
 import clusterNode = require("models/database/cluster/clusterNode");
-import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 import validateNameCommand = require("commands/resources/validateNameCommand");
@@ -11,7 +10,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
 import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
-import cloudBackupCredentials = require("models/resources/creation/cloudBackupCredentials");
+import backupCredentials = require("models/resources/creation/backupCredentials");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -70,36 +69,52 @@ class databaseCreationModel {
     canCreateEncryptedDatabases: KnockoutObservable<boolean>;
 
     restore = {
-        source: ko.observable<restoreSource>("serverLocal"),
-        backupLink: ko.observable<string>(),
-        isBackupLinkValid: ko.observable<boolean>(true),
-        cloudBackupCredentials: ko.observable<cloudBackupCredentials>(), 
-        backupDirectory: ko.observable<string>().extend({ throttle: 500 }),
-        backupDirectoryError: ko.observable<string>(null),
-        lastFailedBackupDirectory: null as string,
-        selectedRestorePoint: ko.observable<restorePoint>(),
-        selectedRestorePointText: ko.pureComputed<string>(() => {
-            const restorePoint = this.restore.selectedRestorePoint();
-            if (!restorePoint) {
-                return null;
-            }
+        source: ko.observable<restoreSource>('local'),
+        
+        localServerCredentials: ko.observable<backupCredentials.localServerCredentials>(backupCredentials.localServerCredentials.empty()),
+        azureCredentials: ko.observable<backupCredentials.azureCredentials>(backupCredentials.azureCredentials.empty()),
+        amazonS3Credentials: ko.observable<backupCredentials.amazonS3Credentials>(backupCredentials.amazonS3Credentials.empty()),
+        googleCloudCredentials: ko.observable<backupCredentials.googleCloudCredentials>(backupCredentials.googleCloudCredentials.empty()),
+        ravenCloudCredentials: ko.observable<backupCredentials.ravenCloudCredentials>(backupCredentials.ravenCloudCredentials.empty()),
 
-            const text: string = `${restorePoint.dateTime}, ${restorePoint.backupType()} Backup`;
-            return text;
-        }),
-        restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
-        isFocusOnBackupDirectory: ko.observable<boolean>(),
-        restorePointsCount: ko.observable<number>(0),
         disableOngoingTasks: ko.observable<boolean>(false),
         skipIndexes: ko.observable<boolean>(false),
         requiresEncryption: undefined as KnockoutComputed<boolean>,
-        backupEncryptionKey: ko.observable<string>(),
-        decodedS3Credentials: ko.observable<Raven.Client.Documents.Operations.Backups.S3Settings>()
+        backupEncryptionKey: ko.observable<string>(),        
+        lastFailedFolderName: null as string,
+
+        restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
+        restorePointsCount: ko.observable<number>(0),
+        restorePointError: ko.observable<string>(),        
+        selectedRestorePoint: ko.observable<restorePoint>(),
+        
+        restorePointButtonText: ko.pureComputed<string>(() => {
+            const count = this.restore.restorePointsCount();
+            
+            if (this.spinners.fetchingRestorePoints()) {
+                // case 1: Loading restore points
+                return "Loading restore points...";
+            } else if (count === 0) {
+                // case 2: No restore points fetched yet
+                return `Enter ${this.restoreSourceObject().mandatoryFieldsText} above to continue`;
+            } else {
+                // case 3: Restore points found
+                const restorePoint = this.restore.selectedRestorePoint();
+                if (!restorePoint) {
+                    const text: string  = `Select restore point... (${count.toLocaleString()} ${count > 1 ? 'options' : 'option'})`;
+                    return text;
+                }
+                
+                const text: string = `${restorePoint.dateTime}, ${restorePoint.backupType()} Backup`;
+                return text;
+            }
+        })
     };
+
+    restoreSourceObject: KnockoutComputed<backupCredentials.restoreSettings>; 
     
     restoreValidationGroup = ko.validatedObservable({ 
         selectedRestorePoint: this.restore.selectedRestorePoint,
-        backupDirectory: this.restore.backupDirectory,
         backupEncryptionKey: this.restore.backupEncryptionKey
     });
     
@@ -172,6 +187,16 @@ class databaseCreationModel {
         this.creationMode = mode;
         this.canCreateEncryptedDatabases = canCreateEncryptedDatabases;
         this.isFromBackupOrFromOfflineMigration = mode !== "newDatabase";
+
+        this.restoreSourceObject = ko.pureComputed(() => {
+            switch (this.restore.source()) {
+                case 'local': return this.restore.localServerCredentials();
+                case 'cloud': return this.restore.ravenCloudCredentials();
+                case 'amazonS3': return this.restore.amazonS3Credentials();
+                case 'azure': return this.restore.azureCredentials();
+                case 'googleCloud': return this.restore.googleCloudCredentials();
+            }
+        });
         
         const legacyMigrationConfig = this.configurationSections.find(x => x.id === "legacyMigration");
         legacyMigrationConfig.validationGroup = this.legacyMigrationValidationGroup;
@@ -181,7 +206,7 @@ class databaseCreationModel {
         
         const encryptionConfig = this.getEncryptionConfigSection();
         encryptionConfig.validationGroup = this.encryptionValidationGroup;
-
+        
         const replicationConfig = this.configurationSections.find(x => x.id === "replication");
         replicationConfig.validationGroup = this.replicationValidationGroup;
 
@@ -193,7 +218,7 @@ class databaseCreationModel {
                 this.replication.replicationFactor(this.replication.nodes().length);
             }
         });
-        
+
         this.replication.nodes.subscribe(nodes => {
             this.replication.replicationFactor(nodes.length);
         });
@@ -204,52 +229,19 @@ class databaseCreationModel {
             }
         });
 
-        this.restore.backupDirectory.subscribe(() => {
-            if (this.restore.source() === "serverLocal") {
-                this.fetchRestorePoints(true);
-            }
+        this.restoreSourceObject.subscribe(() =>  {
+            this.clearRestorePoints();
+            this.restore.restorePointError(null);
+            this.fetchRestorePoints(true);
         });
         
-        this.restore.decodedS3Credentials.subscribe((credentials) => {
-            if (this.restore.source() === "cloud" && credentials) {
-                this.fetchRestorePoints(false);
+        // Raven Cloud - Backup Link 
+        this.restore.ravenCloudCredentials().onCredentialsChange((backupLinkNewValue) => {
+            if (!!_.trim(backupLinkNewValue)) {
+                this.downloadCloudCredentials(backupLinkNewValue)
+            } else {
+                this.clearRestorePoints();
             }
-        });
-        
-        this.restore.backupLink.subscribe(link => {
-            if (!!_.trim(link)) {
-                this.downloadCloudCredentials(link) 
-            }
-        });
-        
-        this.restore.cloudBackupCredentials.subscribe((cloudBackupCredentials) => {
-            if (!!cloudBackupCredentials) {
-                this.tryDecodeS3Credentials(cloudBackupCredentials.toDto());
-            }
-        });
-
-        let isFirst = true;
-        this.restore.isFocusOnBackupDirectory.subscribe(hasFocus => {
-            if (isFirst) {
-                isFirst = false;
-                return;
-            }
-
-            if (this.creationMode !== "restore")
-                return;
-
-            if (hasFocus)
-                return;
-
-            const backupDirectory = this.restore.backupDirectory();
-            if (!this.restore.backupDirectory.isValid() &&
-                backupDirectory === this.restore.lastFailedBackupDirectory)
-                return;
-
-            if (!backupDirectory)
-                return;
-
-            this.fetchRestorePoints(false);
         });
         
         this.restore.selectedRestorePoint.subscribe(restorePoint => {
@@ -260,7 +252,6 @@ class databaseCreationModel {
             try {
                 if (restorePoint) {
                     if (restorePoint.isEncrypted) {
-                        
                         if (restorePoint.isSnapshotRestore) {
                             // encrypted snapshot - we are forced to encrypt newly created database 
                             // it requires license and https
@@ -294,24 +285,39 @@ class databaseCreationModel {
             }
         });
         
-        _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupPathHasChanged", 
+        _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged", "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged", 
             "legacyMigrationDataDirectoryHasChanged", "dataExporterPathHasChanged", "journalsPathHasChanged");
     }
-
+    
     downloadCloudCredentials(link: string) {
         this.spinners.backupCredentialsLoading(true);
         
         new getCloudBackupCredentialsFromLinkCommand(link)
             .execute()
             .fail(() =>  {
-                this.restore.cloudBackupCredentials(null);
-                this.restore.isBackupLinkValid(false);
+                this.restore.ravenCloudCredentials().isBackupLinkValid(false);
+                this.clearRestorePoints();
             })
             .done((cloudCredentials) => {
-                this.restore.cloudBackupCredentials(new cloudBackupCredentials(cloudCredentials));
-                this.restore.isBackupLinkValid(true);
+                // todo: decode the cloud credentials and set appropriate type accordingly - todo later when we support the other types
+                this.restore.ravenCloudCredentials().setAmazonS3Credentials(cloudCredentials);
+                this.restore.ravenCloudCredentials().isBackupLinkValid(true);
+                this.fetchRestorePoints(true);
             })
             .always(() => this.spinners.backupCredentialsLoading(false));
+    }
+
+    backupDirectoryHasChanged(value: string) {
+        this.restore.localServerCredentials().backupDirectory(value);
+    }
+    remoteFolderAzureChanged(value: string) {
+        this.restore.azureCredentials().remoteFolder(value);
+    }
+    remoteFolderAmazonChanged(value: string) {
+        this.restore.amazonS3Credentials().remoteFolder(value);
+    }
+    remoteFolderGoogleCloudChanged(value: string) {
+        this.restore.googleCloudCredentials().remoteFolder(value);
     }
     
     dataPathHasChanged(value: string) {
@@ -327,13 +333,6 @@ class databaseCreationModel {
         //try to continue autocomplete flow
         this.legacyMigration.dataExporterFullPathHasFocus(true);
     }
-    
-    backupPathHasChanged(value: string) {
-        this.restore.backupDirectory(value);
-        
-        // try to continue autocomplete flow
-        this.restore.isFocusOnBackupDirectory(true);
-    }
 
     legacyMigrationDataDirectoryHasChanged(value: string) {
         this.legacyMigration.dataDirectory(value);
@@ -348,32 +347,17 @@ class databaseCreationModel {
         //try to continue autocomplete flow
         this.legacyMigration.journalsPathHasFocus(true);
     }
-
-    private tryDecodeS3Credentials(credentials: any) {
-        try {
-            //TODO: do some duck typing to check if we have correct format
-
-            this.restore.decodedS3Credentials(credentials);
-        } catch (e) {
-            console.warn(e);
-        }
-    }
-
-    private createRestorePointCommand(skipReportingError: boolean) {
-        switch (this.restore.source()) {
-            case "serverLocal":
-                return getRestorePointsCommand.forServerLocal(this.restore.backupDirectory(), skipReportingError);
-            case "cloud":
-                return getRestorePointsCommand.forS3Backup(this.restore.decodedS3Credentials(), skipReportingError);
-        }
-    }
     
-    private fetchRestorePoints(skipReportingError: boolean) {
-        if (!skipReportingError) {
-            this.spinners.fetchingRestorePoints(true);
+    fetchRestorePoints(skipReportingError: boolean) {
+        if (!this.restoreSourceObject().isValid()) {
+            this.clearRestorePoints();
+            return;
         }
+        
+        this.spinners.fetchingRestorePoints(true);
+        this.restore.restorePointError(null);
 
-        this.createRestorePointCommand(skipReportingError)
+        this.restoreSourceObject().fetchRestorePointsCommand() 
             .execute()
             .done((restorePoints: Raven.Server.Documents.PeriodicBackup.Restore.RestorePoints) => {
                 const groups: Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }> = [];
@@ -391,21 +375,26 @@ class databaseCreationModel {
                 this.restore.restorePoints(groups);
                 this.restore.selectedRestorePoint(null);
                 this.restore.backupEncryptionKey("");
-                this.restore.backupDirectoryError(null);
-                this.restore.lastFailedBackupDirectory = null;
+                this.restore.restorePointError(null);
+                this.restore.lastFailedFolderName = null;
                 this.restore.restorePointsCount(restorePoints.List.length);
             })
             .fail((response: JQueryXHR) => {
                 const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
-                this.restore.backupDirectoryError(generalUtils.trimMessage(messageAndOptionalException.message));
-                this.restore.lastFailedBackupDirectory = this.restore.backupDirectory();
-                this.restore.restorePoints([]);
+                this.restore.restorePointError(generalUtils.trimMessage(messageAndOptionalException.message)); 
+                this.restore.lastFailedFolderName = this.restoreSourceObject().folderContent();
+                this.clearRestorePoints();
                 this.restore.backupEncryptionKey("");
-                this.restore.restorePointsCount(0);
             })
             .always(() => this.spinners.fetchingRestorePoints(false));
     }
 
+    private clearRestorePoints() {
+        this.restore.restorePoints([]);
+        this.restore.restorePointsCount(0);
+        this.restore.selectedRestorePoint(null);
+    }
+    
     getEncryptionConfigSection() {
         return this.configurationSections.find(x => x.id === "encryption");
     }
@@ -523,51 +512,48 @@ class databaseCreationModel {
             required: true
         });
         
-        this.restore.backupLink.extend({
+        this.restore.ravenCloudCredentials().backupLink.extend({
             required: {
-                onlyIf: () => this.creationMode === "restore" && 
-                              this.restore.source() === "cloud"
+                onlyIf: (value: string) => _.trim(value) === ""
             },
             validation: [
                 {
-                    validator: () => this.restore.isBackupLinkValid(),
+                    validator: () => this.spinners.backupCredentialsLoading() || this.restore.ravenCloudCredentials().isValid(),
                     message: "Failed to get link credentials"
                 }
             ]
         });
         
-        this.restore.backupDirectory.extend({
+        this.restore.localServerCredentials().backupDirectory.extend({
             required: {
-                onlyIf: () => this.creationMode === "restore" 
-                    && this.restore.restorePoints().length === 0
-                    && this.restore.source() !== "cloud"
-            },
+                onlyIf: () => this.restore.restorePoints().length === 0 
+            }
+        });    
+                
+        this.restore.selectedRestorePoint.extend({
             validation: [
                 {
-                    validator: (_: string) => {
-                        return this.creationMode === "restore" && !this.restore.backupDirectoryError();
-                    },
-                    message: "Couldn't fetch restore points, {0}",
-                    params: this.restore.backupDirectoryError
-                }
-            ]
-        });
-
-        this.restore.selectedRestorePoint.extend({
-            required: {
-                onlyIf: () => this.creationMode === "restore"
-            },
-            validation: [
+                    validator: () => this.restoreSourceObject().isValid(),
+                    message: "Please enter valid source data"
+                },
+                {
+                    validator: () => !this.restore.restorePointError(),
+                    message: `Couldn't fetch restore points, {0}`,
+                    params: this.restore.restorePointError
+                },
                 {
                     validator: (restorePoint: restorePoint) => {
-                        const isEncryptedSnapshot = restorePoint.isEncrypted && restorePoint.isSnapshotRestore;
-                        if (isEncryptedSnapshot) {
+                        if (restorePoint && restorePoint.isEncrypted && restorePoint.isSnapshotRestore) {
                             // check if license supports that
                             return licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption;
                         }
                         return true;
                     },
                     message: "License doesn't support storage encryption"
+                },
+                {
+                    validator: (value: string) => !!value,
+                    message: "This field is required"
                 }
             ]
         });
@@ -665,10 +651,6 @@ class databaseCreationModel {
         this.restore.selectedRestorePoint(restorePoint);
     }
 
-    getRestorePointTitle(restorePoint: restorePoint) {
-        return restorePoint.dateTime;
-    }
-
     toDto(): Raven.Client.ServerWide.DatabaseRecord {
         const settings: dictionary<string> = {};
         const dataDir = _.trim(this.path.dataPath());
@@ -686,7 +668,7 @@ class databaseCreationModel {
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
-    toRestoreDocumentDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase {
+    toRestoreDatabaseDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
 
         const restorePoint = this.restore.selectedRestorePoint();
@@ -729,21 +711,8 @@ class databaseCreationModel {
             EncryptionKey: databaseEncryptionKey,
             BackupEncryptionSettings: encryptionSettings
         } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
-
-        switch (this.restore.source()) {
-            case "serverLocal" :
-                const localConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
-                localConfiguration.BackupLocation = restorePoint.location;
-                (localConfiguration as any as restoreTypeAware).Type = "Local" as Raven.Client.Documents.Operations.Backups.RestoreType; 
-                return localConfiguration;
-            case "cloud":
-                const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
-                s3Configuration.Settings = this.restore.decodedS3Credentials();
-                (s3Configuration as any as restoreTypeAware).Type = "S3" as Raven.Client.Documents.Operations.Backups.RestoreType;
-                return s3Configuration;
-            default:
-                throw new Error("Unhandled source: " + this.restore.source());
-        }
+        
+        return this.restoreSourceObject().getConfigurationForRestoreDatabase(baseConfiguration, restorePoint.location);
     }
     
     toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {

@@ -64,9 +64,8 @@ class createDatabase extends dialogViewModelBase {
     recentPathsAutocomplete: lastUsedAutocomplete;
     dataExporterAutocomplete: lastUsedAutocomplete;
     
-    folderPathOptions = ko.observableArray<string>([]);
     dataExporterDirectoryPathOptions = ko.observableArray<string>([]);
-    backupDirectoryPathOptions = ko.observableArray<string>([]);
+    backupFolderPathOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
     
     allAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
@@ -132,8 +131,8 @@ class createDatabase extends dialogViewModelBase {
 
         const dataPath = this.databaseModel.path.dataPath();
         this.updateDatabaseLocationInfo(this.databaseModel.name(), dataPath);
-        this.updateFolderPathOptions(dataPath);
-        this.updateBackupDirectoryPathOptions(dataPath);
+        
+        this.updateBackupDirectoryPathOptions();
         
         if (this.databaseModel.creationMode === "legacyMigration") {
             this.updateLegacyMigrationDataDirectoryPathOptions(this.databaseModel.legacyMigration.dataDirectory());
@@ -193,7 +192,7 @@ class createDatabase extends dialogViewModelBase {
                 // update database encryption key to match backup encryption key
                 this.databaseModel.encryption.key(key);
             }
-        })
+        });
     }
 
     private setDefaultReplicationFactor(topology: clusterTopology) {
@@ -278,7 +277,6 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.path.dataPath.throttle(300).subscribe(newPath => {
             if (this.databaseModel.path.dataPath.isValid()) {
                 this.updateDatabaseLocationInfo(this.databaseModel.name(), newPath);
-                this.updateFolderPathOptions(newPath);
             } else {
                 this.databaseLocationInfo([]);
                 this.spinners.databaseLocationInfoLoading(false);
@@ -299,26 +297,33 @@ class createDatabase extends dialogViewModelBase {
             }
         });
 
-        this.databaseModel.restore.source.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        this.databaseModel.restore.azureCredentials().onCredentialsChange(() => {
+            this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
         });
-
-        this.databaseModel.restore.cloudBackupCredentials.throttle(300).subscribe(() => {
-            this.updateBackupDirectoryPathOptions(this.databaseModel.restore.backupDirectory());
+        this.databaseModel.restore.amazonS3Credentials().onCredentialsChange(() => {
+            this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
+        });
+        this.databaseModel.restore.googleCloudCredentials().onCredentialsChange(() => {
+            this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
+        });
+        this.databaseModel.restore.localServerCredentials().onCredentialsChange(() => {
+            this.updateBackupDirectoryPathOptions();
+            this.databaseModel.fetchRestorePoints(true);
         });
         
-        this.databaseModel.restore.backupDirectory.throttle(300).subscribe(newPath => {
-            this.updateBackupDirectoryPathOptions(newPath);
+        this.databaseModel.restoreSourceObject.subscribe(() => {
+            this.updateBackupDirectoryPathOptions();
         });
         
         this.databaseModel.legacyMigration.dataDirectory.throttle(300).subscribe(newPath => {
             this.updateLegacyMigrationDataDirectoryPathOptions(newPath);
         });
-        
         this.databaseModel.legacyMigration.dataExporterFullPath.throttle(300).subscribe(newPath => {
            this.updateLegacyDataExporterPath(newPath); 
         });
-        
         this.databaseModel.legacyMigration.journalsPath.throttle(300).subscribe(newPath => {
             this.updateSourceJournalsPathOptions(newPath);
         });
@@ -371,7 +376,7 @@ class createDatabase extends dialogViewModelBase {
                 result.push({ path: p, isRecent: true });
             });
 
-            const pathOptions = this.folderPathOptions();
+            const pathOptions = this.backupFolderPathOptions();
             pathOptions.forEach(p => {
                 result.push({ path: p, isRecent: false });
             });
@@ -410,37 +415,30 @@ class createDatabase extends dialogViewModelBase {
             });
         
         generalUtils.delayedSpinner(this.spinners.databaseLocationInfoLoading, task);
+    }  
+
+    updateBackupDirectoryPathOptions() {
+        this.databaseModel.restoreSourceObject().getFolderPathOptions()
+            .done((optionsList: string[]) => this.backupFolderPathOptions(optionsList));
     }
-    
-    private updateFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
+
+    private updateLocalFolderPath(path: string, backupFolder = false): JQueryPromise<Raven.Server.Web.Studio.FolderPathOptions> {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
-
-    updateFolderPathOptions(path: string) {
-        this.updateFolderPath(path)
-            .done(result => this.folderPathOptions(result.List));
-    }
-
-    updateBackupDirectoryPathOptions(path: string) {
-        if (this.databaseModel.restore.source() === "serverLocal") {
-            this.updateFolderPath(path, true)
-                .done(result => this.backupDirectoryPathOptions(result.List));
-        }
-    }
     
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {
-        this.updateFolderPath(path)
+        this.updateLocalFolderPath(path)
             .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
     }
     
     updateLegacyDataExporterPath(path: string) {
-        this.updateFolderPath(path)
+        this.updateLocalFolderPath(path)
             .done(result => this.dataExporterDirectoryPathOptions(result.List));
     }
 
     updateSourceJournalsPathOptions(path: string) {
-        this.updateFolderPath(path)
+        this.updateLocalFolderPath(path)
             .done(result => this.sourceJournalsPathOptions(result.List));
     }
 
@@ -571,9 +569,9 @@ class createDatabase extends dialogViewModelBase {
     private createDatabaseFromBackup(): JQueryPromise<operationIdDto> {
         this.spinners.create(true);
 
-        const restoreDocument = this.databaseModel.toRestoreDocumentDto();
+        const restoreInfo = this.databaseModel.toRestoreDatabaseDto();
 
-        return new restoreDatabaseFromBackupCommand(restoreDocument)
+        return new restoreDatabaseFromBackupCommand(restoreInfo)
             .execute()
             .done((operationIdDto: operationIdDto) => {
                 const operationId = operationIdDto.OperationId;
@@ -586,12 +584,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     findRestoreSourceLabel(restoreSource: restoreSource) {
-        switch (restoreSource) {
-            case "cloud":
-                return "Cloud";
-            case "serverLocal":
-                return "Server local directory";
-        }
+        return this.databaseModel.restoreSourceObject().backupStorageTypeText;
     }
 
     toggleSelectAll() {
