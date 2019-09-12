@@ -853,6 +853,31 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
+        public void ThrowOnClusterTransactionWithTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Aviv1" }, "users/1-A");
+                    session.TimeSeriesFor("users/1-A").Append("Heartrate", DateTime.Today, "watches/apple", new []{ 55d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = session.Load<User>("users/1-A");
+                    user.Name = "karmel";
+                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    Assert.Equal(typeof(NotSupportedException), e.InnerException.GetType());
+                }
+            }
+        }
+
+        [Fact]
         public async Task ModifyDocumentWithRevision()
         {
             using (var store = GetDocumentStore())

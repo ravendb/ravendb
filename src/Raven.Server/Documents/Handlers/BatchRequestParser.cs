@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.Handlers
 
             public bool SeenCounters;
             public bool SeenAttachments;
+            public bool SeenTimeSeries;
+
             public ForceRevisionStrategy ForceRevisionCreationStrategy;
 
             [JsonIgnore]
@@ -459,6 +461,8 @@ namespace Raven.Server.Documents.Handlers
                         commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.SeenAttachments = modifier.SeenAttachments;
                         commandData.SeenCounters = modifier.SeenCounters;
+                        commandData.SeenTimeSeries = modifier.SeenTimeSeries;
+
                         break;
                     case CommandPropertyName.Patch:
                         while (parser.Read() == false)
