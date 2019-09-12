@@ -162,6 +162,7 @@ namespace Raven.Server.Documents
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += documentDatabase.HandleOnDatabaseRecoveryError;
+            options.OnIntegrityErrorOfAlreadySyncedData += documentDatabase.HandleOnDatabaseIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.TimeToSyncAfterFlushInSec = (int)configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;

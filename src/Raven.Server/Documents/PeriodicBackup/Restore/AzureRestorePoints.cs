@@ -1,28 +1,27 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public class S3RestorePoints : RestorePointsBase
+    public class AzureRestorePoints : RestorePointsBase
     {
-        private readonly RavenAwsS3Client _client;
-
-        public S3RestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, S3Settings s3Settings) : base(sortedList, context)
+        private readonly RavenAzureClient _client;
+        public AzureRestorePoints(SortedList<DateTime, RestorePoint> sortedList, TransactionOperationContext context, AzureSettings azureSettings) : base(sortedList, context)
         {
-            _client = new RavenAwsS3Client(s3Settings);
+            _client = new RavenAzureClient(azureSettings);
         }
 
         public override async Task FetchRestorePoints(string path)
         {
-            path = path.TrimEnd('/');
-            var objects = await _client.ListAllObjectsAsync(string.IsNullOrEmpty(path) ? "" : path + "/", "/", true);
-            var folders = objects.Select(x => x.FullPath).ToList();
+            var objects = await _client.ListBlobs(path, "/", true);
+            var folders = objects.ListBlob.ToList();
 
             if (folders.Count == 0)
             {
@@ -32,27 +31,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 foreach (var folder in folders)
                 {
-                    await FetchRestorePointsForPath(folder, assertLegacyBackups: true);
+                    await FetchRestorePointsForPath(folder.Name, assertLegacyBackups: true);
                 }
             }
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)
         {
-            path = path.TrimEnd('/');
-
-            var allObjects = await _client.ListAllObjectsAsync(path + "/", string.Empty, false);
+            var allObjects = await _client.ListBlobs(path ,string.Empty, false);
 
             var filesInfo = new List<FileInfoDetails>();
 
-            foreach (var obj in allObjects)
+            foreach (var obj in allObjects.ListBlob)
             {
-                if (TryExtractDateFromFileName(obj.FullPath, out var lastModified) == false)
-                    lastModified = Convert.ToDateTime(obj.LastModifiedAsString);
+                if (TryExtractDateFromFileName(obj.Name, out var lastModified) == false)
+                    lastModified = Convert.ToDateTime(obj.LastModified);
 
                 filesInfo.Add(new FileInfoDetails
                 {
-                    FullPath = obj.FullPath,
+                    FullPath = obj.Name,
                     LastModified = lastModified
                 });
             }
@@ -70,7 +67,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
-            var blob = await _client.GetObjectAsync(filePath);
+            var blob = await _client.GetBlobAsync(filePath);
             return new ZipArchive(blob.Data, ZipArchiveMode.Read);
         }
 

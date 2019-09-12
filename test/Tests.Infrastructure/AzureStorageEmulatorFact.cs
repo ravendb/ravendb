@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using FastTests;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 using Xunit;
@@ -27,8 +28,9 @@ namespace Tests.Infrastructure
 
             KillAzureStorageEmulator();
             InitializeAzureStorageEmulator();
+            RavenAzureClient.TestMode = true;
         }
-
+         
         public AzureStorageEmulatorFact([CallerMemberName] string memberName = "")
         {
             if (PlatformDetails.RunningOnPosix)

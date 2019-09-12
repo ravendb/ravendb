@@ -62,6 +62,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         CpuUsageExtensionPointError,
         TcpListenerError,
 
-        Throttling_CpuCreditsBalance
+        Throttling_CpuCreditsBalance,
+
+        IntegrityErrorOfAlreadySyncedData
     }
 }

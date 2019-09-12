@@ -88,5 +88,20 @@ namespace Raven.Client.Util
                 yield return property;
             }
         }
+
+        internal static MemberInfo GetPropertyOrFieldFor(Type type, BindingFlags bindingFlags, string name)
+        {
+            var field = type.GetField(name, bindingFlags);
+            if (field != null)
+            {
+                var compilerGeneratedField = field.CustomAttributes.Any(x => x.AttributeType == typeof(CompilerGeneratedAttribute));
+                if (compilerGeneratedField)
+                    return null;
+
+                return field;
+            }
+
+            return type.GetProperty(name, bindingFlags);
+        }
     }
 }

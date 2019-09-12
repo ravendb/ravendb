@@ -41,6 +41,7 @@ namespace Raven.Server.Documents
 
             options.OnNonDurableFileSystemError += db.HandleNonDurableFileSystemError;
             options.OnRecoveryError += db.HandleOnConfigurationRecoveryError;
+            options.OnIntegrityErrorOfAlreadySyncedData += db.HandleOnConfigurationIntegrityErrorOfAlreadySyncedData;
             options.CompressTxAboveSizeInBytes = db.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ConfigurationVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Configuration, this, null, null);
@@ -58,6 +59,7 @@ namespace Raven.Server.Documents
             options.SyncJournalsCountThreshold = db.Configuration.Storage.SyncJournalsCountThreshold;
             options.IgnoreInvalidJournalErrors = db.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = db.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = db.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
 

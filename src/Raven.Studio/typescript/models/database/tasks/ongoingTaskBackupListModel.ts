@@ -69,10 +69,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         
         this.editUrl = ko.pureComputed(()=> {
              const urls = appUrl.forCurrentDatabase();
-             
-             return this.isServerWide() ?  appUrl.forEditServerWideBackup(this.taskName().replace(ongoingTaskBackupListModel.serverWideNamePrefixFromServer +', ', '')) :
-                                           // Using replace() above since the Server-Wide view is using tasks name *without* the prefix...
-                                           urls.editPeriodicBackupTask(this.taskId)();
+
+             return urls.editPeriodicBackupTask(this.taskId)();
         });
 
         this.isBackupNowEnabled = ko.pureComputed(() => {
@@ -285,10 +283,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             });
 
         app.showBootstrapDialog(confirmDeleteViewModel);
-    }
-
-    navigateToServerWideBackupsListView() {
-        router.navigate(appUrl.forServerWideBackupList());
     }
 }
 
