@@ -50,6 +50,7 @@ namespace Raven.Server.Documents
 
         public bool SeenCounters;
         public bool SeenAttachments;
+        public bool SeenTimeSeries;
 
         private JsonOperationContext _ctx;
         private LazyStringValue _metadataCollections;
@@ -403,6 +404,9 @@ namespace Raven.Server.Documents
                     }
 
                     // remove timeseries names from metadata
+
+                    SeenTimeSeries = true;
+
                     if (reader.Read() == false)
                     {
                         _verifyStartArray = true;
@@ -852,6 +856,7 @@ namespace Raven.Server.Documents
             NonPersistentFlags = NonPersistentDocumentFlags.None;
             SeenAttachments = false;
             SeenCounters = false;
+            SeenTimeSeries = false;
             _depth = 0;
             _state = State.None;
             _readingMetadataObject = false;

@@ -145,6 +145,9 @@ namespace Raven.Server.Documents.Handlers
 
                             if (document.SeenCounters)
                                 throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
+
+                            if (document.SeenTimeSeries)
+                                throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
                         }
                         break;
                     default:
