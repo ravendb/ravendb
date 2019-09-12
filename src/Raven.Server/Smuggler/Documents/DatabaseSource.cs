@@ -140,7 +140,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, int.MaxValue);
                 },
-                new DocumentsIterationState(_context) // initial state
+                new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
                     StartEtag = _startDocumentEtag, 
                     StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
@@ -187,7 +187,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, int.MaxValue);
                 },
-                new DocumentsIterationState(_context) // initial state
+                new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
                     StartEtag = _startDocumentEtag,
                     StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
@@ -259,7 +259,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     return _database.DocumentsStorage.GetTombstonesFrom(_context, state.StartEtag, 0, int.MaxValue);
                 },
-                new TombstonesIterationState(_context)
+                new TombstonesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
                 {
                     StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
                 });
@@ -298,7 +298,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     return _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, state.StartEtag);
                 },
-                new DocumentConflictsIterationState(_context)
+                new DocumentConflictsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
                 {
                     StartEtag = _startDocumentEtag,
                 });
@@ -408,7 +408,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, state.StartEtag, 0, int.MaxValue);
                 },
-                new CountersIterationState(_context) // initial state
+                new CountersIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
                     StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
                 });

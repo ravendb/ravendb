@@ -1,12 +1,13 @@
 ﻿using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
+using Sparrow;
 
 namespace Raven.Server.Documents.Handlers.Streaming
 {
     public class DocsStreamingIterationState : PulsedEnumerationState<Document>
     {
-        public DocsStreamingIterationState(DocumentsOperationContext context) : base(context)
+        public DocsStreamingIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {
         }
 
