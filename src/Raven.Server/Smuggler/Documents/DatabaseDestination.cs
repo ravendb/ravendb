@@ -1568,8 +1568,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 _maxBatchSize = new Size(
                     PlatformDetails.Is32Bits || database.Configuration.Storage.ForceUsing32BitsPager
-                        ? 2
-                        : 10,
+                        ? 1
+                        : 16,
                     SizeUnit.Megabytes);
 
                 _segmentsSize = new Size();
