@@ -39,10 +39,14 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
         {
-            return new DocumentsTransaction(this,
+            var clonedTransaction = new DocumentsTransaction(this,
                 _documentDatabase.DocumentsStorage.Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator),
                 _documentDatabase.Changes
-                );
+            );
+
+            previous.Dispose();
+
+            return clonedTransaction;
         }
 
         protected override DocumentsTransaction CreateReadTransaction()

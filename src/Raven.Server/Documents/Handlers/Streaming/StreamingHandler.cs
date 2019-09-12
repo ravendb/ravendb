@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         }
 
                         if (state.LastIteratedEtag != null)
-                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take);
+                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value - 1, state.Take);
 
                         return Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
                     },
