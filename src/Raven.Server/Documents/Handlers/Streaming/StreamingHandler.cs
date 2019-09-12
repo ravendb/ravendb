@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
 
                 if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
-                    initialState = new DocsStreamingIterationState(context)
+                    initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
                     {
                         StartsWith = HttpContext.Request.Query["startsWith"],
                         Excludes = HttpContext.Request.Query["excludes"],
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 }
                 else // recent docs
                 {
-                    initialState = new DocsStreamingIterationState(context)
+                    initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
                     {
                         Start = start,
                         Take = pageSize

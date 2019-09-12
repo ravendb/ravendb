@@ -7,14 +7,13 @@ namespace Raven.Server.Utils.Enumerators
     public abstract class PulsedEnumerationState<T>
     {
         protected readonly DocumentsOperationContext Context;
+        private readonly Size _pulseLimit;
 
-        protected PulsedEnumerationState(DocumentsOperationContext context)
+        protected PulsedEnumerationState(DocumentsOperationContext context, Size pulseLimit)
         {
             Context = context;
+            _pulseLimit = pulseLimit;
         }
-
-        protected readonly Size PulseLimit = new Size(16, SizeUnit.Megabytes); // TODO arek - make it configurable
-
 
         public int ReadCount { get; set; }
 
@@ -25,7 +24,7 @@ namespace Raven.Server.Utils.Enumerators
                 var size = Context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize() +
                            Context.Transaction.InnerTransaction.LowLevelTransaction.TotalEncryptionBufferSize;
 
-                if (size > PulseLimit)
+                if (size > _pulseLimit)
                 {
                     return true;
                 }

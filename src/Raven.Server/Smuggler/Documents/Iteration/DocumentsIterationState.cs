@@ -1,11 +1,12 @@
 ﻿using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 
 namespace Raven.Server.Smuggler.Documents.Iteration
 {
     public class DocumentsIterationState : CollectionAwareIterationState<Document>
     {
-        public DocumentsIterationState(DocumentsOperationContext context) : base(context)
+        public DocumentsIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {
         }
 
