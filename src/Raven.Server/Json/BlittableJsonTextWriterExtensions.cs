@@ -1225,6 +1225,7 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
+
                 WriteDocument(writer, context, documents.Current, metadataOnly);
             }
 

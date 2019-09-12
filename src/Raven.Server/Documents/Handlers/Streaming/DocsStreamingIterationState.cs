@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
         {
             Take--;
             LastIteratedEtag = current.Etag;
+            ReadCount++;
         }
     }
 }

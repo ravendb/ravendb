@@ -18,7 +18,11 @@ namespace Raven.Server.ServerWide.Context
 
         protected override RavenTransaction CloneReadTransaction(RavenTransaction previous)
         {
-            return new RavenTransaction(_environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator));
+            var clonedTx = new RavenTransaction(_environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator));
+
+            previous.Dispose();
+
+            return clonedTx;
         }
 
         protected override RavenTransaction CreateReadTransaction()
