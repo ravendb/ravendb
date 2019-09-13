@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 using FastTests.Voron;
 using Sparrow.Utils;
@@ -21,7 +22,7 @@ namespace SlowTests.Voron
             options.OnIntegrityErrorOfAlreadySyncedData += (sender, args) =>
             {
                 _onIntegrityErrorOfAlreadySyncedDataHandlerWasCalled = true;
-            }; // just shut it up
+            };
             options.ManualSyncing = true;
             options.ManualFlushing = true;
             options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
@@ -405,6 +406,46 @@ namespace SlowTests.Voron
             CorruptJournal(lastJournal, sizeof(TransactionHeader) + 5, Constants.Size.Kilobyte * 4 * 5);
 
             Assert.Throws<InvalidJournalException>(StartDatabase);
+        }
+
+        [Fact]
+        public void ShouldNotInvokeIntegrityError()
+        {
+            Directory.CreateDirectory(DataDir);
+
+            ExtractFile(DataDir);
+
+            var options = StorageEnvironmentOptions.ForPath(DataDir);
+
+            options.OnIntegrityErrorOfAlreadySyncedData += (sender, args) =>
+            {
+                _onIntegrityErrorOfAlreadySyncedDataHandlerWasCalled = true;
+            };
+
+            options.ManualSyncing = true;
+            options.ManualFlushing = true;
+            options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
+            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = true;
+
+            using (var storage = new StorageEnvironment(options))
+            {
+                Assert.False(_onIntegrityErrorOfAlreadySyncedDataHandlerWasCalled);
+            }
+        }
+
+        private static void ExtractFile(string directory)
+        {
+            var fileName = "storage-with-reused-journal-and-synced-data.zip";
+
+            var fullZipPath = Path.Combine(directory, fileName);
+
+            using (var file = File.Create(fullZipPath))
+            using (var stream = typeof(RavenDB_13940).Assembly.GetManifestResourceStream($"SlowTests.Data.RavenDB_13940.{fileName}"))
+            {
+                stream.CopyTo(file);
+            }
+
+            ZipFile.ExtractToDirectory(fullZipPath, directory);
         }
 
         private void CorruptJournal(long journal, long position, int numberOfCorruptedBytes = Constants.Size.Kilobyte * 4, byte value = 42)

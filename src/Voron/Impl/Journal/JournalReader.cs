@@ -438,6 +438,9 @@ namespace Voron.Impl.Journal
                         return true;
                     }
 
+                    if (hashIsValid && _firstValidTransactionHeader == null)
+                        _firstValidTransactionHeader = current;
+
                     return hashIsValid;
                 }
 
