@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using McMaster.Extensions.CommandLineUtils;
@@ -116,14 +117,12 @@ namespace Raven.Server.Utils.Cli
 
         private static bool ParseSwitchOption(CommandOption opt)
         {
-            var val = opt.Values.FirstOrDefault();
-            if (val == "on")
+            if (opt.OptionType != CommandOptionType.NoValue)
             {
-                return true;
+                throw new ArgumentException($"Option {opt.ShortName} | {opt.LongName} is not a valid switch ");
             }
 
-            bool.TryParse(val, out bool result);
-            return result;
+            return opt.HasValue();
         }
     }
 }
