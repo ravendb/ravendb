@@ -40,6 +40,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Json
 {
@@ -181,6 +182,9 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, GoogleCloudSettings> GoogleCloudSettings = GenerateJsonDeserializationRoutine<GoogleCloudSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, FtpSettings> FtpSettings = GenerateJsonDeserializationRoutine<FtpSettings>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerStatistics> ServerStatistics = GenerateJsonDeserializationRoutine<ServerStatistics>();
+
 
         public class Parameters
         {
