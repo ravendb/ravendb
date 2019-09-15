@@ -61,7 +61,6 @@ namespace SlowTests.Issues
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
             }
 
-            const int minutes = 2;
             var rnd = new Random();
             var index = rnd.Next(0, Servers.Count - 1);
             using (var store = new DocumentStore
@@ -82,7 +81,7 @@ namespace SlowTests.Issues
 
                 // wait until all dbs become idle
                 var now = DateTime.Now;
-                var nextNow = now + TimeSpan.FromSeconds(180);
+                var nextNow = now + TimeSpan.FromSeconds(300);
                 while (now < nextNow && GetIdleCount() < 3)
                 {
                     Thread.Sleep(3000);
@@ -92,8 +91,8 @@ namespace SlowTests.Issues
 
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
-                    FullBackupFrequency = $"*/{minutes} * * * *",
-                    IncrementalBackupFrequency = $"*/{minutes} * * * *",
+                    FullBackupFrequency = "*/2 * * * *",
+                    IncrementalBackupFrequency = "*/2 * * * *",
                     LocalSettings = new LocalSettings
                     {
                         FolderPath = backupPath
@@ -115,7 +114,7 @@ namespace SlowTests.Issues
 
             // wait for the backup occurrence
             var now1 = DateTime.Now;
-            var nextNow1 = now1 + TimeSpan.FromSeconds(60 * minutes + 15);
+            var nextNow1 = now1 + TimeSpan.FromSeconds(300);
             var count = 0;
             while (now1 < nextNow1 && count < 3)
             {
