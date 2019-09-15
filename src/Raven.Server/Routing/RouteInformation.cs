@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -121,21 +120,12 @@ namespace Raven.Server.Routing
                 if (context.Database == null)
                     DatabaseDoesNotExistException.Throw(databaseName.Value);
 
-                if (context.Database?.DatabaseShutdown.IsCancellationRequested == false)
-                {
-                    ClearIdleDatabase(context, context.Database.Name);
-                    return Task.CompletedTask;
-                }
-
-                return UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
+                return context.Database?.DatabaseShutdown.IsCancellationRequested == false
+                    ? Task.CompletedTask
+                    : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
             }
 
             return UnlikelyWaitForDatabaseToLoad(context, database, databasesLandlord, databaseName);
-        }
-
-        private void ClearIdleDatabase(RequestHandlerContext context, string databaseName)
-        {
-            context.RavenServer.ServerStore.IdleDatabases.TryRemove(databaseName, out _);
         }
 
         private async Task UnlikelyWaitForDatabaseToUnload(RequestHandlerContext context, DocumentDatabase database,
@@ -169,8 +159,6 @@ namespace Raven.Server.Routing
             context.Database = await database;
             if (context.Database == null)
                 DatabaseDoesNotExistException.Throw(databaseName.Value);
-
-            ClearIdleDatabase(context, context.Database.Name);
         }
 
         private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)
