@@ -26,7 +26,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -1252,7 +1251,7 @@ namespace Raven.Server.Web.System
                 await CreateDatabase(databaseName, configuration.DatabaseRecord, context, 1, null, RaftIdGenerator.NewId());
             }
 
-            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, ignoreDisabledDatabase: true);
             if (database == null)
             {
                 throw new DatabaseDoesNotExistException($"Can't import into database {databaseName} because it doesn't exist.");

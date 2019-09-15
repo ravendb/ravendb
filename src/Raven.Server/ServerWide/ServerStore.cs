@@ -13,8 +13,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -64,6 +66,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform;
@@ -72,7 +75,6 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
-using Sparrow.Platform;
 
 namespace Raven.Server.ServerWide
 {
@@ -1010,6 +1012,37 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicenseLimits();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
+                case nameof(PutServerWideBackupConfigurationCommand):
+                    RescheduleTimerForIdleDatabases(t.Index);
+                    break;
+            }
+        }
+
+        private void RescheduleTimerForIdleDatabases(long taskId)
+        {
+            if (IdleDatabases.IsEmpty)
+                return;
+
+            foreach (var db in IdleDatabases.Keys)
+            {
+                PeriodicBackupConfiguration backupConfig;
+                DatabaseTopology topology;
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
+                {
+                    topology = rawRecord.GetTopology();
+                    backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
+                }
+
+                var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
+                if (Engine.Tag == tag)
+                {
+                    var wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(SystemTime.UtcNow);
+                    var dueTime = (int)(wakeup - DateTime.UtcNow).TotalMilliseconds;
+
+                    DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
+                }
             }
         }
 

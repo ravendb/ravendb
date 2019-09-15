@@ -253,7 +253,7 @@ namespace Raven.Server.Documents
 
         public long LastTransactionId => DocumentsStorage.Environment.CurrentReadTransactionId;
 
-        public void Initialize(InitializeOptions options = InitializeOptions.None)
+        public void Initialize(InitializeOptions options = InitializeOptions.None, DateTime? wakeup = null)
         {
             try
             {
@@ -282,7 +282,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
 
-                PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
+                PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, _addToInitLog);
