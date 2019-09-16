@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -191,7 +193,7 @@ namespace Voron.Debugging
 
             if (PlatformDetails.RunningOnPosix == false)
             {
-                var process = new Process
+                using (var process = new RavenProcess
                 {
                     StartInfo =
                     {
@@ -201,20 +203,22 @@ namespace Voron.Debugging
                         CreateNoWindow = true,
                         RedirectStandardError = true,
                     }
-                };
-                process.Start();
+                })
+                {
+                    process.Start(CancellationToken.None);
+                }
+
                 return;
             }
 
             if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("open", output);
+                RavenProcess.Start("open", output);
             }
             else
             {
-                Process.Start("xdg-open", output);
+                RavenProcess.Start("xdg-open", output);
             }
-
         }
 
         private unsafe static void RenderFixedSizeTreePage(LowLevelTransaction tx, FixedSizeTreePage page, TextWriter sw, FixedSizeTreeHeader.Large* header, string text, bool open)

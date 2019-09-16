@@ -20,8 +20,8 @@ rvn_kill_process(void* pid, int32_t* detailed_error_code) {
 }
 
 EXPORT int32_t
-rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, int32_t* detailed_error_code) {
-    DWORD rc = WaitForSingleObject(pid, timeout_ms);
+rvn_wait_for_close_process(void* pid, int32_t timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
+    DWORD rc = WaitForSingleObject(pid, timeout_seconds * 1000);
     
     if (rc == WAIT_TIMEOUT)
     {

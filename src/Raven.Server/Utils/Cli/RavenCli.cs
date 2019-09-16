@@ -299,7 +299,7 @@ namespace Raven.Server.Utils.Cli
             WriteText("Opening Studio at: ", TextColor, cli, newLine: false);
             WriteText(url, UserInputColor, cli);
 
-            BrowserHelper.OpenStudioInBrowser(url, onError: errorMessage => WriteError($"{errorMessage}", cli));
+            BrowserHelper.OpenStudioInBrowser(cli._server.ServerStore, onError: errorMessage => WriteError($"{errorMessage}", cli));
 
             return true;
         }

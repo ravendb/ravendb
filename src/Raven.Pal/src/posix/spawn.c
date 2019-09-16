@@ -27,22 +27,24 @@
 #define MSEC_TO_NANOSEC(x) ((x % 1000) * 1000000)
 
 PRIVATE char** 
-parse_cmd_line(char* line)
+parse_cmd_line(char* line, char *filename)
 {
+    int argc = 2;
+    char** argv = malloc(argc);
+    argv[0] = filename;
+    argv[--argc] = NULL;    
     if (line == NULL || *line == '\0')
-        return NULL;
-
-    char** argv = malloc(strlen(line)*2);
-    char * pch;
-    int argc = 1;    
+        return argv;
     
+    char * pch;
     pch = strtok (line," \t\n");
     while (pch != NULL)
     {        
         argv[argc++] = pch;
         pch = strtok (NULL, " \t\n");
+        argv = realloc(argv, argc + 1);
     }  
-    argv[argc] = 0;
+    argv[argc] = NULL;
 
     return argv;
 }
@@ -118,8 +120,13 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     sigset_t signal_set;
     sigset_t old_signal_set;
 
-    char **argv = parse_cmd_line(cmdline);
-    argv[0] = (char *)filename;
+    char *modified = malloc(strlen(filename) + 3);
+    *modified = '\0';
+    if (filename[0] != '/')
+        strcpy(modified, "./");
+    strcat(modified, (char *)filename);
+
+    char **argv = parse_cmd_line(cmdline, modified);
 
     int32_t rc = SUCCESS;
 
@@ -178,7 +185,7 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
         if (result == -1)
             ExitChild(waitForChildToExecPipe[1], errno);
         
-        execvp(filename, argv);
+        execvp(modified, argv);
         ExitChild(waitForChildToExecPipe[1], errno);
     }
 
@@ -228,26 +235,28 @@ error_cleanup:
         *pid = (void*)(intptr_t)-1;
     }
 
+    free(modified);
+
     pthread_setcancelstate(thread_cancel_state, &thread_cancel_state);
 
     return rc;
 }
 
 EXPORT int32_t
-rvn_kill_process(void* pid, int32_t* detailed_error_code) {
-    int rc = kill(*(pid_t*)pid, 9);
+rvn_kill_process(void* pid, int32_t* detailed_error_code) {    
+    int rc = kill((pid_t)(int64_t)(int *)pid, 9);
     if (rc != 0) {
         *detailed_error_code = errno;
         return FAIL_KILL;
     }
     /* calling this to observe the statuc code of the process*/
-    waitpid(*(pid_t*)pid, &rc, WNOHANG);
+    waitpid((pid_t)(int64_t)(int *)pid, &rc, WNOHANG);
     return SUCCESS;
 }
 
 EXPORT int32_t
-rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, int32_t* detailed_error_code) {
-    sigset_t child_mask;
+rvn_wait_for_close_process(void* pid, int32_t timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
+    /* sigset_t child_mask;
     sigemptyset(&child_mask);
     sigaddset(&child_mask, SIGCHLD);
     time_t timeout_sec = MSEC_TO_SEC(timeout_ms);
@@ -258,21 +267,30 @@ rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, in
 
     struct timespec houndrad_ms;
     houndrad_ms.tv_sec = 0;
-    houndrad_ms.tv_nsec = MSEC_TO_NANOSEC(timeout_ms);
+    houndrad_ms.tv_nsec = MSEC_TO_NANOSEC(250);
 
     struct timespec remaining;
-    /*busy wait for proc to end, can't use 'sigtimedwait' on OS X*/
+    busy wait for proc to end, can't use 'sigtimedwait' on OS X
     while (1) {
-        pid_t result = waitpid((pid_t)((int64_t)pid), &status, WNOHANG);
-        if (result != -1)
-            break;
+        pid_t endId = waitpid((pid_t)((int64_t)pid), &status, WNOHANG);
+        if (endId == -1)
+        {
+            *detailed_error_code = errno;
+            if(errno == ECHILD)
+                return FAIL_CHILD_PROCESS_FAILURE;
+            return FAIL_WAIT_PID;
+        }
+
+        if (endId == (int64_t)pid)
+            break;        
 
         if (difftime(time(NULL), start) >= timeout_sec)
         {
             *detailed_error_code = errno;
             return FAIL_TIMEOUT;
         }
-        nanosleep((const struct timespec*)&houndrad_ms,&remaining);
+    
+        nanosleep((const struct timespec*)&houndrad_ms,&remaining);    
     }
 
     *detailed_error_code = status;
@@ -288,4 +306,41 @@ rvn_wait_for_close_process(void* pid, int32_t timeout_ms, int32_t* exit_code, in
         *exit_code = WSTOPSIG(status);
     }
     return FAIL_WAIT_PID;
+    */
+
+    int status;
+    pid_t endID, childID = (pid_t)((int64_t)pid);
+        
+    time_t start = time(NULL);
+    while(difftime(time(NULL), start) <= timeout_seconds)
+    {
+        endID = waitpid(childID, &status, WNOHANG|WUNTRACED);
+        if (endID == -1) 
+        {
+            *detailed_error_code = errno;
+            return FAIL_WAIT_PID;
+        }
+        else if (endID == 0) /* child still running         */
+        {
+              sleep(1);
+        }
+        else if (endID == childID)  /* child ended                 */
+        {        
+            if (WIFEXITED(status))
+            {
+                *exit_code = WEXITSTATUS(status);
+                return SUCCESS;
+            }
+            
+            if (WIFSIGNALED(status) || WIFSTOPPED(status))
+            {
+                *exit_code = WIFSIGNALED(status) || WIFSTOPPED(status);
+                return FAIL_CHILD_PROCESS_FAILURE;
+            }
+            *exit_code = -1;
+            return SUCCESS;
+        }        
+    }
+   
+    return FAIL_TIMEOUT;
 }

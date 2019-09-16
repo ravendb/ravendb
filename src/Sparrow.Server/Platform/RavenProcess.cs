@@ -9,54 +9,48 @@ using Sparrow.Logging;
 
 namespace Sparrow.Server.Platform
 {
-    public class RavenProcess
+    public class ProcessExitedEventArgs : EventArgs
     {
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenProcess>("RavenProcess");
-        private EventHandler _onExited;
+        public int ExitCode { get; set; }
+        public IntPtr Pid { get; set; }
+    }
 
-        public IntPtr Pid { get; }
-        private SafeFileHandle StandardOutAndErr { get; set; }
-        public SafeFileHandle StandardIn { get; set; }
+    public class LineOutputEventArgs : EventArgs
+    {
+        public string line { get; set; }
+    }
+
+    public class RavenProcess : IDisposable
+    {
         public ProcessStartInfo StartInfo { get; set; }
-        public int ExitCode = -1;
-        public bool HasExited;
+        private bool _hasExited;
 
-        public event EventHandler Exited
+        public event EventHandler ProcessExited;
+        private void OnProcessExited(EventArgs e)
         {
-            add { this._onExited += value; }
-            remove { this._onExited -= value; }
+            EventHandler handler = ProcessExited;
+            handler?.Invoke(this, e);
         }
 
-        public CancellationTokenSource cts = new CancellationTokenSource();
-
-        public void WaitForClose()
+        public event EventHandler LineOutput;
+        private void OnLineOutput(EventArgs e, CancellationToken ctk)
         {
-            Console.WriteLine("ADIADI::WaitForClose : " + StartInfo.FileName + " " + StartInfo.Arguments);
-            while (true)
+            if (ctk.IsCancellationRequested == false)
             {
-                if (cts.Token.IsCancellationRequested)
-                    break;
-                var rc = Pal.rvn_wait_for_close_process(Pid, 1000, out var exitCode, out var errorCode);
-                if (rc != PalFlags.FailCodes.FailTimeout)
-                {
-                    HasExited = true;
-                    ExitCode = exitCode;
-                    _onExited?.Invoke(this, new EventArgs());
-                    break;
-                }
+                EventHandler handler = LineOutput;
+                handler?.Invoke(this, e);
             }
-            Console.WriteLine("ADIADI::WaitForClose(Exit) : " + StartInfo.FileName + " " + StartInfo.Arguments);
         }
 
-        public RavenProcess Start(Task waitForCloseTask)
-        {
-            var rc = Start();
-            waitForCloseTask.Start();
-            return rc;
-        }
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenProcess>("RavenProcess");
+        private IntPtr Pid = IntPtr.Zero;
+        private SafeFileHandle StandardOutAndErr { get; set; }
+        private SafeFileHandle StandardIn { get; set; }
+        private CancellationToken _ctk;
 
-        public RavenProcess Start(bool dumpStdoutToConsole = true)
+        public void Start(CancellationToken ctk)
         {
+            _ctk = ctk;
             if (StartInfo?.FileName == null)
                 throw new InvalidOperationException("RavenProcess Start() must be supplied with valid startInfo object and set Filename");
 
@@ -65,29 +59,18 @@ namespace Sparrow.Server.Platform
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, $"Failed to spawn command '{StartInfo.FileName} {StartInfo.Arguments}'");
 
-            if (dumpStdoutToConsole)
-            {
-                ReadTo(Console.Out);
-            }
-
+            Pid = pid;
             StandardOutAndErr = stdout;
             StandardIn = stdin;
-
-            return this;
         }
 
-        public static RavenProcess Start(string filename, string arguments, bool dumpStdoutToConsole = true)
+        public static void Start(string filename, string arguments)
         {
-            var ravenProcess = new RavenProcess {StartInfo = new ProcessStartInfo {FileName = filename, Arguments = arguments}};
-
-            return ravenProcess.Start(dumpStdoutToConsole);
-        }
-
-        public static RavenProcess Start(ProcessStartInfo startInfo, bool dumpStdoutToConsole = true)
-        {
-            var ravenProcess = new RavenProcess();
-            ravenProcess.StartInfo = startInfo;
-            return ravenProcess.Start(dumpStdoutToConsole);
+            using (var ravenProcess = new RavenProcess {StartInfo = new ProcessStartInfo {FileName = filename, Arguments = arguments}})
+            {
+                ravenProcess.Start(CancellationToken.None);
+                ravenProcess.ReadTo(Console.Out);
+            }
         }
 
         private void ReadTo(TextWriter output)
@@ -117,100 +100,146 @@ namespace Sparrow.Server.Platform
             }
         }
 
-        public bool WaitForExit(int timeoutInMs)
-        {
-            Console.WriteLine("ADIADI::WaitForExit : " + StartInfo.FileName + " " + StartInfo.Arguments);
-            var rc = Pal.rvn_wait_for_close_process(Pid, timeoutInMs, out var exitCode, out var errorCode);
-            if (rc == PalFlags.FailCodes.Success)
-            {
-                HasExited = true;
-                return true;
-            }
-
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"For {StartInfo.FileName}");
-            return false;
-
-        }
-
-        public void Kill()
+        private void Kill()
         {
             Console.WriteLine("ADIADI::Kill : " + StartInfo.FileName + " " + StartInfo.Arguments);
-            var rc = Pal.rvn_kill_process(Pid, out var errorCode);
-            if (rc != PalFlags.FailCodes.Success)
-                PalHelper.ThrowLastError(rc, errorCode, $"Failed to spawn command '{StartInfo.FileName} {StartInfo.Arguments}'");
+            if (Pid != IntPtr.Zero)
+            {
+                var rc = Pal.rvn_kill_process(Pid, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to kill proc id={Pid.ToInt64()}. Command: '{StartInfo.FileName} {StartInfo.Arguments}'");
+            }
         }
 
-        public static void Execute(string command, string arguments, MemoryStream ms, int timeoutInMs)
+        public static void Execute(string command, string arguments, int pollingTimeoutInSeconds, EventHandler exitHandler, EventHandler lineOutputHandler, CancellationToken ctk)
         {
             Console.WriteLine("ADIADI::Execute " + command + " " + arguments);
             var startInfo = new ProcessStartInfo
             {
                 FileName = command,
-                Arguments = arguments,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
+                Arguments = arguments
             };
 
-            RavenProcess process;
+            using (var process = new RavenProcess { StartInfo = startInfo })
+            {
+                if (exitHandler != null)
+                    process.ProcessExited += exitHandler;
+                if (lineOutputHandler != null)
+                    process.LineOutput += lineOutputHandler;
 
-            try
-            {
-                process = RavenProcess.Start(startInfo);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Unable to get cpu credits by executing {command} {arguments}. Failed to start process.", e);
-            }
+                process.Start(ctk);
 
-            var readErrors = process.ReadToEndAsync();
-            using (var fs = new FileStream(process.StandardOutAndErr, FileAccess.Read))
-            {
-                string GetStdError()
+                using (var fs = new FileStream(process.StandardOutAndErr, FileAccess.Read))
                 {
-                    try
+                    while (ctk.IsCancellationRequested == false)
                     {
-                        return readErrors.Result;
+                        var rc = Pal.rvn_wait_for_close_process(process.Pid, pollingTimeoutInSeconds, out var exitCode, out var errorCode);
+                        Console.WriteLine($"ADIADI::wait rc={rc}, {exitCode}, {errorCode}");
+                        if (rc == PalFlags.FailCodes.Success ||
+                            rc == PalFlags.FailCodes.FailChildProcessFailure)
+                        {
+                            process._hasExited = true;
+                            var args = new ProcessExitedEventArgs
+                            {
+                                ExitCode = exitCode,
+                                Pid = process.Pid
+                            };
+
+                            process.OnProcessExited(args);
+                        }
+
+
+                        //process.ReadTo(Console.Out);
+
+                        try
+                        {
+                            string read = null;
+                            do
+                            {
+                                read = process.ReadLineAsync(fs, ctk).Result;
+                                if (read != null)
+                                {
+                                    var args = new LineOutputEventArgs() {line = read};
+                                    process.OnLineOutput(args, ctk);
+                                }
+                                else
+                                {
+                                    var args = new LineOutputEventArgs() {line = null};
+                                    process.OnLineOutput(args, ctk);
+                                }
+                            } while (read != null && ctk.IsCancellationRequested == false);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("ADIADI::ERR=" + e.Message);
+                        }
+
+                        if (process._hasExited)
+                            break;
                     }
-                    catch
-                    {
-                        return "Unable to get stdout";
-                    }
                 }
 
-                try
-                {
-                    readErrors.Wait(timeoutInMs);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException(
-                        $"Unable to get cpu credits by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}",
-                        e);
-                }
-
-
-                if (process.WaitForExit(timeoutInMs) == false)
-                {
-                    process.Kill();
-
-                    throw new InvalidOperationException(
-                        $"Unable to get cpu credits by executing {command} {arguments}, waited for {timeoutInMs}ms but the process didn't exit. Stderr: {GetStdError()}");
-                }
-
-                process.HasExited = true;
+                Console.WriteLine("ADIADI::done loop");
             }
         }
 
-        public Task<string> ReadLineAsync()
+        private Task<string> ReadLineAsync(FileStream fs, CancellationToken ctk)
         {
-            Console.WriteLine("ADIADI::ReadLineAsync : " + StartInfo.FileName + " " + StartInfo.Arguments);
-            using (var fs = new FileStream(StandardOutAndErr, FileAccess.Read))
-            using (var sr = new StreamReader(fs))
+            // Console.WriteLine("ADIADI::ReadLineAsync : " + StartInfo.FileName + " " + StartInfo.Arguments);
+            StringBuilder sb = null;
+            var buffer = new byte[1];
+            var read = fs.Read(buffer, 0, 1);
+            while (read != 0)
             {
-                return sr.ReadLineAsync();
+                if (sb == null)
+                    sb = new StringBuilder();
+
+                var c = Encoding.UTF8.GetString(buffer, 0, read);
+
+                if (buffer[0] == '\n')
+                    break;
+
+                sb.Append(c);
+
+                if (ctk.IsCancellationRequested)
+                    break;
+
+                read = fs.Read(buffer, 0, 1);
+            }
+            return Task.FromResult(sb?.ToString());
+        }
+
+        public void Dispose()
+        {
+            Console.WriteLine("ADIADI::Dispose");
+            if (_hasExited == false)
+            {
+                _hasExited = true;
+                try
+                {
+                    var _ = ReadToEndAsync().Result;
+                }
+                catch
+                {
+                    // nothing.. just clear buffers
+                }
+
+                var rc = Pal.rvn_wait_for_close_process(Pid, 5, out var exitCode, out var errorCode); // ADIADI::what timeout to set ?  5 secs?
+                if (rc != PalFlags.FailCodes.FailTimeout)
+                    return;
+
+                Console.WriteLine($"ADIADI::Waited 5 second for {StartInfo.FileName} to close, but it didn't, trying to kill");
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Waited 5 seconds for {StartInfo.FileName} to close, but it didn't, trying to kill");
+                try
+                {
+                    Kill();
+                }
+                catch (Exception ex)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Kill {StartInfo.FileName} failed", ex);
+                }
             }
         }
     }

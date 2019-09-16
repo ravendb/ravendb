@@ -259,7 +259,7 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_wait_for_close_process(
             IntPtr pid,
-            Int32 timeoutInMs,
+            Int32 timeoutInSeconds,
             out Int32 exitCode,
             out Int32 errorCode);
 

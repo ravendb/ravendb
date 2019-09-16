@@ -168,7 +168,7 @@ namespace Raven.Server
                             new RuntimeSettings(Console.Out).Print();
 
                             if (rerun == false && CommandLineSwitches.LaunchBrowser)
-                                BrowserHelper.OpenStudioInBrowser(server.ServerStore.GetNodeHttpServerUrl());
+                                BrowserHelper.OpenStudioInBrowser(server.ServerStore);
 
                             new ClusterMessage(Console.Out, server.ServerStore).Print();
 
