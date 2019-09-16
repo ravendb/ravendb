@@ -329,7 +329,8 @@ namespace Sparrow.LowMemory
             {
                 // running in a limited cgroup
                 var commitedMemoryInBytes = 0L;
-                var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+                var cgroupMemoryUsage = (PlatformDetails.RunningOnDocker && LowMemoryNotification.Instance.UseRssInsteadOfMemUsageInContainer) ? // RDBS-45
+                                        GetRssMemoryUsage() : KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
                 if (cgroupMemoryUsage != null)
                 {
                     commitedMemoryInBytes = cgroupMemoryUsage.Value;
