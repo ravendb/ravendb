@@ -530,6 +530,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
 
             IncludeCounters(includes.Alias, includes.CountersToIncludeBySourcePath);
+
+/*            if (includes.TimeSeriesToInclude != null)
+            {
+                IncludeTimeSeries();
+            }*/
         }
 
         /// <summary>

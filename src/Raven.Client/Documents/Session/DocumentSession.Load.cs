@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 
@@ -78,7 +79,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false)
+        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null)
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -95,6 +96,8 @@ namespace Raven.Client.Documents.Session
             {
                 loadOperation.WithCounters(counterIncludes);
             }
+
+            loadOperation.WithTimeSeries(timeSeriesIncludes);
 
             var command = loadOperation.CreateRequest();
             if (command != null)
