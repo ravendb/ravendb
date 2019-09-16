@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Client.TimeSeries.Query
@@ -58,7 +59,44 @@ namespace SlowTests.Client.TimeSeries.Query
         .AddParameter("start", baseline)
         .AddParameter("end", baseline.AddDays(1))
         .First();
-                    Assert.Equal(3, agg.Count);
+
+                    if (agg.Count != 3)
+                    {
+                        using (var session2 = store.OpenSession(new SessionOptions
+                        {
+                            NoCaching = true
+                        }))
+                        {
+
+                            var agg2 = session2.Advanced.RawQuery<TimeSeriesAggregation>(@"
+    declare timeseries out(u) 
+    {
+        from u.Heartrate between $start and $end
+        group by 1h
+        select min(), max(), first(), last()
+    }
+    from @all_docs as u
+    where id() == 'users/ayende'
+    select out(u)
+")
+                                .AddParameter("start", baseline)
+                                .AddParameter("end", baseline.AddDays(1))
+                                .First();
+
+
+                            if (agg2.Count == 3)
+                            {
+                                throw new Exception($"Query result assertion failed (agg.Count = {agg.Count}). " +
+                                                    "We ran the query again in a new session with NoCaching enabled and it returned the correct result");
+                            }
+
+                            throw new Exception($"Query result assertion failed (agg.Count = {agg.Count}). " +
+                                                $"We ran the query again in a new session with NoCaching enabled and it failed again (agg2.Count = {agg2.Count})");
+
+                        }
+                    }
+
+                    //Assert.Equal(3, agg.Count);
 
                     Assert.Equal(1, agg.Results.Length);
 
