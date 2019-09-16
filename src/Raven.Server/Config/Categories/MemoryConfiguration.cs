@@ -12,7 +12,7 @@ namespace Raven.Server.Config.Categories
             var memoryInfo = MemoryInformation.GetMemoryInfo();
 
             LowMemoryLimit = Size.Min(
-                new Size(2, SizeUnit.Gigabytes), 
+                new Size(2, SizeUnit.Gigabytes),
                 memoryInfo.TotalPhysicalMemory / 10);
         }
 
@@ -40,7 +40,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxFreeCommittedMemoryToKeepInMb { get; set; }
 
-        [Description("Use 'Rss'instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage in docker instance. Default set to true. Applicable only with environment variable RAVEN_IN_DOCKER set to Y. Will use configuration option LowMemoryLimit with RavenDB process Rss value")]
+        [Description("EXPERT: Use 'RSS' instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage in docker instance. Applicable only with environment variable RAVEN_IN_DOCKER is set to 'true' and only when running on Linux. Will use configuration option 'Memory.LowMemoryLimitInMb' with RavenDB process RSS value. Default: true.")]
         [DefaultValue(true)]
         [ConfigurationEntry("Memory.UseRssInsteadOfMemUsageInContainer", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseRssInsteadOfMemUsageInContainer { get; set; }
