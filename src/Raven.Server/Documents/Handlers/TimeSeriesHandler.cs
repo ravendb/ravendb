@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
@@ -16,7 +15,6 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -83,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private static (DateTime From, DateTime To) ParseDates(string fromStr, string toStr, string name)
+        public static (DateTime From, DateTime To) ParseDates(string fromStr, string toStr, string name)
         {
             if (DateTime.TryParseExact(fromStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
                     CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var from) == false)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -17,6 +18,8 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _includes;
         private string[] _countersToInclude;
         private bool _includeAllCounters;
+        private IEnumerable<TimeSeriesRange> _timeSeriesToInclude;
+
         private GetDocumentsResult _currentLoadResults;
 
         public LoadOperation(InMemoryDocumentSessionOperations session)
@@ -34,11 +37,11 @@ namespace Raven.Client.Documents.Session.Operations
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _ids)}' from {_session.StoreIdentifier}");
 
             if (_includeAllCounters)
-                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, metadataOnly: false);
+                return new GetDocumentsCommand(_ids, _includes, includeAllCounters: true, metadataOnly: false, timeSeriesIncludes : _timeSeriesToInclude);
 
             return _countersToInclude != null
-                ? new GetDocumentsCommand(_ids, _includes, _countersToInclude, metadataOnly: false)
-                : new GetDocumentsCommand(_ids, _includes, metadataOnly: false);
+                ? new GetDocumentsCommand(_ids, _includes, _countersToInclude, metadataOnly: false, timeSeriesIncludes: _timeSeriesToInclude)
+                : new GetDocumentsCommand(_ids, _includes, metadataOnly: false, timeSeriesIncludes: _timeSeriesToInclude);
         }
 
         public LoadOperation ById(string id)
@@ -68,6 +71,13 @@ namespace Raven.Client.Documents.Session.Operations
         public LoadOperation WithAllCounters()
         {
             _includeAllCounters = true;
+            return this;
+        }
+
+        public LoadOperation WithTimeSeries(IEnumerable<TimeSeriesRange> timeseries)
+        {
+            if (timeseries != null)
+                _timeSeriesToInclude = timeseries;
             return this;
         }
 

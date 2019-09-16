@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -18,7 +19,7 @@ namespace Raven.Client.Documents.Session
     {
         DocumentConventions Conventions { get; }
 
-        Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false);
+        Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null);
 
         Lazy<Dictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval);
     }

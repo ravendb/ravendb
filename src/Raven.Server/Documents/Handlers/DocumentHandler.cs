@@ -264,6 +264,20 @@ namespace Raven.Server.Documents.Handlers
             includeCounters = new IncludeCountersCommand(database, context, counters);
         }
 
+        private void GetTimeSeriesQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
+        {
+            includeCounters = null;
+
+            var timeseriesNames = GetStringValuesQueryString("timeseries", required: false);
+            if (timeseriesNames.Count == 0)
+                return;
+
+            var fromList = GetStringValuesQueryString("from", required: false);
+            var toList = GetStringValuesQueryString("to", required: false);
+
+            includeCounters = new IncludeTimeSeriesCommand(database, context, counters);
+        }
+
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters, int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))

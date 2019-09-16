@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Loaders
@@ -28,7 +29,12 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeAllCounters();
     }
 
-    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>
+    public interface ITimeSeriesIncludeBuilder<T, out TBuilder>
+    {
+        TBuilder IncludeTimeSeries(string name, DateTime from, DateTime to);
+    }
+
+    public interface IIncludeBuilder<T, out TBuilder> : IDocumentIncludeBuilder<T, TBuilder>, ICounterIncludeBuilder<T, TBuilder>, ITimeSeriesIncludeBuilder<T, TBuilder>
     {
     }
 
@@ -52,6 +58,9 @@ namespace Raven.Client.Documents.Session.Loaders
     public class IncludeBuilder
     {
         internal HashSet<string> DocumentsToInclude;
+
+        internal Dictionary<string, TimeSeriesRange> TimeSeriesToInclude;
+
 
         internal string Alias;
 
@@ -235,6 +244,17 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
+        {
+            throw new NotImplementedException();
+        }
+
+        IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
+        {
+            IncludeTimeSeries(name, from, to);
+            return this;
+        }
+
         private void IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
@@ -331,5 +351,28 @@ namespace Raven.Client.Documents.Session.Loaders
             if (Alias == null)
                 Alias = path.Parameters[0].Name;
         }
+
+        private void IncludeTimeSeries(string name, DateTime from, DateTime to)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
+            if (TimeSeriesToInclude == null)
+            {
+                TimeSeriesToInclude = new Dictionary<string, TimeSeriesRange>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (TimeSeriesToInclude.ContainsKey(name) == false)
+            {
+                TimeSeriesToInclude[name] = new TimeSeriesRange
+                {
+                    Name = name,
+                    From = from,
+                    To = to
+                };
+            }
+        }
+
+
     }
 }
