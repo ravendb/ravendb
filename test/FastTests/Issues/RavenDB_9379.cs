@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Reflection;
 using Raven.Server.Config;
 using Raven.Server.Utils.Cli;
+using Sparrow.Platform;
 using Xunit;
 
 namespace FastTests.Issues
@@ -61,14 +63,15 @@ namespace FastTests.Issues
             };
 
             var oldEnv = Environment.GetEnvironmentVariables();
-            const string RavenInDocker = "RAVEN_IN_DOCKER";
+            var oldRunningInDocker = PlatformDetails.RunningOnDocker;
             const string RemoveUnsecuredCliArg = "REMOVE_UNSECURED_CLI_ARG_AFTER_RESTART";
 
             string[] updatedArgs;
             try
             {
+                PlatformDetails.RunningOnDocker = true;
+                Assert.True(PlatformDetails.RunningOnDocker, "PlatformDetails.RunningOnDocker");
 
-                Environment.SetEnvironmentVariable(RavenInDocker, "true");
                 Environment.SetEnvironmentVariable(RemoveUnsecuredCliArg, "true");
 
                 var confBeforeRestart = RavenConfiguration.CreateForServer(null);
@@ -80,7 +83,8 @@ namespace FastTests.Issues
             }
             finally
             {
-                Environment.SetEnvironmentVariable(RavenInDocker, oldEnv[RavenInDocker] as string);
+                PlatformDetails.RunningOnDocker = oldRunningInDocker;
+                Assert.Equal(oldRunningInDocker, PlatformDetails.RunningOnDocker);
                 Environment.SetEnvironmentVariable(RemoveUnsecuredCliArg, oldEnv[RemoveUnsecuredCliArg] as string);
             }
 
