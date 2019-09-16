@@ -31,26 +31,19 @@ namespace Raven.Server.Documents.Handlers.Streaming
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                DocsStreamingIterationState initialState;
+                DocsStreamingIterationState initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
+                {
+                    Start = start,
+                    Take = pageSize
+                };
 
                 if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
-                    initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
-                    {
-                        StartsWith = HttpContext.Request.Query["startsWith"],
-                        Excludes = HttpContext.Request.Query["excludes"],
-                        Matches = HttpContext.Request.Query["matches"],
-                        StartAfter = HttpContext.Request.Query["startAfter"],
-                        Skip = new Reference<int>()
-                    };
-                }
-                else // recent docs
-                {
-                    initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
-                    {
-                        Start = start,
-                        Take = pageSize
-                    };
+                    initialState.StartsWith = HttpContext.Request.Query["startsWith"];
+                    initialState.Excludes = HttpContext.Request.Query["excludes"];
+                    initialState.Matches = HttpContext.Request.Query["matches"];
+                    initialState.StartAfter = HttpContext.Request.Query["startAfter"];
+                    initialState.Skip = new Reference<int>();
                 }
 
                 var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
@@ -64,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                         }
 
                         if (state.LastIteratedEtag != null)
-                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value - 1, state.Take);
+                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take, skip: 1); // we seek to LastIteratedEtag but skip 1 item to avoid duplicates
 
                         return Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
                     },
