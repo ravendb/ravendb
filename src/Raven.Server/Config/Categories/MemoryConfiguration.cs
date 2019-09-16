@@ -39,5 +39,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxFreeCommittedMemoryToKeepInMb { get; set; }
+
+        [Description("Use 'Rss'instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage in docker instance. Default set to true. Applicable only with environment variable RAVEN_IN_DOCKER set to Y. Will use configuration option LowMemoryLimit with RavenDB process Rss value")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Memory.UseRssInsteadOfMemUsageInContainer", ConfigurationEntryScope.ServerWideOnly)]
+        public bool UseRssInsteadOfMemUsageInContainer { get; set; }
     }
 }

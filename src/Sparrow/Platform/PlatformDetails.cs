@@ -22,7 +22,7 @@ namespace Sparrow.Platform
         public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory;
 
-        public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
+        public static readonly bool RunningOnDocker = string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
 
         static PlatformDetails()
         {
