@@ -1330,13 +1330,16 @@ namespace Voron.Data.Tables
         }
 
 
-        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
+        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key, int skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
                 if (it.Seek(key) == false &&
                     it.SeekToLast() == false)
+                    yield break;
+
+                if (it.Skip(-skip) == false)
                     yield break;
 
                 var result = new TableValueHolder();
