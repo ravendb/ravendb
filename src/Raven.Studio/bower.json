@@ -18,7 +18,7 @@
     "bootstrap-contextmenu": "0.3.4",
     "bootstrap-multiselect": "0.9.13",
     "bootstrap-select": "1.12.4",
-    "Durandal": "durandal#2.2.0",
+    "Durandal": "https://github.com/hibernating-rhinos/Durandal-Bower.git#2.2.0",
     "text": "requirejs-text#2.0.15",
     "animate.css": "3.5.2",
     "mocha": "3.5.3",
