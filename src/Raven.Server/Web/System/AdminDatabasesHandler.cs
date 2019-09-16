@@ -264,7 +264,7 @@ namespace Raven.Server.Web.System
                 }
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
-                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
+                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
                 {
                     throw licenseLimit;
                 }
@@ -539,6 +539,20 @@ namespace Raven.Server.Web.System
                         }
 
                         break;
+                    case PeriodicBackupConnectionType.Azure:
+                        var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
+                        using (var azureRestoreUtils = new AzureRestorePoints(sortedList, context, azureSettings))
+                        {
+                            await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
+                        }
+                        break;  
+                    case PeriodicBackupConnectionType.GoogleCloud:
+                        var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
+                        using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(sortedList, context, googleCloudSettings))
+                        {
+                            await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
+                        }
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -565,7 +579,7 @@ namespace Raven.Server.Web.System
                 RestoreType restoreType;
                 if (restoreConfiguration.TryGet("Type", out string typeAsString))
                 {
-                    if(RestoreType.TryParse(typeAsString, out restoreType) == false)
+                    if (RestoreType.TryParse(typeAsString, out restoreType) == false)
                         throw new ArgumentException($"{typeAsString} is unknown backup type.");
                 }
                 else
@@ -581,7 +595,7 @@ namespace Raven.Server.Web.System
                 {
                     case RestoreType.Local:
                         var localConfiguration = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask  = new RestoreFromLocal(
+                        restoreBackupTask = new RestoreFromLocal(
                             ServerStore,
                             localConfiguration,
                             ServerStore.NodeTag,
@@ -591,12 +605,32 @@ namespace Raven.Server.Web.System
 
                     case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
-                        restoreBackupTask  = new RestoreFromS3(
+                        restoreBackupTask = new RestoreFromS3(
                             ServerStore,
                             s3Configuration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(s3Configuration,  context, restoreBackupTask);
+                        databaseName = await ValidateFreeSpace(s3Configuration, context, restoreBackupTask);
+
+                        break;
+                    case RestoreType.Azure:
+                        var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
+                        restoreBackupTask  = new RestoreFromAzure(
+                            ServerStore,
+                            azureConfiguration,
+                            ServerStore.NodeTag,
+                            cancelToken);
+                        databaseName = await ValidateFreeSpace(azureConfiguration,  context, restoreBackupTask);
+
+                        break;      
+                    case RestoreType.GoogleCloud:
+                        var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
+                        restoreBackupTask  = new RestoreFromGoogleCloud(
+                            ServerStore,
+                            googlCloudConfiguration,
+                            ServerStore.NodeTag,
+                            cancelToken);
+                        databaseName = await ValidateFreeSpace(googlCloudConfiguration,  context, restoreBackupTask);
 
                         break;
 
@@ -622,7 +656,7 @@ namespace Raven.Server.Web.System
             RestoreBackupTaskBase restoreBackupTask)
         {
             var extension = Path.GetExtension(restoreBackup.LastFileNameToRestore);
-            if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension || 
+            if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension ||
                 extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
             {
                 long backupSizeInBytes;
@@ -671,7 +705,7 @@ namespace Raven.Server.Web.System
                 if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
                     throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
             }
-            
+
             HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
             return restoreBackup.DatabaseName;
         }
@@ -831,7 +865,7 @@ namespace Raven.Server.Web.System
                     return;
 
                 if (enable &&
-                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
+                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
                 {
                     throw licenseLimit;
                 }
@@ -1152,7 +1186,7 @@ namespace Raven.Server.Web.System
 
             return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
         }
-        
+
         [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]
         public async Task SetUnusedDatabaseIds()
         {
@@ -1361,7 +1395,7 @@ namespace Raven.Server.Web.System
                                 IOExtensions.DeleteFile(tmpFile);
                             else if (process.HasExited == false && string.IsNullOrEmpty(tmpFile) == false)
                             {
-                                if(ProcessExtensions.TryKill(process))
+                                if (ProcessExtensions.TryKill(process))
                                     IOExtensions.DeleteFile(tmpFile);
                                 else
                                 {

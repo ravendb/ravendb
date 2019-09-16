@@ -3,9 +3,10 @@ import endpoints = require("endpoints");
 
 class getRestorePointsCommand extends commandBase {
 
-    private constructor(private path: string, private skipReportingError: boolean,
+    private constructor(private path: string, 
+                        private skipReportingError: boolean,
                         private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
-                        private s3Credentials?: Raven.Client.Documents.Operations.Backups.S3Settings) {
+                        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
         super();
     }
 
@@ -15,8 +16,8 @@ class getRestorePointsCommand extends commandBase {
                 return {
                     FolderPath: this.path
                 };
-            case "S3":
-                return this.s3Credentials;
+            default:
+                return this.credentials;
         }
     }
     
@@ -45,6 +46,14 @@ class getRestorePointsCommand extends commandBase {
     
     static forS3Backup(credentials: Raven.Client.Documents.Operations.Backups.S3Settings, skipReportingError: boolean) {
         return new getRestorePointsCommand("", skipReportingError, "S3", credentials);
+    }
+    
+    static forAzureBackup(credentials: Raven.Client.Documents.Operations.Backups.AzureSettings, skipReportingError: boolean) {
+        return new getRestorePointsCommand("", skipReportingError, "Azure", credentials);
+    }
+
+    static forGoogleCloudBackup(credentials: Raven.Client.Documents.Operations.Backups.GoogleCloudSettings, skipReportingError: boolean) {
+        return new getRestorePointsCommand("", skipReportingError, "GoogleCloud", credentials);
     }
 }
 

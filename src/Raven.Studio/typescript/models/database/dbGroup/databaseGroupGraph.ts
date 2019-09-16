@@ -2,7 +2,7 @@
 import d3 = require("d3");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import cola = require("cola");
-import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
+import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
 
 
 abstract class layoutable {
@@ -550,6 +550,11 @@ class databaseGroupGraph {
             .attr("class", x => "task-node " + x.type + " " + x.state);
 
         const taskIcon = (node: taskNode) => {
+            if (node.name.startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer)) {
+                // special case: server-wide backup
+                return "&#xea25;";
+            }
+            
             switch (node.type) {
                 case "Backup":
                     return "&#xe9b6;";

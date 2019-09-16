@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
 
-            long totalUnmanagedAllocations = 0;
+            long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
             var threads = new DynamicJsonArray();
             foreach (var stats in NativeMemory.AllThreadStats
                 .Where(x => x.IsThreadAlive())
@@ -280,7 +280,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
             {
                 var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
-                totalUnmanagedAllocations += unmanagedAllocations;
                 var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
                 {
                     ["Id"] = x.UnmanagedThreadId,

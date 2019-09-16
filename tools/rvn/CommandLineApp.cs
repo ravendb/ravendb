@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Microsoft.Extensions.CommandLineUtils;
+using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
 
 namespace rvn

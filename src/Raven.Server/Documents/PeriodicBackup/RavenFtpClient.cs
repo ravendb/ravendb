@@ -13,7 +13,6 @@ using System.Net;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -56,14 +55,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             Debug.Assert(_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase));
         }
 
-        public async Task UploadFile(string folderName, string fileName, Stream stream)
+        public void UploadFile(string folderName, string fileName, Stream stream)
         {
-            await TestConnection();
+            TestConnection();
 
             Progress?.UploadProgress.SetTotal(stream.Length);
             Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
 
-            var url = await CreateNestedFoldersIfNeeded(folderName);
+            var url = CreateNestedFoldersIfNeeded(folderName);
             url += $"/{fileName}";
 
             var request = CreateFtpWebRequest(url, WebRequestMethods.Ftp.UploadFile, keepAlive: true);
@@ -71,26 +70,26 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             int count;
             var requestStream = request.GetRequestStream();
-            while ((count = await stream.ReadAsync(readBuffer, 0, readBuffer.Length)) != 0)
+            while ((count = stream.Read(readBuffer, 0, readBuffer.Length)) != 0)
             {
-                await requestStream.WriteAsync(readBuffer, 0, count, CancellationToken);
+                requestStream.Write(readBuffer, 0, count);
 
                 Progress?.UploadProgress.ChangeState(UploadState.Uploading);
                 Progress?.UploadProgress.UpdateUploaded(count);
                 Progress?.OnUploadProgress();
             }
 
-            await requestStream.FlushAsync();
+            requestStream.Flush();
             requestStream.Close();
 
             Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
-            using (await request.GetResponseAsync())
+            using (request.GetResponse())
             {
                 Progress?.UploadProgress.ChangeState(UploadState.Done);
             }
         }
 
-        private async Task <string> CreateNestedFoldersIfNeeded(string folderName)
+        private string CreateNestedFoldersIfNeeded(string folderName)
         {
             ExtractUrlAndDirectories(out var url, out var directories);
 
@@ -107,7 +106,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    var response = await request.GetResponseAsync();
+                    var response = request.GetResponse();
                     response.Close();
                 }
                 catch (WebException e)
@@ -167,7 +166,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return request;
         }
 
-        public async Task TestConnection()
+        public void TestConnection()
         {
             if (_useSsl && string.IsNullOrWhiteSpace(_certificateAsBase64))
                 throw new ArgumentException("Certificate must be provided when using ftp with SSL!");
@@ -177,7 +176,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                var response = await request.GetResponseAsync();
+                var response = request.GetResponse();
                 response.Close();
             }
             catch (WebException e)

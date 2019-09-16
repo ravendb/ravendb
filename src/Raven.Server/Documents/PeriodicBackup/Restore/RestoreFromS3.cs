@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -23,13 +22,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<Stream> GetStream(string path)
         {
-            var blob = await _client.GetObject(path);
+            var blob = await _client.GetObjectAsync(path);
             return blob.Data;
         }
 
         protected override async Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
-            var blob = await _client.GetObject(path);
+            var blob = await _client.GetObjectAsync(path);
             return new ZipArchive(blob.Data, ZipArchiveMode.Read);
         }
 
@@ -40,8 +39,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<List<string>> GetFilesForRestore()
         {
-            var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName + "/";
-            var allObjects = await _client.ListAllObjects(prefix, string.Empty, false);
+            var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName.TrimEnd('/') + "/";
+            var allObjects = await _client.ListAllObjectsAsync(prefix, string.Empty, false);
             return allObjects.Select(x => x.FullPath).ToList();
         }
 

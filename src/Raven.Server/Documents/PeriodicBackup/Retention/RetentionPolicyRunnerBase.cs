@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -31,17 +30,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             CancellationToken = parameters.CancellationToken;
         }
 
-        protected abstract Task<GetFoldersResult> GetSortedFolders();
+        protected abstract GetFoldersResult GetSortedFolders();
 
         protected abstract string GetFolderName(string folderPath);
 
-        protected abstract Task<GetBackupFolderFilesResult> GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange);
+        protected abstract GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange);
 
-        protected abstract Task DeleteFolders(List<string> folders);
+        protected abstract void DeleteFolders(List<string> folders);
 
         protected abstract string Name { get; }
 
-        public async Task Execute()
+        public void Execute()
         {
             if (_isFullBackup == false)
                 return; // run this only for full backups
@@ -63,11 +62,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 while (hasMore)
                 {
-                    var foldersResult = await GetSortedFolders();
+                    var foldersResult = GetSortedFolders();
                     var resultType = hasMore ? "partial " : string.Empty;
                     _onProgress.Invoke($"Got {resultType}{foldersResult.List.Count:#,#} potential backups to check.");
 
-                    var canContinue = await UpdateFoldersToDelete(foldersResult, now, foldersToDelete);
+                    var canContinue = UpdateFoldersToDelete(foldersResult, now, foldersToDelete);
 
                     if (canContinue == false)
                     {
@@ -96,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                     Logger.Info(message);
 
                 sp.Restart();
-                await DeleteFolders(foldersToDelete);
+                DeleteFolders(foldersToDelete);
 
                 message = $"Deleted {foldersToDelete.Count:#,#} backups, took: {sp.ElapsedMilliseconds:#,#}ms";
                 _onProgress.Invoke(message);
@@ -119,7 +118,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
         }
 
-        private async Task<bool> UpdateFoldersToDelete(GetFoldersResult folders, DateTime now, List<string> foldersToDelete)
+        private bool UpdateFoldersToDelete(GetFoldersResult folders, DateTime now, List<string> foldersToDelete)
         {
             var firstDateInRetentionRange = now - _retentionPolicy.MinimumBackupAgeToKeep.Value;
 
@@ -157,7 +156,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 if (string.Equals(folderDetails.DatabaseName, _databaseName, StringComparison.OrdinalIgnoreCase) == false)
                     continue; // a backup for a different database
 
-                var backupFiles = await GetBackupFilesInFolder(folder, firstDateInRetentionRange);
+                var backupFiles = GetBackupFilesInFolder(folder, firstDateInRetentionRange);
                 if (backupFiles == null)
                     continue; // folder is empty
 

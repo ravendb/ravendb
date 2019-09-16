@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
@@ -10,10 +11,30 @@ namespace SlowTests.Client.Attachments
     public class AttachmentsBigFiles : RavenTestBase
     {
         [Theory]
-        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
-        public async Task BatchRequestWithLongMultiPartSections(long size, string hash)
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
+        public async Task BatchRequestWithLongMultiPartSections(long size, string hash, bool encrypted)
         {
-            using (var store = GetDocumentStore())
+            string dbName = null;
+            X509Certificate2 adminCert = null;
+            if (encrypted)
+            {
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var key = EncryptedServer(out adminCert, out dbName);
+            }
+            else
+            {
+                dbName = GetDatabaseName();                
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = encrypted,
+                Path = NewDataPath()
+            }))
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store, dbId1);
@@ -50,10 +71,30 @@ namespace SlowTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
-        public async Task SupportHugeAttachment(long size, string hash)
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
+        [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
+        public async Task SupportHugeAttachment(long size, string hash, bool encrypted)
         {
-            using (var store = GetDocumentStore())
+            string dbName = null;
+            X509Certificate2 adminCert = null;
+            if (encrypted)
+            {
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var key = EncryptedServer(out adminCert, out dbName);
+            }
+            else
+            {
+                dbName = GetDatabaseName();
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = encrypted,
+                Path = NewDataPath()
+            }))
             {
                 var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
                 await SetDatabaseId(store, dbId1);

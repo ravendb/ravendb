@@ -21,8 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public override async Task FetchRestorePoints(string path)
         {
             path = path.TrimEnd('/');
-
-            var objects = await _client.ListAllObjects(path + "/", "/", true);
+            var objects = await _client.ListAllObjectsAsync(string.IsNullOrEmpty(path) ? "" : path + "/", "/", true);
             var folders = objects.Select(x => x.FullPath).ToList();
 
             if (folders.Count == 0)
@@ -36,14 +35,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     await FetchRestorePointsForPath(folder, assertLegacyBackups: true);
                 }
             }
-            
         }
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)
         {
             path = path.TrimEnd('/');
 
-            var allObjects = await _client.ListAllObjects(path + "/", string.Empty, false);
+            var allObjects = await _client.ListAllObjectsAsync(path + "/", string.Empty, false);
 
             var filesInfo = new List<FileInfoDetails>();
 
@@ -72,7 +70,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<ZipArchive> GetZipArchive(string filePath)
         {
-            var blob = await _client.GetObject(filePath);
+            var blob = await _client.GetObjectAsync(filePath);
             return new ZipArchive(blob.Data, ZipArchiveMode.Read);
         }
 
@@ -84,11 +82,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public override void Dispose()
         {
             _client.Dispose();
-        }
-
-        private static string GetFolderName(string fullPath)
-        {
-            return fullPath.Replace(fullPath.Substring(fullPath.LastIndexOf('/')), "");
         }
     }
 }

@@ -117,13 +117,13 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
+        public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
         {
             var oldConventions = Conventions;
 
             try
             {
-                Conventions = conventions ?? Conventions ?? store.GetRequestExecutor(database ?? store.Database).Conventions;                    
+                Conventions = conventions ?? Conventions ?? store.GetRequestExecutor(database ?? store.Database).Conventions;
 
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Name = IndexName;

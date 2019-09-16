@@ -222,11 +222,6 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        protected virtual void RemoveIndexFromCache()
-        {
-
-        }
-
         protected virtual void DisposeIndex()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
@@ -266,8 +261,6 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
 
                 exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
-
-                exceptionAggregator.Execute(RemoveIndexFromCache);
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -478,6 +471,7 @@ namespace Raven.Server.Documents.Indexes
         {
             options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(name, s, e);
+            options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData(name, s, e);
             options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
@@ -492,6 +486,7 @@ namespace Raven.Server.Documents.Indexes
             options.SyncJournalsCountThreshold = documentDatabase.Configuration.Storage.SyncJournalsCountThreshold;
             options.IgnoreInvalidJournalErrors = documentDatabase.Configuration.Storage.IgnoreInvalidJournalErrors;
             options.SkipChecksumValidationOnDatabaseLoading = documentDatabase.Configuration.Storage.SkipChecksumValidationOnDatabaseLoading;
+            options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
 
             if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
                 options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);

@@ -10,29 +10,40 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     /// <summary>
     /// This is a static class because creating indexes is expensive, we want to cache them 
-    /// as much as possible, even across different databases and database instansiation. Per process,
+    /// as much as possible, even across different databases and database instantiation. Per process,
     /// we are going to have a single cache for all indexes. This also plays nice with testing, which 
     /// will build up and tear down a server frequently, so we can still reduce the cost of compiling 
     /// the indexes.
     /// </summary>
     public static class IndexCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> _indexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
 
         public static StaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var list = new List<string>();
             var type = definition.DetectStaticIndexType();
-
-            // we do not want to reuse javascript indexes definitions, because they have the Engine, which can't be reused.
-            // we also need to make sure that the same index is not used in two different databases under the same definitions
-            // todo: when porting javascript indexes to use ScriptRunner (RavenDB-10918), check if we can generate and/or pool the single runs, allowing to remove this code
             if (type.IsJavaScript())
+                return GenerateIndex(definition, configuration, type);
+
+            var key = GetCacheKey(definition);
+
+            Lazy<StaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
+
+            try
             {
-                list.Add(definition.Name);
-                list.Add(configuration.ResourceName);
+                return result.Value;
             }
-            
+            catch (Exception)
+            {
+                _indexCache.TryRemove(key, out _);
+                throw;
+            }
+        }
+
+        private static CacheKey GetCacheKey(IndexDefinition definition)
+        {
+            var list = new List<string>();
+
             list.AddRange(definition.Maps);
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
@@ -45,23 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            var key = new CacheKey(list);
-            Lazy<StaticIndexBase> result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
-
-            try
-            {
-                var index = result.Value;
-                if (index is JavaScriptIndex javaScriptIndex)
-                {
-                    javaScriptIndex.TryRemoveFromCache = () => { IndexCache.TryRemove(key, out _); };
-                }
-                return index;
-            }
-            catch (Exception)
-            {
-                IndexCache.TryRemove(key, out _);
-                throw;
-            }
+            return new CacheKey(list);
         }
 
         internal static StaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
@@ -77,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return IndexCompiler.Compile(definition);
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return new JavaScriptIndex(definition, configuration);                
+                    return new JavaScriptIndex(definition, configuration);
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
@@ -129,8 +124,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public override bool Equals(object obj)
             {
-                var cacheKey = obj as CacheKey;
-                if (cacheKey != null)
+                if (obj is CacheKey cacheKey)
                     return Equals(cacheKey);
                 return false;
             }

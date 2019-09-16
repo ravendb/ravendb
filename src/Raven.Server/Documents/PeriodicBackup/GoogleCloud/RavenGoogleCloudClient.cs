@@ -26,15 +26,20 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         private const string ProjectIdPropertyName = "project_id";
 
-        public RavenGoogleCloudClient(GoogleCloudSettings settings, CancellationToken? cancellationToken = null, Progress progress = null)
+        public RavenGoogleCloudClient(GoogleCloudSettings settings, Progress progress = null, CancellationToken? cancellationToken = null)
         {
+            if (string.IsNullOrWhiteSpace(settings.BucketName))
+                throw new ArgumentException("Google Cloud Bucket name cannot be null or empty");
+
+            if (string.IsNullOrWhiteSpace(settings.GoogleCredentialsJson))
+                throw new ArgumentException("Google Credentials JSON cannot be null or empty");
             try
             {
                 _client = StorageClient.Create(GoogleCredential.FromJson(settings.GoogleCredentialsJson));
             }
             catch (Exception e)
             {
-                throw new ArgumentException("Wrong format for account key.", e);
+                throw new ArgumentException("Wrong format for Google Credentials.", e);
             }
 
             var credentialJsonType = JObject.Parse(settings.GoogleCredentialsJson);
@@ -50,10 +55,38 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             _progress = progress;
         }
 
+        public Object UploadObject(string fileName, Stream stream, Dictionary<string, string> metadata = null)
+        {
+            return _client.UploadObject(
+                new Object { Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata }, stream,
+                progress: new Progress<IUploadProgress>(p =>
+                {
+                    if (_progress == null)
+                        return;
+
+                    switch (p.Status)
+                    {
+                        case UploadStatus.Starting:
+                        case UploadStatus.NotStarted:
+                            _progress.UploadProgress.ChangeState(UploadState.PendingUpload);
+                            break;
+                        case UploadStatus.Completed:
+                            _progress.UploadProgress.ChangeState(UploadState.Done);
+                            break;
+                        case UploadStatus.Uploading:
+                            _progress.UploadProgress.ChangeState(UploadState.Uploading);
+                            break;
+                    }
+
+                    _progress.UploadProgress.UploadedInBytes = p.BytesSent;
+                    _progress.OnUploadProgress();
+                }));
+        }
+
         public Task<Object> UploadObjectAsync(string fileName, Stream stream, Dictionary<string, string> metadata = null)
         {
             return _client.UploadObjectAsync(
-                new Object {Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata}, stream,
+                new Object { Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata }, stream,
                 cancellationToken: CancellationToken,
                 progress: new Progress<IUploadProgress>(p =>
                 {
@@ -117,9 +150,14 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             return _client.ListBuckets(_projectId);
         }
 
-        public Task<List<Object>> ListObjectsAsync()
+        public Task<List<Object>> ListObjectsAsync(string prefix = null, string delimiter = null)
         {
-            return _client.ListObjectsAsync(_bucketName).ToList(CancellationToken);
+            var option = new ListObjectsOptions
+            {
+                Delimiter = delimiter
+            };
+
+            return _client.ListObjectsAsync(_bucketName, prefix, options: delimiter == null ? null : option).ToList(CancellationToken);
         }
 
         public async Task TestConnection()
@@ -128,7 +166,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
             {
                 await _client.GetBucketAsync(_bucketName, cancellationToken: CancellationToken);
 
-                if (await _client.TestBucketIamPermissionsAsync(_bucketName, new[] {"storage.objects.create"}, cancellationToken: CancellationToken) == null)
+                if (await _client.TestBucketIamPermissionsAsync(_bucketName, new[] { "storage.objects.create" }, cancellationToken: CancellationToken) == null)
                 {
                     throw new InvalidOperationException(
                         $"Can't create an object in bucket '{_bucketName}', " +

@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Text;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
@@ -22,116 +22,152 @@ namespace SlowTests.Server.Documents.PeriodicBackup
     public class RavenDB_4163 : RavenTestBase
     {
         [AzureStorageEmulatorFact]
-        public async Task put_blob_64MB()
+        public void put_blob_64MB()
         {
-            await PutBlob(64, false, UploadType.Regular);
+            PutBlob(64, false, UploadType.Regular);
         }
 
         [AzureStorageEmulatorFact]
-        public async Task put_blob_70MB()
+        public void list_blobs_()
         {
-            await PutBlob(70, false, UploadType.Regular);
+            var containerName = "mycontainer";
+            var blobKey1 = $"{Guid.NewGuid()}/folder/testKey";
+            var blobKey2 = $"{Guid.NewGuid()}/folder/testKey";
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName)))
+            {
+                try
+                {
+                    client.DeleteContainer();
+                    client.PutContainer();
+
+                    var path = NewDataPath(forceCreateDir: true);
+
+                    var filePath1 = Path.Combine(path, Guid.NewGuid().ToString()) + ".txt";
+                    var filePath2 = Path.Combine(path, Guid.NewGuid().ToString()) + ".txt";
+
+                    File.WriteAllText(filePath1, "abc", Encoding.UTF8);
+                    File.WriteAllText(filePath2, "def", Encoding.UTF8);
+                    using (var file1 = File.Open(filePath1, FileMode.Open))
+                    using (var file2 = File.Open(filePath2, FileMode.Open))
+                    {
+                        client.PutBlob(blobKey1, file1, new Dictionary<string, string>());
+                        client.PutBlob(blobKey2, file2, new Dictionary<string, string>());
+                    }
+
+                    // Assert.Equal((await client.ListBlobs(containerName)).Count, 2);
+                }
+                finally
+                {
+                    client.DeleteContainer();
+                }
+            }
         }
 
         [AzureStorageEmulatorFact]
-        public async Task put_blob_100MB()
+        public void put_blob_70MB()
         {
-            await PutBlob(100, false, UploadType.Regular);
-        }
-
-        [NightlyBuildAzureStorageEmulatorFact]
-        public async Task put_blob_256MB()
-        {
-            await PutBlob(256, false, UploadType.Regular);
-        }
-
-        [NightlyBuildAzureStorageEmulatorFact]
-        public async Task put_blob_500MB()
-        {
-            await PutBlob(500, false, UploadType.Chunked);
-        }
-
-        [NightlyBuildAzureStorageEmulatorFact]
-        public async Task put_blob_765MB()
-        {
-            await PutBlob(765, false, UploadType.Chunked);
+            PutBlob(70, false, UploadType.Regular);
         }
 
         [AzureStorageEmulatorFact]
-        public async Task put_blob_into_folder_64MB()
+        public void put_blob_100MB()
         {
-            await PutBlob(64, true, UploadType.Regular);
-        }
-
-        [AzureStorageEmulatorFact]
-        public async Task put_blob_into_folder_70MB()
-        {
-            await PutBlob(70, true, UploadType.Regular);
-        }
-
-        [AzureStorageEmulatorFact]
-        public async Task put_blob_into_folder_100MB()
-        {
-            await PutBlob(100, true, UploadType.Regular);
+            PutBlob(100, false, UploadType.Regular);
         }
 
         [NightlyBuildAzureStorageEmulatorFact]
-        public async Task put_blob_into_folder_256MB()
+        public void put_blob_256MB()
         {
-            await PutBlob(256, true, UploadType.Regular);
+            PutBlob(256, false, UploadType.Regular);
         }
 
         [NightlyBuildAzureStorageEmulatorFact]
-        public async Task put_blob_into_folder_500MB()
+        public void put_blob_500MB()
         {
-            await PutBlob(500, true, UploadType.Chunked);
+            PutBlob(500, false, UploadType.Chunked);
         }
 
         [NightlyBuildAzureStorageEmulatorFact]
-        public async Task put_blob_into_folder_765MB()
+        public void put_blob_765MB()
         {
-            await PutBlob(765, true, UploadType.Chunked);
+            PutBlob(765, false, UploadType.Chunked);
         }
 
         [AzureStorageEmulatorFact]
-        public async Task can_get_and_delete_container()
+        public void put_blob_into_folder_64MB()
+        {
+            PutBlob(64, true, UploadType.Regular);
+        }
+
+        [AzureStorageEmulatorFact]
+        public void put_blob_into_folder_70MB()
+        {
+            PutBlob(70, true, UploadType.Regular);
+        }
+
+        [AzureStorageEmulatorFact]
+        public void put_blob_into_folder_100MB()
+        {
+            PutBlob(100, true, UploadType.Regular);
+        }
+
+        [NightlyBuildAzureStorageEmulatorFact]
+        public void put_blob_into_folder_256MB()
+        {
+            PutBlob(256, true, UploadType.Regular);
+        }
+
+        [NightlyBuildAzureStorageEmulatorFact]
+        public void put_blob_into_folder_500MB()
+        {
+            PutBlob(500, true, UploadType.Chunked);
+        }
+
+        [NightlyBuildAzureStorageEmulatorFact]
+        public void put_blob_into_folder_765MB()
+        {
+            PutBlob(765, true, UploadType.Chunked);
+        }
+
+        [AzureStorageEmulatorFact]
+        public void can_get_and_delete_container()
         {
             var containerName = Guid.NewGuid().ToString();
-            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), isTest: true))
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName)))
             {
-                var containerNames = await client.GetContainerNames(500);
+                var containerNames = client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
-                await client.PutContainer();
+                client.PutContainer();
 
-                containerNames = await client.GetContainerNames(500);
+                containerNames = client.GetContainerNames(500);
                 Assert.True(containerNames.Exists(x => x.Equals(containerName)));
 
-                await client.DeleteContainer();
+                client.DeleteContainer();
 
-                containerNames = await client.GetContainerNames(500);
+                containerNames = client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
             }
         }
 
         [AzureStorageEmulatorFact]
-        public async Task can_get_container_not_found()
+        public void can_get_container_not_found()
         {
             var containerName = Guid.NewGuid().ToString();
-            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), isTest: true))
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName)))
             {
-                var containerNames = await client.GetContainerNames(500);
+                var containerNames = client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
 
-                var e = await Assert.ThrowsAsync<ContainerNotFoundException>(async () => await client.TestConnection());
+                var e = Assert.Throws<ContainerNotFoundException>(() => client.TestConnection());
                 Assert.Equal($"Container '{containerName}' not found!", e.Message);
 
-                containerNames = await client.GetContainerNames(500);
+                containerNames = client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
             }
         }
 
         // ReSharper disable once InconsistentNaming
-        private async Task PutBlob(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        private void PutBlob(int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = testBlobKeyAsFolder == false ?
@@ -139,12 +175,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 $"{Guid.NewGuid()}/folder/testKey";
 
             var progress = new Progress();
-            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), progress, isTest: true))
+            using (var client = new RavenAzureClient(Azure.GenerateAzureSettings(containerName), progress: progress))
             {
                 try
                 {
-                    await client.DeleteContainer();
-                    await client.PutContainer();
+                    client.DeleteContainer();
+                    client.PutContainer();
 
                     var path = NewDataPath(forceCreateDir: true);
                     var filePath = Path.Combine(path, Guid.NewGuid().ToString());
@@ -172,7 +208,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (var file = File.Open(filePath, FileMode.Open))
                     {
                         streamLength = file.Length;
-                        await client.PutBlob(blobKey, file,
+                        client.PutBlob(blobKey, file,
                             new Dictionary<string, string>
                             {
                                     {"property1", value1},
@@ -181,7 +217,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             });
                     }
 
-                    var blob = await client.GetBlob(blobKey);
+                    var blob = client.GetBlob(blobKey);
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
@@ -189,7 +225,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var readBuffer = new char[buffer.Length];
 
                         long read, totalRead = 0;
-                        while ((read = await reader.ReadAsync(readBuffer, 0, readBuffer.Length)) > 0)
+                        while ((read = reader.Read(readBuffer, 0, readBuffer.Length)) > 0)
                         {
                             for (var i = 0; i < read; i++)
                                 Assert.Equal(buffer[i], (byte)readBuffer[i]);
@@ -215,7 +251,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    await client.DeleteContainer();
+                    client.DeleteContainer();
                 }
             }
         }

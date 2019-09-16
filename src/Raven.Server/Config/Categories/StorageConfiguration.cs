@@ -113,5 +113,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.Dangerous.SkipChecksumValidationOnDatabaseLoading", ConfigurationEntryScope.ServerWideOnly)]
         public bool SkipChecksumValidationOnDatabaseLoading { get; set; }
+
+        [Description("EXPERT: Allows to load a database regardless encountered data integrity errors of already synced transactions in journals during the recovery operation on startup")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions", ConfigurationEntryScope.ServerWideOnly)]
+        public bool IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions { get; set; }
     }
 }

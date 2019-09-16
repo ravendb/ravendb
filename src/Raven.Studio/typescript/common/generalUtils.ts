@@ -20,7 +20,7 @@ class genUtils {
     
     /***  IP Address Methods  ***/
 
-    static isLocalhostIpAddress(ip: string) : boolean {
+    static isLocalhostIpAddress(ip: string): boolean {
         return ((ip === 'localhost') || (_.split(ip, '.')[0] === '127') || (ip === '::1'));
     }
 
@@ -179,8 +179,9 @@ class genUtils {
 
         const formatNumber = (input: number) => _.padStart(input.toString(), 2, '0');
 
-        if (duration.days()) {
-            return `${duration.days()}.${formatNumber(duration.hours())}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
+        const days = Math.floor(duration.asDays());
+        if (days) {
+            return `${days}.${formatNumber(duration.hours())}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
         }
 
         return `${formatNumber(Math.floor(duration.asHours()))}:${formatNumber(duration.minutes())}:${formatNumber(duration.seconds())}`;
@@ -263,7 +264,7 @@ class genUtils {
         return result;
     };
 
-    static getSizeClass(input: number) : string {
+    static getSizeClass(input: number): string {
         if (input < 100000) {
             return "";
         }

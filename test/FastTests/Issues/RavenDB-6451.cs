@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Json;
 using Xunit;
 
@@ -55,7 +56,7 @@ namespace FastTests.Issues
             {
                 try
                 {
-                    if (t == typeof(Microsoft.Extensions.CommandLineUtils.CommandParsingException))
+                    if (t == typeof(CommandParsingException))
                         continue;
 
                     Assert.False(HasInvalidProperties(t), $"The type {t.FullName} should not have pointer or BlittableXXX properties");

@@ -11,7 +11,7 @@ abstract class amazonSettings extends backupSettings {
     
     allowedRegions: Array<string>;
 
-    availableAwsRegionEndpoints = [
+    static availableAwsRegionEndpointsStatic = [
         { label: "Asia Pacific (Mumbai)", value: "ap-south-1", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Seoul)", value: "ap-northeast-2", hasS3: true, hasGlacier: true },
         { label: "Asia Pacific (Osaka-Local)", value: "ap-northeast-3", hasS3: true, hasGlacier: true },
@@ -35,6 +35,8 @@ abstract class amazonSettings extends backupSettings {
         { label: "US West (Oregon)", value: "us-west-2", hasS3: true, hasGlacier: true }
     ];
 
+    availableAwsRegionEndpoints = amazonSettings.availableAwsRegionEndpointsStatic;
+    
     constructor(dto: Raven.Client.Documents.Operations.Backups.AmazonSettings, 
                 connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
                 allowedRegions: Array<string>) {
@@ -49,7 +51,7 @@ abstract class amazonSettings extends backupSettings {
 
         const lowerCaseRegionName = !dto.AwsRegionName ? "" : dto.AwsRegionName.toLowerCase();
         const region = this.availableAwsRegionEndpoints.find(x => x.value === lowerCaseRegionName);
-        this.selectedAwsRegion(!!region ? this.getDisplayRegionName(region) : dto.AwsRegionName);
+        this.selectedAwsRegion(!!region ? amazonSettings.getDisplayRegionName(region) : dto.AwsRegionName);
 
         this.initAmazonValidation();
 
@@ -61,7 +63,7 @@ abstract class amazonSettings extends backupSettings {
 
             const newSelectedAwsRegionLowerCase = newSelectedAwsRegion.toLowerCase();
             const foundRegion = this.availableAwsRegionEndpoints.find(x =>
-                this.getDisplayRegionName(x).toLowerCase() === newSelectedAwsRegionLowerCase);
+                amazonSettings.getDisplayRegionName(x).toLowerCase() === newSelectedAwsRegionLowerCase);
             
             if (foundRegion) {
                 // if we managed to find long name - set short name under the hood
@@ -135,20 +137,13 @@ abstract class amazonSettings extends backupSettings {
     createAwsRegionAutoCompleter(hasS3: boolean) {
         return ko.pureComputed(() => {
             let key = this.selectedAwsRegion();
-
             const options = this.availableAwsRegionEndpoints
                 .filter(x => hasS3 ? x.hasS3 : x.hasGlacier)
-                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.value) : true)
-                .map(x => {
-                    return {
-                        label: x.label,
-                        value: x.value
-                    }
-                });
+                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.value) : true);
 
             if (key) {
                 key = key.toLowerCase();
-                return options.filter(x => this.getDisplayRegionName(x).toLowerCase().includes(key));
+                return options.filter(x => amazonSettings.getDisplayRegionName(x).toLowerCase().includes(key));
             } else {
                 return options;
             }
@@ -156,10 +151,10 @@ abstract class amazonSettings extends backupSettings {
     }
 
     useAwsRegion(awsRegionEndpoint: { label: string, value: string }) {
-        this.selectedAwsRegion(this.getDisplayRegionName(awsRegionEndpoint));
+        this.selectedAwsRegion(amazonSettings.getDisplayRegionName(awsRegionEndpoint));
     }
 
-    private getDisplayRegionName(awsRegionEndpoint: { label: string, value: string }): string {
+    static getDisplayRegionName(awsRegionEndpoint: { label: string, value: string }): string {
         return awsRegionEndpoint.label + " - " + awsRegionEndpoint.value;
     }
 

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection.Name);
-            }           
+            }
         }
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false && 
+            if (HandleAllDocs == false && Collections.Contains(change.CollectionName) == false &&
                 _referencedCollections.Contains(change.CollectionName) == false)
                 return;
 
@@ -149,11 +149,6 @@ namespace Raven.Server.Documents.Indexes.Static
                     return canReplace;
                 }
             }
-        }
-
-        protected override void RemoveIndexFromCache()
-        {
-            _compiled.RemoveIndexFromCache();
         }
 
         public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()

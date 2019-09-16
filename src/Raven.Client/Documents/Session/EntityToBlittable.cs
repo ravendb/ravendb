@@ -3,8 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
@@ -107,7 +109,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static BlittableJsonReaderObject ConvertEntityToBlittableInternal(
             object entity,
@@ -124,7 +125,7 @@ namespace Raven.Client.Documents.Session
             var isDynamicObject = entity is IDynamicMetaObjectProvider;
 
             var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
-            changes |= TrySimplifyJson(reader);
+            changes |= TrySimplifyJson(reader, type);
 
             if (changes)
             {
@@ -165,7 +166,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Converts a BlittableJsonReaderObject to an entity.        
+        /// Converts a BlittableJsonReaderObject to an entity.
         /// </summary>
         /// <param name="entityType"></param>
         /// <param name="id">The id.</param>
@@ -334,16 +335,23 @@ namespace Raven.Client.Documents.Session
             return true;
         }
 
-        private static bool TrySimplifyJson(BlittableJsonReaderObject document)
+        private static bool TrySimplifyJson(BlittableJsonReaderObject document, Type rootType)
         {
             var simplified = false;
             foreach (var propertyName in document.GetPropertyNames())
             {
+                var propertyType = GetPropertyType(propertyName, rootType);
+                if (propertyType == typeof(JObject) || propertyType == typeof(JArray) || propertyType == typeof(JValue))
+                {
+                    // don't simplify the property if it's a JObject
+                    continue;
+                }
+
                 var propertyValue = document[propertyName];
 
                 if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {
-                    simplified |= TrySimplifyJson(propertyArray);
+                    simplified |= TrySimplifyJson(propertyArray, propertyType);
                     continue;
                 }
 
@@ -353,7 +361,7 @@ namespace Raven.Client.Documents.Session
 
                 if (propertyObject.TryGet(Constants.Json.Fields.Type, out string type) == false)
                 {
-                    simplified |= TrySimplifyJson(propertyObject);
+                    simplified |= TrySimplifyJson(propertyObject, propertyType);
                     continue;
                 }
 
@@ -376,14 +384,16 @@ namespace Raven.Client.Documents.Session
 
                 document.Modifications[propertyName] = values;
 
-                simplified |= TrySimplifyJson(values);
+                simplified |= TrySimplifyJson(values, propertyType);
             }
 
             return simplified;
         }
 
-        private static bool TrySimplifyJson(BlittableJsonReaderArray array)
+        private static bool TrySimplifyJson(BlittableJsonReaderArray array, Type rootType)
         {
+            var itemType = GetItemType();
+
             var simplified = false;
             foreach (var item in array)
             {
@@ -391,10 +401,25 @@ namespace Raven.Client.Documents.Session
                 if (itemObject == null)
                     continue;
 
-                simplified |= TrySimplifyJson(itemObject);
+                simplified |= TrySimplifyJson(itemObject, itemType);
             }
 
             return simplified;
+
+            Type GetItemType()
+            {
+                if (rootType == null)
+                    return null;
+
+                if (rootType.IsArray)
+                    return rootType.GetElementType();
+
+                var enumerableInterface = rootType.GetInterface(typeof(IEnumerable<>).Name);
+                if (enumerableInterface == null)
+                    return null;
+
+                return enumerableInterface.GenericTypeArguments[0];
+            }
         }
 
         private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
@@ -413,6 +438,24 @@ namespace Raven.Client.Documents.Session
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
 
+        private static Type GetPropertyType(string propertyName, Type rootType)
+        {
+            if (rootType == null)
+                return null;
+
+            var memberInfo = ReflectionUtil.GetPropertyOrFieldFor(rootType, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, propertyName);
+
+            switch (memberInfo)
+            {
+                case PropertyInfo pi:
+                    return pi.PropertyType;
+                case FieldInfo fi:
+                    return fi.FieldType;
+                default:
+                    return null;
+            }
+        }
+
         public object ConvertToBlittableIfNeeded(object value)
         {
             if (value is ValueType ||
@@ -424,7 +467,6 @@ namespace Raven.Client.Documents.Session
             if (value is IEnumerable && !(value is IDictionary))
             {
                 return ((IEnumerable)value).Cast<object>().Select(ConvertToBlittableIfNeeded);
-
             }
             return ConvertEntityToBlittable(value, documentInfo: null);
         }

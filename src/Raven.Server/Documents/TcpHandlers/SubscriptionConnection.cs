@@ -480,7 +480,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 _startEtag = GetStartEtagForSubscription(SubscriptionState);
                 _filterAndProjectionScript = SetupFilterAndProjectionScript();
-                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Subscription.Collection, Subscription.Revisions, SubscriptionState, _filterAndProjectionScript);
+                var useRevisions = Subscription.Revisions;
+                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Subscription.Collection, useRevisions, SubscriptionState, _filterAndProjectionScript);
 
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -518,7 +519,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 using (docsContext.OpenReadTransaction())
                                 {
-                                    long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
+                                    var globalEtag = useRevisions ? 
+                                        TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, Subscription.Collection) : 
+                                        TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, Subscription.Collection);
 
                                     if (globalEtag > _startEtag)
                                         continue;

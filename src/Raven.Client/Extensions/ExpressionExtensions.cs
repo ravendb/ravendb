@@ -98,16 +98,21 @@ namespace Raven.Client.Extensions
                 if (curValue.Length == 1 && curValue[0] == propertySeparator && i != stackLength - 1)
                 {
                     var nextVal = propertyPathExpressionVisitor.Results.Peek();
-
                     if (nextVal.Length == collectionSeparator.Length && nextVal.Equals(collectionSeparator, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
                 }
 
-                builder.Append(curValue);
+                if (curValue == "$Value" && i != stackLength - 1)
+                {
+                    // Dictionary[].$Value.PropertyName => Dictionary[].PropertyName
+                    continue;
+                }
 
+                builder.Append(curValue);
             }
+
             return builder.ToString().Trim(propertySeparator, collectionSeparator[0], collectionSeparator[1], collectionSeparator[2]);
         }
 
@@ -116,6 +121,7 @@ namespace Raven.Client.Extensions
             private readonly string _propertySeparator;
             private readonly string _collectionSeparator;
             public Stack<string> Results = new Stack<string>();
+            private bool _isFirst = true;
 
             public PropertyPathExpressionVisitor(string propertySeparator, string collectionSeparator)
             {
@@ -125,21 +131,31 @@ namespace Raven.Client.Extensions
 
             protected override Expression VisitMember(MemberExpression node)
             {
-                string propertyName;
-                if (IsDictionaryProperty(node, out propertyName))
+                if (IsDictionaryProperty(node, out string propertyName))
                 {
                     if (string.IsNullOrEmpty(propertyName) == false)
                     {
-                        Results.Push(_propertySeparator);
+                        AddPropertySeparator();
                         Results.Push("$" + node.Member.Name);
                     }
 
                     return base.VisitMember(node);
                 }
 
-                Results.Push(_propertySeparator);
+                AddPropertySeparator();
                 Results.Push(node.Member.Name);
                 return base.VisitMember(node);
+            }
+
+            private void AddPropertySeparator()
+            {
+                if (_isFirst)
+                {
+                    _isFirst = false;
+                    return;
+                }
+
+                Results.Push(_propertySeparator);
             }
 
             private static bool IsDictionaryProperty(MemberExpression node, out string propertyName)
@@ -154,6 +170,7 @@ namespace Raven.Client.Extensions
                 var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();
                 if (node.Member.Name == "Value" || node.Member.Name == "Key")
                 {
+                    propertyName = node.Member.Name;
                     return genericTypeDefinition == typeof(KeyValuePair<,>);
                 }
 
