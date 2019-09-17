@@ -157,10 +157,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<Document> GetDocumentsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)
         {
-            foreach (var item in state.StartEtagByCollection)
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
             {
-                var collection = item.Key;
-                var etag = item.Value;
+                var etag = state.StartEtagByCollection[collection];
 
                 state.CurrentCollection = collection;
 
@@ -204,10 +205,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<Document> GetRevisionsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)
         {
-            foreach (var item in state.StartEtagByCollection)
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
             {
-                var collection = item.Key;
-                var etag = item.Value;
+                var etag = state.StartEtagByCollection[collection];
 
                 var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
@@ -272,10 +274,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<Tombstone> GetTombstonesFromCollections(DocumentsOperationContext context, TombstonesIterationState state)
         {
-            foreach (var item in state.StartEtagByCollection)
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
             {
-                var collection = item.Key;
-                var etag = item.Value;
+                var etag = state.StartEtagByCollection[collection];
 
                 state.CurrentCollection = collection;
 
@@ -421,10 +424,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private IEnumerable<CounterGroupDetail> GetCounterValuesFromCollections(DocumentsOperationContext context, CountersIterationState state)
         {
-            foreach (var item in state.StartEtagByCollection)
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
             {
-                var collection = item.Key;
-                var etag = item.Value;
+                var etag = state.StartEtagByCollection[collection];
 
                 state.CurrentCollection = collection;
 
