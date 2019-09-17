@@ -1,39 +1,37 @@
-using System;
 using Lextm.SharpSnmpLib;
-using Raven.Client.Util;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
     internal class ServerUpTime : ScalarObjectBase<TimeTicks>
     {
-        private readonly DateTime _startUpTime;
+        private readonly ServerStatistics _statistics;
 
         public ServerUpTime(ServerStatistics statistics)
             : base(SnmpOids.Server.UpTime)
         {
-            _startUpTime = statistics.StartUpTime;
+            _statistics = statistics;
         }
 
         protected override TimeTicks GetData()
         {
-            return new TimeTicks(SystemTime.UtcNow - _startUpTime);
+            return new TimeTicks(_statistics.UpTime);
         }
     }
 
     internal class ServerUpTimeGlobal : ScalarObjectBase<TimeTicks>
     {
-        private readonly DateTime _startUpTime;
+        private readonly ServerStatistics _statistics;
 
         public ServerUpTimeGlobal(ServerStatistics statistics)
             : base(SnmpOids.Server.UpTimeGlobal, appendRoot: false)
         {
-            _startUpTime = statistics.StartUpTime;
+            _statistics = statistics;
         }
 
         protected override TimeTicks GetData()
         {
-            return new TimeTicks(SystemTime.UtcNow - _startUpTime);
+            return new TimeTicks(_statistics.UpTime);
         }
     }
 }
