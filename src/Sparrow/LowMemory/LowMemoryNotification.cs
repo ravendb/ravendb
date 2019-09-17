@@ -116,9 +116,9 @@ namespace Sparrow.LowMemory
         public bool LowMemoryState { get; private set; }
 
         public Size LowMemoryThreshold { get; private set; }
-        public bool UseRssInsteadOfMemUsageInContainer { get; private set; }
+        public bool UseRssInsteadOfMemUsage { get; private set; }
 
-        public void Initialize(Size lowMemoryThreshold, bool useRssInsteadOfMemUsageInContainer, AbstractLowMemoryMonitor monitor, CancellationToken shutdownNotification)
+        public void Initialize(Size lowMemoryThreshold, bool useRssInsteadOfMemUsage, AbstractLowMemoryMonitor monitor, CancellationToken shutdownNotification)
         {
             if (_initialized)
                 return;
@@ -130,7 +130,7 @@ namespace Sparrow.LowMemory
 
                 _initialized = true;
                 LowMemoryThreshold = lowMemoryThreshold;
-                UseRssInsteadOfMemUsageInContainer = useRssInsteadOfMemUsageInContainer;
+                UseRssInsteadOfMemUsage = useRssInsteadOfMemUsage;
                 _lowMemoryMonitor = monitor;
 
                 var thread = new Thread(MonitorMemoryUsage)
