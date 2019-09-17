@@ -92,6 +92,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Server last request time")]
             public const string LastRequestTime = "1.8";
 
+            [Description("Server last user request time")]
+            public const string LastUserRequestTime = "1.8.1";
+
             [Description("Server license type")]
             public const string ServerLicenseType = "1.9.1";
 

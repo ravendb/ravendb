@@ -310,6 +310,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerLowMemoryFlag());
 
             store.Add(new ServerLastRequestTime(server.Statistics));
+            store.Add(new ServerLastUserRequestTime(server.Statistics));
 
             store.Add(new DatabaseLoadedCount(server.ServerStore.DatabasesLandlord));
             store.Add(new DatabaseTotalCount(server.ServerStore));
