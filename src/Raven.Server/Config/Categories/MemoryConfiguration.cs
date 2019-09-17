@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -14,6 +15,8 @@ namespace Raven.Server.Config.Categories
             LowMemoryLimit = Size.Min(
                 new Size(2, SizeUnit.Gigabytes),
                 memoryInfo.TotalPhysicalMemory / 10);
+
+            UseRssInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
         }
 
         [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
@@ -40,9 +43,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxFreeCommittedMemoryToKeepInMb { get; set; }
 
-        [Description("EXPERT: Use 'RSS' instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage in docker instance. Applicable only with environment variable RAVEN_IN_DOCKER is set to 'true' and only when running on Linux. Will use configuration option 'Memory.LowMemoryLimitInMb' with RavenDB process RSS value. Default: true.")]
-        [DefaultValue(true)]
-        [ConfigurationEntry("Memory.UseRssInsteadOfMemUsageInContainer", ConfigurationEntryScope.ServerWideOnly)]
-        public bool UseRssInsteadOfMemUsageInContainer { get; set; }
+        [Description("EXPERT: Use 'RSS' instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage. Applicable only when running on Linux. Will use configuration option 'Memory.LowMemoryLimitInMb' with RavenDB process RSS value. Default: 'true' when 'RAVEN_IN_DOCKER' environment variable is set to 'true', 'false' otherwise.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Memory.UseRssInsteadOfMemUsage", ConfigurationEntryScope.ServerWideOnly)]
+        public bool UseRssInsteadOfMemUsage { get; set; }
     }
 }
