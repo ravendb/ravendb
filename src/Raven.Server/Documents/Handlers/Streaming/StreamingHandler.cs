@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                DocsStreamingIterationState initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
+                var initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
                 {
                     Start = start,
                     Take = pageSize
