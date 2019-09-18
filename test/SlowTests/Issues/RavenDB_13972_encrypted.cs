@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Utils.Enumerators;
@@ -6,7 +6,7 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_13972_32_bits : RavenDB_13972
+    public class RavenDB_13972_encrypted : RavenDB_13972
     {
         [Theory]
         [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
@@ -19,22 +19,20 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             var fileAfterDeletions = GetTempFileName();
 
-            using (var server = GetNewServer(new ServerCreationOptions
-            {
-                CustomSettings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager)] = "true"
+            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
 
-                }
-            }))
             using (var storeToExport = GetDocumentStore(new Options
             {
-                Server = server,
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Settings[RavenConfiguration.GetKey(x => x.Databases.PulseReadTransactionLimit)] = "0";
+                    record.Encrypted = true;
                 }
             }))
+            using (var server = GetNewServer(new ServerCreationOptions()))
             using (var storeToImport = GetDocumentStore(new Options
             {
                 Server = server
@@ -55,20 +53,17 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public void CanStreamDocumentsWithPulsatingReadTransaction(int numberOfUsers, int numberOfOrders, int deleteUserFactor)
         {
-            using (var server = GetNewServer(new ServerCreationOptions
-            {
-                CustomSettings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager)] = "true"
+            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
 
-                }
-            }))
             using (var store = GetDocumentStore(new Options
             {
-                Server = server,
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
                     record.Settings[RavenConfiguration.GetKey(x => x.Databases.PulseReadTransactionLimit)] = "0";
+                    record.Encrypted = true;
                 }
             }))
             {
