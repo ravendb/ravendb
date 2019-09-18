@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly string _name;
             private readonly DateTime _from, _to;
             private readonly Table _table;
-            private TableValueReader _tvr;
+            internal TableValueReader _tvr;
             private double[] _values = Array.Empty<double>();
             private TimeStampState[] _states = Array.Empty<TimeStampState>();
             private TimeSeriesValuesSegment.TagPointer _tagPointer;
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _tag = new LazyStringValue(null, null, 0, context);
             }
 
-            private bool Init()
+            internal bool Init()
             {
                 using (DocumentIdWorker.GetSliceFromId(_context, _documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
                 using (Slice.From(_context.Allocator, _name, out Slice timeSeriesName))

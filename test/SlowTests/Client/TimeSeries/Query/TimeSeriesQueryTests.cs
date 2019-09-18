@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Linq;
+using System.Text;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Client.TimeSeries.Query
@@ -23,7 +28,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
-        public void CanQueryTimeSeriesAggregation_Simple()
+        public unsafe void CanQueryTimeSeriesAggregation_Simple()
         {
             using (var store = GetDocumentStore())
             {
@@ -45,7 +50,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var agg = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
     declare timeseries out(u) 
     {
         from u.Heartrate between $start and $end
@@ -56,47 +61,41 @@ namespace SlowTests.Client.TimeSeries.Query
     where id() == 'users/ayende'
     select out(u)
 ")
-        .AddParameter("start", baseline)
-        .AddParameter("end", baseline.AddDays(1))
-        .First();
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(1));
+
+                    var agg = query.First();
 
                     if (agg.Count != 3)
                     {
-                        using (var session2 = store.OpenSession(new SessionOptions
+                        var db = GetDocumentDatabaseInstanceFor(store).Result;
+                        var tss = db.DocumentsStorage.TimeSeriesStorage;
+                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
                         {
-                            NoCaching = true
-                        }))
-                        {
+                            var reader = tss.GetReader(ctx, "users/ayende", "Heartrate", baseline, baseline.AddDays(1));
 
-                            var agg2 = session2.Advanced.RawQuery<TimeSeriesAggregation>(@"
-    declare timeseries out(u) 
-    {
-        from u.Heartrate between $start and $end
-        group by 1h
-        select min(), max(), first(), last()
-    }
-    from @all_docs as u
-    where id() == 'users/ayende'
-    select out(u)
-")
-                                .AddParameter("start", baseline)
-                                .AddParameter("end", baseline.AddDays(1))
-                                .First();
+                            Assert.True(reader.Init());
 
+                            Assert.NotNull(reader._tvr);
 
-                            if (agg2.Count == 3)
-                            {
-                                throw new Exception($"Query result assertion failed (agg.Count = {agg.Count}). " +
-                                                    "We ran the query again in a new session with NoCaching enabled and it returned the correct result");
-                            }
+                            var key = reader._tvr.Read(0, out var size);
 
-                            throw new Exception($"Query result assertion failed (agg.Count = {agg.Count}). " +
-                                                $"We ran the query again in a new session with NoCaching enabled and it failed again (agg2.Count = {agg2.Count})");
+                            TimeSeriesValuesSegment.ParseTimeSeriesKey(key, size, out var docId, out var name, out DateTime baseline2);
 
+                            Assert.Equal("users/ayende", docId);
+                            Assert.Equal("Heartrate", name);
+                            Assert.Equal(baseline.AddMinutes(61), baseline2);
+
+                            Assert.Equal(1, reader.SegmentsOrValues().Count());
+
+                            Assert.False(query.First().Count == 3, "Query assertion failed once and passed on second try. sanity check passed");
+
+                            Assert.True(false, "Query assertion failed twice. sanity check passed");
                         }
                     }
 
-                    //Assert.Equal(3, agg.Count);
+                    Assert.Equal(3, agg.Count);
 
                     Assert.Equal(1, agg.Results.Length);
 
