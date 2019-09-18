@@ -168,7 +168,7 @@ namespace SlowTests.Issues
 
                 var originalStatsAfterDeletions = await storeToExport.Maintenance.SendAsync(new GetStatisticsOperation());
 
-               // TODO arek options.OperateOnTypes |= DatabaseItemType.Tombstones;
+                options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
                 operation = await storeToExport.Smuggler.ExportAsync(options, fileAfterDeletions);
                 result = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(2));
@@ -178,7 +178,7 @@ namespace SlowTests.Issues
                 Assert.Equal(originalStatsAfterDeletions.CountOfDocuments, progress.Documents.ReadCount);
                 Assert.Equal(originalStatsAfterDeletions.CountOfCounterEntries, progress.Counters.ReadCount);
                 Assert.Equal(originalStatsAfterDeletions.CountOfRevisionDocuments, progress.RevisionDocuments.ReadCount);
-                // TODO arek Assert.Equal(originalStats.CountOfTombstones, progress.Tombstones.ReadCount);
+                Assert.Equal(originalStatsAfterDeletions.CountOfTombstones, progress.Tombstones.ReadCount);
 
                 var importOptions = new DatabaseSmugglerImportOptions();
 
@@ -192,10 +192,9 @@ namespace SlowTests.Issues
                 Assert.Equal(numberOfUsers - deletedUsers + numberOfOrders, statsAfterDeletions.CountOfDocuments);
                 Assert.Equal(numberOfUsers - deletedUsers, statsAfterDeletions.CountOfCounterEntries);
                 Assert.Equal(expectedNumberOfRevisions, statsAfterDeletions.CountOfRevisionDocuments);
-                // TODO arek Assert.Equal(deletedUsers, statsAfterDeletions.CountOfTombstones);
+                Assert.Equal(deletedUsers, statsAfterDeletions.CountOfTombstones);
             }
         }
-
 
         [Theory]
         [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 0, 2)]
