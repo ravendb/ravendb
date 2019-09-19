@@ -323,21 +323,25 @@ namespace Raven.Server.Documents.Queries.Results
             var isJson = false;
             var isNumeric = false;
 
+            var arrayFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
+            var jsonConvertFieldName = field + LuceneDocumentConverterBase.ConvertToJsonSuffix;
+            var numericFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
+
             foreach (var f in indexDocument.GetFields())
             {
-                if (f.Name == field + LuceneDocumentConverterBase.IsArrayFieldSuffix)
+                if (f.Name == arrayFieldName)
                 {
                     isArray = true;
                     continue;
                 }
 
-                if (f.Name == field + LuceneDocumentConverterBase.ConvertToJsonSuffix)
+                if (f.Name == jsonConvertFieldName)
                 {
                     isJson = true;
                     break;
                 }
 
-                if (f.Name == field + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble)
+                if (f.Name == numericFieldName)
                 {
                     isNumeric = true;
                 }
