@@ -13,33 +13,6 @@ namespace Sparrow.Platform.Posix
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(KernelVirtualFileSystemUtils).FullName);
         private static readonly ConcurrentSet<string> IsOldFileAlert = new ConcurrentSet<string>();
 
-
-        public static long? ReadNumberFromCgroupFileFiled(string fileName, string field)
-        {
-            try
-            {
-                var txt = File.ReadAllLines(fileName);
-                foreach (var line in txt)
-                {
-                    var words = line.Split(" ");
-                    if (words.Length == 2)
-                    {
-                        if (words[0].Equals(field))
-                            return Convert.ToInt64(words[1]);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsOperationsEnabled)
-                {
-                    Logger.Operations($"Unable to read and parse '{fileName}', will not respect container's '{field}'", e);
-                }
-            }
-
-            return null;
-        }
-
         public static long? ReadNumberFromCgroupFile(string fileName)
         {
             try
