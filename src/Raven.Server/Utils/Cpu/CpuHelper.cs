@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Dashboard;
+using Raven.Server.ServerWide;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -36,16 +38,16 @@ namespace Raven.Server.Utils.Cpu
             return calculator;
         }
 
-        internal static ExtensionPointCpuUsageCalculator GetExtensionPointCpuUsageCalculator(
-            JsonContextPool contextPool,
+        internal static ExtensionPointCpuUsageCalculator GetExtensionPointCpuUsageCalculator(JsonContextPool contextPool,
             MonitoringConfiguration configuration,
-            NotificationCenter.NotificationCenter notificationCenter)
+            NotificationCenter.NotificationCenter notificationCenter, CancellationToken serverStoreServerShutdown)
         {
             var extensionPoint = new ExtensionPointCpuUsageCalculator(
                 contextPool,
                 configuration.CpuUsageMonitorExec,
                 configuration.CpuUsageMonitorExecArguments,
-                notificationCenter);
+                notificationCenter,
+                serverStoreServerShutdown);
 
             
 

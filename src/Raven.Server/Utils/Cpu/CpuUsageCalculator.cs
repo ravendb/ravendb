@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Raven.Server.Dashboard;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -256,12 +257,13 @@ namespace Raven.Server.Utils.Cpu
     internal class ExtensionPointCpuUsageCalculator : ICpuUsageCalculator
     {
         private readonly CpuUsageExtensionPoint _inspector;
+        private readonly CancellationToken _serverShutdown;
 
-        public ExtensionPointCpuUsageCalculator(
-            JsonContextPool contextPool,
+        public ExtensionPointCpuUsageCalculator(JsonContextPool contextPool,
             string exec,
             string args,
-            NotificationCenter.NotificationCenter notificationCenter)
+            NotificationCenter.NotificationCenter notificationCenter,
+            CancellationToken serverStoreServerShutdown)
         {
             _inspector = new CpuUsageExtensionPoint(
                 contextPool,
@@ -269,6 +271,7 @@ namespace Raven.Server.Utils.Cpu
                 args,
                 notificationCenter
             );
+            _serverShutdown = CancellationToken.None;
         }
 
         public (double MachineCpuUsage, double ProcessCpuUsage) Calculate()
@@ -279,12 +282,11 @@ namespace Raven.Server.Utils.Cpu
 
         public void Init()
         {
-            _inspector.Start();
+            _inspector.Start(_serverShutdown);
         }
 
         public void Dispose()
         {
-            _inspector.Dispose();
         }
     }
 }

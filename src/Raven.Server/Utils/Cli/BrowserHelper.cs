@@ -24,44 +24,7 @@ namespace Raven.Server.Utils.Cli
                 }
                 else
                 {
-                    // ADIADI::RavenProcess.Start("xdg-open", url);
-//                    using (var p = new RavenProcess {StartInfo = new ProcessStartInfo{FileName = "ls", Arguments = "-la"}})
-//                    {
-                    int i = 0;
-                    var cts1 = new CancellationTokenSource();
-                    var ctk1 = cts1.Token;
-                    var cts2 = new CancellationTokenSource();
-                    var ctk2 = cts2.Token;
-                    var cts3 = new CancellationTokenSource();
-                    var ctk3 = cts3.Token;
-                    var cts4 = new CancellationTokenSource();
-                    var ctk4 = cts4.Token;
-                        EventHandler lineOutHandler = (sender, args) =>
-                        {
-                            LineOutputEventArgs l = args as LineOutputEventArgs;
-                            Console.WriteLine(i + " - " + l.line);
-                            i++;
-//                            if (i > 13)
-//                            {
-//                                Console.WriteLine("About to cancel");
-//                                cts4.Cancel();
-//                            }
-                        };
-
-                        EventHandler exitHandler = (sender, args) =>
-                        {
-                            ProcessExitedEventArgs l = args as ProcessExitedEventArgs;
-                            Console.WriteLine("exit:");
-                            Console.WriteLine(l.ExitCode + ", " + l.Pid.ToInt64());
-                            Console.WriteLine("===");
-                        };
-
-                        RavenProcess.Execute("testme.sh", "Second", 1, exitHandler, lineOutHandler, serverStore.ServerShutdown);
-
-//                    }
-
-                    Console.WriteLine("After");
-                    // RavenProcess.Start("testme.sh", url);
+                    RavenProcess.Start("xdg-open", url);
                 }
 
                 return true;

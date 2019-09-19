@@ -148,7 +148,6 @@ namespace Sparrow.Platform.Posix
                             term = _rssBytes;
                         else if (_smapsBuffer[_currentBuffer][i] == 'S')
                         {
-                            Console.WriteLine($"[S]");
                             term = _sizeBytes; // or SharedDirty or SharedCleanBytes (which ARE longer in length from Size)
                             offset = _sharedCleanBytes.Length - term.Length;
                         }
@@ -200,7 +199,6 @@ namespace Sparrow.Platform.Posix
                                     term = _sharedCleanBytes;
                                     if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     {
-                                        Console.WriteLine($"<{Encoding.UTF8.GetString(_smapsBuffer[searchedBuffer], 0, 1)}>");
                                         continue;
                                     }
                                 }
