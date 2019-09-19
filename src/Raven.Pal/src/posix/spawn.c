@@ -22,12 +22,8 @@
 #include "status_codes.h"
 #include "internal_posix.h"
 
-
-#define MSEC_TO_SEC(x) (x/1000)
-#define MSEC_TO_NANOSEC(x) ((x % 1000) * 1000000)
-
 PRIVATE char** 
-parse_cmd_line(char* line, char *filename)
+_parse_cmd_line(char* line, char *filename)
 {
     int argc = 2;
     char** argv = malloc(argc);
@@ -36,8 +32,7 @@ parse_cmd_line(char* line, char *filename)
     if (line == NULL || *line == '\0')
         return argv;
     
-    char * pch;
-    pch = strtok (line," \t\n");
+    char * pch = strtok (line," \t\n");
     while (pch != NULL)
     {        
         argv[argc++] = pch;
@@ -50,66 +45,84 @@ parse_cmd_line(char* line, char *filename)
 }
 
 PRIVATE ssize_t 
-ReadSize(int fd, void* buffer, size_t count)
+_read_size_internal(int fd, void* buffer, size_t count)
 {
-    ssize_t rv = 0;
+    ssize_t result = read(fd, buffer, count);
+    while ( result < 0 && errno == EINTR)
+        result = read(fd, buffer, count);
+    return result;
+}
+
+
+
+PRIVATE ssize_t 
+_read_size(int fd, void* buffer, size_t count)
+{
+    ssize_t rc = 0;
     while (count > 0)
     {
-        ssize_t result = read(fd, buffer, count);
-        while ( result < 0 && errno == EINTR)
-            result = read(fd, buffer, count);
+        ssize_t result = _read_size_internal(fd, buffer, count);
 
-        if (result > 0)
-        {
-            rv += result;
-            buffer = (uint8_t*)buffer + result;
-            count -= (size_t)result;
-        }
-        else
-        {
+        if (result <= 0)
             return -1;
-        }
+        
+        rc += result;
+        buffer = (uint8_t*)buffer + result;
+        count -= (size_t)result;
     }
-    return rv;
+    return rc;
 }
 
 PRIVATE void 
-CloseIfOpen(int fd)
+_close_if_open(int fd)
 {
     if (fd >= 0)    
         close(fd);    
 }
 
-PRIVATE ssize_t WriteSize(int fd, const void* buffer, size_t count)
+PRIVATE ssize_t
+_write_size_internal(int fd, const void* buffer, size_t count)
 {
-    ssize_t rv = 0;
+    ssize_t result = write(fd, buffer, count);
+    while ( result  < 0 && errno == EINTR)
+        result = write(fd, buffer, count);
+    return result;
+}
+
+PRIVATE ssize_t 
+_write_size(int fd, const void* buffer, size_t count)
+{
+    ssize_t rc = 0;
     while (count > 0)
     {
-        ssize_t result = write(fd, buffer, count);
-        while ( result  < 0 && errno == EINTR)
-            result = write(fd, buffer, count);
+        ssize_t result = _write_size_internal(fd, buffer, count);
 
-        if (result > 0)
-        {
-            rv += result;
-            buffer = (const uint8_t*)buffer + result;
-            count -= (size_t)result;
-        }
-        else
-        {
+        if (result <= 0)
             return -1;
-        }
+        
+        rc += result;
+        buffer = (const uint8_t*)buffer + result;
+        count -= (size_t)result;
     }
-    return rv;
+    return rc;
 }
 
 PRIVATE void 
-ExitChild(int pipeToParent, int error)
+_exit_child(int pipeToParent, int error)
 {
     if (pipeToParent != -1)
-        WriteSize(pipeToParent, &error, sizeof(error));
+        _write_size(pipeToParent, &error, sizeof(error));
 
     _exit(error != 0 ? error : EXIT_FAILURE);
+}
+
+PRIVATE int32_t
+_redirect_std(int fd, int fileno)
+{
+    int32_t result = dup2(fd, fileno);
+    while ( result < 0 && errno == EINTR)
+        result = dup2(fd, STDOUT_FILENO);
+    return result;
 }
 
 EXPORT int32_t
@@ -126,7 +139,7 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
         strcpy(modified, "./");
     strcat(modified, (char *)filename);
 
-    char **argv = parse_cmd_line(cmdline, modified);
+    char **argv = _parse_cmd_line(cmdline, modified);
 
     int32_t rc = SUCCESS;
 
@@ -167,26 +180,16 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
         pthread_sigmask(SIG_SETMASK, &old_signal_set, &junk_signal_set); 
         
         /* redirect both stdout and stderr to the same stream, and redirect stdin: */
-        result = dup2(stdoutFds[1], STDOUT_FILENO);
-        while ( result < 0 && errno == EINTR)
-            result = dup2(stdoutFds[1], STDOUT_FILENO);
-        if (result == -1)
-            ExitChild(waitForChildToExecPipe[1], errno);
-
-        result = dup2(stdoutFds[1], STDERR_FILENO);
-        while ( result < 0 && errno == EINTR)
-            result = dup2(stdoutFds[1], STDERR_FILENO);
-        if (result == -1)
-            ExitChild(waitForChildToExecPipe[1], errno);
-
-        result = dup2(stdinFds[0], STDIN_FILENO);
-        while ( result < 0 && errno == EINTR)
-            result = dup2(stdinFds[0], STDERR_FILENO);
-        if (result == -1)
-            ExitChild(waitForChildToExecPipe[1], errno);
+        if ( (result = _redirect_std(stdoutFds[1], STDOUT_FILENO)) == -1 ||
+             (result = _redirect_std(stdoutFds[1], STDERR_FILENO)) == -1 ||
+             (result = _redirect_std(stdinFds[1],  STDIN_FILENO)) == -1  ||
+             (result = _redirect_std(stdoutFds[1], STDOUT_FILENO)) == -1 )
+        {
+            _exit_child(waitForChildToExecPipe[1], errno);
+        }        
         
         execvp(modified, argv);
-        ExitChild(waitForChildToExecPipe[1], errno);
+        _exit_child(waitForChildToExecPipe[1], errno);
     }
 
     pthread_sigmask(SIG_SETMASK, &old_signal_set, &signal_set);
@@ -202,29 +205,29 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
 
 error_cleanup:
     *detailed_error_code = errno;
-    CloseIfOpen(stdinFds[0]);
-    CloseIfOpen(stdoutFds[1]);
-    CloseIfOpen(waitForChildToExecPipe[1]);
+    _close_if_open(stdinFds[0]);
+    _close_if_open(stdoutFds[1]);
+    _close_if_open(waitForChildToExecPipe[1]);
    
     if (waitForChildToExecPipe[0] != -1)
     {
         int childError;
         if (rc == SUCCESS)
         {
-            ssize_t result = ReadSize(waitForChildToExecPipe[0], &childError, sizeof(childError));
+            ssize_t result = _read_size(waitForChildToExecPipe[0], &childError, sizeof(childError));
             if (result == sizeof(childError))
             {
                 rc = FAIL_CHILD_PROCESS_FAILURE;
                 *detailed_error_code = childError;
             }
         }
-        CloseIfOpen(waitForChildToExecPipe[0]);
+        _close_if_open(waitForChildToExecPipe[0]);
     }
 
     if (rc != SUCCESS)
     {
-        CloseIfOpen(stdinFds[1]);
-        CloseIfOpen(stdoutFds[0]);
+        _close_if_open(stdinFds[1]);
+        _close_if_open(stdoutFds[0]);
         
         if (processId > 0)
         {
@@ -249,72 +252,20 @@ rvn_kill_process(void* pid, int32_t* detailed_error_code) {
         *detailed_error_code = errno;
         return FAIL_KILL;
     }
-    /* calling this to observe the statuc code of the process*/
-    waitpid((pid_t)(int64_t)(int *)pid, &rc, WNOHANG);
+    /* calling this to observe the status code of the process*/
+    waitpid((pid_t)(int64_t)(int *)pid, &rc, WNOHANG | WUNTRACED);
     return SUCCESS;
 }
 
 EXPORT int32_t
-rvn_wait_for_close_process(void* pid, int32_t timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
-    /* sigset_t child_mask;
-    sigemptyset(&child_mask);
-    sigaddset(&child_mask, SIGCHLD);
-    time_t timeout_sec = MSEC_TO_SEC(timeout_ms);
-    
-    int status;
-
-    time_t start = time(NULL);
-
-    struct timespec houndrad_ms;
-    houndrad_ms.tv_sec = 0;
-    houndrad_ms.tv_nsec = MSEC_TO_NANOSEC(250);
-
-    struct timespec remaining;
-    busy wait for proc to end, can't use 'sigtimedwait' on OS X
-    while (1) {
-        pid_t endId = waitpid((pid_t)((int64_t)pid), &status, WNOHANG);
-        if (endId == -1)
-        {
-            *detailed_error_code = errno;
-            if(errno == ECHILD)
-                return FAIL_CHILD_PROCESS_FAILURE;
-            return FAIL_WAIT_PID;
-        }
-
-        if (endId == (int64_t)pid)
-            break;        
-
-        if (difftime(time(NULL), start) >= timeout_sec)
-        {
-            *detailed_error_code = errno;
-            return FAIL_TIMEOUT;
-        }
-    
-        nanosleep((const struct timespec*)&houndrad_ms,&remaining);    
-    }
-
-    *detailed_error_code = status;
-
-    if (WIFEXITED(status)) {
-        *exit_code = WEXITSTATUS(status);
-        return SUCCESS;
-    }
-    else if (WIFSIGNALED(status)) {
-        *exit_code = WTERMSIG(status);
-    }
-    else if (WIFSTOPPED(status)) {
-        *exit_code = WSTOPSIG(status);
-    }
-    return FAIL_WAIT_PID;
-    */
-
+rvn_wait_for_close_process(void* pid, int32_t closewait_timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
     int status;
     pid_t endID, childID = (pid_t)((int64_t)pid);
         
     time_t start = time(NULL);
-    while(difftime(time(NULL), start) <= timeout_seconds)
+    while(difftime(time(NULL), start) <= closewait_timeout_seconds)
     {
-        endID = waitpid(childID, &status, WNOHANG|WUNTRACED);
+        endID = waitpid(childID, &status, WNOHANG | WUNTRACED);
         if (endID == -1) 
         {
             *detailed_error_code = errno;
