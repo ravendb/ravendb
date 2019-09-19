@@ -1039,7 +1039,7 @@ namespace Raven.Server.ServerWide
                 if (Engine.Tag == tag)
                 {
                     var wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(SystemTime.UtcNow);
-                    var dueTime = (int)(wakeup - DateTime.UtcNow).TotalMilliseconds;
+                    var dueTime = (int)(wakeup - SystemTime.UtcNow).TotalMilliseconds;
 
                     DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
                 }
