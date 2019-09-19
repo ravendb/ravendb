@@ -59,7 +59,7 @@ namespace Raven.Server.Documents
 
         private void HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
-            if (PreventWakeupIdleDatabase(databaseName, type))
+            if (PreventWakeUpIdleDatabase(databaseName, type))
                 return;
 
             _disposing.EnterReadLock();
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool PreventWakeupIdleDatabase(string databaseName, string type)
+        private bool PreventWakeUpIdleDatabase(string databaseName, string type)
         {
             if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
                 return false;

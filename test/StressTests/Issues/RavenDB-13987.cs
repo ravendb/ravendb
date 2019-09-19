@@ -12,9 +12,10 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_13987 : ReplicationTestBase
     {
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
             DoNotReuseServer();
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task ServerWideBackupShouldNotWakeupIdleDatabases()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -88,8 +89,8 @@ namespace SlowTests.Issues
 
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
-                    FullBackupFrequency = "*/2 * * * *",
-                    IncrementalBackupFrequency = "*/2 * * * *",
+                    FullBackupFrequency = "*/1 * * * *",
+                    IncrementalBackupFrequency = "*/1 * * * *",
                     LocalSettings = new LocalSettings { FolderPath = backupPath },
                 };
 
