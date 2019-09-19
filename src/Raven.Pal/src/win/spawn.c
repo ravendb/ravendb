@@ -11,32 +11,32 @@
 
 EXPORT int32_t
 rvn_kill_process(void* pid, int32_t* detailed_error_code) {
+    int32_t rc = SUCCESS;
     if (!TerminateProcess(pid, 9)) {
         *detailed_error_code = GetLastError();
-        return FAIL_KILL;
+        rc = FAIL_KILL;
     }
     CloseHandle(pid);
-    return SUCCESS;
+    return rc;
 }
 
 EXPORT int32_t
-rvn_wait_for_close_process(void* pid, int32_t timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
+rvn_wait_for_close_process(void* pid, int32_t closewait_timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
     DWORD rc = WaitForSingleObject(pid, timeout_seconds * 1000);
     
     if (rc == WAIT_TIMEOUT)
     {
         *detailed_error_code = GetLastError();
-        return FAIL_TIMEOUT;
+        rc = FAIL_TIMEOUT;
     }
-
-    if (!GetExitCodeProcess(pid, exit_code)) {
+    else if (!GetExitCodeProcess(pid, exit_code)) {
         *detailed_error_code = GetLastError();
-        return FAIL_WAIT_PID;
+        rc = FAIL_WAIT_PID;
     }
 
     CloseHandle(pid);
 
-    return SUCCESS;
+    return rc;
 }
 
 EXPORT int32_t
@@ -55,8 +55,10 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     int cmdline_len = strlen(cmdline);
     int line_len = filename_len + cmdline_len + 2;// space + null
     ZeroMemory(&si, sizeof(STARTUPINFO));
-    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));    
     ZeroMemory(&sa, sizeof(SECURITY_ATTRIBUTES));
+
+    pi.hThread = FAIL_INVALID_HANDLE;
 
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = NULL;
@@ -100,7 +102,7 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     si.hStdInput = stdin_read;
     si.dwFlags |= STARTF_USESTDHANDLES;
 
-    /* Creates a child process*/
+    /* Creates a child process*/    
     if (!CreateProcess(
         NULL,     /* Module*/
         line,                                    /* Command-line*/

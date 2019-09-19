@@ -70,7 +70,7 @@ rvn_test_storage_durability(
 }
 
 PRIVATE int32_t
-rvn_pipe_for_child(int descriptors[])
+rvn_pipe_for_child(int descriptors[2])
 {
     int32_t result = FAIL;
     while ((result = pipe(descriptors)) < 0 && errno == EINTR);

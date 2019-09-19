@@ -109,7 +109,7 @@ error_cleanup:
 }
 
 PRIVATE int32_t
-rvn_pipe_for_child(int descriptors[])
+rvn_pipe_for_child(int descriptors[2])
 {
     int32_t result = FAIL;
     while ((result = pipe2(descriptors, O_CLOEXEC)) < 0 && errno == EINTR);

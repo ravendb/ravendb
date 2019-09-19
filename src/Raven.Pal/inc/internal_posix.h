@@ -62,7 +62,7 @@ PRIVATE int32_t
 _ensure_path_exists(const char *path, int32_t *detailed_error_code);
 
 PRIVATE int32_t
-rvn_pipe_for_child(int descriptors[]);
+rvn_pipe_for_child(int descriptors[2]);
 
 #endif
 #endif

@@ -108,7 +108,7 @@ EXPORT int32_t
 rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** stdin, void** stdout, int32_t* detailed_error_code);
 
 EXPORT int32_t
-rvn_wait_for_close_process(void* pid, int32_t timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code);
+rvn_wait_for_close_process(void* pid, int32_t closewait_timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code);
 
 EXPORT int32_t
 rvn_kill_process(void* pid, int32_t* detailed_error_code);
