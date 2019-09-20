@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
-using Raven.Server.Config;
-using Raven.Server.Utils.Enumerators;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 
@@ -218,6 +218,49 @@ namespace SlowTests.Issues
             AssertAllMatchesDocsStreamed(store, numberOfUsers);
 
             AssertAllMatchesDocsStreamedWithPaging(store, numberOfUsers);
+        }
+
+        public class Users_ByName : AbstractIndexCreationTask<User>
+        {
+            public Users_ByName()
+            {
+                Map = users => from user in users select new
+                {
+                    user.Name,
+                    user.LastName
+                };
+            }
+        }
+
+        protected static void CanStreamQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
+        {
+            using (var bulk = store.BulkInsert())
+            {
+                for (int i = 0; i < numberOfUsers; i++)
+                {
+                    bulk.Store(new User(), "users/" + i);
+                }
+            }
+
+            new Users_ByName().Execute(store);
+
+            WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<User, Users_ByName>();
+
+                var enumerator = session.Advanced.Stream<User>(query);
+
+                var count = 0;
+
+                while (enumerator.MoveNext())
+                {
+                    count++;
+                }
+
+                Assert.Equal(numberOfUsers, count);
+            }
         }
 
         private static void AssertAllStartsWithDocsStreamedWithPaging(DocumentStore store, int numberOfUsers)
