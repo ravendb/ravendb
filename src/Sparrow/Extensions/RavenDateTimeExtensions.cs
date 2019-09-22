@@ -263,7 +263,7 @@ namespace Sparrow.Extensions
         /// <param name="dt"></param>
         /// <param name="isUtc"></param>
         /// <returns></returns>
-        public static unsafe string GetDefaultRavenFormat(this DateTime dt, bool isUtc = false)
+        public static unsafe string GetDefaultRavenFormat(this DateTime dt, bool isUtc)
         {
             ValidateDate(dt, isUtc);
 
@@ -278,6 +278,12 @@ namespace Sparrow.Extensions
 
             return result;
         }
+
+        public static string GetDefaultRavenFormat(this DateTime dt)
+        {
+            return GetDefaultRavenFormat(dt, dt.Kind == DateTimeKind.Utc);
+        }
+
 
         /// <summary>
         /// This function Processes the to string format of the form "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff" for date times in 
