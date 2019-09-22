@@ -1435,7 +1435,7 @@ namespace Raven.Server.Documents.TimeSeries
                 while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader))
                 {
                     name = UpdateSlice(ref reader, documentKeyPrefix.Size, ref slice);
-                    list.Add(name);
+                    list.Insert(0, name);
                 }
                 return list;
             }
