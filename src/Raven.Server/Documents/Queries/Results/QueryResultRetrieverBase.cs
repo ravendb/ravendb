@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var arrayFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
             var jsonConvertFieldName = field + LuceneDocumentConverterBase.ConvertToJsonSuffix;
-            var numericFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
+            var numericFieldName = field + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
 
             foreach (var f in indexDocument.GetFields())
             {
