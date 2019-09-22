@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Raven.Abstractions.Data;
@@ -13,7 +14,7 @@ using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Replication;
 using Raven.Client.Document;
 using Raven.Database.Raft.Dto;
-
+using Raven.Json.Linq;
 using Xunit;
 
 namespace Raven.Tests.Raft
@@ -127,6 +128,98 @@ namespace Raven.Tests.Raft
                     });
                 }
             }
+        }
+
+
+        [Fact]
+        public void InterClusterDocumentsETL()
+        {
+            var cluster1Stores = CreateRaftCluster(3, activeBundles: "Replication");
+            var cluster2Stores = CreateRaftCluster(3, activeBundles: "Replication");
+
+            SetupClusterConfiguration(cluster1Stores);
+            SetupClusterConfiguration(cluster2Stores);
+            cluster1Stores.First().DatabaseCommands.Put(Constants.RavenReplicationDestinations,
+                null,
+                new RavenJObject() {
+                    {
+                        "Destinations", new RavenJArray(new RavenJObject {
+                            { "Url", cluster2Stores.First().Url},
+                            { "Database", cluster2Stores.First().DefaultDatabase },
+                            { "SpecifiedCollections", RavenJObject.FromObject(new Dictionary<string, string>
+                                {
+                                    { "users", null }
+                                }) }
+
+                        } )
+                    }
+                }
+                , new RavenJObject()
+
+                );
+            cluster1Stores.First().DatabaseCommands.Put("users/1", null, new RavenJObject() { { "Foo", "Bar" } }, new RavenJObject() { { "Raven-Entity-Name", "users" } });
+
+            RavenJObject document = null;
+
+            for (int i = 0; i < 100 * 10; i++)
+            {
+                using (var session = cluster2Stores.First().OpenSession())
+                {
+                    document = session.Load<RavenJObject>("users/1");
+                    if (document != null)
+                        break;
+                    Thread.Sleep(100);
+                }
+            }
+
+            Assert.NotNull(document);
+
+        }
+
+        [Fact]
+        public void InterClusterAttachmentsETL()
+        {
+            var cluster1Stores = CreateRaftCluster(3, activeBundles: "Replication");
+            var cluster2Stores = CreateRaftCluster(3, activeBundles: "Replication");
+
+            SetupClusterConfiguration(cluster1Stores);
+            SetupClusterConfiguration(cluster2Stores);
+            cluster1Stores.First().DatabaseCommands.Put(Constants.RavenReplicationDestinations,
+                null,
+                new RavenJObject() {
+                    {
+                        "Destinations", new RavenJArray(new RavenJObject {
+                            { "Url", cluster2Stores.First().Url},
+                            { "Database", cluster2Stores.First().DefaultDatabase },
+                            { "SpecifiedCollections", RavenJObject.FromObject(new Dictionary<string, string>
+                                {
+                                    { "users", null }
+                                }) },
+                            {"ReplicateAttachmentsInEtl", "true" }
+
+                        } )
+                    }
+                }
+                , new RavenJObject()
+
+                );
+
+            cluster1Stores.First().DatabaseCommands.PutAttachment("attach/1", null, new System.IO.MemoryStream(new byte[] { 1, 2, 3 }), new RavenJObject());
+
+
+
+            Attachment attachment = null;
+
+            for (int i = 0; i < 100 * 10; i++)
+            {
+                attachment = cluster2Stores.First().DatabaseCommands.GetAttachment("attach/1");
+                if (attachment != null)
+                    break;
+                Thread.Sleep(100);
+            }
+
+            Assert.NotNull(attachment);
+
         }
     }
 }

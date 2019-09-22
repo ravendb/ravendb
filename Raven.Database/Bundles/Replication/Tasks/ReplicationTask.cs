@@ -1194,7 +1194,8 @@ namespace Raven.Bundles.Replication.Tasks
 
                     Guid? currentTopologyID = docDb.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId;
 
-                    if (currentTopologyID != null && currentTopologyID.Value != Guid.Empty)
+                    if ((destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count == 0) &&
+                        currentTopologyID != null && currentTopologyID.Value != Guid.Empty)
                         request.WebRequest.Headers["Topology-Id"] = docDb.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString();
 
                     request.WriteBson(jsonAttachments);
@@ -1337,7 +1338,9 @@ namespace Raven.Bundles.Replication.Tasks
                     var request = httpRavenRequestFactory.Create(url, HttpMethods.Post, destination.ConnectionStringOptions, GetRequestBuffering(destination));
                     Guid? currentTopologyID = docDb.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId;
 
-                    if (currentTopologyID!= null && currentTopologyID.Value != Guid.Empty)
+                    if (
+                        (destination.SpecifiedCollections == null || destination.SpecifiedCollections.Count==0) &&
+                        currentTopologyID!= null && currentTopologyID.Value != Guid.Empty)
                         request.WebRequest.Headers["Topology-Id"] = docDb.ClusterManager?.Value?.Engine.CurrentTopology.TopologyId.ToString();
 
                     request.Write(jsonDocuments);
