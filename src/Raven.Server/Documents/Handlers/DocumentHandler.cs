@@ -468,7 +468,7 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteComma();
 
                             writer.WritePropertyName(nameof(command.PatchResult.LastModified));
-                            writer.WriteString(command.PatchResult.LastModified.GetDefaultRavenFormat(isUtc: command.PatchResult.LastModified.Kind == DateTimeKind.Utc));
+                            writer.WriteString(command.PatchResult.LastModified.GetDefaultRavenFormat());
                             writer.WriteComma();
 
                             writer.WritePropertyName(nameof(command.PatchResult.ChangeVector));

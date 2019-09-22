@@ -38,7 +38,7 @@ namespace Raven.Client.Json.Converters
                     var dateTime = (DateTime)key;
                     if (dateTime.Kind == DateTimeKind.Unspecified)
                         dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-                    writer.WritePropertyName(dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc));
+                    writer.WritePropertyName(dateTime.GetDefaultRavenFormat());
                 }
                 else if (key is DateTimeOffset)
                 {

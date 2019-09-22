@@ -71,9 +71,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     foreach (var range in _ranges)
                     {
                         pathBuilder.Append("&from=")
-                            .Append(range.From.GetDefaultRavenFormat(range.From.Kind == DateTimeKind.Utc))
+                            .Append(range.From.GetDefaultRavenFormat())
                             .Append("&to=")
-                            .Append(range.To.GetDefaultRavenFormat(range.To.Kind == DateTimeKind.Utc));
+                            .Append(range.To.GetDefaultRavenFormat());
                     }
                 }
 

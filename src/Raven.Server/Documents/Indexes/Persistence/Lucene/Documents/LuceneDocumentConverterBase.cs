@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.DateTime)
             {
                 var dateTime = (DateTime)value;
-                var dateAsString = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+                var dateAsString = dateTime.GetDefaultRavenFormat();
 
                 instance.Add(GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector));
                 newFields++;

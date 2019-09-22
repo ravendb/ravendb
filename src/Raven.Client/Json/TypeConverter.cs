@@ -127,7 +127,7 @@ namespace Raven.Client.Json
                     kvpKeyAsString = lcsv.ToLazyStringValue();
                     break;
                 case DateTime dateTime:
-                    kvpKeyAsString = dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc);
+                    kvpKeyAsString = dateTime.GetDefaultRavenFormat();
                     break;
                 case DateTimeOffset dateTimeOffset:
                     kvpKeyAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);

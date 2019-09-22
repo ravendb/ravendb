@@ -452,7 +452,7 @@ namespace Sparrow.Json.Parsing
 
                 if (current is DateTime dateTime1)
                 {
-                    var s = dateTime1.GetDefaultRavenFormat(isUtc: dateTime1.Kind == DateTimeKind.Utc);
+                    var s = dateTime1.GetDefaultRavenFormat();
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;

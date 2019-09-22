@@ -219,7 +219,7 @@ namespace Raven.Client.Json
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
                     break;
                 case DateTime dt:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc));
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat());
                     break;
                 case DateTimeOffset dto:
                     _manualBlittableJsonDocumentBuilder.WriteValue(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
@@ -343,7 +343,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(DateTime value)
         {
-            var s = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
+            var s = value.GetDefaultRavenFormat();
             _manualBlittableJsonDocumentBuilder.WriteValue(s);
         }
 
@@ -428,7 +428,7 @@ namespace Raven.Client.Json
         public override void WriteValue(DateTime? value)
         {
             if (value != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat(isUtc: value.Value.Kind == DateTimeKind.Utc));
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat());
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
