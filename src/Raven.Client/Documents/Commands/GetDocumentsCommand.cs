@@ -10,6 +10,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -134,8 +135,8 @@ namespace Raven.Client.Documents.Commands
                 foreach (var range in _timeSeriesIncludes)
                 {
                     pathBuilder.Append("&timeseries=").Append(range.Name)
-                        .Append("&from=").Append(range.From)
-                        .Append("&to=").Append(range.To);
+                        .Append("&from=").Append(range.From.GetDefaultRavenFormat(range.From.Kind == DateTimeKind.Utc))
+                        .Append("&to=").Append(range.To.GetDefaultRavenFormat(range.From.Kind == DateTimeKind.Utc));
                 }
             }
 

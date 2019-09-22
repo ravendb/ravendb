@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -1606,6 +1607,82 @@ more responsive application.
                 }
             }
 
+        }
+
+        internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries, string[] ids, IEnumerable<TimeSeriesRange> timeSeriesToInclude)
+        {
+            if (NoTracking)
+                return;
+
+            if (resultTimeSeries != null)
+            {
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                for (int i = 0; i < resultTimeSeries.Count; i++)
+                {
+                    resultTimeSeries.GetPropertyByIndex(i, ref propertyDetails);
+                    if (propertyDetails.Value == null)
+                        continue;
+
+                    var id = propertyDetails.Name;
+
+                    if (TimeSeriesByDocId.TryGetValue(id, out var cache) == false)
+                    {
+                        cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+                    }
+
+                    var timeseriesRanges = (BlittableJsonReaderArray)propertyDetails.Value;
+
+                    foreach (BlittableJsonReaderObject blittableRange in timeseriesRanges)
+                    {
+                        if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Name), out string name) == false ||
+                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.From), out DateTime from) == false ||
+                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.To), out DateTime to) == false ||
+                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.Values), out BlittableJsonReaderArray blitabbleValues) == false)
+                            continue;
+
+                        var arr = new TimeSeriesValue[blitabbleValues.Length];
+
+                        for (int j = 0; j < blitabbleValues.Length; j++)
+                        {
+                            var timeSeriesValueBlittable = blitabbleValues.GetByIndex<BlittableJsonReaderObject>(j);
+                            if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false ||
+                                timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false ||
+                                timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
+                                continue;
+
+                            arr[j] = new TimeSeriesValue
+                            {
+                                Tag = tag,
+                                Timestamp = timestamp,
+                                Values = values.Select(x => (double)(long)x).ToArray()
+                            };
+
+                        }
+
+                        if (cache.TryGetValue(name, out var localRanges) == false)
+                        {
+                            cache[name] = new List<TimeSeriesRangeResult>()
+                            {
+                                new TimeSeriesRangeResult
+                                {
+                                    From = from,
+                                    To = to,
+                                    Values = arr
+                                }
+                            };
+                        }
+
+                      //  TODO handle ranges merging
+                    }
+
+                    TimeSeriesByDocId[id] = cache;
+
+                }
+
+
+            }
+
+           // TODO register missing timeseries
         }
 
         public override int GetHashCode()

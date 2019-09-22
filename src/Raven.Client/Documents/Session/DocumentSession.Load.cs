@@ -75,7 +75,8 @@ namespace Raven.Client.Documents.Session
                 ids.ToArray(),
                 includeBuilder.DocumentsToInclude?.ToArray(),
                 includeBuilder.CountersToInclude?.ToArray(),
-                includeBuilder.AllCounters);
+                includeBuilder.AllCounters,
+                includeBuilder.TimeSeriesToInclude.Values);
         }
 
         /// <inheritdoc />
