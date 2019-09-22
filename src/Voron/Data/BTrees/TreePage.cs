@@ -149,11 +149,6 @@ namespace Voron.Data.BTrees
                 goto MultipleEntryKey;
             }
 
-            if (options == SliceOptions.OutOfScope)
-            {
-                goto NoEntries;
-            }
-
             ThrowNotSupportedException();         
 
             NoEntries:

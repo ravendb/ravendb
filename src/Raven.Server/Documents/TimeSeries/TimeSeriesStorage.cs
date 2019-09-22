@@ -1410,35 +1410,46 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(TimeSeriesSchema, tableName);
         }
 
-
-      
-
-        public (IEnumerable<object>, int Count) GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
+        public DynamicJsonArray GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
-            var list = new List<string>();
+            var list = new DynamicJsonArray();
+
+            if (table.SeekToLastPrimaryKey(out var reader) == false)
+                return list;
+
+            var holder = new ByteStringStorage
+            {
+                Flags = ByteStringType.Mutable,
+                Length = 0,
+                Ptr = (byte*)0,
+                Size = 0
+            };
+            var slice = new Slice(new ByteString(&holder));
+
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
             {
-                var valueSlice = Slices.OutOfScope; // seek for this value will return false, so we will get the last value in the tree
-                var prefix = Slices.AfterAllKeys;
+                var name = UpdateSlice(ref reader, documentKeyPrefix.Size, ref slice);
+                list.Add(name);
 
-                while (table.SeekOneBackwardByPrimaryKeyPrefix(prefix, valueSlice, out var reader))
+                while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader))
                 {
-                    var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out var size);
-                    var name = Encoding.UTF8.GetString(keyPtr + documentKeyPrefix.Size, size - documentKeyPrefix.Size - sizeof(long) - 1);
-                    var ptr = new ByteStringStorage
-                    {
-                        Flags = ByteStringType.Mutable, 
-                        Length = size - sizeof(long), 
-                        Ptr = keyPtr, 
-                        Size = size - sizeof(long)
-                    };
-                    valueSlice = new Slice(new ByteString(&ptr));
-                    prefix = documentKeyPrefix;
+                    name = UpdateSlice(ref reader, documentKeyPrefix.Size, ref slice);
                     list.Add(name);
                 }
-                return (list, list.Count);
+                return list;
             }
+        }
+
+        private static string UpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
+        {
+            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out var size);
+            var name = Encoding.UTF8.GetString(keyPtr + prefixSize, size - prefixSize - sizeof(long) - 1);
+
+            slice.Content._pointer->Ptr = keyPtr;
+            slice.Content._pointer->Length = size - sizeof(long);
+            slice.Content._pointer->Size = size - sizeof(long);
+            return name;
         }
 
         private enum TimeSeriesTable

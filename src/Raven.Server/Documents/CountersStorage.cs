@@ -1201,10 +1201,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public (IEnumerable<object> Items, int Count) GetCountersForDocumentList(DocumentsOperationContext context, string docId)
+        public DynamicJsonArray GetCountersForDocumentList(DocumentsOperationContext context, string docId)
         {
-            var items = GetCountersForDocument(context, docId).ToList();
-            return (items, items.Count);
+            return new DynamicJsonArray(GetCountersForDocument(context, docId));
         }
 
         private static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)
