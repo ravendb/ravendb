@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Commands
                 }
             }
             if (_before.HasValue)
-                pathBuilder.Append("&before=").Append(_before.Value.GetDefaultRavenFormat(_before.Value.Kind == DateTimeKind.Utc));
+                pathBuilder.Append("&before=").Append(_before.Value.GetDefaultRavenFormat());
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
             if (_pageSize.HasValue)

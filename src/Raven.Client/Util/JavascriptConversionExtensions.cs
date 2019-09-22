@@ -1635,7 +1635,7 @@ namespace Raven.Client.Util
                         context.PreventDefault();
                         var dateTime = (DateTime)value;
                         writer.Write("new Date(Date.parse(\"");
-                        writer.Write(dateTime.GetDefaultRavenFormat(isUtc: dateTime.Kind == DateTimeKind.Utc));
+                        writer.Write(dateTime.GetDefaultRavenFormat());
                         writer.Write("\"))");
                         return;
                     }
