@@ -544,12 +544,11 @@ namespace Raven.Server.Documents
             return attachments;
         }
 
-        public (IEnumerable<object>, int) GetAttachmentsMetadataForDocument(DocumentsOperationContext context, string docId)
+        public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, string docId)
         {
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, docId, out var lowerDocumentId, out _))
             {
-                var items = GetAttachmentsMetadataForDocument(context, lowerDocumentId);
-                return (items, items.Count);
+                return GetAttachmentsMetadataForDocument(context, lowerDocumentId);
             }
         }
 

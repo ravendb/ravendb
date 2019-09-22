@@ -111,8 +111,6 @@ namespace Voron.Data.BTrees
                         if (last.Options == SliceOptions.AfterAllKeys)
                             return page;
                         break;
-                    case SliceOptions.OutOfScope:
-                        break;
                     default:
                         throw new ArgumentException(key.Options.ToString());
                 }

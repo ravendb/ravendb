@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
             _recreationTypes = new IRecreationType[]
             {
-                new RecreateAttachment(documentsStorage),
+                new RecreateAttachments(documentsStorage),
                 new RecreateCounters(documentsStorage), 
                 new RecreateTimeSeries(documentsStorage), 
             };
@@ -446,7 +446,6 @@ namespace Raven.Server.Documents
             void Recreate(ref DocumentFlags documentFlags)
             {
                 var values = type.GetMetadata(context, docId);
-                var items = values.Items;
 
                 if (values.Count == 0)
                 {
@@ -471,7 +470,7 @@ namespace Raven.Server.Documents
                     {
                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [type.MetadataProperty] = items
+                            [type.MetadataProperty] = values
                         }
                     };
                 }
@@ -479,7 +478,7 @@ namespace Raven.Server.Documents
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata)
                     {
-                        [type.MetadataProperty] = items
+                        [type.MetadataProperty] = values
                     };
                     document.Modifications = new DynamicJsonValue(document)
                     {
@@ -492,7 +491,7 @@ namespace Raven.Server.Documents
         private interface IRecreationType
         {
             string MetadataProperty { get; }
-            Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata { get; }
+            Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata { get; }
 
             DocumentFlags HasFlag { get; }
 
@@ -502,18 +501,18 @@ namespace Raven.Server.Documents
             Action<BlittableJsonReaderObject, DocumentFlags> Assert { get; }
         }
 
-        private class RecreateAttachment : IRecreationType
+        private class RecreateAttachments : IRecreationType
         {
             private readonly DocumentsStorage _storage;
 
-            public RecreateAttachment(DocumentsStorage storage)
+            public RecreateAttachments(DocumentsStorage storage)
             {
                 _storage = storage;
             }
 
             public string MetadataProperty => Constants.Documents.Metadata.Attachments;
 
-            public Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata => _storage.AttachmentsStorage.GetAttachmentsMetadataForDocument;
+            public Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata => _storage.AttachmentsStorage.GetAttachmentsMetadataForDocument;
 
             public DocumentFlags HasFlag => DocumentFlags.HasAttachments;
 
@@ -535,7 +534,7 @@ namespace Raven.Server.Documents
 
             public string MetadataProperty => Constants.Documents.Metadata.Counters;
 
-            public Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata => _storage.CountersStorage.GetCountersForDocumentList;
+            public Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata => _storage.CountersStorage.GetCountersForDocumentList;
 
             public DocumentFlags HasFlag => DocumentFlags.HasCounters;
 
@@ -557,7 +556,7 @@ namespace Raven.Server.Documents
 
             public string MetadataProperty => Constants.Documents.Metadata.TimeSeries;
 
-            public Func<DocumentsOperationContext, string, (IEnumerable<object> Items, int Count)> GetMetadata => _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument;
+            public Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata => _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument;
 
             public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;
 
