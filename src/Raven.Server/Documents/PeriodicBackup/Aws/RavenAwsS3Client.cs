@@ -884,13 +884,55 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
             var response = client.SendAsync(requestMessage).Result;
-            if (response.IsSuccessStatusCode)
-                return;
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
 
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return;
+            using (var stream = response.Content.ReadAsStreamAsync().Result)
+            using (var reader = new StreamReader(stream))
+            {
+                var xElement = XElement.Load(reader);
+                var ns = xElement.Name.Namespace;
 
-            throw StorageException.FromResponseMessage(response);
+                var errors = xElement.Elements(ns + "Error").Select(x =>
+                        new
+                        {
+                            Key = x.Element(ns + "Key").Value,
+                            Code = x.Element(ns + "Code").Value,
+                            Message = x.Element(ns + "Message").Value
+                        }
+                    )
+                    .GroupBy(x => x.Code)
+                    .Select(x => new
+                    {
+                        Message = x.First().Message,
+                        Keys = x.Select(e => e.Key).ToList(),
+                        Count = x.Count()
+                    })
+                    .ToList();
+
+                if (errors.Count == 0)
+                    return;
+
+                var totalFailedToDelete = errors.Sum(x => x.Keys.Count);
+                var totalDeleted = xElement.Elements(ns + "Deleted").Count();
+                var message = $"Failed to delete {totalFailedToDelete} file{Pluralize(totalFailedToDelete)}";
+
+                if (_logger != null && _logger.IsInfoEnabled)
+                {
+                    var failedToDeleteReasons = errors.Aggregate(string.Empty, (current, error) =>
+                        current + $"Reason: {error.Message}, Files ({error.Count}): {string.Join(", ", error.Keys)}. ");
+
+                    _logger.Info($"{message}. Successfully deleted {totalDeleted} file{Pluralize(totalDeleted)}. {failedToDeleteReasons}");
+                }
+
+                string Pluralize(int num)
+                {
+                    return num == 0 || num > 1 ? "s" : string.Empty;
+                }
+
+                var reasons = errors.Select(x => x.Message);
+                throw new InvalidOperationException(message + $" because of: {string.Join(", ", reasons)}");
+            }
         }
 
         public string CalculateMD5Hash(string input)
