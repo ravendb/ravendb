@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Handlers;
@@ -62,7 +61,7 @@ namespace Raven.Server.Documents.Includes
                 var timeSeriesToGet = kvp.Value.TimeseriesNames.ToArray();
                 TimeSeriesToGetByDocId[docId] = timeSeriesToGet;
 
-                var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value);
+                var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value.TimeseriesNames, kvp.Value.FromList, kvp.Value.ToList);
 
                 Results.Add(docId, rangeResults);
             }

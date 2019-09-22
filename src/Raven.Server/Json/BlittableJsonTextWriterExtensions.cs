@@ -5,10 +5,12 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.Timings;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Stats;
@@ -1487,6 +1489,84 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
+        public static async Task WriteTimeSeriesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Dictionary<string, List<TimeSeriesRangeResult>> timeSeries)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in timeSeries)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                await writer.WriteTimeSeriesForDocumentAsync(kvp.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private static async Task WriteTimeSeriesForDocumentAsync(this AsyncBlittableJsonTextWriter writer, IEnumerable<TimeSeriesRangeResult> timeSeries)
+        {
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var ts in timeSeries)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Name));
+                writer.WriteString(ts.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.From));
+                writer.WriteDateTime(ts.From, true);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.To));
+                writer.WriteDateTime(ts.To, true);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(TimeSeriesRangeResult.Values));
+
+                writer.WriteStartArray();
+                {
+                    for (var i = 0; i < ts.Values.Length; i++)
+                    {
+                        if (i > 0)
+                        {
+                            writer.WriteComma();
+                        }
+
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(TimeSeriesValue.Timestamp));
+                        writer.WriteDateTime(ts.Values[i].Timestamp, true);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesValue.Tag));
+                        writer.WriteString(ts.Values[i].Tag);
+                        writer.WriteComma();
+                        writer.WriteArray(nameof(TimeSeriesValue.Values), ts.Values[i].Values);
+
+                        writer.WriteEndObject();
+                    }
+                }
+                writer.WriteEndArray();
+
+                writer.WriteEndObject();
+
+                await writer.MaybeOuterFlushAsync();
+            }
+
+            writer.WriteEndArray();
+        }
 
         public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
             Document document)

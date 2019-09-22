@@ -17,6 +17,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
@@ -213,6 +214,9 @@ namespace Raven.Server.Documents.Handlers
 
             GetCountersQueryString(Database, context, out var includeCounters);
 
+            GetTimeSeriesQueryString(Database, context, out var includeTimeSeries);
+
+
             foreach (var id in ids)
             {
                 var document = Database.DocumentsStorage.Get(context, id);
@@ -225,6 +229,7 @@ namespace Raven.Server.Documents.Handlers
                 documents.Add(document);
                 includeDocs.Gather(document);
                 includeCounters?.Fill(document);
+                includeTimeSeries?.Fill(document);
             }
 
             includeDocs.Fill(includes);
@@ -242,7 +247,7 @@ namespace Raven.Server.Documents.Handlers
 
             int numberOfResults = 0;
 
-            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, numberOfResults);
+            numberOfResults = await WriteDocumentsJsonAsync(context, metadataOnly, documents, includes, includeCounters?.Results, includeTimeSeries?.Results, numberOfResults);
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsByIdAsync), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.ElapsedMilliseconds);
         }
@@ -264,9 +269,9 @@ namespace Raven.Server.Documents.Handlers
             includeCounters = new IncludeCountersCommand(database, context, counters);
         }
 
-        private void GetTimeSeriesQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeCountersCommand includeCounters)
+        private void GetTimeSeriesQueryString(DocumentDatabase database, DocumentsOperationContext context, out IncludeTimeSeriesCommand includeTimeSeries)
         {
-            includeCounters = null;
+            includeTimeSeries = null;
 
             var timeseriesNames = GetStringValuesQueryString("timeseries", required: false);
             if (timeseriesNames.Count == 0)
@@ -275,10 +280,11 @@ namespace Raven.Server.Documents.Handlers
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
 
-            includeCounters = new IncludeTimeSeriesCommand(database, context, counters);
+            includeTimeSeries = new IncludeTimeSeriesCommand(database, context, timeseriesNames, fromList, toList);
         }
 
-        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters, int numberOfResults)
+        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
+            Dictionary<string, List<CounterDetail>> counters, Dictionary<string, List<TimeSeriesRangeResult>> timeseries, int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
@@ -303,6 +309,13 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
                     await writer.WriteCountersAsync(context, counters);
+                }
+
+                if (timeseries?.Count > 0)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
+                    await writer.WriteTimeSeriesAsync(context, timeseries);
                 }
 
                 writer.WriteEndObject();

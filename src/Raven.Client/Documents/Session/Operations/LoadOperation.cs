@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -176,6 +175,11 @@ namespace Raven.Client.Documents.Session.Operations
             if (_includeAllCounters || _countersToInclude != null)
             {
                 _session.RegisterCounters(result.CounterIncludes, _ids.ToArray(), _countersToInclude, _includeAllCounters);
+            }
+
+            if (_timeSeriesToInclude != null)
+            {
+                _session.RegisterTimeSeries(result.TimeSeriesIncludes, _ids.ToArray(), _timeSeriesToInclude);
             }
 
             foreach (var document in GetDocumentsFromResult(result))
