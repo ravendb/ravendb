@@ -146,6 +146,18 @@ namespace Sparrow.Json.Parsing
             Items.Add(obj);
         }
 
+        public void Insert(int index, object obj)
+        {
+#if DEBUG
+            if (obj != null &&
+                obj.GetType().FullName == "Raven.Server.Documents.Document")
+            {
+                throw new InvalidOperationException("Cannot add Document to DynamicJsonArray");
+            }
+#endif
+            Items.Insert(index, obj);
+        }
+
         public int Count => Items.Count;
 
         public IEnumerator<object> GetEnumerator()
