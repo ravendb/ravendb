@@ -313,7 +313,7 @@ namespace Raven.Client.Documents.Session
             return mergedValues.ToArray();
         }
 
-        private static void AddToCache(
+        internal static void AddToCache(
             string timeseries, 
             DateTime from, 
             DateTime to, 

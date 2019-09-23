@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -59,6 +60,216 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(baseline.AddMinutes(10), values[2].Timestamp);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void IncludeTimeSeriesAndMergeWithExistingRangesInCache()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User{ Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                    }
+
+                    session.SaveChanges();
+
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(49, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(2), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(10), vals[48].Timestamp);
+
+                    var user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(40), baseline.AddMinutes(50)));
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(40), baseline.AddMinutes(50))
+                        .ToList();
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(61, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(40), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(50), vals[60].Timestamp);
+
+                    Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
+                    Assert.True(cache.TryGetValue("Heartrate", out var ranges));
+                    Assert.Equal(2, ranges.Count);
+
+                    Assert.Equal(baseline.AddMinutes(2), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+
+                    session.Advanced.Evict(user);
+
+                    // should go to server to get [0, 2] and merge it into existing [2, 10] 
+                    user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline, baseline.AddMinutes(2)));
+
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline, baseline.AddMinutes(2))
+                        .ToList();
+
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(13, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(2), vals[12].Timestamp);
+
+                    Assert.Equal(2, ranges.Count);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(10), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+
+                    // should go to server to get [10, 16] and merge it into existing [0, 10] 
+
+                    session.Advanced.Evict(user);
+                    user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(16)));
+
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(16))
+                        .ToList();
+
+                    Assert.Equal(4, session.Advanced.NumberOfRequests);
+/*
+
+                    Assert.Equal(37, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(8), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(16), vals[48].Timestamp);*/
+
+                    Assert.Equal(2, ranges.Count);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[1].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+
+                    // should go to server to get range [17, 19]
+                    // and add it to cache in between [10, 16] and [40, 50]
+
+                    session.Advanced.Evict(user);
+                    user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(17), baseline.AddMinutes(19)));
+
+                    Assert.Equal(5, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(17), baseline.AddMinutes(19))
+                        .ToList();
+
+                    Assert.Equal(5, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(13, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(17), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(19), vals[12].Timestamp);
+
+                    Assert.Equal(3, ranges.Count);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(17), ranges[1].From);
+                    Assert.Equal(baseline.AddMinutes(19), ranges[1].To);
+                    Assert.Equal(baseline.AddMinutes(40), ranges[2].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[2].To);
+
+                    // should go to server to get range [19, 40]
+                    // and merge the result with existing ranges [17, 19] and [40, 50] 
+                    // into single range [17, 50]
+
+                    session.Advanced.Evict(user);
+                    user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(18), baseline.AddMinutes(48)));
+
+                    Assert.Equal(6, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(18), baseline.AddMinutes(48))
+                        .ToList();
+
+                    Assert.Equal(6, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(18), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(48), vals[180].Timestamp);
+
+                    Assert.Equal(2, ranges.Count);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(16), ranges[0].To);
+                    Assert.Equal(baseline.AddMinutes(17), ranges[1].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[1].To);
+
+                    // should go to server to get range [12, 22]
+                    // and merge the result with existing ranges [0, 16] and [17, 50] 
+                    // into single range [0, 50]
+
+
+                    session.Advanced.Evict(user);
+                    user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(12), baseline.AddMinutes(22)));
+
+                    Assert.Equal(7, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(12), baseline.AddMinutes(22))
+                        .ToList();
+
+                    Assert.Equal(7, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(61, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(12), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(22), vals[60].Timestamp);
+
+                    Assert.Equal(1, ranges.Count);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
+                    Assert.Equal(baseline.AddMinutes(50), ranges[0].To);
 
                 }
             }
