@@ -1637,14 +1637,14 @@ more responsive application.
                         if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Name), out string name) == false ||
                             blittableRange.TryGet(nameof(TimeSeriesRangeResult.From), out DateTime from) == false ||
                             blittableRange.TryGet(nameof(TimeSeriesRangeResult.To), out DateTime to) == false ||
-                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.Values), out BlittableJsonReaderArray blitabbleValues) == false)
+                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.Values), out BlittableJsonReaderArray valuesBlittable) == false)
                             continue;
 
-                        var arr = new TimeSeriesValue[blitabbleValues.Length];
+                        var arr = new TimeSeriesValue[valuesBlittable.Length];
 
-                        for (int j = 0; j < blitabbleValues.Length; j++)
+                        for (int j = 0; j < valuesBlittable.Length; j++)
                         {
-                            var timeSeriesValueBlittable = blitabbleValues.GetByIndex<BlittableJsonReaderObject>(j);
+                            var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
                             if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false ||
                                 timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false ||
                                 timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
@@ -1689,6 +1689,7 @@ more responsive application.
 
                             int toRangeIndex;
                             var fromRangeIndex = -1;
+                            var rangeExistsInCache = false;
 
                             for (toRangeIndex = 0; toRangeIndex < localRanges.Count; toRangeIndex++)
                             {
@@ -1696,9 +1697,8 @@ more responsive application.
                                 {
                                     if (localRanges[toRangeIndex].To >= to)
                                     {
-                                        // TODO override existing values in cache with new range 
+                                        rangeExistsInCache = true;
                                         break;
-//                                      resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to);
                                     }
 
                                     fromRangeIndex = toRangeIndex;
@@ -1709,37 +1709,16 @@ more responsive application.
                                     break;
                             }
 
-
-                            var mergedValues = new List<TimeSeriesValue>();
-
-                            if (fromRangeIndex != -1 && 
-                                localRanges[fromRangeIndex].To >= from)
+                            if (rangeExistsInCache)
                             {
-
-                                foreach (var val in localRanges[fromRangeIndex].Values)
-                                {
-                                    if (val.Timestamp >= from)
-                                        break;
-                                    mergedValues.Add(val);
-                                }
-
+                                UpdateExistingRange(localRanges[toRangeIndex], from, to, newRange);
+                                continue;
                             }
 
-                            mergedValues.AddRange(newRange.Values);
 
-                            if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= to)
-                            {
-                                foreach (var val in localRanges[toRangeIndex].Values)
-                                {
-                                    if (val.Timestamp <= to)
-                                        continue;
-                                    mergedValues.Add(val);
-                                }
+                           var mergedValues = MergeRanges(fromRangeIndex, toRangeIndex, localRanges, from, to, newRange);
 
-                            }
-
-                            AsyncSessionDocumentTimeSeries.AddToCache(name, from, to, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues.ToArray());
-
+                            AsyncSessionDocumentTimeSeries.AddToCache(name, from, to, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues);
 
                         }
 
@@ -1753,6 +1732,61 @@ more responsive application.
             }
 
            // TODO register missing timeseries
+        }
+
+        private static TimeSeriesValue[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, DateTime from, DateTime to, TimeSeriesRangeResult newRange)
+        {
+            var mergedValues = new List<TimeSeriesValue>();
+
+            if (fromRangeIndex != -1 &&
+                localRanges[fromRangeIndex].To >= @from)
+            {
+                foreach (var val in localRanges[fromRangeIndex].Values)
+                {
+                    if (val.Timestamp >= @from)
+                        break;
+                    mergedValues.Add(val);
+                }
+            }
+
+            mergedValues.AddRange(newRange.Values);
+
+            if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= to)
+            {
+                foreach (var val in localRanges[toRangeIndex].Values)
+                {
+                    if (val.Timestamp <= to)
+                        continue;
+                    mergedValues.Add(val);
+                }
+            }
+
+            return mergedValues.ToArray();
+        }
+
+        private static void UpdateExistingRange(TimeSeriesRangeResult localRange, DateTime from, DateTime to, TimeSeriesRangeResult newRange)
+        {
+            var newValues = new List<TimeSeriesValue>();
+            int index;
+            for (index = 0; index < localRange.Values.Length; index++)
+            {
+                if (localRange.Values[index].Timestamp >= @from)
+                    break;
+
+                newValues.Add(localRange.Values[index]);
+            }
+
+            newValues.AddRange(newRange.Values);
+
+            for (int j = index; j < localRange.Values.Length; j++)
+            {
+                if (localRange.Values[j].Timestamp <= to)
+                    continue;
+
+                newValues.Add(localRange.Values[j]);
+            }
+
+            localRange.Values = newValues.ToArray();
         }
 
         public override int GetHashCode()
