@@ -27,6 +27,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
@@ -271,6 +272,9 @@ namespace TypingsGenerator
             
             // expiration 
             scripter.AddType(typeof(ExpirationConfiguration));
+            
+            // refresh
+            scripter.AddType(typeof(RefreshConfiguration));
 
             // storage report
             scripter.AddType(typeof(StorageReport));
