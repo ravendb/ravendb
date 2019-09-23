@@ -172,11 +172,10 @@ namespace SlowTests.Client.TimeSeries.Session
                         .ToList();
 
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
-/*
 
                     Assert.Equal(37, vals.Count);
-                    Assert.Equal(baseline.AddMinutes(8), vals[0].Timestamp);
-                    Assert.Equal(baseline.AddMinutes(16), vals[48].Timestamp);*/
+                    Assert.Equal(baseline.AddMinutes(10), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(16), vals[36].Timestamp);
 
                     Assert.Equal(2, ranges.Count);
                     Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
@@ -270,6 +269,72 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(1, ranges.Count);
                     Assert.Equal(baseline.AddMinutes(0), ranges[0].From);
                     Assert.Equal(baseline.AddMinutes(50), ranges[0].To);
+
+                }
+            }
+        }
+
+
+        [Fact]
+        public void IncludeTimeSeriesAndUpdateExistingRangeInCache()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+                    }
+
+                    session.SaveChanges();
+
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(2), baseline.AddMinutes(10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(49, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(2), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(10), vals[48].Timestamp);
+
+                    session.TimeSeriesFor("users/ayende").Append("Heartrate", baseline.AddMinutes(3).AddSeconds(3), "watches/fitbit", new[] { 6d });
+                    session.SaveChanges();
+
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+
+                    var user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeTimeSeries("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5)));
+
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline.AddMinutes(3), baseline.AddMinutes(5))
+                        .ToList();
+
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(14, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(3), vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(3).AddSeconds(3), vals[1].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(5), vals[13].Timestamp);
 
                 }
             }
