@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Handlers;
@@ -15,7 +14,6 @@ namespace Raven.Server.Documents.Includes
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, (IList<string> TimeseriesNames, IList<string> FromList, IList<string> ToList)> _timeSeriesBySourcePath;
 
-        public Dictionary<string, string[]> TimeSeriesToGetByDocId { get; }
         public Dictionary<string, List<TimeSeriesRangeResult>> Results { get; }
 
         public IncludeTimeSeriesCommand(DocumentDatabase database, DocumentsOperationContext context)
@@ -23,7 +21,6 @@ namespace Raven.Server.Documents.Includes
             _database = database;
             _context = context;
 
-            TimeSeriesToGetByDocId = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
             Results = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
         }
 
@@ -35,12 +32,6 @@ namespace Raven.Server.Documents.Includes
                 [string.Empty] = (timeseriesNames, fromList, toList)
             };
         }
-
-/*        public IncludeTimeSeriesCommand(DocumentDatabase database, DocumentsOperationContext context, Dictionary<string, HashSet<string>> countersBySourcePath)
-            : this(database, context)
-        {
-            _countersBySourcePath = countersBySourcePath.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
-        }*/
 
         public void Fill(Document document)
         {
@@ -57,9 +48,6 @@ namespace Raven.Server.Documents.Includes
 
                 if (Results.ContainsKey(docId))
                     continue;
-
-                var timeSeriesToGet = kvp.Value.TimeseriesNames.ToArray();
-                TimeSeriesToGetByDocId[docId] = timeSeriesToGet;
 
                 var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value.TimeseriesNames, kvp.Value.FromList, kvp.Value.ToList);
 

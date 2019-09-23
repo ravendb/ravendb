@@ -179,7 +179,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (_timeSeriesToInclude != null)
             {
-                _session.RegisterTimeSeries(result.TimeSeriesIncludes, _ids.ToArray(), _timeSeriesToInclude);
+                _session.RegisterTimeSeries(result.TimeSeriesIncludes);
             }
 
             foreach (var document in GetDocumentsFromResult(result))
