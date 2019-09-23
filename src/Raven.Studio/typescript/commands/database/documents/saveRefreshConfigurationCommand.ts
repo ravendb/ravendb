@@ -8,7 +8,7 @@ class saveRefreshConfigurationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
-        const url = endpoint.databases.expiration.adminRefreshConfig;
+        const url = endpoint.databases.refresh.adminRefreshConfig;
         const args = ko.toJSON(this.refreshConfiguration);
         return this.post<updateDatabaseConfigurationsResult>(url, args, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to save refresh configuration", response.responseText, response.statusText));

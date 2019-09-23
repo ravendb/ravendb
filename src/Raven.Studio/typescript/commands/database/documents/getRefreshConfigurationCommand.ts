@@ -11,7 +11,7 @@ class getRefreshConfigurationCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Refresh.RefreshConfiguration> {
 
         const deferred = $.Deferred<Raven.Client.Documents.Operations.Refresh.RefreshConfiguration>();
-        const url = endpoints.databases.expiration.refreshConfig;
+        const url = endpoints.databases.refresh.refreshConfig;
         this.query(url, null, this.db)
             .done((refreshConfig: Raven.Client.Documents.Operations.Refresh.RefreshConfiguration) => deferred.resolve(refreshConfig))
             .fail((xhr: JQueryXHR) => {
