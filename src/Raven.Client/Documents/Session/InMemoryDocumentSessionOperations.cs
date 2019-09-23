@@ -1659,20 +1659,90 @@ more responsive application.
 
                         }
 
-                        if (cache.TryGetValue(name, out var localRanges) == false)
+                        var newRange = new TimeSeriesRangeResult
                         {
-                            cache[name] = new List<TimeSeriesRangeResult>()
+                            From = from,
+                            To = to,
+                            Values = arr
+                        };
+
+                        if (cache.TryGetValue(name, out var localRanges) == false ||
+                            localRanges.Count == 0)
+                        {
+                            cache[name] = new List<TimeSeriesRangeResult>
                             {
-                                new TimeSeriesRangeResult
-                                {
-                                    From = from,
-                                    To = to,
-                                    Values = arr
-                                }
+                                newRange
                             };
                         }
 
-                      //  TODO handle ranges merging
+                        else if (localRanges[0].From > to || localRanges[localRanges.Count - 1].To < from)
+                        {
+                            // the entire range [from, to] is out of cache bounds
+
+                            var index = localRanges[0].From > to ? 0 : localRanges.Count;
+                            localRanges.Insert(index, newRange);
+
+                        }
+                        else
+                        {
+                            //  TODO handle ranges merging
+
+                            int toRangeIndex;
+                            var fromRangeIndex = -1;
+
+                            for (toRangeIndex = 0; toRangeIndex < localRanges.Count; toRangeIndex++)
+                            {
+                                if (localRanges[toRangeIndex].From <= from)
+                                {
+                                    if (localRanges[toRangeIndex].To >= to)
+                                    {
+                                        // TODO override existing values in cache with new range 
+                                        break;
+//                                      resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to);
+                                    }
+
+                                    fromRangeIndex = toRangeIndex;
+                                    continue;
+                                }
+
+                                if (localRanges[toRangeIndex].To >= to)
+                                    break;
+                            }
+
+
+                            var mergedValues = new List<TimeSeriesValue>();
+
+                            if (fromRangeIndex != -1 && 
+                                localRanges[fromRangeIndex].To >= from)
+                            {
+
+                                foreach (var val in localRanges[fromRangeIndex].Values)
+                                {
+                                    if (val.Timestamp >= from)
+                                        break;
+                                    mergedValues.Add(val);
+                                }
+
+                            }
+
+                            mergedValues.AddRange(newRange.Values);
+
+                            if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= to)
+                            {
+                                foreach (var val in localRanges[toRangeIndex].Values)
+                                {
+                                    if (val.Timestamp <= to)
+                                        continue;
+                                    mergedValues.Add(val);
+                                }
+
+                            }
+
+                            AsyncSessionDocumentTimeSeries.AddToCache(name, from, to, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues.ToArray());
+
+
+                        }
+
                     }
 
                     TimeSeriesByDocId[id] = cache;
@@ -1773,6 +1843,7 @@ more responsive application.
                 if ((documentInfo.Entity == null) && (documentInfo.Document == null))
                     return false;
 
+                // todo check if we have counter includes or timeseries includes
                 if (includes == null)
                     continue;
 
