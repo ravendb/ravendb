@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -24,6 +25,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -1654,7 +1656,9 @@ more responsive application.
                             {
                                 Tag = tag,
                                 Timestamp = timestamp,
-                                Values = values.Select(x => (double)(long)x).ToArray()
+                                Values = values.Select(x => x is LazyNumberValue val
+                                    ? val.ToDouble(CultureInfo.InvariantCulture) 
+                                    : (long)x).ToArray()
                             };
 
                         }
