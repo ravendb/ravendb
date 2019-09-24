@@ -114,6 +114,9 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
 
+        private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryReferencesIndexProgress =
+            new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
+
         internal DocumentDatabase DocumentDatabase;
 
         internal PoolOfThreads.LongRunningWork _indexingThread;
@@ -2067,7 +2070,7 @@ namespace Raven.Server.Documents.Indexes
                 var collectionNameForStats = isAllDocs == false ? collection : Constants.Documents.Collections.AllDocumentsCollection;
                 var collectionStats = stats?.Collections[collectionNameForStats];
 
-                var lastEtags = GetLastEtags(collectionNameForStats,
+                var lastEtags = GetLastEtags(_inMemoryIndexProgress, collectionNameForStats,
                     collectionStats?.LastProcessedDocumentEtag ?? 0,
                     collectionStats?.LastProcessedTombstoneEtag ?? 0);
 
@@ -2080,14 +2083,52 @@ namespace Raven.Server.Documents.Indexes
                     };
                 }
 
+                UpdateProgressStats(progressStats, collection);
+            }
+
+            var referencedCollections = GetReferencedCollections();
+            if (referencedCollections != null)
+            {
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (indexContext.OpenReadTransaction())
+                {
+                    foreach (var referencedCollection in referencedCollections)
+                    {
+                        foreach (var value in referencedCollection.Value)
+                        {
+                            var collectionName = value.Name;
+                            if (progress.Collections.TryGetValue(collectionName, out var progressStats))
+                            {
+                                // the collection is already monitored
+                                continue;
+                            }
+
+                            var lastReferenceEtag = _indexStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction, referencedCollection.Key, value);
+                            var lastReferenceTombstoneEtag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction, referencedCollection.Key, value);
+                            var lastEtags = GetLastEtags(_inMemoryReferencesIndexProgress, collectionName, lastReferenceEtag, lastReferenceTombstoneEtag);
+
+                            progressStats = progress.Collections[collectionName] = new IndexProgress.CollectionStats
+                            {
+                                LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
+                                LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                            };
+
+                            UpdateProgressStats(progressStats, value.Name);
+                        }
+                    }
+                }
+            }
+
+            void UpdateProgressStats(IndexProgress.CollectionStats progressStats, string collectionName)
+            {
                 progressStats.NumberOfDocumentsToProcess +=
                     DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                        documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
+                        documentsContext, collectionName, progressStats.LastProcessedDocumentEtag, out var totalCount);
                 progressStats.TotalNumberOfDocuments += totalCount;
 
                 progressStats.NumberOfTombstonesToProcess +=
                     DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                        documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                        documentsContext, collectionName, progressStats.LastProcessedTombstoneEtag, out totalCount);
                 progressStats.TotalNumberOfTombstones += totalCount;
             }
         }
@@ -2109,10 +2150,16 @@ namespace Raven.Server.Documents.Indexes
             return _inMemoryIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
         }
 
-        private (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag) GetLastEtags(
+        public IndexProgress.CollectionStats GetReferencesStats(string collection)
+        {
+            return _inMemoryReferencesIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
+        }
+
+        private static (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag) GetLastEtags(
+            ConcurrentDictionary<string, IndexProgress.CollectionStats> indexProgressStats,
             string collection, long lastProcessedDocumentEtag, long lastProcessedTombstoneEtag)
         {
-            if (_inMemoryIndexProgress.TryGetValue(collection, out var stats) == false)
+            if (indexProgressStats.TryGetValue(collection, out var stats) == false)
                 return (lastProcessedDocumentEtag, lastProcessedTombstoneEtag);
 
             var lastDocumentEtag = Math.Max(lastProcessedDocumentEtag, stats.LastProcessedDocumentEtag);
