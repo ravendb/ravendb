@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         foreach (var collection in Collections)
                         {
                             if (_compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
-                                throw new InvalidOperationException("Should not happen ever!");
+                                continue;
 
                             foreach (var referencedCollection in referencedCollections)
                             {
