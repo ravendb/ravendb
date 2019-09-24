@@ -70,6 +70,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: "databases/settings/revisions"
         }),
         new leafMenuItem({
+            route: 'databases/settings/refresh',
+            moduleId: 'viewmodels/database/settings/refresh',
+            title: 'Document Refresh',
+            nav: true,
+            css: 'icon-expos-refresh',
+            dynamicHash: appUrls.refresh
+        }),
+        new leafMenuItem({
             route: 'databases/settings/expiration',
             moduleId: 'viewmodels/database/settings/expiration',
             title: 'Document Expiration',

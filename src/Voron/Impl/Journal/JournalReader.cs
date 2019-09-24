@@ -11,6 +11,7 @@ using Voron.Data;
 using Voron.Exceptions;
 using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
+using System.Linq;
 
 namespace Voron.Impl.Journal
 {
@@ -275,6 +276,8 @@ namespace Voron.Impl.Journal
             var transactionHeaders = new List<TransactionHeader>();
             while (ReadOneTransactionToDataFile(options))
             {
+                Debug.Assert(transactionHeaders.Count == 0 || LastTransactionHeader->TransactionId > transactionHeaders.Last().TransactionId);
+
                 transactionHeaders.Add(*LastTransactionHeader);
             }
             ZeroRecoveryBufferIfNeeded(this, options);
@@ -437,6 +440,9 @@ namespace Voron.Impl.Journal
 
                         return true;
                     }
+
+                    if (hashIsValid && _firstValidTransactionHeader == null)
+                        _firstValidTransactionHeader = current;
 
                     return hashIsValid;
                 }

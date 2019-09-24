@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, id);
+                var document = Database.DocumentsStorage.Get(context, id, DocumentFields.ChangeVector);
                 if (document == null)
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 else

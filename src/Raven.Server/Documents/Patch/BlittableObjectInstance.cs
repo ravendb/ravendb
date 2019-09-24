@@ -135,58 +135,64 @@ namespace Raven.Server.Documents.Patch
                             arrayItems[i] = TranslateToJs(parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
                         }
 
-                        value = JsValue.FromObject(parent.Engine, arrayItems);
+                        value = FromObject(parent.Engine, arrayItems);
                         return true;
+                    }
+
+                    var values = parent.LuceneDocument.GetValues(property, parent.LuceneState);
+                    value = FromObject(parent.Engine, values);
+                    return true;
+                }
+
+                var fieldable = _parent.LuceneDocument.GetFieldable(property);
+                if (fieldable == null)
+                    return false;
+
+                var val = fieldable.StringValue(_parent.LuceneState);
+                if (fieldType.IsJson)
+                {
+                    BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(val, property);
+                    value = TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                    return true;
+                }
+
+                if (fieldable.IsTokenized == false)
+                {
+                    // NULL_VALUE and EMPTY_STRING fields aren't tokenized
+                    // this will prevent converting fields with a "NULL_VALUE" string to null
+                    switch (val)
+                    {
+                        case Client.Constants.Documents.Indexing.Fields.NullValue:
+                            value = JsValue.Null;
+                            return true;
+                        case Client.Constants.Documents.Indexing.Fields.EmptyString:
+                            value = string.Empty;
+                            return true;
+                    }
+                }
+
+                if (fieldType.IsNumeric)
+                {
+                    if (long.TryParse(val, out var valueAsLong))
+                    {
+                        value = valueAsLong;
+                    }
+                    else if (double.TryParse(val, out var valueAsDouble))
+                    {
+                        value = valueAsDouble;
                     }
                     else
                     {
-                        var values = parent.LuceneDocument.GetValues(property, parent.LuceneState);
-                        value = JsValue.FromObject(parent.Engine, values);
-                        return true;
+                        throw new InvalidOperationException($"Recognized field '{property}' as numeric but was unable to parse its value to 'long' or 'double'. " +
+                                                            $"documentId = '{parent.DocumentId}', value = {val}.");
                     }
                 }
                 else
                 {
-                    var fieldable = _parent.LuceneDocument.GetFieldable(property);
-                    if (fieldable == null)
-                        return false;
-
-                    var val = fieldable.StringValue(_parent.LuceneState);
-                    if (fieldType.IsJson)
-                    {
-                        BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(val, property);
-                        value = TranslateToJs(parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
-                        return true;
-                    }
-                    else
-                    {
-                        if (fieldable.IsTokenized == false)
-                        {
-                            // NULL_VALUE and EMPTY_STRING fields aren't tokenized
-                            // this will prevent converting fields with a "NULL_VALUE" string to null
-                            switch (val)
-                            {
-                                case Client.Constants.Documents.Indexing.Fields.NullValue:
-                                    value = JsValue.Null;
-                                    return true;
-                                case Client.Constants.Documents.Indexing.Fields.EmptyString:
-                                    value = string.Empty;
-                                    return true;
-                            }
-                        }
-
-                        if (double.TryParse(val, out var valueAsDouble))
-                        {
-                            value = valueAsDouble;
-                        }
-                        else
-                        {
-                            value = val;
-                        }
-
-                        return true;
-                    }
+                    value = val;
                 }
+
+                return true;
             }
 
             protected override JsValue CustomValue

@@ -22,10 +22,12 @@ namespace Sparrow.Platform
         public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory;
 
-        public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
+        public static bool RunningOnDocker;
 
         static PlatformDetails()
         {
+            RunningOnDocker = string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
+
             if (TryGetWindowsVersion(out var version))
             {
                 IsWindows8OrNewer = version >= 6.19M;

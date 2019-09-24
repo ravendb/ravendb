@@ -1,0 +1,66 @@
+<div class="content-container">
+    <form data-bind="submit: saveChanges" novalidate>
+        <div class="content-margin">
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-save"></i> <span>Save</span>
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-sm-7">
+                    <div class="panel padding margin-bottom">
+                        <div class="toggle">
+                            <input id="toggleOverride" class="styled" type="checkbox" data-bind="checked: enabled">
+                            <label for="toggleOverride">
+                                Enable document refresh
+                            </label>
+                        </div>
+                        <div class="flex-horizontal">
+                            <div class="flex-start" >
+                                <div class="checkbox">
+                                    <input id="specifyRefreshFrequency" class="styled" type="checkbox"
+                                           data-bind="checked: specifyRefreshFrequency, enable: enabled">
+                                    <label for="specifyRefreshFrequency">
+                                        Manually specify refresh frequency
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="flex-grow" data-bind="validationElement: refreshFrequencyInSec">
+                                <div class="input-group">
+                                    <input class="form-control" type="number" min="0" placeholder="Default (60)" data-bind="numericInput: refreshFrequencyInSec, enable: specifyRefreshFrequency" />
+                                    <div class="input-group-addon">
+                                        seconds
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-5">
+                    <div class="bg-info padding">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-start"><i class="icon-info"></i></div>
+                            <div>
+                                <div>
+                                    'Document refresh' will update a document by removing <code>@refresh</code> flag from metadata when given time has passed.
+                                </div>
+                                <div>
+                                    To set the refresh time enter the appropriate date in the metadata <code>@refresh</code> property.
+                                    The document will be automatically updated at the specified time - <code>@refresh</code> flag will be removed.<br/>
+                                    As a result:
+                                    <ul>
+                                        <li>a document could be re-indexed</li>
+                                        <li>the ETL subscription could be triggered</li>
+                                    </ul>
+                                    <strong>Note</strong>: RavenDB scans which documents are to be updated at a frequency specified.<br/>
+                                    The actual refresh time can increase (up to) that value.
+                                </div>
+                            </div>
+                        </div>
+                        <pre data-bind="html: refreshSampleFormatted"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

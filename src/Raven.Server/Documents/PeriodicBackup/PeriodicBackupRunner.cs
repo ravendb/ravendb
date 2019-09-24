@@ -45,6 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly ConcurrentSet<Task> _inactiveRunningPeriodicBackupsTasks = new ConcurrentSet<Task>();
 
         private bool _disposed;
+        private readonly DateTime? _databaseWakeUpTime;
 
         // interval can be 2^32-2 milliseconds at most
         // this is the maximum interval acceptable in .Net's threading timer
@@ -52,14 +53,17 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public ICollection<PeriodicBackup> PeriodicBackups => _periodicBackups.Values;
 
-        public PeriodicBackupRunner(DocumentDatabase database, ServerStore serverStore)
+        public PeriodicBackupRunner(DocumentDatabase database, ServerStore serverStore, DateTime? wakeup = null)
         {
             _database = database;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-
             _tempBackupPath = (_database.Configuration.Storage.TempPath ?? _database.Configuration.Core.DataDirectory).Combine("PeriodicBackupTemp");
+
+            // we pass wakeup-1 to ensure the backup will run right after DB woke up on wakeup time, and not on the next occurrence.
+            // relevant only if it's the first backup after waking up
+            _databaseWakeUpTime = wakeup?.AddMinutes(-1);
 
             _database.TombstoneCleaner.Subscribe(this);
             IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
@@ -134,8 +138,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             bool skipErrorLog = false)
         {
             var now = SystemTime.UtcNow;
-            var lastFullBackup = backupStatus.LastFullBackupInternal ?? now;
-            var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
+            var lastFullBackup = backupStatus.LastFullBackupInternal ?? _databaseWakeUpTime ?? now;
+            var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? _databaseWakeUpTime ?? now;
             var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency,
                 lastFullBackup, configuration, skipErrorLog: skipErrorLog);
             var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency,

@@ -47,6 +47,7 @@ namespace Sparrow.LowMemory
         }
 
         private static bool _failedToGetAvailablePhysicalMemory;
+
         private static readonly MemoryInfoResult FailedResult = new MemoryInfoResult
         {
             AvailableMemory = new Size(256, SizeUnit.Megabytes),
@@ -132,7 +133,7 @@ namespace Sparrow.LowMemory
             if (memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
             {
                 // this can happen on containers, since we get this information from the host, and
-                // sometimes this kind of stat is shared, see: 
+                // sometimes this kind of stat is shared, see:
                 // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
 
                 commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalPhysicalMemory);
@@ -329,7 +330,10 @@ namespace Sparrow.LowMemory
             {
                 // running in a limited cgroup
                 var commitedMemoryInBytes = 0L;
-                var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+                var cgroupMemoryUsage = LowMemoryNotification.Instance.UseRssInsteadOfMemUsage // RDBS-45
+                    ? GetRssMemoryUsage()
+                    : KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+
                 if (cgroupMemoryUsage != null)
                 {
                     commitedMemoryInBytes = cgroupMemoryUsage.Value;
@@ -458,9 +462,9 @@ namespace Sparrow.LowMemory
                 return FailedResult;
             }
 
-            // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function 
+            // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function
             // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
-            // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA. 
+            // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA.
             // Malformed SMBIOS data may indicate a problem with the user's computer.
             var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
 
@@ -613,8 +617,16 @@ namespace Sparrow.LowMemory
 
     public class EarlyOutOfMemoryException : SystemException
     {
-        public EarlyOutOfMemoryException() { }
-        public EarlyOutOfMemoryException(string message) : base(message) { }
-        public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner) { }
+        public EarlyOutOfMemoryException()
+        {
+        }
+
+        public EarlyOutOfMemoryException(string message) : base(message)
+        {
+        }
+
+        public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }
