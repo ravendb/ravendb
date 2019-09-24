@@ -128,7 +128,7 @@ namespace Raven.Server.Routing
                         var now = SystemTime.UtcNow;
                         _ravenServer.Statistics.LastRequestTime = now;
                         if (skipAuthorization == false && authResult && status != RavenServer.AuthenticationStatus.ClusterAdmin)
-                            _ravenServer.Statistics.LastUserRequestTime = now;
+                            _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
                     }
                 }
 
