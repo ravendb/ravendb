@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Session;
@@ -61,6 +62,67 @@ namespace SlowTests.Client.TimeSeries.Session
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionLoadWithIncludeTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline, "watches/apple", new[] { 67d });
+                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(5), "watches/apple", new[] { 64d });
+                    session.TimeSeriesFor("orders/1-A").Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new[] { 65d });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        i => i.IncludeDocuments("Company")
+                            .IncludeTimeSeries("Heartrate", DateTime.MinValue, DateTime.MaxValue));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var values = (await session.TimeSeriesFor(order)
+                        .GetAsync("Heartrate", DateTime.MinValue, DateTime.MaxValue))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, values.Count);
+
+                    Assert.Equal(1, values[0].Values.Length);
+                    Assert.Equal(67d, values[0].Values[0]);
+                    Assert.Equal("watches/apple", values[0].Tag);
+                    Assert.Equal(baseline, values[0].Timestamp);
+
+                    Assert.Equal(1, values[1].Values.Length);
+                    Assert.Equal(64d, values[1].Values[0]);
+                    Assert.Equal("watches/apple", values[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(5), values[1].Timestamp);
+
+                    Assert.Equal(1, values[2].Values.Length);
+                    Assert.Equal(65d, values[2].Values[0]);
+                    Assert.Equal("watches/fitbit", values[2].Tag);
+                    Assert.Equal(baseline.AddMinutes(10), values[2].Timestamp);
                 }
             }
         }
@@ -274,7 +336,6 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-
         [Fact]
         public void IncludeTimeSeriesAndUpdateExistingRangeInCache()
         {
@@ -339,7 +400,6 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
-
 
         [Fact]
         public void IncludeMultipleTimeSeries()
@@ -527,5 +587,168 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
+        [Fact]
+        public void MultiLoadWithIncludeTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.Store(new User { Name = "Pawel" }, "users/ppekrol");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende")
+                            .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 6d });
+
+                        if (i % 2 == 0)
+                        {
+                            session.TimeSeriesFor("users/ppekrol")
+                                .Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 7d });
+                        }
+
+                    }
+
+                    session.SaveChanges();
+
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var users = session.Load<User>(
+                        new[] { "users/ayende", "users/ppekrol" },
+                        i => i.IncludeTimeSeries("Heartrate", baseline, baseline.AddMinutes(30)));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", users["users/ayende"].Name);
+                    Assert.Equal("Pawel", users["users/ppekrol"].Name);
+
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(30), vals[180].Timestamp);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor("users/ppekrol")
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(91, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(30), vals[90].Timestamp);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void IncludeTimeSeriesAndDocumentsAndCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren", WorksAt = "companies/1"}, "users/ayende");
+                    session.Store(new Company { Name = "HR" }, "companies/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                    }
+
+                    session.CountersFor("users/ayende").Increment("likes", 100);
+                    session.CountersFor("users/ayende").Increment("dislikes", 5);
+
+                    session.SaveChanges();
+
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(
+                        "users/ayende",
+                        i => i.IncludeDocuments<Company>(u => u.WorksAt)
+                            .IncludeTimeSeries("Heartrate", baseline, baseline.AddMinutes(30))
+                            .IncludeCounter("likes")
+                            .IncludeCounter("dislikes"));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", user.Name);
+
+                    // should not go to server
+
+                    var company = session.Load<Company>(user.WorksAt);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(67d, vals[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(30), vals[180].Timestamp);
+
+                    // should not go to server
+
+                    var counters = session.CountersFor("users/ayende").GetAll();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.True(counters.TryGetValue("likes", out var counter));
+                    Assert.Equal(100, counter);
+                    Assert.True(counters.TryGetValue("dislikes", out counter));
+                    Assert.Equal(5, counter);
+
+                }
+            }
+        }
+
+        private class User
+        {
+            public string Name { get; set; }
+            public string WorksAt { get; set; }
+
+        }
     }
 }

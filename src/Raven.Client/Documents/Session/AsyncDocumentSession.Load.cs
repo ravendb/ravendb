@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 
@@ -70,11 +71,12 @@ namespace Raven.Client.Documents.Session
                 includeBuilder.DocumentsToInclude?.ToArray(),
                 includeBuilder.CountersToInclude?.ToArray(),
                 includeBuilder.AllCounters,
+                includeBuilder.TimeSeriesToInclude.Values,
                 token);
         }
 
         /// <inheritdoc />
-        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, CancellationToken token = new CancellationToken())
+        public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null, CancellationToken token = new CancellationToken())
         {
             if (ids == null)
                 throw new ArgumentNullException(nameof(ids));
@@ -91,6 +93,8 @@ namespace Raven.Client.Documents.Session
             {
                 loadOperation.WithCounters(counterIncludes);
             }
+
+            loadOperation.WithTimeSeries(timeSeriesIncludes);
 
             var command = loadOperation.CreateRequest();
             if (command != null)

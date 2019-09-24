@@ -1611,7 +1611,7 @@ more responsive application.
 
         }
 
-        internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries, string[] ids, IEnumerable<TimeSeriesRange> timeSeriesToInclude)
+        internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries)
         {
             if (NoTracking)
                 return;
