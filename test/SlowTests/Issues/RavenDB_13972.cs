@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Utils.Enumerators;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 
@@ -260,6 +261,80 @@ namespace SlowTests.Issues
                 }
 
                 Assert.Equal(numberOfUsers, count);
+            }
+        }
+
+        protected static void CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
+        {
+            var uniqueUserNames = PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
+
+            using (var bulk = store.BulkInsert())
+            {
+                for (int i = 0; i < numberOfUsers; i++)
+                {
+                    bulk.Store(new User()
+                        {
+                            Name = "users-" + (i % uniqueUserNames)
+                        }, "users/" + i);
+                }
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<User>();
+
+                var enumerator = session.Advanced.Stream<User>(query);
+
+                var count = 0;
+
+                while (enumerator.MoveNext())
+                {
+                    count++;
+                }
+
+                Assert.Equal(numberOfUsers, count);
+            }
+
+            // distinct
+
+            using (var session = store.OpenSession())
+            {
+                var query = session.Query<User>().Select(x => new User
+                {
+                    Name = x.Name
+                }).Distinct();
+
+                var enumerator = session.Advanced.Stream(query);
+
+                var count = 0;
+
+                while (enumerator.MoveNext())
+                {
+                    count++;
+                }
+
+                Assert.Equal(uniqueUserNames, count);
+            }
+
+            // paging
+
+            using (var session = store.OpenSession())
+            {
+                var skip = 100;
+                var take = PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
+
+                var query = session.Query<User>().Skip(skip).Take(take);
+
+                var enumerator = session.Advanced.Stream<User>(query);
+
+                var count = 0;
+
+                while (enumerator.MoveNext())
+                {
+                    count++;
+                }
+
+                Assert.Equal(take, count);
             }
         }
 
