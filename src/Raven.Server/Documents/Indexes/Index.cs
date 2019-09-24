@@ -3160,7 +3160,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
+        internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
         {
             var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             foreach (var collection in Collections)

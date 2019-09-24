@@ -165,31 +165,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             using (CurrentlyInUse())
             {
-                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-                {
-                    using (var tx = context.OpenReadTransaction())
-                    {
-                        var etags = GetLastProcessedDocumentTombstonesPerCollection(tx);
-
-                        if (_referencedCollections.Count <= 0)
-                            return etags;
-
-                        foreach (var collection in Collections)
-                        {
-                            if (_compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
-                                continue;
-
-                            foreach (var referencedCollection in referencedCollections)
-                            {
-                                var etag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, referencedCollection);
-                                if (etags.TryGetValue(referencedCollection.Name, out long currentEtag) == false || etag < currentEtag)
-                                    etags[referencedCollection.Name] = etag;
-                            }
-                        }
-
-                        return etags;
-                    }
-                }
+                return StaticIndexHelper.GetLastProcessedTombstonesPerCollection(
+                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
             }
         }
 
