@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide
 
         public DateTime? LastRequestTime;
 
-        public DateTime? LastUserRequestTime;
+        public DateTime? LastAuthorizedNonClusterAdminRequestTime;
 
         public void WriteTo(BlittableJsonTextWriter writer)
         {
@@ -48,9 +48,9 @@ namespace Raven.Server.ServerWide
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(LastUserRequestTime));
-            if (LastUserRequestTime.HasValue)
-                writer.WriteDateTime(LastUserRequestTime.Value, isUtc: true);
+            writer.WritePropertyName(nameof(LastAuthorizedNonClusterAdminRequestTime));
+            if (LastAuthorizedNonClusterAdminRequestTime.HasValue)
+                writer.WriteDateTime(LastAuthorizedNonClusterAdminRequestTime.Value, isUtc: true);
             else
                 writer.WriteNull();
 
@@ -77,7 +77,7 @@ namespace Raven.Server.ServerWide
                         var stats = JsonDeserializationServer.ServerStatistics(json);
 
                         LastRequestTime = stats.LastRequestTime;
-                        LastUserRequestTime = stats.LastUserRequestTime;
+                        LastAuthorizedNonClusterAdminRequestTime = stats.LastAuthorizedNonClusterAdminRequestTime;
                     }
                 }
             }
