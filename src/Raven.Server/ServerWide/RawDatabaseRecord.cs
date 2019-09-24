@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
@@ -103,6 +104,16 @@ namespace Raven.Server.ServerWide
             }
 
             return JsonDeserializationCluster.ExpirationConfiguration(config);
+        }
+        
+        public RefreshConfiguration GetRefreshConfiguration()
+        {
+            if (_record.TryGet(nameof(DatabaseRecord.Refresh), out BlittableJsonReaderObject config) == false || config == null)
+            {
+                return null;
+            }
+
+            return JsonDeserializationCluster.RefreshConfiguration(config);
         }
 
         public List<ExternalReplication> GetExternalReplications()

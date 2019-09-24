@@ -14,25 +14,25 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class ExpirationHandler : DatabaseRequestHandler
+    public class RefreshHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/expiration/config", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetExpirationConfig()
+        [RavenAction("/databases/*/refresh/config", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetRefreshConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                ExpirationConfiguration expirationConfig;
+                RefreshConfiguration refreshConfig;
                 using (var recordRaw = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                 {
-                    expirationConfig = recordRaw?.GetExpirationConfiguration();
+                    refreshConfig = recordRaw?.GetRefreshConfiguration();
                 }
 
-                if (expirationConfig != null)
+                if (refreshConfig != null)
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, expirationConfig.ToJson());
+                        context.Write(writer, refreshConfig.ToJson());
                     }
                 }
                 else
@@ -42,11 +42,11 @@ namespace Raven.Server.Documents.Handlers
             }
             return Task.CompletedTask;
         }
-
-        [RavenAction("/databases/*/admin/expiration/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigExpiration()
+        
+        [RavenAction("/databases/*/admin/refresh/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigRefresh()
         {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config", GetRaftRequestIdFromQuery());
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseRefresh, "read-refresh-config", GetRaftRequestIdFromQuery());
         }
     }
 }

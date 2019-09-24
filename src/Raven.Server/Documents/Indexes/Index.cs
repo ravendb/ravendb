@@ -678,11 +678,11 @@ namespace Raven.Server.Documents.Indexes
 
         private void ReportUnexpectedIndexingError(Exception e)
         {
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
-
             try
             {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+
                 DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
                     "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
                     key: Name,

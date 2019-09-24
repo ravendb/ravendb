@@ -322,10 +322,39 @@ namespace Raven.Server.Documents.Queries.Results
 
         internal static FieldType GetFieldType(string field, Lucene.Net.Documents.Document indexDocument)
         {
+            var isArray = false;
+            var isJson = false;
+            var isNumeric = false;
+
+            var arrayFieldName = field + LuceneDocumentConverterBase.IsArrayFieldSuffix;
+            var jsonConvertFieldName = field + LuceneDocumentConverterBase.ConvertToJsonSuffix;
+            var numericFieldName = field + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+
+            foreach (var f in indexDocument.GetFields())
+            {
+                if (f.Name == arrayFieldName)
+                {
+                    isArray = true;
+                    continue;
+                }
+
+                if (f.Name == jsonConvertFieldName)
+                {
+                    isJson = true;
+                    break;
+                }
+
+                if (f.Name == numericFieldName)
+                {
+                    isNumeric = true;
+                }
+            }
+
             return new FieldType
             {
-                IsArray = indexDocument.GetField(field + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
-                IsJson = indexDocument.GetField(field + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
+                IsArray = isArray,
+                IsJson = isJson,
+                IsNumeric = isNumeric
             };
         }
 
@@ -333,6 +362,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             public bool IsArray;
             public bool IsJson;
+            public bool IsNumeric;
         }
 
         private static object ConvertType(JsonOperationContext context, IFieldable field, FieldType fieldType, IState state)

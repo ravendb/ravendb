@@ -15,6 +15,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
@@ -58,6 +59,9 @@ namespace Raven.Server.Documents
 
         private void HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
+            if (PreventWakeUpIdleDatabase(databaseName, type))
+                return;
+
             _disposing.EnterReadLock();
             try
             {
@@ -182,6 +186,22 @@ namespace Raven.Server.Documents
             finally
             {
                 _disposing.ExitReadLock();
+            }
+        }
+
+        private bool PreventWakeUpIdleDatabase(string databaseName, string type)
+        {
+            if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
+                return false;
+
+            switch (type)
+            {
+                case nameof(PutServerWideBackupConfigurationCommand):
+                    return true;
+                case nameof(UpdatePeriodicBackupStatusCommand):
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -504,7 +524,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false)
+        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false)
         {
             try
             {
@@ -541,7 +561,7 @@ namespace Raven.Server.Documents
                         return database;
                     }
                 }
-                return CreateDatabase(databaseName, ignoreDisabledDatabase);
+                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase);
             }
             finally
             {
@@ -555,34 +575,35 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, bool ignoreDisabledDatabase = false)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false)
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase);
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 
             if (!_databaseSemaphore.Wait(0))
-                return UnlikelyCreateDatabaseUnderContention(databaseName, config);
+                return UnlikelyCreateDatabaseUnderContention(databaseName, config, wakeup);
 
-            return CreateDatabaseUnderResourceSemaphore(databaseName, config);
+            return CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
         }
 
-        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config)
+        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
         {
             if (await _databaseSemaphore.WaitAsync(_concurrentDatabaseLoadTimeout) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
-            return await CreateDatabaseUnderResourceSemaphore(databaseName, config);
+            return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
         }
 
-        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config)
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
         {
             try
             {
-                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, wakeup), TaskCreationOptions.RunContinuationsAsynchronously);
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
+                    _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
                     DeleteIfNeeded(databaseName, task);
                     task.Start(); // the semaphore will be released here at the end of the task
                 }
@@ -598,7 +619,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config)
+        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
         {
             try
             {
@@ -609,7 +630,7 @@ namespace Raven.Server.Documents
                 if (_disposing.TryEnterReadLock(0) == false)
                     ThrowServerIsBeingDisposed(databaseName);
 
-                var db = CreateDocumentsStorage(databaseName, config);
+                var db = CreateDocumentsStorage(databaseName, config, wakeup);
                 _serverStore.NotificationCenter.Add(
                     DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
 
@@ -676,7 +697,7 @@ namespace Raven.Server.Documents
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
-        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config)
+        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
         {
             void AddToInitLog(string txt)
             {
@@ -701,7 +722,7 @@ namespace Raven.Server.Documents
 
                 var sp = Stopwatch.StartNew();
                 documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
-                documentDatabase.Initialize();
+                documentDatabase.Initialize(InitializeOptions.None, wakeup);
 
                 AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, _serverStore);
@@ -874,41 +895,49 @@ namespace Raven.Server.Documents
 
             LastRecentlyUsed.TryRemove(databaseName, out _);
             DatabasesCache.RemoveLockAndReturn(databaseName.Value, CompleteDatabaseUnloading, out _, caller).Dispose();
-            ScheduleDatabaseWakeup(databaseName.Value, dueTime);
-        }
 
-        private void ScheduleDatabaseWakeup(string name, long milliseconds)
-        {
-            if (milliseconds == 0)
+            if (dueTime == 0)
                 return;
 
-            _wakeupTimers.TryAdd(name, new Timer(_ =>
+            _wakeupTimers.TryAdd(databaseName.Value, new Timer(_ => StartDatabaseOnTimer(databaseName.Value, wakeup), null, dueTime, Timeout.Infinite));
+        }
+
+        public void RescheduleDatabaseWakeup(string name, long milliseconds, DateTime? wakeup = null)
+        {
+            if (_wakeupTimers.TryGetValue(name, out var oldTimer))
             {
+                oldTimer.Dispose();
+            }
+
+            var newTimer = new Timer(_ => StartDatabaseOnTimer(name, wakeup), null, milliseconds, Timeout.Infinite);
+            _wakeupTimers.AddOrUpdate(name, _ => newTimer, (_, __) => newTimer);
+        }
+
+        private void StartDatabaseOnTimer(string name, DateTime? wakeup = null)
+        {
+            try
+            {
+                _disposing.EnterReadLock();
                 try
                 {
-                    _disposing.EnterReadLock();
-                    try
-                    {
-                        if (_serverStore.ServerShutdown.IsCancellationRequested)
-                            return;
+                    if (_serverStore.ServerShutdown.IsCancellationRequested)
+                        return;
 
-                        TryGetOrCreateResourceStore(name);
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // expected 
-                    }
-                    finally
-                    {
-                        _disposing.ExitReadLock();
-                    }
+                    TryGetOrCreateResourceStore(name, wakeup);
                 }
-                catch
+                catch (ObjectDisposedException)
                 {
-                    // we have to swallow any exception here.
+                    // expected 
                 }
-
-            }, null, milliseconds, Timeout.Infinite));
+                finally
+                {
+                    _disposing.ExitReadLock();
+                }
+            }
+            catch
+            {
+                // we have to swallow any exception here.
+            }
         }
 
         private bool ShouldContinueDispose(string name, DateTime? wakeup, out int dueTime)

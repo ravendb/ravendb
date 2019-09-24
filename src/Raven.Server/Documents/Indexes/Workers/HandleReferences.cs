@@ -134,7 +134,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
 
                                         references = _documentsStorage
-                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, 
+                                                DocumentFields.Id | DocumentFields.Etag)
                                             .Select(document =>
                                             {
                                                 _reference.Key = document.Id;
