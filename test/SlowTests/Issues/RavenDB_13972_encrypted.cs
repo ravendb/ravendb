@@ -93,5 +93,28 @@ namespace SlowTests.Issues
                 CanStreamQueryWithPulsatingReadTransaction_ActualTest(numberOfUsers, store);
             }
         }
+
+        [Theory]
+        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
+        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
+        {
+            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Databases.PulseReadTransactionLimit)] = "0";
+                    record.Encrypted = true;
+                }
+            }))
+            {
+                CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTest(numberOfUsers, store);
+            }
+        }
     }
 }

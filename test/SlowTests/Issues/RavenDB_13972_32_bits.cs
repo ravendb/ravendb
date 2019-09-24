@@ -101,5 +101,30 @@ namespace SlowTests.Issues
                 CanStreamQueryWithPulsatingReadTransaction_ActualTest(numberOfUsers, store);
             }
         }
+
+        [Theory]
+        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
+        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
+        {
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager)] = "true"
+                }
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Databases.PulseReadTransactionLimit)] = "0";
+                }
+            }))
+            {
+                CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTest(numberOfUsers, store);
+            }
+        }
     }
 }
