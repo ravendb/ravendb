@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -1415,33 +1416,45 @@ namespace Raven.Server.Documents.TimeSeries
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
             var list = new DynamicJsonArray();
 
-            if (table.SeekToLastPrimaryKey(out var reader) == false)
-                return list;
+            // here we need to find all of the time series names for a given document.
 
-            var holder = new ByteStringStorage
+            // for example we have:
+            // doc/heartbeats/123
+            // doc/heartbeats/234
+            // doc/heartbeats/666
+            // doc/pulse/123
+            // doc/pulse/54656
+
+            // so we seek backwards, starting from the end.
+            // extracting the last name and use it as a prefix for the next iteration
+
+            var dummyHolder = new ByteStringStorage
             {
                 Flags = ByteStringType.Mutable,
                 Length = 0,
                 Ptr = (byte*)0,
                 Size = 0
             };
-            var slice = new Slice(new ByteString(&holder));
+            var slice = new Slice(new ByteString(&dummyHolder));
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out var last, SpecialChars.RecordSeparator + 1))
             {
-                var name = UpdateSlice(ref reader, documentKeyPrefix.Size, ref slice);
-                list.Add(name);
+                if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, last, out var reader) == false)
+                    return list;
 
-                while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader))
+                var size = documentKeyPrefix.Size;
+                do
                 {
-                    name = UpdateSlice(ref reader, documentKeyPrefix.Size, ref slice);
-                    list.Insert(0, name);
-                }
+                    list.Add(GetNameAndUpdateSlice(ref reader, size, ref slice));
+                } while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader));
+
+                list.Items.Reverse();
                 return list;
             }
         }
 
-        private static string UpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
+        private static string GetNameAndUpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
         {
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out var size);
             var name = Encoding.UTF8.GetString(keyPtr + prefixSize, size - prefixSize - sizeof(long) - 1);

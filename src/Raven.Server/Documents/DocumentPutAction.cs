@@ -12,6 +12,7 @@ using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 using System.Linq;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
 using Sparrow.Server;
@@ -491,7 +492,8 @@ namespace Raven.Server.Documents
         private interface IRecreationType
         {
             string MetadataProperty { get; }
-            Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata { get; }
+
+            DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id);
 
             DocumentFlags HasFlag { get; }
 
@@ -512,7 +514,10 @@ namespace Raven.Server.Documents
 
             public string MetadataProperty => Constants.Documents.Metadata.Attachments;
 
-            public Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata => _storage.AttachmentsStorage.GetAttachmentsMetadataForDocument;
+            public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
+            {
+                return _storage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, id);
+            }
 
             public DocumentFlags HasFlag => DocumentFlags.HasAttachments;
 
@@ -534,7 +539,10 @@ namespace Raven.Server.Documents
 
             public string MetadataProperty => Constants.Documents.Metadata.Counters;
 
-            public Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata => _storage.CountersStorage.GetCountersForDocumentList;
+            public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
+            {
+                return _storage.CountersStorage.GetCountersForDocumentList(context, id);
+            }
 
             public DocumentFlags HasFlag => DocumentFlags.HasCounters;
 
@@ -556,7 +564,10 @@ namespace Raven.Server.Documents
 
             public string MetadataProperty => Constants.Documents.Metadata.TimeSeries;
 
-            public Func<DocumentsOperationContext, string, DynamicJsonArray> GetMetadata => _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument;
+            public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
+            {
+                return _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, id);
+            }
 
             public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;
 
