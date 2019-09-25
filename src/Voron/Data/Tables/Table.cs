@@ -1143,21 +1143,6 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool SeekToLastPrimaryKey(out TableValueReader reader)
-        {
-            reader = default;
-            var pk = _schema.Key;
-            var tree = GetTree(pk);
-            using (var it = tree.Iterate(true))
-            {
-                if (it.Seek(Slices.AfterAllKeys) == false)
-                    return false;
-
-                GetTableValueReader(it, out reader);
-                return true;
-            }
-        }
-
         public bool SeekOneBackwardByPrimaryKeyPrefix(Slice prefix, Slice value, out TableValueReader reader)
         {
             reader = default;

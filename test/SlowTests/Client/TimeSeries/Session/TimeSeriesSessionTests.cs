@@ -520,6 +520,23 @@ namespace SlowTests.Client.TimeSeries.Session
             {
                 using (var session = store.OpenSession())
                 {
+                    session.Store(new User(), "users/karmel");
+                    session.TimeSeriesFor("users/karmel")
+                        .Append("Nasdaq2", DateTime.Now, "web", new[] { 7547.31 });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/karmel")
+                        .Append("Heartrate2", DateTime.Now, "web", new[] { 7547.31 });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
                     session.Store(new User(), "users/ayende");
                     session.TimeSeriesFor("users/ayende")
                         .Append("Nasdaq", DateTime.Now, "web", new[] { 7547.31 });
@@ -545,10 +562,108 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal("Heartrate", tsNames[0]);
                     Assert.Equal("Nasdaq", tsNames[1]);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/karmel");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(2, tsNames.Count);
+
+                    // should be sorted
+                    Assert.Equal("Heartrate2", tsNames[0]);
+                    Assert.Equal("Nasdaq2", tsNames[1]);
+                }
             }
         }
 
+        [Fact]
+        public void CanGetTimeSeriesNames2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
 
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var offset = 0;
+
+                for (int i = 0; i < 100; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+
+                        for (int j = 0; j < 1000; j++)
+                        {
+                            session.TimeSeriesFor("users/ayende")
+                                .Append("Heartrate", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { offset });
+                        }
+
+                        session.SaveChanges();
+                    }
+                }
+
+
+                offset = 0;
+
+                for (int i = 0; i < 100; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+
+                        for (int j = 0; j < 1000; j++)
+                        {
+                            session.TimeSeriesFor("users/ayende")
+                                .Append("Pulse", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { offset });
+                        }
+
+                        session.SaveChanges();
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(100_000, vals.Count);
+
+                    for (int i = 0; i < 100_000; i++)
+                    {
+                        Assert.Equal(baseline.AddMinutes(i), vals[i].Timestamp);
+                        Assert.Equal(1 + i, vals[i].Values[0]);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Pulse", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+                    Assert.Equal(100_000, vals.Count);
+
+                    for (int i = 0; i < 100_000; i++)
+                    {
+                        Assert.Equal(baseline.AddMinutes(i), vals[i].Timestamp);
+                        Assert.Equal(1 + i, vals[i].Values[0]);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(2, tsNames.Count);
+
+                    // should be sorted
+                    Assert.Equal("Heartrate", tsNames[0]);
+                    Assert.Equal("Pulse", tsNames[1]);
+                }
+            }
+        }
 
         [Fact]
         public void DocumentsChangeVectorShouldBeUpdatedAfterAddingNewTimeSeries()
