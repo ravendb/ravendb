@@ -1,0 +1,119 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.WebSockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using FastTests.Server.Replication;
+using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server;
+using Raven.Server.Config;
+using Tests.Infrastructure;
+using Xunit;
+
+namespace SlowTests.Cluster
+{
+    public class ClusterMaintenanceTest : ClusterTestBase
+    {
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null)
+        {
+            if (options == null)
+            {
+                options = new ServerCreationOptions();
+            }
+            if (options.CustomSettings == null)
+                options.CustomSettings = new Dictionary<string, string>();
+
+            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "1";
+
+            return base.GetNewServer(options);
+        }
+
+
+        [Fact]
+        public async Task RavenDB_14044()
+        {
+            DoNotReuseServer();
+
+            var cluster = await CreateRaftCluster(3);
+
+            using (var client = new ClientWebSocket())
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+            }))
+            {
+                var str = string.Format("{0}/admin/logs/watch", store.Urls.First().Replace("http", "ws"));
+                var sb = new StringBuilder();
+
+                await client.ConnectAsync(new Uri(str), CancellationToken.None);
+                var task = Task.Run(async () =>
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                    while (client.State == WebSocketState.Open)
+                    {
+                        var value = await ReadFromWebSocket(buffer, client);
+                        lock (sb)
+                        {
+                            sb.AppendLine(value);
+                        }
+                        const string expectedValue = "Exception occurred while reading the report from the connection";
+                        if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
+                            throw new InvalidOperationException("Exception occurred while reading the report from the connection");
+                    }
+                });
+
+                for (int i = 0; i < 100; i++)
+                {
+                    if (task.IsFaulted)
+                        await task;
+
+                    try
+                    {
+                        var name = GetDatabaseName(new string('a', i));
+                        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name),2));
+                        //     await store.Maintenance.ForDatabase(name).SendAsync(new CreateSampleDataOperation());
+                    }
+                    catch (ConcurrencyException)
+                    {
+
+                    }
+                }
+
+                client.Dispose();
+                await task;
+
+                WaitForUserToContinueTheTest(store);
+            }
+        }
+
+        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+        {
+            using (var ms = new MemoryStream())
+            {
+                WebSocketReceiveResult result;
+                do
+                {
+                    try
+                    {
+                        result = await source.ReceiveAsync(buffer, CancellationToken.None);
+                    }
+                    catch (Exception)
+                    {
+                        break;
+                    }
+                    ms.Write(buffer.Array, buffer.Offset, result.Count);
+                }
+                while (!result.EndOfMessage);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
+        }
+
+    }
+}
