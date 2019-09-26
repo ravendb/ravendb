@@ -31,7 +31,7 @@ namespace Raven.Server.Routing
     public class RequestRouter
     {
         private static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
-        private DateTime _lastRequestTimeUpdated;
+        internal DateTime _lastRequestTimeUpdated;
 
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
