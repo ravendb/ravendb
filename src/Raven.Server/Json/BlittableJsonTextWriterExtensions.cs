@@ -441,6 +441,14 @@ namespace Raven.Server.Json
                 WriteIncludedCounterNames(writer, result);
             }
 
+            var timeSeries = result.GetTimeSeriesIncludes();
+            if (timeSeries != null)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.TimeSeriesIncludes));
+                await writer.WriteTimeSeriesAsync(context, timeSeries);
+            }
+
             writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();

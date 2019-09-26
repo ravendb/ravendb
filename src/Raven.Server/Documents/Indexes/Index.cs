@@ -2439,6 +2439,7 @@ namespace Raven.Server.Documents.Indexes
                                 var totalResults = new Reference<int>();
                                 var skippedResults = new Reference<int>();
                                 IncludeCountersCommand includeCountersCommand = null;
+                                IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
 
                                 var fieldsToFetch = new FieldsToFetch(query, Definition);
 
@@ -2453,6 +2454,14 @@ namespace Raven.Server.Documents.Indexes
                                         DocumentDatabase,
                                         documentsContext,
                                         query.Metadata.CounterIncludes.Counters);
+                                }
+
+                                if (query.Metadata.HasTimeSeries)
+                                {
+                                    includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
+                                        DocumentDatabase,
+                                        documentsContext,
+                                        query.Metadata.TimeSeriesIncludes.TimeSeries);
                                 }
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
@@ -2534,6 +2543,8 @@ namespace Raven.Server.Documents.Indexes
 
                                             includeCountersCommand?.Fill(document.Result);
                                         }
+                                        includeTimeSeriesCommand?.Fill(document.Result);
+
                                     }
                                 }
                                 catch (Exception e)

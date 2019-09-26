@@ -43,6 +43,8 @@
 
         Counters,
 
+        TimeSeries,
+
         Unknown,
     }
 }

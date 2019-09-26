@@ -165,12 +165,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 IncludeCountersCommand includeCountersCommand = null;
+                IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                 if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
                         Database,
                         context,
                         query.Metadata.CounterIncludes.Counters);
+                }
+
+                if (query.Metadata.HasTimeSeries)
+                {
+                    includeTimeSeriesCommand = new IncludeTimeSeriesCommand(
+                        Database, 
+                        context, 
+                        query.Metadata.TimeSeriesIncludes.TimeSeries);
                 }
 
                 try
@@ -190,6 +199,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             includeCountersCommand?.Fill(document);
                         }
+                        includeTimeSeriesCommand?.Fill(document);
+
                     }
                 }
                 catch (Exception e)

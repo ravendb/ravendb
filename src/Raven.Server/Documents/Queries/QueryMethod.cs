@@ -101,6 +101,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "proximity", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Proximity;
 
+            if (string.Equals(methodName, "timeseries", StringComparison.OrdinalIgnoreCase))
+                return MethodType.TimeSeries;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 
