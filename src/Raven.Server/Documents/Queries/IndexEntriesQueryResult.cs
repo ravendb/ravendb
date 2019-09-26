@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
@@ -37,6 +38,16 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes()
         {
             throw new NotSupportedException();
         }

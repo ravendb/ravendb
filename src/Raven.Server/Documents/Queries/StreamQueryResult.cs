@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
@@ -53,10 +54,22 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+
+        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
+        {
+            throw new NotSupportedException();
+        }
+
         public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
         {
             throw new NotSupportedException();
         }
+
+        public override Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes()
+        {
+            throw new NotSupportedException();
+        }
+
 
         public override void HandleException(Exception e)
         {

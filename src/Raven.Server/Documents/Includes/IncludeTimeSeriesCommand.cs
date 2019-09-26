@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Includes
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, (IList<string> TimeseriesNames, IList<string> FromList, IList<string> ToList)> _timeSeriesBySourcePath;
+        private readonly Dictionary<string, HashSet<TimeSeriesRange>> _timeSeriesRangesBySourcePath;
+
 
         public Dictionary<string, List<TimeSeriesRangeResult>> Results { get; }
 
@@ -33,11 +35,29 @@ namespace Raven.Server.Documents.Includes
             };
         }
 
+        public IncludeTimeSeriesCommand(DocumentDatabase database, DocumentsOperationContext context, Dictionary<string, HashSet<TimeSeriesRange>> timeSeriesRangesBySourcePath)
+            : this(database, context)
+        {
+            _timeSeriesRangesBySourcePath = timeSeriesRangesBySourcePath;
+        }
+
         public void Fill(Document document)
+        {
+            if (_timeSeriesRangesBySourcePath != null)
+            {
+                Fill(document, _timeSeriesRangesBySourcePath);
+                return;
+            }
+
+            Fill(document, _timeSeriesBySourcePath);
+        }
+
+
+        private void Fill(Document document, dynamic timeSeriesToGet)
         {
             var docId = document.Id;
 
-            foreach (var kvp in _timeSeriesBySourcePath)
+            foreach (var kvp in timeSeriesToGet)
             {
                 if (kvp.Key != string.Empty &&
                     document.Data.TryGet(kvp.Key, out docId) == false)
@@ -49,46 +69,64 @@ namespace Raven.Server.Documents.Includes
                 if (Results.ContainsKey(docId))
                     continue;
 
-                var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value.TimeseriesNames, kvp.Value.FromList, kvp.Value.ToList);
+                var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value);
 
                 Results.Add(docId, rangeResults);
+
             }
         }
 
-        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(LazyStringValue docId, IList<string> timeseriesNames, IList<string> fromList, IList<string> toList)
+        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(LazyStringValue docId, HashSet<TimeSeriesRange> timesSeriesToGet)
         {
             var rangeResults = new List<TimeSeriesRangeResult>();
 
-            for (var i = 0; i < timeseriesNames.Count; i++)
+            foreach (var range in timesSeriesToGet)
             {
-                var name = timeseriesNames[i];
-                var (from, to) = TimeSeriesHandler.ParseDates(fromList[i], toList[i], name);
-
-                var values = new List<TimeSeriesValue>();
-                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_context, docId, name, from, to);
-
-                foreach (var singleResult in reader.AllValues())
-                {
-                    values.Add(new TimeSeriesValue
-                    {
-                        Timestamp = singleResult.TimeStamp,
-                        Tag = singleResult.Tag,
-                        Values = singleResult.Values.ToArray()
-                    });
-                }
-
-                var rangeResult = new TimeSeriesRangeResult
-                {
-                    Name = name,
-                    From = from,
-                    To = to,
-                    Values = values.ToArray()
-                };
-
-                rangeResults.Add(rangeResult);
+                var timeSeriesRangeResult = GetTimeSeries(docId, range.Name, range.From, range.To);
+                rangeResults.Add(timeSeriesRangeResult);
             }
 
             return rangeResults;
+        }
+
+        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(LazyStringValue docId, (IList<string> TimeseriesNames, IList<string> FromList, IList<string> ToList) timesSeriesToGet)
+        {
+            var rangeResults = new List<TimeSeriesRangeResult>();
+
+            for (var i = 0; i < timesSeriesToGet.TimeseriesNames.Count; i++)
+            {
+                var name = timesSeriesToGet.TimeseriesNames[i];
+                var (from, to) = TimeSeriesHandler.ParseDates(timesSeriesToGet.FromList[i], timesSeriesToGet.ToList[i], name);
+                var timeSeriesRangeResult = GetTimeSeries(docId, name, from, to);
+                rangeResults.Add(timeSeriesRangeResult);
+            }
+
+            return rangeResults;
+        }
+
+        private TimeSeriesRangeResult GetTimeSeries(LazyStringValue docId, string name, DateTime from, DateTime to)
+        {
+            var values = new List<TimeSeriesValue>();
+            var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_context, docId, name, from, to);
+
+            foreach (var singleResult in reader.AllValues())
+            {
+                values.Add(new TimeSeriesValue
+                {
+                    Timestamp = singleResult.TimeStamp,
+                    Tag = singleResult.Tag,
+                    Values = singleResult.Values.ToArray()
+                });
+            }
+
+            return new TimeSeriesRangeResult
+            {
+                Name = name,
+                From = from,
+                To = to,
+                Values = values.ToArray()
+            };
+
         }
     }
 }

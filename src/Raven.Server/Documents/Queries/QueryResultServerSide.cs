@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
@@ -36,5 +37,11 @@ namespace Raven.Server.Documents.Queries
         public abstract void AddCounterIncludes(IncludeCountersCommand includeCountersCommand);
 
         public abstract Dictionary<string, List<CounterDetail>> GetCounterIncludes();
+
+        public abstract void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand);
+
+        public abstract Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes();
+
+
     }
 }

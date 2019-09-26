@@ -10,9 +10,11 @@ using Esprima.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;
@@ -121,6 +123,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCmpXchgSelect { get; internal set; }
 
+        public bool HasTimeSeries { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<string, DeclaredFunction> DeclaredFunctions { get; }
@@ -150,6 +154,8 @@ namespace Raven.Server.Documents.Queries
         public ExplanationField Explanation;
 
         public CounterIncludesField CounterIncludes;
+
+        public TimeSeriesIncludesField TimeSeriesIncludes;
 
         public readonly ulong CacheKey;
 
@@ -492,6 +498,17 @@ namespace Raven.Server.Documents.Queries
 
                                 AddToCounterIncludes(CounterIncludes, me, parameters);
                                 break;
+                            case MethodType.TimeSeries:
+                                QueryValidator.ValidateIncludeTimeseries(me.Arguments, QueryText, parameters);
+
+                                if (TimeSeriesIncludes == null)
+                                {
+                                    TimeSeriesIncludes = new TimeSeriesIncludesField();
+                                    HasTimeSeries = true;
+                                }
+
+                                AddToTimeSeriesIncludes(TimeSeriesIncludes, me, parameters);
+                                break;
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
                         }
@@ -690,6 +707,90 @@ namespace Raven.Server.Documents.Queries
                                                 $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
 
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
+        }
+
+        private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeseriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
+        {
+            string sourcePath = null;
+            var start = 0;
+            if (expression.Arguments.Count > 0 &&
+                expression.Arguments[0] is FieldExpression fe)
+            {
+                start = 1;
+
+                if (Query.From.Alias?.Value != fe.FieldValue)
+                {
+                    if (RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
+                    {
+                        sourcePath = value.PropertyPath;
+                    }
+
+                    else if (fe.FieldValue != null)
+                    {
+                        if (Query.From.Alias?.Value == null)
+                        {
+                            sourcePath = fe.FieldValue;
+                        }
+                        else
+                        {
+                            var split = fe.FieldValue.Split('.');
+                            if (split.Length >= 2 &&
+                                split[0] == Query.From.Alias.Value)
+                            {
+                                sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (start == expression.Arguments.Count)
+            {
+                timeseriesIncludes.TimeSeries[sourcePath ?? string.Empty] = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
+                return;
+            }
+
+            Debug.Assert(expression.Arguments.Count - start == 3);
+
+            var args = new List<(object Value, ValueTokenType Type)>(3);
+
+            for (var index = start; index < expression.Arguments.Count; index++)
+            {
+                if (!(expression.Arguments[index] is ValueExpression vt))
+                    continue;
+
+                if (vt.Value == ValueTokenType.Parameter)
+                {
+/*
+                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
+                    {
+                        AddTimeSeriesToInclude(timeseriesIncludes, parameters, v, sourcePath);
+                    }
+*/
+
+                    continue;
+                }
+
+                args.Add(QueryBuilder.GetValue(Query, this, parameters, vt));
+
+
+            }
+
+            AddTimeSeriesToInclude(timeseriesIncludes, parameters, args, sourcePath);
+        }
+
+        private void AddTimeSeriesToInclude(TimeSeriesIncludesField timeseriesIncludes, BlittableJsonReaderObject parameters,
+            List<(object Value, ValueTokenType Type)> args, string sourcePath)
+        {
+            foreach (var arg in args)
+            {
+                if (arg.Type != ValueTokenType.String)
+                    throw new InvalidQueryException("Parameters of method `timeseries` must be of type `string``, " +
+                                                    $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+            }
+
+
+            timeseriesIncludes.AddTimeSeries(args[0].Value.ToString(), args[1].Value.ToString(), args[2].Value.ToString(), sourcePath);
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)

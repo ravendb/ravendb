@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 
@@ -20,6 +21,8 @@ namespace Raven.Server.Documents.Queries
 
         private Dictionary<string, List<CounterDetail>> _counterIncludes;
 
+        private Dictionary<string, List<TimeSeriesRangeResult>> _timeSeriesIncludes;
+
         public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
         {
             _counterIncludes = includeCountersCommand.Results;
@@ -27,6 +30,12 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, List<CounterDetail>> GetCounterIncludes() => _counterIncludes;
+        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand includeTimeSeriesCommand)
+        {
+            _timeSeriesIncludes = includeTimeSeriesCommand.Results;
+        }
+
+        public override Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesIncludes() => _timeSeriesIncludes;
 
         public override void AddResult(Document result)
         {
