@@ -225,7 +225,8 @@ namespace Sparrow.LowMemory
             }
         }
 
-        internal static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory) GetFromProcMemInfo(SmapsReader smapsReader)
+        internal static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory, Size TotalDirty)
+            GetFromProcMemInfo(SmapsReader smapsReader)
         {
             const string path = "/proc/meminfo";
 
@@ -245,6 +246,7 @@ namespace Sparrow.LowMemory
                     var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
 
                     var totalClean = new Size(memAvailableInKb, SizeUnit.Kilobytes);
+                    var totalDirty = new Size(0, SizeUnit.Bytes);
                     var sharedCleanMemory = new Size(0, SizeUnit.Bytes);
                     if (smapsReader != null)
                     {
@@ -252,6 +254,7 @@ namespace Sparrow.LowMemory
                         totalClean.Add(result.SharedClean, SizeUnit.Bytes);
                         totalClean.Add(result.PrivateClean, SizeUnit.Bytes);
                         sharedCleanMemory.Set(result.SharedClean, SizeUnit.Bytes);
+                        totalDirty.Add(result.TotalDirty, SizeUnit.Bytes);
                     }
 
                     return (
@@ -263,7 +266,8 @@ namespace Sparrow.LowMemory
                         // is dependent on many different factors
                         CommitLimit: new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes),
                         AvailableWithoutTotalCleanMemory: totalClean,
-                        SharedCleanMemory: sharedCleanMemory
+                        SharedCleanMemory: sharedCleanMemory,
+                        TotalDirty: totalDirty
                     );
                 }
             }
@@ -272,7 +276,7 @@ namespace Sparrow.LowMemory
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to read value from {path}", ex);
 
-                return (new Size(), new Size(), new Size(), new Size(), new Size(), new Size());
+                return (new Size(), new Size(), new Size(), new Size(), new Size(), new Size(), new Size());
             }
         }
 
@@ -330,8 +334,8 @@ namespace Sparrow.LowMemory
             {
                 // running in a limited cgroup
                 var commitedMemoryInBytes = 0L;
-                var cgroupMemoryUsage = LowMemoryNotification.Instance.UseRssInsteadOfMemUsage // RDBS-45
-                    ? GetRssMemoryUsage()
+                var cgroupMemoryUsage = LowMemoryNotification.Instance.UseTotalDirtyMemInsteadOfMemUsage // RDBS-45
+                    ? fromProcMemInfo.TotalDirty.GetValue(SizeUnit.Bytes)
                     : KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
 
                 if (cgroupMemoryUsage != null)
