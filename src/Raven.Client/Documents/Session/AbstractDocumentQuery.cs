@@ -1799,7 +1799,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
-        public string AddAliasToCounterIncludesTokens(string fromAlias)
+        public string AddAliasToIncludesTokens(string fromAlias)
         {
             if (_includesAlias == null)
                 return fromAlias;
@@ -1810,9 +1810,20 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 AddFromAliasToWhereTokens(fromAlias);
             }
 
-            foreach (var counterIncludesToken in CounterIncludesTokens)
+            if (CounterIncludesTokens != null)
             {
-                counterIncludesToken.AddAliasToPath(fromAlias);
+                foreach (var token in CounterIncludesTokens)
+                {
+                    token.AddAliasToPath(fromAlias);
+                }
+            }
+
+            if (TimeSeriesIncludesTokens != null)
+            {
+                foreach (var token in TimeSeriesIncludesTokens)
+                {
+                    token.AddAliasToPath(fromAlias);
+                }
             }
 
             return fromAlias;

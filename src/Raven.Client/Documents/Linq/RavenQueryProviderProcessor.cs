@@ -2579,9 +2579,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
         }
 
-        private void AddAliasToCounterIncludesIfNeeded()
+        private void AddAliasToIncludeTokensIfNeeded()
         {
-            _fromAlias = _documentQuery.AddAliasToCounterIncludesTokens(_fromAlias);
+            _fromAlias = _documentQuery.AddAliasToIncludesTokens(_fromAlias);
         }
 
         private string RenameAliasIfNeeded(string alias)
@@ -3198,7 +3198,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
-            AddAliasToCounterIncludesIfNeeded();
+            AddAliasToIncludeTokensIfNeeded();
 
             if (_jsSelectBody != null)
             {
@@ -3244,7 +3244,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
 
-            AddAliasToCounterIncludesIfNeeded();
+            AddAliasToIncludeTokensIfNeeded();
 
             if (_jsSelectBody != null)
             {
