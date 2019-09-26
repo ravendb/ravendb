@@ -1,10 +1,20 @@
 <div class="content-container">
     <form class="flex-form" data-bind="submit: run">
         <div class="content-margin">
-            <div class="toolbar">
-                <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': spinners.save }" title="Revert all documents in the database to the specified time">
-                    <i class="icon-revert-revisions"></i> <span>Revert Revisions</span>
-                </button>
+            <div class="row">
+                <div class="col-xs-12 col-lg-7 toolbar flex-horizontal">
+                    <div class="">
+                        <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': spinners.save }" title="Revert all documents in the database to the specified time">
+                            <i class="icon-revert-revisions"></i> <span>Revert Revisions</span>
+                        </button>
+                    </div>
+                    <div class="flex-separator"></div>
+                    <div>
+                        <a class="btn btn-default" data-bind="attr: { href: revisionsUrl }">
+                            <span>Back to Revisions View</span>
+                        </a>
+                    </div>
+                </div>
             </div>
             <div class="row flex-row">
                 <div class="col-xs-12 col-lg-7 flex-vertical">
