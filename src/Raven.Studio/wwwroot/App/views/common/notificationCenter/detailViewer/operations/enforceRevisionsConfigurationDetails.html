@@ -16,9 +16,7 @@
             </div>
         </div>
         <div class="modal-body">
-            
             <p data-bind="html: op.message"></p>
-            
             <div class="modal-details" data-bind="with: progress">
                 <div class="details-item">
                     <div class="row">
@@ -34,19 +32,19 @@
                 </div>
                 <div class="details-item">
                     <div class="row">
-                        <div class="col-sm-6 text-right">Reverted documents:</div>
-                        <div class="col-sm-6 details-value" data-bind="text: RevertedDocuments.toLocaleString()"></div>
+                        <div class="col-sm-6 text-right">Removed revisions:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: RemovedRevisions.toLocaleString()"></div>
                     </div>
                 </div>
             </div>
             <div data-bind="if: operationFailed">
                 <h3 class="text-danger text-center">Operation failed!</h3>
-                <pre class="margin-top error-messages"><code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span>
-</code></pre>
+                <pre class="margin-top error-messages">
+                    <code data-bind="foreach: errorMessages"><span data-bind="text: $data"></span></code>
+                </pre>
             </div>
-
             <div class="margin-bottom" style="position: relative; height: 300px" data-bind="visible: allWarnings().length">
-                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-revert-revisions-template'"></virtual-grid>
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-enforce-revisions-template'"></virtual-grid>
             </div>
         </div>
         <div class="modal-footer">
@@ -57,10 +55,9 @@
         </div>
     </div>
 </div>
-
 <div class="tooltip json-preview js-revisions-details-tooltip" style="opacity: 0">
 </div>
 
-<script type="text/html" id="empty-revert-revisions-template">
+<script type="text/html" id="empty-enforce-revisions-template">
     No warnings found.
 </script>
