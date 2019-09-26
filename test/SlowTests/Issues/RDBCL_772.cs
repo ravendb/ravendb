@@ -38,8 +38,6 @@ namespace SlowTests.Issues
                 ModifyDatabaseName = s => dbName
             }))
             {
-                Server.Router._lastRequestTimeUpdated = DateTime.MinValue;
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User());

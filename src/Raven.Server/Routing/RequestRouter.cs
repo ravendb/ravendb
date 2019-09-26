@@ -31,7 +31,8 @@ namespace Raven.Server.Routing
     public class RequestRouter
     {
         private static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
-        internal DateTime _lastRequestTimeUpdated;
+        private DateTime _lastRequestTimeUpdated;
+        private DateTime _lastAuthorizedNonClusterAdminRequestTime;
 
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
@@ -133,11 +134,16 @@ namespace Raven.Server.Routing
                         if (now - _lastRequestTimeUpdated >= LastRequestTimeUpdateFrequency)
                         {
                             _ravenServer.Statistics.LastRequestTime = now;
-
-                            if (skipAuthorization == false && authResult && status != RavenServer.AuthenticationStatus.ClusterAdmin)
-                                _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
-
                             _lastRequestTimeUpdated = now;
+                        }
+
+                        if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency && 
+                            skipAuthorization == false && 
+                            authResult && 
+                            status != RavenServer.AuthenticationStatus.ClusterAdmin)
+                        {
+                            _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
+                            _lastAuthorizedNonClusterAdminRequestTime = now;
                         }
                     }
                 }
