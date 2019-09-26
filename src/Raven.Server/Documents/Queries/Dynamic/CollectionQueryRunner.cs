@@ -217,6 +217,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (includeCountersCommand != null)
                     resultToFill.AddCounterIncludes(includeCountersCommand);
 
+                if (includeTimeSeriesCommand != null)
+                    resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
+
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
 
                 if (query.Offset != null || query.Limit != null)

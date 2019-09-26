@@ -1613,141 +1613,144 @@ more responsive application.
 
         internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries)
         {
-            if (NoTracking)
+            if (NoTracking || resultTimeSeries == null)
                 return;
 
-            if (resultTimeSeries != null)
+            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < resultTimeSeries.Count; i++)
             {
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                for (int i = 0; i < resultTimeSeries.Count; i++)
+                resultTimeSeries.GetPropertyByIndex(i, ref propertyDetails);
+                if (propertyDetails.Value == null)
+                    continue;
+
+                var id = propertyDetails.Name;
+
+                if (TimeSeriesByDocId.TryGetValue(id, out var cache) == false)
                 {
-                    resultTimeSeries.GetPropertyByIndex(i, ref propertyDetails);
-                    if (propertyDetails.Value == null)
-                        continue;
-
-                    var id = propertyDetails.Name;
-
-                    if (TimeSeriesByDocId.TryGetValue(id, out var cache) == false)
-                    {
-                        cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    var timeseriesRanges = (BlittableJsonReaderArray)propertyDetails.Value;
-
-                    foreach (BlittableJsonReaderObject blittableRange in timeseriesRanges)
-                    {
-                        if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Name), out string name) == false ||
-                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.From), out DateTime from) == false ||
-                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.To), out DateTime to) == false ||
-                            blittableRange.TryGet(nameof(TimeSeriesRangeResult.Values), out BlittableJsonReaderArray valuesBlittable) == false)
-                            continue;
-
-                        var arr = new TimeSeriesValue[valuesBlittable.Length];
-
-                        for (int j = 0; j < valuesBlittable.Length; j++)
-                        {
-                            var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
-                            if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false ||
-                                timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false ||
-                                timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
-                                continue;
-
-                            arr[j] = new TimeSeriesValue
-                            {
-                                Tag = tag,
-                                Timestamp = timestamp,
-                                Values = values.Select(x => x is LazyNumberValue val
-                                    ? val.ToDouble(CultureInfo.InvariantCulture) 
-                                    : (long)x).ToArray()
-                            };
-
-                        }
-
-                        var newRange = new TimeSeriesRangeResult
-                        {
-                            From = from,
-                            To = to,
-                            Values = arr
-                        };
-
-                        if (cache.TryGetValue(name, out var localRanges) == false ||
-                            localRanges.Count == 0)
-                        {
-                            cache[name] = new List<TimeSeriesRangeResult>
-                            {
-                                newRange
-                            };
-                        }
-
-                        else if (localRanges[0].From > to || localRanges[localRanges.Count - 1].To < from)
-                        {
-                            // the entire range [from, to] is out of cache bounds
-
-                            var index = localRanges[0].From > to ? 0 : localRanges.Count;
-                            localRanges.Insert(index, newRange);
-
-                        }
-                        else
-                        {
-                            //  TODO handle ranges merging
-
-                            int toRangeIndex;
-                            var fromRangeIndex = -1;
-                            var rangeExistsInCache = false;
-
-                            for (toRangeIndex = 0; toRangeIndex < localRanges.Count; toRangeIndex++)
-                            {
-                                if (localRanges[toRangeIndex].From <= from)
-                                {
-                                    if (localRanges[toRangeIndex].To >= to)
-                                    {
-                                        rangeExistsInCache = true;
-                                        break;
-                                    }
-
-                                    fromRangeIndex = toRangeIndex;
-                                    continue;
-                                }
-
-                                if (localRanges[toRangeIndex].To >= to)
-                                    break;
-                            }
-
-                            if (rangeExistsInCache)
-                            {
-                                UpdateExistingRange(localRanges[toRangeIndex], from, to, newRange);
-                                continue;
-                            }
-
-
-                           var mergedValues = MergeRanges(fromRangeIndex, toRangeIndex, localRanges, from, to, newRange);
-
-                            AsyncSessionDocumentTimeSeries.AddToCache(name, from, to, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues);
-
-                        }
-
-                    }
-
-                    TimeSeriesByDocId[id] = cache;
-
+                    cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
                 }
 
+                if (!(propertyDetails.Value is BlittableJsonReaderArray timeseriesRanges))
+                    throw new InvalidDataException($"Unable to read time series range results on document : '{id}'.");
 
+                foreach (BlittableJsonReaderObject blittableRange in timeseriesRanges)
+                {
+                    var newRange = ParseTimeSeriesRangeResult(blittableRange, id);
+                    AddToCache(cache, newRange);
+                }
+
+                TimeSeriesByDocId[id] = cache;
             }
-
-           // TODO register missing timeseries
         }
 
-        private static TimeSeriesValue[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, DateTime from, DateTime to, TimeSeriesRangeResult newRange)
+        private static void AddToCache(Dictionary<string, List<TimeSeriesRangeResult>> cache, TimeSeriesRangeResult newRange)
+        {
+            if (cache.TryGetValue(newRange.Name, out var localRanges) == false ||
+                localRanges.Count == 0)
+            {
+                // no local ranges in cache for this series
+
+                cache[newRange.Name] = new List<TimeSeriesRangeResult>
+                {
+                    newRange
+                };
+                return;
+            }
+
+            if (localRanges[0].From > newRange.To || localRanges[localRanges.Count - 1].To < newRange.From)
+            {
+                // the entire range [from, to] is out of cache bounds
+
+                var index = localRanges[0].From > newRange.To ? 0 : localRanges.Count;
+                localRanges.Insert(index, newRange);
+                return;
+            }
+
+            int toRangeIndex;
+            var fromRangeIndex = -1;
+            var rangeAlreadyInCache = false;
+
+            for (toRangeIndex = 0; toRangeIndex < localRanges.Count; toRangeIndex++)
+            {
+                if (localRanges[toRangeIndex].From <= newRange.From)
+                {
+                    if (localRanges[toRangeIndex].To >= newRange.To)
+                    {
+                        rangeAlreadyInCache = true;
+                        break;
+                    }
+
+                    fromRangeIndex = toRangeIndex;
+                    continue;
+                }
+
+                if (localRanges[toRangeIndex].To >= newRange.To)
+                    break;
+            }
+
+            if (rangeAlreadyInCache)
+            {
+                UpdateExistingRange(localRanges[toRangeIndex], newRange);
+                return;
+            }
+
+            var mergedValues = MergeRanges(fromRangeIndex, toRangeIndex, localRanges, newRange);
+            AsyncSessionDocumentTimeSeries.AddToCache(newRange.Name, newRange.From, newRange.To, fromRangeIndex, toRangeIndex, localRanges, cache, mergedValues);
+        }
+
+        private static TimeSeriesRangeResult ParseTimeSeriesRangeResult(BlittableJsonReaderObject blittableRange, LazyStringValue id)
+        {
+            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Name), out string name) == false)
+                throw new InvalidDataException($"Unable to read time series range result on document : '{id}'. Missing '{nameof(TimeSeriesRangeResult.Name)}' property");
+
+            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.From), out DateTime from) == false ||
+                blittableRange.TryGet(nameof(TimeSeriesRangeResult.To), out DateTime to) == false)
+                throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
+                                               $"Missing '{nameof(TimeSeriesRangeResult.From)}' and/or '{nameof(TimeSeriesRangeResult.To)}' properties");
+
+            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Values), out BlittableJsonReaderArray valuesBlittable) == false)
+                throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
+                                               $"Missing '{nameof(TimeSeriesRangeResult.Values)}' property");
+
+            var valuesArray = new TimeSeriesValue[valuesBlittable.Length];
+
+            for (int j = 0; j < valuesBlittable.Length; j++)
+            {
+                var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false ||
+                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false ||
+                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
+                    continue;
+
+                valuesArray[j] = new TimeSeriesValue
+                {
+                    Tag = tag,
+                    Timestamp = timestamp,
+                    Values = values.Select(x => x is LazyNumberValue val
+                        ? val.ToDouble(CultureInfo.InvariantCulture)
+                        : (long)x).ToArray()
+                };
+            }
+
+            return new TimeSeriesRangeResult
+            {
+                Name = name,
+                From = from,
+                To = to,
+                Values = valuesArray
+            };
+        }
+
+        private static TimeSeriesValue[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, TimeSeriesRangeResult newRange)
         {
             var mergedValues = new List<TimeSeriesValue>();
 
             if (fromRangeIndex != -1 &&
-                localRanges[fromRangeIndex].To >= @from)
+                localRanges[fromRangeIndex].To >= newRange.From)
             {
                 foreach (var val in localRanges[fromRangeIndex].Values)
                 {
-                    if (val.Timestamp >= @from)
+                    if (val.Timestamp >= newRange.From)
                         break;
                     mergedValues.Add(val);
                 }
@@ -1755,11 +1758,11 @@ more responsive application.
 
             mergedValues.AddRange(newRange.Values);
 
-            if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= to)
+            if (toRangeIndex < localRanges.Count && localRanges[toRangeIndex].From <= newRange.To)
             {
                 foreach (var val in localRanges[toRangeIndex].Values)
                 {
-                    if (val.Timestamp <= to)
+                    if (val.Timestamp <= newRange.To)
                         continue;
                     mergedValues.Add(val);
                 }
@@ -1768,13 +1771,13 @@ more responsive application.
             return mergedValues.ToArray();
         }
 
-        private static void UpdateExistingRange(TimeSeriesRangeResult localRange, DateTime from, DateTime to, TimeSeriesRangeResult newRange)
+        private static void UpdateExistingRange(TimeSeriesRangeResult localRange, TimeSeriesRangeResult newRange)
         {
             var newValues = new List<TimeSeriesValue>();
             int index;
             for (index = 0; index < localRange.Values.Length; index++)
             {
-                if (localRange.Values[index].Timestamp >= @from)
+                if (localRange.Values[index].Timestamp >= newRange.From)
                     break;
 
                 newValues.Add(localRange.Values[index]);
@@ -1784,7 +1787,7 @@ more responsive application.
 
             for (int j = index; j < localRange.Values.Length; j++)
             {
-                if (localRange.Values[j].Timestamp <= to)
+                if (localRange.Values[j].Timestamp <= newRange.To)
                     continue;
 
                 newValues.Add(localRange.Values[j]);

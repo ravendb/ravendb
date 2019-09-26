@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// todo
         /// </summary>
-        public Dictionary<string, List<TimeSeriesRangeResult>> TimeSeriesIncludes { get; set; }
+        public BlittableJsonReaderObject TimeSeriesIncludes { get; set; }
 
         /// <summary>
         /// The paths that the server included in the results
