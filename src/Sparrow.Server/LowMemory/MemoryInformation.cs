@@ -76,13 +76,24 @@ namespace Sparrow.LowMemory
             string.Equals(Environment.GetEnvironmentVariable("RAVEN_DISABLE_EARLY_OOM"), "true", StringComparison.OrdinalIgnoreCase);
 
         public static bool EnableEarlyOutOfMemoryCheck =
-           string.Equals(Environment.GetEnvironmentVariable("RAVEN_ENABLE_EARLY_OOM"), "true", StringComparison.OrdinalIgnoreCase);
+            string.Equals(Environment.GetEnvironmentVariable("RAVEN_ENABLE_EARLY_OOM"), "true", StringComparison.OrdinalIgnoreCase);
 
         public static bool EnableEarlyOutOfMemoryChecks = false; // we don't want this to run on the clients
 
         private static float _minimumFreeCommittedMemoryPercentage = 0.05f;
         private static Size _maxFreeCommittedMemoryToKeep = new Size(128, SizeUnit.Megabytes);
         private static Size _lowMemoryCommitLimitInMb = new Size(512, SizeUnit.Megabytes);
+
+        internal struct ProcMemInfoResults
+        {
+            public Size MemAvailable;
+            public Size TotalMemory;
+            public Size Commited;
+            public Size CommitLimit;
+            public Size AvailableWithoutTotalCleanMemory;
+            public Size SharedCleanMemory;
+            public Size TotalDirty;
+        }
 
         public static void SetFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep, Size lowMemoryCommitLimitInMb)
         {
@@ -225,8 +236,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        internal static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory, Size TotalDirty)
-            GetFromProcMemInfo(SmapsReader smapsReader)
+        internal static bool GetFromProcMemInfo(SmapsReader smapsReader, ref ProcMemInfoResults procMemInfoResults)
         {
             const string path = "/proc/meminfo";
 
@@ -257,18 +267,16 @@ namespace Sparrow.LowMemory
                         totalDirty.Add(result.TotalDirty, SizeUnit.Bytes);
                     }
 
-                    return (
-                        MemAvailable: new Size(Math.Max(memAvailableInKb, memFreeInKb), SizeUnit.Kilobytes),
-                        TotalMemory: new Size(totalMemInKb, SizeUnit.Kilobytes),
-                        Commited: new Size(commitedInKb, SizeUnit.Kilobytes),
+                    procMemInfoResults.MemAvailable = new Size(Math.Max(memAvailableInKb, memFreeInKb), SizeUnit.Kilobytes);
+                    procMemInfoResults.TotalMemory = new Size(totalMemInKb, SizeUnit.Kilobytes);
+                    procMemInfoResults.Commited = new Size(commitedInKb, SizeUnit.Kilobytes);
 
-                        // on Linux, we use the swap + ram as the commit limit, because the actual limit
-                        // is dependent on many different factors
-                        CommitLimit: new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes),
-                        AvailableWithoutTotalCleanMemory: totalClean,
-                        SharedCleanMemory: sharedCleanMemory,
-                        TotalDirty: totalDirty
-                    );
+                    // on Linux, we use the swap + ram as the commit limit, because the actual limit
+                    // is dependent on many different factors
+                    procMemInfoResults.CommitLimit = new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes);
+                    procMemInfoResults.AvailableWithoutTotalCleanMemory = totalClean;
+                    procMemInfoResults.SharedCleanMemory = sharedCleanMemory;
+                    procMemInfoResults.TotalDirty = totalDirty;
                 }
             }
             catch (Exception ex)
@@ -276,8 +284,10 @@ namespace Sparrow.LowMemory
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to read value from {path}", ex);
 
-                return (new Size(), new Size(), new Size(), new Size(), new Size(), new Size(), new Size());
+                return false;
             }
+
+            return true;
         }
 
         public static (double InstalledMemory, double UsableMemory) GetMemoryInfoInGb()
@@ -323,7 +333,9 @@ namespace Sparrow.LowMemory
 
         private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader)
         {
-            var fromProcMemInfo = GetFromProcMemInfo(smapsReader);
+            var fromProcMemInfo = new ProcMemInfoResults();
+            GetFromProcMemInfo(smapsReader, ref fromProcMemInfo);
+
             var totalPhysicalMemoryInBytes = fromProcMemInfo.TotalMemory.GetValue(SizeUnit.Bytes);
 
             var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
@@ -579,7 +591,7 @@ namespace Sparrow.LowMemory
                 LowSinceStartup = availableRamInBytes;
 
             while (MemByTime.TryPeek(out var existing) &&
-                (now - existing.Item2) > TimeSpan.FromMinutes(5))
+                   (now - existing.Item2) > TimeSpan.FromMinutes(5))
             {
                 if (MemByTime.TryDequeue(out _) == false)
                     break;
