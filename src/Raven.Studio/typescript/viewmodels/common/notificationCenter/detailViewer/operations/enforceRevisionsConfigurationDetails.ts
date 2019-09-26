@@ -14,9 +14,8 @@ type gridItem = {
     Description: string;
 }
 
-class revertRevisionsDetails extends abstractOperationDetails {
-
-    progress: KnockoutObservable<Raven.Client.Documents.Operations.Revisions.RevertResult>;
+class enforceRevisionsConfigurationDetail extends abstractOperationDetails {
+    progress: KnockoutObservable<Raven.Client.Documents.Operations.Revisions.EnforceConfigurationResult>;
 
     private gridController = ko.observable<virtualGridController<gridItem>>();
     private columnPreview = new columnPreviewPlugin<gridItem>();
@@ -26,7 +25,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
-
+        
         this.initObservables();
     }
 
@@ -34,7 +33,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
         super.initObservables();
         
         this.progress = ko.pureComputed(() => {
-            return (this.op.progress() || this.op.result()) as Raven.Client.Documents.Operations.Revisions.RevertResult
+            return (this.op.progress() || this.op.result()) as Raven.Client.Documents.Operations.Revisions.EnforceConfigurationResult
         });
     }
 
@@ -98,12 +97,12 @@ class revertRevisionsDetails extends abstractOperationDetails {
     }
 
     static supportsDetailsFor(notification: abstractNotification) {
-        return (notification instanceof operation) && notification.taskType() === "DatabaseRevert";
+        return (notification instanceof operation) && notification.taskType() === "EnforceRevisionConfiguration";
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
-        return app.showBootstrapDialog(new revertRevisionsDetails(op, center));
+        return app.showBootstrapDialog(new enforceRevisionsConfigurationDetail(op, center));
     }
 }
 
-export = revertRevisionsDetails;
+export = enforceRevisionsConfigurationDetail;

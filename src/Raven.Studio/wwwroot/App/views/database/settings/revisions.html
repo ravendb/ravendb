@@ -28,7 +28,6 @@
                                 </li>
                             </ul>
                         </div>
-
                         <button type="submit" class="btn btn-primary" title="Save Changes" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }">
                             <i class="icon-save"></i> <span>Save</span>
                         </button>
@@ -36,13 +35,18 @@
                 </div>
                 <div class="flex-separator"></div>
                 <div>
-                    <a class="btn btn-default" data-bind="attr: { href: revertRevisionsUrl }">
-                        <i class="icon-revert-revisions"></i>
-                        <span>Revert revisions</span>
+                    <a class="btn btn-default" data-bind="attr: { href: revertRevisionsUrl }" title="Revert all documents in the database to a specific point in time">
+                        <i class="icon-revert-revisions"></i><span>Revert Revisions</span>
                     </a>
                 </div>
+                <div>
+                    <button class="btn btn-default" data-bind="click: enforceConfiguration, 
+                         disable: perCollectionConfigurations().length === 0 && !defaultConfiguration() || isSaveEnabled(),
+                         attr: { title: enforceButtonTitle }">
+                        <i class="icon-revisions"></i><span>Enforce Configuration</span>
+                    </button>
+                </div>
             </div>
-            
             <div class="scroll flex-grow">
                 <div data-bind="with: defaultConfiguration">
                     <div class="panel panel-info panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
@@ -132,7 +136,6 @@
                 </div>
             </div>
         </div>
-        
     </div>
 </form>
 
