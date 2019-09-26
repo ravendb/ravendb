@@ -1075,6 +1075,7 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 DocumentIncludes = new HashSet<string>(DocumentIncludes),
                 CounterIncludesTokens = CounterIncludesTokens,
+                TimeSeriesIncludesTokens = TimeSeriesIncludesTokens,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,

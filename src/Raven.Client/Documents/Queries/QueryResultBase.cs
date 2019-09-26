@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json;
 
@@ -27,6 +28,12 @@ namespace Raven.Client.Documents.Queries
         /// was asked to include in the result, by document id.
         /// </summary>
         public Dictionary<string, string[]> IncludedCounterNames { get; set; }
+
+
+        /// <summary>
+        /// todo
+        /// </summary>
+        public Dictionary<string, List<TimeSeriesRangeResult>> TimeSeriesIncludes { get; set; }
 
         /// <summary>
         /// The paths that the server included in the results

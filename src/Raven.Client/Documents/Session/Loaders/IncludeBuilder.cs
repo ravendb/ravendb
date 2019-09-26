@@ -53,14 +53,26 @@ namespace Raven.Client.Documents.Session.Loaders
         IQueryIncludeBuilder<T> IncludeCounters(Expression<Func<T, string>> path, string[] names);
 
         IQueryIncludeBuilder<T> IncludeAllCounters(Expression<Func<T, string>> path);
+
+        IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to);
+
     }
 
     public class IncludeBuilder
     {
         internal HashSet<string> DocumentsToInclude;
 
-        internal Dictionary<string, TimeSeriesRange> TimeSeriesToInclude;
+        internal IEnumerable<TimeSeriesRange> TimeSeriesToInclude
+        {
+            get
+            {
+                if (TimeSeriesToIncludeBySourcePath == null)
+                    return null;
 
+                TimeSeriesToIncludeBySourcePath.TryGetValue(string.Empty, out var value);
+                return value;
+            }
+        }
 
         internal string Alias;
 
@@ -89,6 +101,9 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
+
+        internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourcePath;
+
     }
 
     internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>
@@ -117,6 +132,7 @@ namespace Raven.Client.Documents.Session.Loaders
             IncludeAllCountersWithAlias(path);
             return this;
         }
+
 
         IQueryIncludeBuilder<T> ICounterIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeCounter(string name)
         {
@@ -244,14 +260,22 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
-        {
-            throw new NotImplementedException();
-        }
-
         IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
         {
-            IncludeTimeSeries(name, from, to);
+            IncludeTimeSeries(string.Empty, name, from, to);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
+        {
+            IncludeTimeSeries(string.Empty, name, from, to);
+            return this;
+        }
+
+        public IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime @from, DateTime to)
+        {
+            WithAlias(path);
+            IncludeTimeSeries(path.ToPropertyPath(), name, from, to);
             return this;
         }
 
@@ -352,27 +376,55 @@ namespace Raven.Client.Documents.Session.Loaders
                 Alias = path.Parameters[0].Name;
         }
 
-        private void IncludeTimeSeries(string name, DateTime from, DateTime to)
+        private void IncludeTimeSeries(string path, string name, DateTime from, DateTime to)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            if (TimeSeriesToInclude == null)
+            if (TimeSeriesToIncludeBySourcePath == null)
             {
-                TimeSeriesToInclude = new Dictionary<string, TimeSeriesRange>(StringComparer.OrdinalIgnoreCase);
+                TimeSeriesToIncludeBySourcePath = new Dictionary<string, HashSet<TimeSeriesRange>>();
             }
 
-            if (TimeSeriesToInclude.ContainsKey(name) == false)
+            if (TimeSeriesToIncludeBySourcePath.TryGetValue(path, out var hashSet) == false)
             {
-                TimeSeriesToInclude[name] = new TimeSeriesRange
-                {
-                    Name = name,
-                    From = from,
-                    To = to
-                };
+                TimeSeriesToIncludeBySourcePath[path] = hashSet = new HashSet<TimeSeriesRange>(comparer: TimeSeriesRangeComparer.Instance);
             }
+
+            hashSet.Add(new TimeSeriesRange
+            {
+                Name = name,
+                From = from,
+                To = to
+            });
+        }
+    }
+
+    internal class TimeSeriesRangeComparer : IEqualityComparer<TimeSeriesRange>
+    {
+        public static TimeSeriesRangeComparer Instance = new TimeSeriesRangeComparer();
+
+        private TimeSeriesRangeComparer()
+        {
+            
         }
 
+        public bool Equals(TimeSeriesRange x, TimeSeriesRange y)
+        {
+            if (x?.Name == null)
+                return y?.Name == null;
 
+            if (y?.Name == null)
+                return false;
+
+            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode(TimeSeriesRange obj)
+        {
+            return obj.Name.GetHashCode();
+        }
     }
+
+
 }
