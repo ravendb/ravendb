@@ -156,6 +156,11 @@ namespace Raven.Client.Documents.Session.Operations
                         queryResult.CounterIncludes,
                         queryResult.IncludedCounterNames);
                 }
+                if (queryResult.TimeSeriesIncludes != null)
+                {
+                    _session.RegisterTimeSeries(
+                        queryResult.TimeSeriesIncludes);
+                }
             }
         }
 

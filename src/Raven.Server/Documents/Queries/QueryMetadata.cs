@@ -752,12 +752,18 @@ namespace Raven.Server.Documents.Queries
 
             Debug.Assert(expression.Arguments.Count - start == 3);
 
-            var args = new List<(object Value, ValueTokenType Type)>(3);
+            var args = new string[3];
 
             for (var index = start; index < expression.Arguments.Count; index++)
             {
                 if (!(expression.Arguments[index] is ValueExpression vt))
                     continue;
+
+                var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
+
+                if (arg.Type != ValueTokenType.String)
+                    throw new InvalidQueryException("Parameters of method `timeseries` must be of type `string``, " +
+                                                    $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
 
                 if (vt.Value == ValueTokenType.Parameter)
                 {
@@ -771,27 +777,14 @@ namespace Raven.Server.Documents.Queries
                     continue;
                 }
 
-                args.Add(QueryBuilder.GetValue(Query, this, parameters, vt));
+                args[index - start] = arg.Value.ToString();
 
 
             }
 
-            AddTimeSeriesToInclude(timeseriesIncludes, parameters, args, sourcePath);
+            timeseriesIncludes.AddTimeSeries(args[0], args[1], args[2], sourcePath);
         }
 
-        private void AddTimeSeriesToInclude(TimeSeriesIncludesField timeseriesIncludes, BlittableJsonReaderObject parameters,
-            List<(object Value, ValueTokenType Type)> args, string sourcePath)
-        {
-            foreach (var arg in args)
-            {
-                if (arg.Type != ValueTokenType.String)
-                    throw new InvalidQueryException("Parameters of method `timeseries` must be of type `string``, " +
-                                                    $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
-            }
-
-
-            timeseriesIncludes.AddTimeSeries(args[0].Value.ToString(), args[1].Value.ToString(), args[2].Value.ToString(), sourcePath);
-        }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
         {
