@@ -275,6 +275,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, type);
         }
 
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        {
+            using (CurrentlyInUse())
+            {
+                return StaticIndexHelper.GetLastProcessedTombstonesPerCollection(
+                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+            }
+        }
+
         public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
