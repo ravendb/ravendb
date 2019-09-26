@@ -47,6 +47,7 @@ namespace Sparrow.LowMemory
         }
 
         private static bool _failedToGetAvailablePhysicalMemory;
+
         private static readonly MemoryInfoResult FailedResult = new MemoryInfoResult
         {
             AvailableMemory = new Size(256, SizeUnit.Megabytes),
@@ -132,7 +133,7 @@ namespace Sparrow.LowMemory
             if (memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
             {
                 // this can happen on containers, since we get this information from the host, and
-                // sometimes this kind of stat is shared, see: 
+                // sometimes this kind of stat is shared, see:
                 // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
 
                 commitChargeThreshold = GetMinCommittedToKeep(memInfo.TotalPhysicalMemory);
@@ -224,7 +225,8 @@ namespace Sparrow.LowMemory
             }
         }
 
-        internal static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory) GetFromProcMemInfo(SmapsReader smapsReader)
+        internal static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size AvailableWithoutTotalCleanMemory, Size SharedCleanMemory, Size TotalDirty)
+            GetFromProcMemInfo(SmapsReader smapsReader)
         {
             const string path = "/proc/meminfo";
 
@@ -244,6 +246,7 @@ namespace Sparrow.LowMemory
                     var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
 
                     var totalClean = new Size(memAvailableInKb, SizeUnit.Kilobytes);
+                    var totalDirty = new Size(0, SizeUnit.Bytes);
                     var sharedCleanMemory = new Size(0, SizeUnit.Bytes);
                     if (smapsReader != null)
                     {
@@ -251,6 +254,7 @@ namespace Sparrow.LowMemory
                         totalClean.Add(result.SharedClean, SizeUnit.Bytes);
                         totalClean.Add(result.PrivateClean, SizeUnit.Bytes);
                         sharedCleanMemory.Set(result.SharedClean, SizeUnit.Bytes);
+                        totalDirty.Add(result.TotalDirty, SizeUnit.Bytes);
                     }
 
                     return (
@@ -262,7 +266,8 @@ namespace Sparrow.LowMemory
                         // is dependent on many different factors
                         CommitLimit: new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes),
                         AvailableWithoutTotalCleanMemory: totalClean,
-                        SharedCleanMemory: sharedCleanMemory
+                        SharedCleanMemory: sharedCleanMemory,
+                        TotalDirty: totalDirty
                     );
                 }
             }
@@ -271,7 +276,7 @@ namespace Sparrow.LowMemory
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to read value from {path}", ex);
 
-                return (new Size(), new Size(), new Size(), new Size(), new Size(), new Size());
+                return (new Size(), new Size(), new Size(), new Size(), new Size(), new Size(), new Size());
             }
         }
 
@@ -329,7 +334,10 @@ namespace Sparrow.LowMemory
             {
                 // running in a limited cgroup
                 var commitedMemoryInBytes = 0L;
-                var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+                var cgroupMemoryUsage = LowMemoryNotification.Instance.UseTotalDirtyMemInsteadOfMemUsage // RDBS-45
+                    ? fromProcMemInfo.TotalDirty.GetValue(SizeUnit.Bytes)
+                    : KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+
                 if (cgroupMemoryUsage != null)
                 {
                     commitedMemoryInBytes = cgroupMemoryUsage.Value;
@@ -458,9 +466,9 @@ namespace Sparrow.LowMemory
                 return FailedResult;
             }
 
-            // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function 
+            // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function
             // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
-            // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA. 
+            // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA.
             // Malformed SMBIOS data may indicate a problem with the user's computer.
             var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
 
@@ -613,8 +621,16 @@ namespace Sparrow.LowMemory
 
     public class EarlyOutOfMemoryException : SystemException
     {
-        public EarlyOutOfMemoryException() { }
-        public EarlyOutOfMemoryException(string message) : base(message) { }
-        public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner) { }
+        public EarlyOutOfMemoryException()
+        {
+        }
+
+        public EarlyOutOfMemoryException(string message) : base(message)
+        {
+        }
+
+        public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }

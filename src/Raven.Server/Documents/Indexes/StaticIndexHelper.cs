@@ -147,5 +147,35 @@ namespace Raven.Server.Documents.Indexes
                 return (long)Hashing.XXHash64.Calculate(indexEtagBytes, (ulong)length);
             }
         }
+
+        public static Dictionary<string, long> GetLastProcessedTombstonesPerCollection(
+            Index index, HashSet<string> referencedCollections, HashSet<string> collections,
+            Dictionary<string, HashSet<CollectionName>> compiledReferencedCollections,
+            IndexStorage indexStorage)
+        {
+            using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var etags = index.GetLastProcessedDocumentTombstonesPerCollection(tx);
+
+                if (referencedCollections.Count <= 0)
+                    return etags;
+
+                foreach (var collection in collections)
+                {
+                    if (compiledReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> collectionNames) == false)
+                        continue;
+
+                    foreach (var collectionName in collectionNames)
+                    {
+                        var etag = indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, collectionName);
+                        if (etags.TryGetValue(collectionName.Name, out long currentEtag) == false || etag < currentEtag)
+                            etags[collectionName.Name] = etag;
+                    }
+                }
+
+                return etags;
+            }
+        }
     }
 }

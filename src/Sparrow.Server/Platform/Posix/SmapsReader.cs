@@ -112,7 +112,7 @@ namespace Sparrow.Platform.Posix
             return read;
         }
 
-        public unsafe (long Rss, long SharedClean, long PrivateClean, T SmapsResults) CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
+        public (long Rss, long SharedClean, long PrivateClean, long TotalDirty, T SmapsResults) CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
         {
             _endOfBuffer[0] = 0;
             _endOfBuffer[1] = 0;
@@ -127,14 +127,14 @@ namespace Sparrow.Platform.Posix
             {
                 var read = ReadFromFile(fileStream, _currentBuffer);
                 var offsetForNextBuffer = 0;
-                long tmpRss = 0, tmpSharedClean = 0, tmpPrivateClean = 0;
+                long tmpRss = 0, tmpSharedClean = 0, tmpPrivateClean = 0, tmpTotalDirty = 0;
                 string resultString = null;
                 long valSize = 0, valRss = 0, valPrivateDirty = 0, valSharedDirty = 0, valSharedClean = 0, valPrivateClean = 0;
                 while (true)
                 {
                     if (read == 0)
                     {
-                        return (tmpRss, tmpSharedClean, tmpPrivateClean, smapResultsObject);
+                        return (tmpRss, tmpSharedClean, tmpPrivateClean, tmpTotalDirty, smapResultsObject);
                     }
 
                     var switchBuffer = false;
@@ -354,6 +354,8 @@ namespace Sparrow.Platform.Posix
                         }
                         else if (term == _sharedDirtyBytes)
                         {
+                            // special case - we want dirty memory of all files and not only after rw-s
+                            tmpTotalDirty += resultLong;
                             if (state != SearchState.SharedClean)
                                 continue;
                             state = SearchState.SharedDirty;
@@ -369,6 +371,8 @@ namespace Sparrow.Platform.Posix
                         }
                         else if (term == _privateDirtyBytes)
                         {
+                            // special case - we want dirty memory of all files and not only after rw-s
+                            tmpTotalDirty += resultLong;
                             if (state != SearchState.PrivateClean)
                                 continue;
                             state = SearchState.PrivateDirty;
@@ -413,7 +417,7 @@ namespace Sparrow.Platform.Posix
                     }
                 }
 
-                return (tmpRss, tmpSharedClean, tmpPrivateClean, smapResultsObject);
+                return (tmpRss, tmpSharedClean, tmpPrivateClean, tmpTotalDirty, smapResultsObject);
             }
         }
 

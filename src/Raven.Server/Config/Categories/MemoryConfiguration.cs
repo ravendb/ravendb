@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -12,8 +13,10 @@ namespace Raven.Server.Config.Categories
             var memoryInfo = MemoryInformation.GetMemoryInfo();
 
             LowMemoryLimit = Size.Min(
-                new Size(2, SizeUnit.Gigabytes), 
+                new Size(2, SizeUnit.Gigabytes),
                 memoryInfo.TotalPhysicalMemory / 10);
+
+            UseTotalDirtyMemInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
         }
 
         [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
@@ -39,5 +42,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MaxFreeCommittedMemoryToKeepInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxFreeCommittedMemoryToKeepInMb { get; set; }
+
+        [Description("EXPERT: Use entire process dirty memory instead of 'memory.usage_in_bytes minus Shared Clean Memory' value to determine machine memory usage. Applicable only when running on Linux. Default: 'true' when 'RAVEN_IN_DOCKER' environment variable is set to 'true', 'false' otherwise.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Memory.UseTotalDirtyMemInsteadOfMemUsage", ConfigurationEntryScope.ServerWideOnly)]
+        public bool UseTotalDirtyMemInsteadOfMemUsage { get; set; }
     }
 }

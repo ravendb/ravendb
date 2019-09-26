@@ -65,7 +65,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Load.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateLoadExec { get; set; }
 
-        [Description("A command or executable to handle automatic renewals, providing a renewed .pfx cluster certificate. The leader node will invoke the executable once every hour and if a new certificate is received, it will be sent to the other nodes. The executable specified in Security.Certificate.Exec.OnCertificateChange will then be used to persist the certificate across the cluster.")]
+        [Description("A command or executable to handle automatic renewals, providing a renewed .pfx cluster certificate. The leader node will invoke the executable once every hour and if a new certificate is received, it will be sent to the other nodes. The executable specified in Security.Certificate.Change.Exec will then be used to persist the certificate across the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Renew.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateRenewExec { get; set; }
@@ -148,7 +148,8 @@ namespace Raven.Server.Config.Categories
 
         public bool IsCertificateConfigured =>
             string.IsNullOrWhiteSpace(CertificatePath) == false ||
-            string.IsNullOrWhiteSpace(CertificateLoadExec) == false;
+            string.IsNullOrWhiteSpace(CertificateLoadExec) == false ||
+            string.IsNullOrWhiteSpace(CertificateExec) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 

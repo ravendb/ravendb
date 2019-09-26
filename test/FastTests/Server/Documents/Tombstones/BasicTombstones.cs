@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -188,6 +190,100 @@ namespace FastTests.Server.Documents.Tombstones
                     var list = database.DocumentsStorage.GetTombstonesFrom(context, "Users", 0, 0, 128).ToList();
                     Assert.Equal(1, list.Count);
                     Assert.Equal(5, list[0].Etag);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CleanupOfMultiMapIndexWithLoadDocument()
+        {
+            var indexDefinition = new IndexDefinition()
+            {
+                Name = "NewIndex",
+                Maps = new HashSet<string>
+                {
+                    "from p in docs.Orders select new { CompanyName = LoadDocument(p.Company, \"Companies\").Name }",
+                    "from p in docs.Companies select new { CompanyName = p.Name }"
+                }
+            };
+
+            using (var database = CreateDocumentDatabase())
+            using (var index = MapIndex.CreateNew(indexDefinition, database))
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            {
+                DocumentsStorage.PutOperationResults result;
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue
+                    {
+                        ["Name"] = "John",
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Collection] = "Orders"
+                        }
+                    }))
+                    {
+                        database.DocumentsStorage.Put(context, "key/1", null, doc);
+                    }
+
+                    tx.Commit();
+                }
+
+                var batchStats = new IndexingRunStats();
+                var stats = new IndexingStatsScope(batchStats);
+                index.DoIndexingWork(stats, CancellationToken.None);
+
+                var tombstones = index.GetLastProcessedTombstonesPerCollection();
+                Assert.Equal(2, tombstones.Count);
+                Assert.Equal(0, tombstones["Orders"]);
+                Assert.Equal(0, tombstones["Companies"]);
+
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.GetTombstonesFrom(context, "Orders", 0, 0, 128).Count();
+                    Assert.Equal(0, count);
+                }
+
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    database.DocumentsStorage.Delete(context, "key/1", null);
+                    tx.Commit();
+                }
+
+                tombstones = index.GetLastProcessedTombstonesPerCollection();
+                Assert.Equal(2, tombstones.Count);
+                Assert.Equal(0, tombstones["Orders"]);
+                Assert.Equal(0, tombstones["Companies"]);
+
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.GetTombstonesFrom(context, "Orders", 0, 0, 128).Count();
+                    Assert.Equal(1, count);
+                }
+
+                await database.TombstoneCleaner.ExecuteCleanup();
+
+                using (context.OpenReadTransaction())
+                {
+                    var count = database.DocumentsStorage.GetTombstonesFrom(context, "Orders", 0, 0, 128).Count();
+                    Assert.Equal(1, count);
+                }
+
+                batchStats = new IndexingRunStats();
+                stats = new IndexingStatsScope(batchStats);
+                index.DoIndexingWork(stats, CancellationToken.None);
+
+                tombstones = index.GetLastProcessedTombstonesPerCollection();
+                Assert.Equal(2, tombstones.Count);
+                Assert.Equal(2, tombstones["Orders"]);
+                Assert.Equal(0, tombstones["Companies"]);
+
+                await database.TombstoneCleaner.ExecuteCleanup();
+
+                using (context.OpenReadTransaction())
+                {
+                    var list = database.DocumentsStorage.GetTombstonesFrom(context, "Orders", 0, 0, 128).ToList();
+                    Assert.Equal(0, list.Count);
                 }
             }
         }

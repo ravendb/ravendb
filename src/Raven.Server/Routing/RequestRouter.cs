@@ -30,6 +30,10 @@ namespace Raven.Server.Routing
 {
     public class RequestRouter
     {
+        private static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
+        private DateTime _lastRequestTimeUpdated;
+        private DateTime _lastAuthorizedNonClusterAdminRequestTime;
+
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
@@ -42,7 +46,6 @@ namespace Raven.Server.Routing
             _serverMetrics = ravenServer.Metrics;
             AllRoutes = new List<RouteInformation>(routes.Values);
         }
-
 
         public RouteInformation GetRoute(string method, string path, out RouteMatch match)
         {
@@ -76,9 +79,6 @@ namespace Raven.Server.Routing
 
             try
             {
-                if (tryMatch.Value.SkipLastRequestTimeUpdate == false)
-                    _ravenServer.Statistics.LastRequestTime = SystemTime.UtcNow;
-
                 if (handler == null)
                 {
                     var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
@@ -114,11 +114,38 @@ namespace Raven.Server.Routing
                     skipAuthorization = context.Request.Method == "OPTIONS";
                 }
 
-                if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
+                var status = RavenServer.AuthenticationStatus.ClusterAdmin;
+                bool authResult = true;
+                try
                 {
-                    var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
-                    if (authResult == false)
-                        return;
+                    if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
+                    {
+                        authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database, out status);
+                        if (authResult == false)
+                            return;
+                    }
+                }
+                finally
+                {
+                    if (tryMatch.Value.SkipLastRequestTimeUpdate == false)
+                    {
+                        var now = SystemTime.UtcNow;
+
+                        if (now - _lastRequestTimeUpdated >= LastRequestTimeUpdateFrequency)
+                        {
+                            _ravenServer.Statistics.LastRequestTime = now;
+                            _lastRequestTimeUpdated = now;
+                        }
+
+                        if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency && 
+                            skipAuthorization == false && 
+                            authResult && 
+                            status != RavenServer.AuthenticationStatus.ClusterAdmin)
+                        {
+                            _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
+                            _lastAuthorizedNonClusterAdminRequestTime = now;
+                        }
+                    }
                 }
 
                 if (reqCtx.Database != null)
@@ -195,7 +222,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)
+        private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database, out RavenServer.AuthenticationStatus authenticationStatus)
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
@@ -232,13 +259,12 @@ namespace Raven.Server.Routing
                                     auditLog.Info(msg);
                                 });
                             }
-
                         }
                     }
                 }
             }
 
-            var authenticationStatus = feature?.Status;
+            authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
             switch (route.AuthorizationStatus)
             {
                 case AuthorizationStatus.UnauthenticatedClients:
@@ -247,7 +273,6 @@ namespace Raven.Server.Routing
                     {
                         switch (authenticationStatus)
                         {
-                            case null:
                             case RavenServer.AuthenticationStatus.NoCertificateProvided:
                             case RavenServer.AuthenticationStatus.Expired:
                             case RavenServer.AuthenticationStatus.NotYetValid:
@@ -260,6 +285,7 @@ namespace Raven.Server.Routing
                     }
 
                     return true;
+
                 case AuthorizationStatus.ClusterAdmin:
                 case AuthorizationStatus.Operator:
                 case AuthorizationStatus.ValidUser:
@@ -267,7 +293,6 @@ namespace Raven.Server.Routing
                 case AuthorizationStatus.RestrictedAccess:
                     switch (authenticationStatus)
                     {
-                        case null:
                         case RavenServer.AuthenticationStatus.NoCertificateProvided:
                         case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.NotYetValid:
@@ -280,7 +305,7 @@ namespace Raven.Server.Routing
                             // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
                                 return true;
-                            goto case null;
+                            goto case RavenServer.AuthenticationStatus.None;
 
                         case RavenServer.AuthenticationStatus.Allowed:
                             if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
@@ -296,8 +321,10 @@ namespace Raven.Server.Routing
                             if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;
                             return true;
+
                         case RavenServer.AuthenticationStatus.ClusterAdmin:
                             return true;
+
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -370,9 +397,11 @@ namespace Raven.Server.Routing
                 case AuthorizationStatus.ClusterAdmin:
                     message += " ClusterAdmin access is required but not given to this certificate";
                     break;
+
                 case AuthorizationStatus.Operator:
                     message += " Operator/ClusterAdmin access is required but not given to this certificate";
                     break;
+
                 case AuthorizationStatus.DatabaseAdmin:
                     message += " DatabaseAdmin access is required but not given to this certificate";
                     break;
@@ -403,7 +432,7 @@ namespace Raven.Server.Routing
         private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
             if (context.Response.Headers.TryGetValue("Connection", out Microsoft.Extensions.Primitives.StringValues value) && value == "close")
-                return; // don't need to drain it, the connection will close 
+                return; // don't need to drain it, the connection will close
 
             using (ctx.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             {

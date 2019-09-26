@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                 {
                     await Assert.ThrowsAsync<Raven.Client.Exceptions.Database.DatabaseLoadFailureException>(async ()=> await TrySavingDocument(notInDbGroupStore));
                     PutSecrectKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
-                    await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, true);
+                    await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, ignoreDisabledDatabase: true);
                     await TrySavingDocument(notInDbGroupStore);
                 }                
             }

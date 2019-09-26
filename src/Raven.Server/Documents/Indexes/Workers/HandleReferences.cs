@@ -88,6 +88,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 foreach (var referencedCollection in referencedCollections)
                 {
+                    var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
+
                     using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
                     {
                         if (_logger.IsInfoEnabled)
@@ -134,7 +136,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
 
                                         references = _documentsStorage
-                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, 
+                                                DocumentFields.Id | DocumentFields.Etag)
                                             .Select(document =>
                                             {
                                                 _reference.Key = document.Id;
@@ -161,12 +164,15 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         throw new NotSupportedException();
                                 }
 
+                                var isTombstone = actionType == ActionType.Tombstone;
+
                                 foreach (var referencedDocument in references)
                                 {
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Executing handle references for '{_index.Name}'. Processing reference: {referencedDocument.Key}.");
 
                                     lastEtag = referencedDocument.Etag;
+                                    inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
                                     count++;
                                     batchCount++;
 

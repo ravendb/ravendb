@@ -245,7 +245,7 @@ namespace FastTests
 
                             try
                             {
-                                var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, options.IgnoreDisabledDatabase);
+                                var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase: options.IgnoreDisabledDatabase);
                                 if (databaseTask != null && databaseTask.IsCompleted == false)
                                     // if we are disposing store before database had chance to load then we need to wait
                                     databaseTask.Wait();

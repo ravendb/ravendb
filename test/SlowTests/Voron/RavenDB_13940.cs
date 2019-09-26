@@ -408,12 +408,14 @@ namespace SlowTests.Voron
             Assert.Throws<InvalidJournalException>(StartDatabase);
         }
 
-        [Fact]
-        public void ShouldNotInvokeIntegrityError()
+        [Theory]
+        [InlineData("storage-with-reused-journal-and-synced-data.zip")]
+        [InlineData("storage-with-reused-journal-and-synced-data-2.zip")]
+        public void ShouldNotInvokeIntegrityError(string fileName)
         {
             Directory.CreateDirectory(DataDir);
 
-            ExtractFile(DataDir);
+            ExtractFile(DataDir, fileName);
 
             var options = StorageEnvironmentOptions.ForPath(DataDir);
 
@@ -433,10 +435,8 @@ namespace SlowTests.Voron
             }
         }
 
-        private static void ExtractFile(string directory)
+        private static void ExtractFile(string directory, string fileName)
         {
-            var fileName = "storage-with-reused-journal-and-synced-data.zip";
-
             var fullZipPath = Path.Combine(directory, fileName);
 
             using (var file = File.Create(fullZipPath))

@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             ["SharedClean"] = result.SharedClean,
                             ["PrivateClean"] = result.PrivateClean,
                             ["TotalClean"] = result.SharedClean + result.PrivateClean,
+                            ["TotalDirty"] = result.TotalDirty, // This includes not only r-ws buffer and voron files, but also dotnet's and heap dirty memory
                             ["RssHumanly"] = Sizes.Humane(result.Rss),
                             ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
                             ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),

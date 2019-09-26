@@ -227,7 +227,12 @@ namespace FastTests
 
                 if (_doNotReuseServer)
                 {
-                    UseNewLocalServer();
+                    bool runInMemory = true;
+
+                    if (_customServerSettings != null && _customServerSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.RunInMemory)))
+                        runInMemory = bool.Parse(_customServerSettings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)]);
+
+                    UseNewLocalServer(runInMemory: runInMemory);
                     Servers.Add(_localServer);
                     _doNotReuseServer = false;
 
