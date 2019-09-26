@@ -17,7 +17,7 @@ namespace Sparrow.Server.Platform
 
     public class LineOutputEventArgs : EventArgs
     {
-        public string line { get; set; }
+        public string Line { get; set; }
     }
 
     public class RavenProcess : IDisposable
@@ -43,14 +43,12 @@ namespace Sparrow.Server.Platform
         }
 
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenProcess>("RavenProcess");
-        private IntPtr Pid = IntPtr.Zero;
+        private IntPtr _pid = IntPtr.Zero;
         private SafeFileHandle StandardOutAndErr { get; set; }
         private SafeFileHandle StandardIn { get; set; }
-        private CancellationToken _ctk;
 
         public void Start(CancellationToken ctk)
         {
-            _ctk = ctk;
             if (StartInfo?.FileName == null)
                 throw new InvalidOperationException("RavenProcess Start() must be supplied with valid startInfo object and set Filename");
 
@@ -58,7 +56,7 @@ namespace Sparrow.Server.Platform
             if (rc != PalFlags.FailCodes.Success)
                 PalHelper.ThrowLastError(rc, errorCode, $"Failed to spawn command '{StartInfo.FileName} {StartInfo.Arguments}'");
 
-            Pid = pid;
+            _pid = pid;
             StandardOutAndErr = stdout;
             StandardIn = stdin;
         }
@@ -100,11 +98,11 @@ namespace Sparrow.Server.Platform
 
         private void Kill()
         {
-            if (Pid != IntPtr.Zero)
+            if (_pid != IntPtr.Zero)
             {
-                var rc = Pal.rvn_kill_process(Pid, out var errorCode);
+                var rc = Pal.rvn_kill_process(_pid, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to kill proc id={Pid.ToInt64()}. Command: '{StartInfo.FileName} {StartInfo.Arguments}'");
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to kill proc id={_pid.ToInt64()}. Command: '{StartInfo.FileName} {StartInfo.Arguments}'");
             }
         }
 
@@ -129,7 +127,7 @@ namespace Sparrow.Server.Platform
                 {
                     while (ctk.IsCancellationRequested == false)
                     {
-                        var rc = Pal.rvn_wait_for_close_process(process.Pid, pollingTimeoutInSeconds, out var exitCode, out var errorCode);
+                        var rc = Pal.rvn_wait_for_close_process(process._pid, pollingTimeoutInSeconds, out var exitCode, out var errorCode);
                         if (rc == PalFlags.FailCodes.Success ||
                             rc == PalFlags.FailCodes.FailChildProcessFailure)
                         {
@@ -137,7 +135,7 @@ namespace Sparrow.Server.Platform
                             var args = new ProcessExitedEventArgs
                             {
                                 ExitCode = exitCode,
-                                Pid = process.Pid
+                                Pid = process._pid
                             };
 
                             process.OnProcessExited(args);
@@ -150,12 +148,12 @@ namespace Sparrow.Server.Platform
                             read = process.ReadLineAsync(fs, ctk).Result;
                             if (read != null)
                             {
-                                var args = new LineOutputEventArgs() {line = read};
+                                var args = new LineOutputEventArgs() {Line = read};
                                 process.OnLineOutput(args, ctk);
                             }
                             else
                             {
-                                var args = new LineOutputEventArgs() {line = null};
+                                var args = new LineOutputEventArgs() {Line = null};
                                 process.OnLineOutput(args, ctk);
                             }
                         } while (read != null && ctk.IsCancellationRequested == false);
@@ -197,16 +195,18 @@ namespace Sparrow.Server.Platform
             if (_hasExited == false)
             {
                 _hasExited = true;
+                var task = new Task(() => ReadToEndAsync());
                 try
                 {
-                    var _ = ReadToEndAsync().Result;
+                    task.Start();
                 }
                 catch
                 {
-                    // nothing.. just clear buffers
+                    // nothing.. just flush
                 }
 
-                var rc = Pal.rvn_wait_for_close_process(Pid, 5, out var exitCode, out var errorCode);
+
+                var rc = Pal.rvn_wait_for_close_process(_pid, 5, out var exitCode, out var errorCode);
                 if (rc != PalFlags.FailCodes.FailTimeout)
                     return;
 
@@ -220,6 +220,18 @@ namespace Sparrow.Server.Platform
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Kill {StartInfo.FileName} failed", ex);
+                }
+
+                try
+                {
+                    if (task.IsFaulted == false)
+                    {
+                        Task.WaitAny(new [] {task}, TimeSpan.FromSeconds(15));
+                    }
+                }
+                catch
+                {
+                    // nothing.. just flush
                 }
             }
         }

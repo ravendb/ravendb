@@ -73,7 +73,7 @@ namespace Raven.Server.Utils.Cpu
                             Interlocked.Exchange(ref _isDataValid, 1);
                             var l = args as LineOutputEventArgs;
 
-                            if (l?.line == null)
+                            if (l?.Line == null)
                             {
                                 if (DateTime.UtcNow - lastReceivedLine > TimeSpan.FromSeconds(60))
                                 {
@@ -85,7 +85,7 @@ namespace Raven.Server.Utils.Cpu
                             }
 
                             lastReceivedLine = DateTime.UtcNow;
-                            var errString = HandleInfoReceived(l?.line);
+                            var errString = HandleInfoReceived(l?.Line);
                             if (errString != null)
                             {
                                 Interlocked.Exchange(ref _isDataValid, 0);

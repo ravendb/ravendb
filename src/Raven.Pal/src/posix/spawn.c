@@ -17,6 +17,7 @@
 #include <time.h>
 #include <string.h>
 #include <signal.h>
+#include <dirent.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -32,13 +33,14 @@ _parse_cmd_line(char* line, char *filename)
     if (line == NULL || *line == '\0')
         return argv;
     
-    char * pch = strtok (line," \t\n");
-    while (pch != NULL)
-    {        
-        argv[argc++] = pch;
-        pch = strtok (NULL, " \t\n");
+    char *rest = line;
+    char *token;
+
+    while((token = strtok_r(rest, " \t\n", &rest)))
+    {
+        argv[argc++] = token;
         argv = realloc(argv, argc + 1);
-    }  
+    }
     argv[argc] = NULL;
 
     return argv;
@@ -125,6 +127,28 @@ _redirect_std(int fd, int fileno)
     return result;
 }
 
+PRIVATE bool
+_is_file_exists_in_working_dir(const char *filename)
+{    
+    struct dirent *dir;
+    DIR *d = opendir(".");
+    bool found = false;
+    if (d)
+    {
+        while ((dir = readdir(d)) != NULL)
+        {
+            if (strcmp(filename, dir->d_name) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+        closedir(d);
+    }
+
+    return found;
+}
+
 EXPORT int32_t
 rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standard_in, void** standard_out, int32_t* detailed_error_code) {    
     int stdinFds[2] = {-1, -1}, stdoutFds[2] = {-1, -1}, waitForChildToExecPipe[2] = {-1, -1};
@@ -136,7 +160,10 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     char *modified = malloc(strlen(filename) + 3);
     *modified = '\0';
     if (filename[0] != '/')
-        strcpy(modified, "./");
+    {
+        if (_is_file_exists_in_working_dir(filename) == true)
+            strcpy(modified, "./");
+    }
     strcat(modified, (char *)filename);
 
     char **argv = _parse_cmd_line(cmdline, modified);
@@ -182,8 +209,7 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
         /* redirect both stdout and stderr to the same stream, and redirect stdin: */
         if ( (result = _redirect_std(stdoutFds[1], STDOUT_FILENO)) == -1 ||
              (result = _redirect_std(stdoutFds[1], STDERR_FILENO)) == -1 ||
-             (result = _redirect_std(stdinFds[1],  STDIN_FILENO)) == -1  ||
-             (result = _redirect_std(stdoutFds[1], STDOUT_FILENO)) == -1 )
+             (result = _redirect_std(stdinFds[1],  STDIN_FILENO)) == -1 )
         {
             _exit_child(waitForChildToExecPipe[1], errno);
         }        
@@ -191,6 +217,9 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
         execvp(modified, argv);
         _exit_child(waitForChildToExecPipe[1], errno);
     }
+
+    if (argv != NULL)
+        free(argv); /* safe because vfork returns only after exec started a new process */
 
     pthread_sigmask(SIG_SETMASK, &old_signal_set, &signal_set);
 
