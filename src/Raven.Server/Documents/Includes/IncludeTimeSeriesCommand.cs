@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Includes
 
         private void Fill(Document document, dynamic timeSeriesToGet)
         {
-            var docId = document.Id;
+            string docId = document.Id;
 
             foreach (var kvp in timeSeriesToGet)
             {
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(LazyStringValue docId, HashSet<TimeSeriesRange> timesSeriesToGet)
+        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(string docId, HashSet<TimeSeriesRange> timesSeriesToGet)
         {
             var rangeResults = new List<TimeSeriesRangeResult>();
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Includes
             return rangeResults;
         }
 
-        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(LazyStringValue docId, (IList<string> TimeseriesNames, IList<string> FromList, IList<string> ToList) timesSeriesToGet)
+        private List<TimeSeriesRangeResult> GetTimeSeriesForDocument(string docId, (IList<string> TimeseriesNames, IList<string> FromList, IList<string> ToList) timesSeriesToGet)
         {
             var rangeResults = new List<TimeSeriesRangeResult>();
 
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Includes
             return rangeResults;
         }
 
-        private TimeSeriesRangeResult GetTimeSeries(LazyStringValue docId, string name, DateTime from, DateTime to)
+        private TimeSeriesRangeResult GetTimeSeries(string docId, string name, DateTime from, DateTime to)
         {
             var values = new List<TimeSeriesValue>();
             var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_context, docId, name, from, to);
