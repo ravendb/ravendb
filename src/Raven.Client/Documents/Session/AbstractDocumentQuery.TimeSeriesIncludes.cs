@@ -1,34 +1,26 @@
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        protected List<CounterIncludesToken> TimeSeriesIncludesTokens;
+        protected List<TimeSeriesIncludesToken> TimeSeriesIncludesTokens;
 
-        protected void IncludeTimeSeries(string alias, Dictionary<string, (bool All, HashSet<string> Counters)> countersToIncludeByDocId)
+        protected void IncludeTimeSeries(string alias, Dictionary<string, HashSet<TimeSeriesRange>> timeseriesToInclude)
         {
-            if (countersToIncludeByDocId?.Count > 0 == false)
+            if (timeseriesToInclude?.Count > 0 == false)
                 return;
 
-            CounterIncludesTokens = new List<CounterIncludesToken>();
-            _includesAlias = alias;
+            TimeSeriesIncludesTokens = new List<TimeSeriesIncludesToken>();
+            _includesAlias = _includesAlias ?? alias;
 
-            foreach (var kvp in countersToIncludeByDocId)
+            foreach (var kvp in timeseriesToInclude)
             {
-                if (kvp.Value.All)
+                foreach (var range in kvp.Value)
                 {
-                    CounterIncludesTokens.Add(CounterIncludesToken.All(kvp.Key));
-                    continue;
-                }
-
-                if (kvp.Value.Counters?.Count > 0 == false)
-                    continue;
-
-                foreach (var name in kvp.Value.Counters)
-                {
-                    CounterIncludesTokens.Add(CounterIncludesToken.Create(kvp.Key, name));
+                    TimeSeriesIncludesTokens.Add(TimeSeriesIncludesToken.Create(kvp.Key, range));
                 }
             }
         }
