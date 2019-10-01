@@ -147,25 +147,30 @@ namespace Raven.Server.Documents.Expiration
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    context.Reset();
-                    context.Renew();
-
                     while (true)
                     {
+                        context.Reset();
+                        context.Renew();
+
                         using (context.OpenReadTransaction())
                         {
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, BatchSize, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, BatchSize, out duration, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, BatchSize, out var count, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, BatchSize, out count, out duration, CancellationToken);
 
-                            if (expired == null || expired.Count == 0)
+                            if (expired == null || expired.Count == 0 || count == 0)
                                 return;
 
                             var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration);
                             await _database.TxMerger.Enqueue(command);
+
                             if (Logger.IsInfoEnabled)
                                 Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+
+                            // precaution
+                            if (command.DeletionCount == 0)
+                                return;
                         }
                     }
                 }

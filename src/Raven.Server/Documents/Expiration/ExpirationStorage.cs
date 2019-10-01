@@ -80,21 +80,22 @@ namespace Raven.Server.Documents.Expiration
         }
 
         public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(DocumentsOperationContext context,
-            DateTime currentTime, bool applyToExistingDocuments, int take, out Stopwatch duration, CancellationToken cancellationToken)
+            DateTime currentTime, bool applyToExistingDocuments, int take, out int count, out Stopwatch duration, CancellationToken cancellationToken)
         {
-            return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByExpiration, Constants.Documents.Metadata.Expires, take, out duration, cancellationToken);
+            return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByExpiration, Constants.Documents.Metadata.Expires, take, out count, out duration, cancellationToken);
         }
 
         public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(DocumentsOperationContext context,
-            DateTime currentTime, bool applyToExistingDocuments, int take, out Stopwatch duration, CancellationToken cancellationToken)
+            DateTime currentTime, bool applyToExistingDocuments, int take, out int count, out Stopwatch duration, CancellationToken cancellationToken)
 
         {
-            return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, take, out duration, cancellationToken);
+            return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, take, out count, out duration, cancellationToken);
         }
 
         private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(DocumentsOperationContext context,
-            DateTime currentTime, bool applyToExistingDocuments, string treeName, string metadataPropertyToCheck, int take, out Stopwatch duration, CancellationToken cancellationToken)
+            DateTime currentTime, bool applyToExistingDocuments, string treeName, string metadataPropertyToCheck, int take, out int count, out Stopwatch duration, CancellationToken cancellationToken)
         {
+            count = 0;
             var currentTicks = currentTime.Ticks;
 
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(treeName);
@@ -140,6 +141,7 @@ namespace Raven.Server.Documents.Expiration
                                             HasPassed(metadata, metadataPropertyToCheck, currentTime) == false)
                                         {
                                             expiredDocs.Add((clonedId, null));
+                                            count++;
                                             continue;
                                         }
 
@@ -156,6 +158,7 @@ namespace Raven.Server.Documents.Expiration
                                         }
 
                                         expiredDocs.Add((clonedId, document.Id));
+                                        count++;
                                     }
                                 }
                                 catch (DocumentConflictException)
@@ -166,12 +169,15 @@ namespace Raven.Server.Documents.Expiration
                                     var (allExpired, id) = GetConflictedExpiration(context, currentTime, clonedId);
 
                                     if (allExpired)
+                                    {
                                         expiredDocs.Add((clonedId, id));
+                                        count++;
+                                    }
                                 }
-                            } while (multiIt.MoveNext() && expired.Count < take);
+                            } while (multiIt.MoveNext() && count < take);
                         }
                     }
-                } while (it.MoveNext() && expired.Count < take);
+                } while (it.MoveNext() && count < take);
 
                 return expired;
             }
