@@ -8,6 +8,8 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Refresh;
+using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Sparrow;
@@ -72,6 +74,89 @@ namespace SlowTests.Issues
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
             }
+        }
+
+        [Fact]
+        public async Task CanDisableAndEnableExpirationAndRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Assert.False(await DisableExpiration(store));
+                Assert.False(await DisableRefresh(store));
+
+                Assert.False(await DisableExpiration(store));
+                Assert.False(await DisableRefresh(store));
+
+                Assert.True(await EnableExpiration(store));
+                Assert.True(await EnableExpiration(store));
+
+                Assert.True(await EnableRefresh(store));
+                Assert.True(await DisableExpiration(store));
+
+                Assert.True(await EnableRefresh(store));
+                Assert.True(await EnableExpiration(store));
+
+                Assert.True(await EnableRefresh(store));
+                Assert.True(await DisableRefresh(store));
+
+                Assert.False(await DisableExpiration(store));
+            }
+        }
+
+        private async Task<bool> EnableRefresh(IDocumentStore store)
+        {
+            var config = new RefreshConfiguration
+            {
+                Disabled = false,
+                RefreshFrequencyInSec = 100,
+            };
+
+            await RefreshHelper.SetupExpiration(store, Server.ServerStore, config);
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+            return database.ExpiredDocumentsCleaner != null;
+        }
+
+        private async Task<bool> DisableRefresh(IDocumentStore store)
+        {
+            var config = new RefreshConfiguration
+            {
+                Disabled = true,
+                RefreshFrequencyInSec = 100,
+            };
+
+            await RefreshHelper.SetupExpiration(store, Server.ServerStore, config);
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+            return database.ExpiredDocumentsCleaner != null;
+        }
+
+        private async Task<bool> EnableExpiration(IDocumentStore store)
+        {
+            var config = new ExpirationConfiguration
+            {
+                Disabled = false,
+                DeleteFrequencyInSec = 100,
+            };
+
+            await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+            return database.ExpiredDocumentsCleaner != null;
+        }
+
+        private async Task<bool> DisableExpiration(IDocumentStore store)
+        {
+            var config = new ExpirationConfiguration
+            {
+                Disabled = true,
+                DeleteFrequencyInSec = 100,
+            };
+
+            await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+            return database.ExpiredDocumentsCleaner != null;
         }
     }
 }
