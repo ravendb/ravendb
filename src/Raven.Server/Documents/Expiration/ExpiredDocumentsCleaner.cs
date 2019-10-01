@@ -62,7 +62,11 @@ namespace Raven.Server.Documents.Expiration
                 }
 
                 expiredDocumentsCleaner?.Dispose();
-                if (dbRecord.Expiration?.Disabled == true && dbRecord.Refresh?.Disabled == true)
+
+                var hasExpiration = dbRecord.Expiration?.Disabled == false;
+                var hasRefresh = dbRecord.Refresh?.Disabled == false;
+
+                if (hasExpiration == false && hasRefresh == false)
                     return null;
 
                 var cleaner = new ExpiredDocumentsCleaner(database, dbRecord.Expiration, dbRecord.Refresh);
