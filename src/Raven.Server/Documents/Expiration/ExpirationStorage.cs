@@ -79,20 +79,20 @@ namespace Raven.Server.Documents.Expiration
                 $"The expiration date format for document '{lowerId}' is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> GetExpiredDocuments(DocumentsOperationContext context,
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetExpiredDocuments(DocumentsOperationContext context,
             DateTime currentTime, bool applyToExistingDocuments, int take, out Stopwatch duration, CancellationToken cancellationToken)
         {
             return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByExpiration, Constants.Documents.Metadata.Expires, take, out duration, cancellationToken);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> GetDocumentsToRefresh(DocumentsOperationContext context,
+        public Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocumentsToRefresh(DocumentsOperationContext context,
             DateTime currentTime, bool applyToExistingDocuments, int take, out Stopwatch duration, CancellationToken cancellationToken)
 
         {
             return GetDocuments(context, currentTime, applyToExistingDocuments, DocumentsByRefresh, Constants.Documents.Metadata.Refresh, take, out duration, cancellationToken);
         }
 
-        private Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> GetDocuments(DocumentsOperationContext context,
+        private Dictionary<Slice, List<(Slice LowerId, string Id)>> GetDocuments(DocumentsOperationContext context,
             DateTime currentTime, bool applyToExistingDocuments, string treeName, string metadataPropertyToCheck, int take, out Stopwatch duration, CancellationToken cancellationToken)
         {
             var currentTicks = currentTime.Ticks;
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Expiration
                     return null;
                 }
 
-                var expired = new Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>>();
+                var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
                 duration = Stopwatch.StartNew();
 
                 do
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Expiration
 
                     var ticksAsSlice = it.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
 
-                    var expiredDocs = new List<(Slice LowerId, LazyStringValue Id)>();
+                    var expiredDocs = new List<(Slice LowerId, string Id)>();
                     expired.Add(ticksAsSlice, expiredDocs);
 
                     using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
@@ -133,28 +133,30 @@ namespace Raven.Server.Documents.Expiration
 
                                 try
                                 {
-                                    var document = _database.DocumentsStorage.Get(context, clonedId);
-                                    if (document == null ||
-                                        document.TryGetMetadata(out var metadata) == false ||
-                                        HasPassed(metadata, metadataPropertyToCheck, currentTime) == false)
+                                    using (var document = _database.DocumentsStorage.Get(context, clonedId, DocumentFields.Id | DocumentFields.Data))
                                     {
-                                        expiredDocs.Add((clonedId, null));
-                                        continue;
-                                    }
+                                        if (document == null ||
+                                            document.TryGetMetadata(out var metadata) == false ||
+                                            HasPassed(metadata, metadataPropertyToCheck, currentTime) == false)
+                                        {
+                                            expiredDocs.Add((clonedId, null));
+                                            continue;
+                                        }
 
-                                    if (applyToExistingDocuments == false)
-                                    {
-                                        // this can happen when we are running the expiration on a node that isn't 
-                                        // the primary node for the database. In this case, we still run the cleanup
-                                        // procedure, but we only account for documents that have already been removed
-                                        // or refreshed, to cleanup the expiration queue. We'll stop on the first
-                                        // document that is scheduled to be expired / refreshed and wait until the 
-                                        // primary node will act on it. In this way, we reduce conflicts between nodes
-                                        // performing the same action concurrently. 
-                                        break;
-                                    }
+                                        if (applyToExistingDocuments == false)
+                                        {
+                                            // this can happen when we are running the expiration on a node that isn't 
+                                            // the primary node for the database. In this case, we still run the cleanup
+                                            // procedure, but we only account for documents that have already been removed
+                                            // or refreshed, to cleanup the expiration queue. We'll stop on the first
+                                            // document that is scheduled to be expired / refreshed and wait until the 
+                                            // primary node will act on it. In this way, we reduce conflicts between nodes
+                                            // performing the same action concurrently. 
+                                            break;
+                                        }
 
-                                    expiredDocs.Add((clonedId, document.Id));
+                                        expiredDocs.Add((clonedId, document.Id));
+                                    }
                                 }
                                 catch (DocumentConflictException)
                                 {
@@ -221,7 +223,7 @@ namespace Raven.Server.Documents.Expiration
         }
 
 
-        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired)
+        public int DeleteDocumentsExpiration(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired)
         {
             var deletionCount = 0;
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
@@ -260,7 +262,7 @@ namespace Raven.Server.Documents.Expiration
             return deletionCount;
         }
 
-        public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired)
+        public int RefreshDocuments(DocumentsOperationContext context, Dictionary<Slice, List<(Slice LowerId, string Id)>> expired)
         {
             var deletionCount = 0;
             var refreshTree = context.Transaction.InnerTransaction.ReadTree(DocumentsByRefresh);

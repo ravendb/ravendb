@@ -16,13 +16,16 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Voron;
 
 namespace Raven.Server.Documents.Expiration
 {
     public class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
-        internal const int BatchSize = 4096;
+        internal static int BatchSize = PlatformDetails.Is32Bits == false
+            ? 4096
+            : 1024;
 
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
@@ -177,13 +180,13 @@ namespace Raven.Server.Documents.Expiration
 
         internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> _expired;
+            private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _expired;
             private readonly DocumentDatabase _database;
             private readonly bool _forExpiration;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired, DocumentDatabase database, bool forExpiration)
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DocumentDatabase database, bool forExpiration)
             {
                 _expired = expired;
                 _database = database;
@@ -203,7 +206,7 @@ namespace Raven.Server.Documents.Expiration
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
 
-                var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>[_expired.Count];
+                var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_expired.Count];
                 var i = 0;
                 foreach (var item in _expired)
                 {
@@ -224,7 +227,7 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var expired = new Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>>();
+            var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
             foreach (var item in Expired)
             {
                 expired[item.Key] = item.Value;
@@ -235,6 +238,6 @@ namespace Raven.Server.Documents.Expiration
 
         public bool ForExpiration { get; set; }
 
-        public KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>[] Expired { get; set; }
+        public KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[] Expired { get; set; }
     }
 }
