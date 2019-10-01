@@ -127,30 +127,37 @@ namespace Raven.Server.Documents.Expiration
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Trying to find {(forExpiration ? "expired" : "require refreshing")} documents to delete");
 
+                DatabaseTopology topology;
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
+                }
+
+                var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    DatabaseTopology topology;
-                    using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                    using (serverContext.OpenReadTransaction())
+                    context.Reset();
+                    context.Renew();
+
+                    while (true)
                     {
-                        topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
-                    }
+                        using (context.OpenReadTransaction())
+                        {
+                            var expired =
+                                forExpiration ?
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, 4096, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, 4096, out duration, CancellationToken);
 
-                    var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+                            if (expired == null || expired.Count == 0)
+                                return;
 
-                    using (context.OpenReadTransaction())
-                    {
-                        var expired =
-                            forExpiration ?
-                                _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, out var duration, CancellationToken) :
-                                _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, out duration, CancellationToken);
-                        if (expired == null || expired.Count == 0)
-                            return;
-
-                        var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration);
-                        await _database.TxMerger.Enqueue(command);
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                            var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration);
+                            await _database.TxMerger.Enqueue(command);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                        }
                     }
                 }
             }
