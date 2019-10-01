@@ -119,7 +119,6 @@ namespace Raven.Server.Documents.Expiration
                     var ticksAsSlice = it.CurrentKey.Clone(context.Transaction.InnerTransaction.Allocator);
 
                     var expiredDocs = new List<(Slice LowerId, string Id)>();
-                    expired.Add(ticksAsSlice, expiredDocs);
 
                     using (var multiIt = expirationTree.MultiRead(it.CurrentKey))
                     {
@@ -177,6 +176,10 @@ namespace Raven.Server.Documents.Expiration
                             } while (multiIt.MoveNext() && count < take);
                         }
                     }
+
+                    if (expiredDocs.Count > 0)
+                        expired.Add(ticksAsSlice, expiredDocs);
+
                 } while (it.MoveNext() && count < take);
 
                 return expired;
