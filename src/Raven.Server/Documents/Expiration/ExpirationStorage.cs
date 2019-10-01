@@ -177,22 +177,25 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        private (bool AllExpired, LazyStringValue Id) GetConflictedExpiration(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
+        private (bool AllExpired, string Id) GetConflictedExpiration(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
         {
-            LazyStringValue id = null;
+            string id = null;
             var allExpired = true;
             var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, clonedId);
             if (conflicts.Count > 0)
             {
                 foreach (var conflict in conflicts)
                 {
-                    id = conflict.Id;
+                    using (conflict)
+                    {
+                        id = conflict.Id;
 
-                    if (HasPassed(conflict.Doc, currentTime))
-                        continue;
+                        if (HasPassed(conflict.Doc, currentTime))
+                            continue;
 
-                    allExpired = false;
-                    break;
+                        allExpired = false;
+                        break;
+                    }
                 }
             }
 
@@ -237,12 +240,14 @@ namespace Raven.Server.Documents.Expiration
                     {
                         try
                         {
-                            var doc = _database.DocumentsStorage.Get(context, ids.LowerId, throwOnConflict: true);
-                            if (doc != null && doc.TryGetMetadata(out var metadata))
+                            using (var doc = _database.DocumentsStorage.Get(context, ids.LowerId, DocumentFields.Data, throwOnConflict: true))
                             {
-                                if (HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime))
+                                if (doc != null && doc.TryGetMetadata(out var metadata))
                                 {
-                                    _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
+                                    if (HasPassed(metadata, Constants.Documents.Metadata.Expires, currentTime))
+                                    {
+                                        _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
+                                    }
                                 }
                             }
                         }
@@ -274,18 +279,20 @@ namespace Raven.Server.Documents.Expiration
                 {
                     if (ids.Id != null)
                     {
-                        var doc = _database.DocumentsStorage.Get(context, ids.LowerId, throwOnConflict: false);
-                        if (doc != null && doc.TryGetMetadata(out var metadata))
+                        using (var doc = _database.DocumentsStorage.Get(context, ids.LowerId, throwOnConflict: false))
                         {
-                            if (HasPassed(metadata, Constants.Documents.Metadata.Refresh, currentTime))
+                            if (doc != null && doc.TryGetMetadata(out var metadata))
                             {
-                                // remove the @refresh tag
-                                metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
-                                metadata.Modifications.Remove(Constants.Documents.Metadata.Refresh);
-
-                                using (var updated = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                                if (HasPassed(metadata, Constants.Documents.Metadata.Refresh, currentTime))
                                 {
-                                    _database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags);
+                                    // remove the @refresh tag
+                                    metadata.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(metadata);
+                                    metadata.Modifications.Remove(Constants.Documents.Metadata.Refresh);
+
+                                    using (var updated = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                                    {
+                                        _database.DocumentsStorage.Put(context, doc.Id, doc.ChangeVector, updated, flags: doc.Flags);
+                                    }
                                 }
                             }
                         }
