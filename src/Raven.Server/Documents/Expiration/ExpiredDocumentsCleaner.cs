@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Expiration
 {
     public class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
+        internal const int BatchSize = 4096;
+
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
         private readonly TimeSpan _expirationPeriod;
@@ -147,8 +149,8 @@ namespace Raven.Server.Documents.Expiration
                         {
                             var expired =
                                 forExpiration ?
-                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, 4096, out var duration, CancellationToken) :
-                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, 4096, out duration, CancellationToken);
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, BatchSize, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, BatchSize, out duration, CancellationToken);
 
                             if (expired == null || expired.Count == 0)
                                 return;
