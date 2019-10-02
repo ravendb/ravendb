@@ -41,10 +41,12 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
+            var random = new Random(1);
+
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -69,7 +71,7 @@ namespace SlowTests.Voron
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -121,10 +123,12 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
+            var random = new Random(1);
+
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -149,7 +153,7 @@ namespace SlowTests.Voron
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -201,10 +205,12 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
+            var random = new Random(1);
+
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -229,7 +235,7 @@ namespace SlowTests.Voron
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -281,10 +287,12 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
+            var random = new Random(1);
+
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -309,7 +317,7 @@ namespace SlowTests.Voron
             for (var i = 0; i < 100; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -361,10 +369,12 @@ namespace SlowTests.Voron
                 tx.Commit();
             }
 
+            var random = new Random(1);
+
             for (var i = 0; i < 3; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
@@ -389,7 +399,7 @@ namespace SlowTests.Voron
             for (var i = 0; i < 2; i++)
             {
                 var buffer = new byte[1000];
-                new Random().NextBytes(buffer);
+                random.NextBytes(buffer);
                 using (var tx = Env.WriteTransaction())
                 {
                     for (int j = 0; j < 100; j++)
