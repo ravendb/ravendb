@@ -770,6 +770,8 @@ class editDocument extends viewModelBase {
                     continue;
                 if (prop === "@collection" && savedDocumentDto["@collection"] === "@empty")
                     continue;
+                if (prop === "RevisionCreated") 
+                   continue;
                 metadata[prop] = (savedDocumentDto as any)[prop];
             }
         }
