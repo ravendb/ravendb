@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
@@ -1501,6 +1502,83 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var users = session.Load<User>("users/1");
                         Assert.NotNull(users);
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(BackupType.Backup, Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension)]
+        [InlineData(BackupType.Snapshot, Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)]
+        public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true,
+                Path = NewDataPath()
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = backupType,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var folderPath = Directory.GetDirectories(backupPath).First();
+                var filePath = Directory.GetFiles(folderPath).First();
+                var extension = Path.GetExtension(filePath);
+
+                Assert.Equal(expectedExtension, extension);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = folderPath,
+                    DatabaseName = databaseName,
+                    EncryptionKey = key,
+                    BackupEncryptionSettings = new BackupEncryptionSettings
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey,
+                        Key = key
+                    }
+                }))
+                {
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var user = session.Load<User>("users/1");
+                        Assert.NotNull(user);
                     }
                 }
             }
