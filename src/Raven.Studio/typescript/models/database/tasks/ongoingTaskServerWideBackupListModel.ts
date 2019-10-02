@@ -20,7 +20,7 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
     backupDestinationsHumanized: KnockoutComputed<string>;
     textClass: KnockoutComputed<string>;
     
-    isBackupEncryped = ko.observable<boolean>();
+    isBackupEncrypted = ko.observable<boolean>();
 
     constructor(dto: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio) {
         super();
@@ -66,7 +66,7 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
         this.retentionPolicyDisabled(serverWideDto.RetentionPolicy ? serverWideDto.RetentionPolicy.Disabled : true);
         this.retentionPolicyPeriod(serverWideDto.RetentionPolicy ? serverWideDto.RetentionPolicy.MinimumBackupAgeToKeep : "0.0:00:00");
         
-        this.isBackupEncryped(!!serverWideDto.BackupEncryptionSettings);       
+        this.isBackupEncrypted(!!serverWideDto.BackupEncryptionSettings);       
     }
 
     private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
