@@ -44,11 +44,20 @@ class encryptionSettings {
         
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
-        
+
         this.enabled(encryptedDatabase);
         this.key(dto ? dto.Key : undefined);
-        if (dto && dto.EncryptionMode) {
+
+        if (!dto) {
+            // new one or wasn't set in the client API
+            this.mode("UseDatabaseKey");
+        }
+        else if (dto.EncryptionMode) {
             this.mode(dto.EncryptionMode);
+            if (dto.EncryptionMode === "None") {
+                // it was already confirmed
+                this.allowUnencryptedBackupForEncryptedDatabase(true);
+            }
         } else {
             this.mode(backupType() === "Backup" ? "UseProvidedKey": "UseDatabaseKey");
         }
@@ -101,7 +110,6 @@ class encryptionSettings {
         });
         
         this.enableKeySourceDropdown = ko.pureComputed(() => {
-            const encryptBackup = this.enabled();
             const canProvideKey = this.canProvideOwnKey();
             const canUseDbKey = this.canUseDatabaseKey();
             return canProvideKey && canUseDbKey;
@@ -174,11 +182,14 @@ class encryptionSettings {
     useEncryptionType(mode: Raven.Client.Documents.Operations.Backups.EncryptionMode) {
         this.mode(mode);
     }
-    
+
     toDto(): Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings {
         if (this.mode() === "None" || !this.enabled()) 
         {
-            return null;
+            return {
+                EncryptionMode: "None",
+                Key: null
+            };
         }
         
         return {
