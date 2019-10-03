@@ -188,16 +188,8 @@ class encryptionSettings {
     }
 
     toDto(): Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings {
-        if (this.mode() === "None" || !this.enabled()) 
-        {
-            return {
-                EncryptionMode: "None",
-                Key: null
-            };
-        }
-        
         return {
-            EncryptionMode: this.mode(),
+            EncryptionMode: !this.enabled() ? "None" : this.mode(),
             Key: this.mode() === "UseProvidedKey" ? this.key() : undefined
         }
     }
