@@ -164,23 +164,25 @@ namespace Raven.Client.Documents.Session.Operations
             if (metadata.TryGetProjection(out var projection) == false || projection == false)
                 return session.TrackEntity<T>(id, document, metadata, disableEntitiesTracking);
 
+            var type = typeof(T);
+
             if (fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
             {
-                var type = typeof(T);
                 var typeInfo = type.GetTypeInfo();
                 var projectionField = fieldsToFetch.Projections[0];
 
-                if (fieldsToFetch.SourceAlias != null )
+                if (fieldsToFetch.SourceAlias != null)
                 {
                     if (projectionField.StartsWith(fieldsToFetch.SourceAlias))
                     {
                         // remove source-alias from projection name
                         projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
                     }
-                    if (Regex.IsMatch(projectionField, "'([^']*)")) 
+
+                    if (Regex.IsMatch(projectionField, "'([^']*)"))
                     {
                         // projection field is quoted, remove quotes
-                        projectionField = projectionField.Substring(1, projectionField.Length -2);
+                        projectionField = projectionField.Substring(1, projectionField.Length - 2);
                     }
                 }
 
@@ -201,7 +203,7 @@ namespace Raven.Client.Documents.Session.Operations
                         //extraction from original type
                         document = innerJson;
                     }
-                    else if (inner is BlittableJsonReaderArray bjra && 
+                    else if (inner is BlittableJsonReaderArray bjra &&
                              JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
                     {
                         return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
@@ -209,8 +211,11 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
+            if (type == typeof(BlittableJsonReaderObject))
+                return (T)(object)document;
+
             session.OnBeforeConversionToEntityInvoke(id, typeof(T), ref document);
-            var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
+            var result = (T)session.Conventions.DeserializeEntityFromBlittable(type, document);
 
             if (string.IsNullOrEmpty(id) == false)
             {
