@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Attachments;
@@ -38,6 +39,21 @@ namespace Raven.Client.Documents.Session
                 ThrowEntityNotInSessionOrMissingId(entity);
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
+            return Session.Operations.Send(operation, SessionInfo);
+        }
+
+        public Dictionary<string, AttachmentResult> Get(string documentId, IEnumerable<string> names)
+        {
+            var operation = new GetAttachmentsOperation(documentId, names, AttachmentType.Document, null);
+            return Session.Operations.Send(operation, SessionInfo);
+        }
+
+        public Dictionary<string, AttachmentResult> Get(object entity, IEnumerable<string> names)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSessionOrMissingId(entity);
+
+            var operation = new GetAttachmentsOperation(document.Id, names, AttachmentType.Document, null);
             return Session.Operations.Send(operation, SessionInfo);
         }
 
