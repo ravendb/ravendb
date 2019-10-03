@@ -239,12 +239,12 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
-        private long _lastDatabaseRecordIndex;
+        private long _lastRaftIndexForStateChange;
 
-        public long LastDatabaseRecordIndex
+        public long LastRaftIndexForStateChange
         {
-            get => Volatile.Read(ref _lastDatabaseRecordIndex);
-            private set => _lastDatabaseRecordIndex = value; // we write this always under lock
+            get => Volatile.Read(ref _lastRaftIndexForStateChange);
+            private set => _lastRaftIndexForStateChange = value; // we write this always under lock
         }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
@@ -1043,35 +1043,6 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public void ValueChanged(long index)
-        {
-            try
-            {
-                if (_databaseShutdown.IsCancellationRequested)
-                    ThrowDatabaseShutdown();
-
-                DatabaseRecord record;
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
-                }
-
-                NotifyFeaturesAboutValueChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-
-            }
-            catch (Exception e)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-
-                if (_databaseShutdown.IsCancellationRequested)
-                    ThrowDatabaseShutdown();
-
-                throw;
-            }
-        }
-
         public void StateChanged(long index)
         {
             try
@@ -1095,6 +1066,7 @@ namespace Raven.Server.Documents
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
+
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1118,7 +1090,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            if (CanSkip(record.DatabaseName, index))
+            if (CanSkipStateChange(record.DatabaseName, index))
                 return;
 
             var taken = false;
@@ -1127,7 +1099,7 @@ namespace Raven.Server.Documents
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    if (CanSkip(record.DatabaseName, index))
+                    if (CanSkipStateChange(record.DatabaseName, index))
                         return;
 
                     if (taken == false)
@@ -1139,7 +1111,7 @@ namespace Raven.Server.Documents
                         $"{Name} != {record.DatabaseName}");
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
+                        _logger.Info($"Starting to process record {index} (last {LastRaftIndexForStateChange}) for {record.DatabaseName}.");
 
                     try
                     {
@@ -1147,12 +1119,14 @@ namespace Raven.Server.Documents
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
-                        LastDatabaseRecordIndex = index;
                         IndexStore.HandleDatabaseRecordChange(record, index);
                         ReplicationLoader?.HandleDatabaseRecordChange(record);
                         EtlLoader?.HandleDatabaseRecordChange(record);
-                        OnDatabaseRecordChanged(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
+
+                        OnDatabaseRecordChanged(record);
+
+                        LastRaftIndexForStateChange = index;
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1189,47 +1163,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkip(string database, long index)
+        private bool CanSkipStateChange(string database, long index)
         {
-            if (LastDatabaseRecordIndex > index)
+            if (LastRaftIndexForStateChange > index)
             {
-                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
+                // index and LastRaftIndexForStateChange could have equal values when we transit from/to passive and want to update the tasks. 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping record state change in index {index} (current {LastRaftIndexForStateChange}) for {database} because it was already precessed.");
                 return true;
             }
 
             return false;
-        }
-
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
-        {
-            if (CanSkip(record.DatabaseName, index))
-                return;
-
-            var taken = false;
-            while (taken == false)
-            {
-                Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
-                try
-                {
-                    if (CanSkip(record.DatabaseName, index))
-                        return;
-
-                    if (taken == false)
-                        continue;
-                
-                    LastDatabaseRecordIndex = index;
-                    DatabaseShutdown.ThrowIfCancellationRequested();
-                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
-                    EtlLoader?.HandleDatabaseValueChanged(record);
-                }
-                finally
-                {
-                    if (taken)
-                        Monitor.Exit(_clusterLocker);
-                }
-            }
         }
 
         public void RefreshFeatures()

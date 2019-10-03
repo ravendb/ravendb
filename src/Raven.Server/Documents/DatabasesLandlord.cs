@@ -111,6 +111,7 @@ namespace Raven.Server.Documents
                 switch (changeType)
                 {
                     case ClusterDatabaseChangeType.RecordChanged:
+                    case ClusterDatabaseChangeType.ValueChanged:
                         if (task.IsCompleted)
                         {
                             NotifyDatabaseAboutStateChange(databaseName, task, index);
@@ -130,15 +131,6 @@ namespace Raven.Server.Documents
                                 NotifyPendingClusterTransaction(databaseName, done, index, changeType);
                             }
                         });
-                        break;
-                    case ClusterDatabaseChangeType.ValueChanged:
-                        if (task.IsCompleted)
-                        {
-                            NotifyDatabaseAboutValueChange(databaseName, task, index);
-                            return;
-                        }
-
-                        task.ContinueWith(done => { NotifyDatabaseAboutValueChange(databaseName, done, index); });
                         break;
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                     case ClusterDatabaseChangeType.ClusterTransactionCompleted:
@@ -405,22 +397,6 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Failed to update database {changedDatabase} about new state", e);
-                }
-                // nothing to do here
-            }
-        }
-
-        private void NotifyDatabaseAboutValueChange(string changedDatabase, Task<DocumentDatabase> done, long index)
-        {
-            try
-            {
-                done.Result.ValueChanged(index);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to update database {changedDatabase} about new value", e);
                 }
                 // nothing to do here
             }

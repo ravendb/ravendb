@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
+using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -90,6 +92,22 @@ namespace SlowTests.Cluster
                     cts.Cancel();
                     task.Wait();
                 }
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_14086()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var indexes = new List<Task>();
+                for (int i = 0; i < 100; i++)
+                {
+                    var index = new Index();
+                    indexes.Add(index.ExecuteAsync(store));
+                }
+               
+                await Task.WhenAll(indexes);
             }
         }
 
