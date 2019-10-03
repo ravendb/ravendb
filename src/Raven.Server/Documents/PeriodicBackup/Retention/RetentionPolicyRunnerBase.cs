@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
                 if (hasFullBackupOrSnapshot == false)
                     continue; // no snapshot or full backup
 
-                if (GotFreshIncrementalBackup(backupFiles, now))
+                if (GotFreshIncrementalBackup(backupFiles, now, folder))
                     continue;
 
                 foldersToDelete.Add(folder);
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             return true;
         }
 
-        private bool GotFreshIncrementalBackup(GetBackupFolderFilesResult backupFiles, DateTime now)
+        private bool GotFreshIncrementalBackup(GetBackupFolderFilesResult backupFiles, DateTime now, string folder)
         {
             if (backupFiles.LastFile == null)
                 return false;
@@ -187,11 +187,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
             if (RestorePointsBase.TryExtractDateFromFileName(backupFiles.LastFile, out var lastModified) == false)
             {
-                lastModified = File.GetLastWriteTimeUtc(backupFiles.LastFile).ToLocalTime();
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to parse date from file '{backupFiles.LastFile}'. Skipping folder '{folder}'");
+                return true;
             }
 
             return now - lastModified < _retentionPolicy.MinimumBackupAgeToKeep;
         }
-
     }
 }
