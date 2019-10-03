@@ -218,9 +218,6 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
         _exit_child(waitForChildToExecPipe[1], errno);
     }
 
-    if (argv != NULL)
-        free(argv); /* safe because vfork returns only after exec started a new process */
-
     pthread_sigmask(SIG_SETMASK, &old_signal_set, &signal_set);
 
     if (processId < 0)
@@ -233,6 +230,9 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     *standard_out = (void*)(intptr_t)stdoutFds[0];
 
 error_cleanup:
+    if (argv != NULL)
+        free(argv); /* safe because vfork returns only after exec started a new process */
+        
     *detailed_error_code = errno;
     _close_if_open(stdinFds[0]);
     _close_if_open(stdoutFds[1]);
