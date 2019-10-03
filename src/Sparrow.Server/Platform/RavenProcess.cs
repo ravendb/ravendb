@@ -42,6 +42,8 @@ namespace Sparrow.Server.Platform
             }
         }
 
+        public delegate void StreamWriteDelegate(MemoryStream tw, int count);
+
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenProcess>("RavenProcess");
         private IntPtr _pid = IntPtr.Zero;
         private SafeFileHandle StandardOutAndErr { get; set; }
@@ -61,27 +63,28 @@ namespace Sparrow.Server.Platform
             StandardIn = stdin;
         }
 
-        public static void Start(string filename, string arguments)
+        public static void Start(string filename, string arguments, StreamWriteDelegate outputDel)
         {
             using (var ravenProcess = new RavenProcess {StartInfo = new ProcessStartInfo {FileName = filename, Arguments = arguments}})
             {
                 ravenProcess.Start(CancellationToken.None);
-                ravenProcess.ReadTo(Console.Out);
+                ravenProcess.ReadTo(outputDel);
             }
         }
 
-        private void ReadTo(TextWriter output)
+        private void ReadTo(StreamWriteDelegate outputDel)
         {
+            using (var ms = new MemoryStream())
             using (var fs = new FileStream(StandardOutAndErr, FileAccess.Read))
             {
                 var buffer = new byte[4096];
                 var read = fs.Read(buffer, 0, 4096);
                 while (read != 0)
                 {
-                    output.Write(Encoding.UTF8.GetString(buffer, 0, read));
-                    output.Flush();
-                    if (output == Console.Out)
-                        Console.Out.Flush();
+                    ms.Position = 0;
+                    ms.Write(buffer, 0, read);
+                    ms.Flush();
+                    outputDel?.Invoke(ms, read);
                     read = fs.Read(buffer, 0, 4096);
                 }
             }
@@ -145,7 +148,10 @@ namespace Sparrow.Server.Platform
                         string read = null;
                         do
                         {
-                            read = process.ReadLineAsync(fs, ctk).Result;
+                            read = process.ReadLineAsync(fs, ctk);
+//                            using (var sr = new StreamReader(fs, Encoding.UTF8))
+//                                read = sr.ReadLine();
+
                             if (read != null)
                             {
                                 var args = new LineOutputEventArgs() {Line = read};
@@ -165,7 +171,7 @@ namespace Sparrow.Server.Platform
             }
         }
 
-        private Task<string> ReadLineAsync(FileStream fs, CancellationToken ctk)
+        private string ReadLineAsync(FileStream fs, CancellationToken ctk)
         {
             StringBuilder sb = null;
             var buffer = new byte[1];
@@ -174,7 +180,6 @@ namespace Sparrow.Server.Platform
             {
                 if (sb == null)
                     sb = new StringBuilder();
-
                 var c = Encoding.UTF8.GetString(buffer, 0, read);
 
                 if (buffer[0] == '\n')
@@ -187,7 +192,7 @@ namespace Sparrow.Server.Platform
 
                 read = fs.Read(buffer, 0, 1);
             }
-            return Task.FromResult(sb?.ToString());
+            return sb?.ToString();
         }
 
         public void Dispose()

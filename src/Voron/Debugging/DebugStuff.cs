@@ -213,11 +213,11 @@ namespace Voron.Debugging
 
             if (PlatformDetails.RunningOnMacOsx)
             {
-                RavenProcess.Start("open", output);
+                RavenProcess.Start("open", output, null);
             }
             else
             {
-                RavenProcess.Start("xdg-open", output);
+                RavenProcess.Start("xdg-open", output, null);
             }
         }
 

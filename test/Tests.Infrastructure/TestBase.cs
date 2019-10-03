@@ -581,17 +581,17 @@ namespace FastTests
 
             if (PlatformDetails.RunningOnPosix == false)
             {
-                RavenProcess.Start("cmd", $"/c start \"Stop & look at studio\" \"{url}\"");
+                RavenProcess.Start("cmd", $"/c start \"Stop & look at studio\" \"{url}\"", null);
                 return;
             }
 
             if (PlatformDetails.RunningOnMacOsx)
             {
-                RavenProcess.Start("open", url);
+                RavenProcess.Start("open", url, null);
                 return;
             }
 
-            RavenProcess.Start("xdg-open", url);
+            RavenProcess.Start("xdg-open", url, null);
         }
 
         protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)
