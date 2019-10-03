@@ -474,9 +474,14 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
             });
+
+            if (_processes.Length > 0)
+            {
+                Reset(record);
+            }
         }
 
-        public void HandleDatabaseValueChanged(DatabaseRecord record)
+        private void Reset(DatabaseRecord record)
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

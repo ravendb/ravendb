@@ -43,6 +43,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -495,7 +496,7 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
-                ExecuteManyOnDispose(context, index, type, actionsByDatabase.Values.ToList());
+                ExecuteManyOnDispose(context, index, type, actionsByDatabase.Values.ToList(), actionsByDatabase.Keys.ToList());
             }
             catch (Exception e)
             {
@@ -926,7 +927,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
                 var actions = new List<Action>();
-
+                var databases = new List<string>();
                 foreach (var record in ReadAllDatabases(context))
                 {
                     using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
@@ -961,12 +962,12 @@ namespace Raven.Server.ServerWide
 
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
-
+                    databases.Add(record.DatabaseName);
                     actions.Add(() => DatabaseChanged?.Invoke(this,
-                        (record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                        (record.DatabaseName, index, nameof(RemoveNodeFromClusterCommand), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
                 }
 
-                ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), actions);
+                ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromClusterCommand), actions, databases);
             }
             catch (Exception e)
             {
@@ -979,12 +980,18 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Action> actions)
+        private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Action> actions, List<string> affectedDatabases)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
+                    foreach (var database in affectedDatabases)
+                    {
+                        var queue = CommandsHolder.GetOrAdd(database, new ConcurrentQueue<(long Index, DatabaseRecordChange Type)>());
+                        queue.Enqueue((index, GetChangeType(type)));
+                    }
+
                     _rachisLogIndexNotifications.AddTask(index);
                     var count = actions.Count;
 
@@ -1696,16 +1703,141 @@ namespace Raven.Server.ServerWide
             };
         }
 
+        [Flags]
+        public enum DatabaseRecordChange
+        {
+            None = 0,
+            Index = 1,
+            Backup = 2,
+            Replication = 4,
+            ETL = 8,
+            Subscription = 16,
+            Configuration = 32,
+        }
+
+        public static DatabaseRecordChange All = DatabaseRecordChange.Index | 
+                                                 DatabaseRecordChange.Backup | 
+                                                 DatabaseRecordChange.Replication | 
+                                                 DatabaseRecordChange.ETL | 
+                                                 DatabaseRecordChange.Subscription | 
+                                                 DatabaseRecordChange.Configuration;
+
+        public static DatabaseRecordChange TopologyAffected = DatabaseRecordChange.Backup |
+                                                              DatabaseRecordChange.Replication |
+                                                              DatabaseRecordChange.ETL |
+                                                              DatabaseRecordChange.Subscription;
+
+        public ConcurrentDictionary<string, ConcurrentQueue<(long Index, DatabaseRecordChange Change)>> CommandsHolder =
+            new ConcurrentDictionary<string, ConcurrentQueue<(long Index, DatabaseRecordChange Change)>>();
+
         private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
+                    var queue = CommandsHolder.GetOrAdd(databaseName, new ConcurrentQueue<(long Index, DatabaseRecordChange Type)>());
+                    queue.Enqueue((index, GetChangeType(type)));
+
                     ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
                 }
             };
         }
+
+        private DatabaseRecordChange GetChangeType(string type)
+        {
+            switch (type)
+            {
+                case nameof(UpdateUnusedDatabaseIdsCommand):
+                case nameof(ClusterTransactionCommand):
+                case nameof(CleanUpClusterStateCommand):
+                case nameof(AddOrUpdateCompareExchangeBatchCommand):
+                case nameof(DeleteValueCommand):
+                case nameof(DeleteCertificateCollectionFromClusterCommand):
+                case nameof(DeleteMultipleValuesCommand):
+                case nameof(CleanCompareExchangeTombstonesCommand):
+                case nameof(IncrementClusterIdentityCommand):
+                case nameof(IncrementClusterIdentitiesBatchCommand):
+                case nameof(UpdateClusterIdentityCommand):
+                case nameof(AddOrUpdateCompareExchangeCommand):
+                case nameof(RemoveCompareExchangeCommand):
+                case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
+
+                case nameof(UpdateExternalReplicationStateCommand):
+                case nameof(AcknowledgeSubscriptionBatchCommand):
+                case nameof(UpdateEtlProcessStateCommand):
+                case nameof(UpdatePeriodicBackupStatusCommand):
+                    return DatabaseRecordChange.None;
+
+                case nameof(RemoveNodeFromDatabaseCommand):
+                case nameof(RemoveNodeFromClusterCommand):
+                case nameof(AddDatabaseCommand):
+                case nameof(UpdateTopologyCommand):
+                case nameof(DeleteDatabaseCommand):
+                case nameof(PromoteDatabaseNodeCommand):
+                case "ClusterTopologyChanged":
+                    return TopologyAffected;
+
+                case nameof(PutSubscriptionBatchCommand):
+                case nameof(PutSubscriptionCommand):
+                case nameof(DeleteSubscriptionCommand):
+                case nameof(ToggleSubscriptionStateCommand):
+                case nameof(UpdateSubscriptionClientConnectionTime):
+                    return DatabaseRecordChange.Subscription;
+
+                case nameof(PutSortersCommand):
+                case nameof(DeleteSorterCommand):
+                case nameof(PutIndexCommand):
+                case nameof(PutIndexesCommand):
+                case nameof(PutAutoIndexCommand):
+                case nameof(DeleteIndexCommand):
+                case nameof(SetIndexLockCommand):
+                case nameof(SetIndexPriorityCommand):
+                case nameof(SetIndexStateCommand):
+                    return DatabaseRecordChange.Index;
+
+                case nameof(EditRevisionsConfigurationCommand):
+                case nameof(EditExpirationCommand):
+                case nameof(EditRefreshCommand):
+                case nameof(EditDatabaseClientConfigurationCommand):
+                    return DatabaseRecordChange.Configuration;
+
+                case nameof(ModifyConflictSolverCommand):
+                case nameof(UpdateExternalReplicationCommand):
+                case nameof(UpdatePullReplicationAsHubCommand):
+                case nameof(UpdatePullReplicationAsSinkCommand):
+                    return DatabaseRecordChange.Replication;
+
+                case nameof(ToggleTaskStateCommand):
+                case nameof(DeleteOngoingTaskCommand):
+                    return DatabaseRecordChange.Backup |
+                           DatabaseRecordChange.Replication |
+                           DatabaseRecordChange.ETL |
+                           DatabaseRecordChange.Subscription;
+
+                case nameof(AddRavenEtlCommand):
+                case nameof(AddSqlEtlCommand):
+                case nameof(UpdateRavenEtlCommand):
+                case nameof(UpdateSqlEtlCommand):
+                case nameof(PutRavenConnectionStringCommand):
+                case nameof(PutSqlConnectionStringCommand):
+                case nameof(RemoveRavenConnectionStringCommand):
+                case nameof(RemoveSqlConnectionStringCommand):
+                case nameof(RemoveEtlProcessStateCommand):
+                    return DatabaseRecordChange.ETL;
+                
+                 
+                case nameof(UpdatePeriodicBackupCommand):
+                case nameof(PutServerWideBackupConfigurationCommand):
+                case nameof(DeleteServerWideBackupConfigurationCommand):
+                    return DatabaseRecordChange.Backup;
+
+                default:
+                    Debug.Assert(false,$"unknown type {type}");
+                    return All;
+            }
+        }
+
 
         private void ExecuteAsyncTask(long index, Action action)
         {
@@ -2049,6 +2181,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             var actions = new List<Action>();
+            var databases = new List<string>();
             var type = "ClusterTopologyChanged";
 
             foreach (var record in toShrink)
@@ -2070,9 +2203,10 @@ namespace Raven.Server.ServerWide
 
                 actions.Add(() => DatabaseChanged?.Invoke(this,
                     (record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                databases.Add(record.DatabaseName);
             }
 
-            ExecuteManyOnDispose(context, index, type, actions);
+            ExecuteManyOnDispose(context, index, type, actions, databases);
         }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
@@ -2986,7 +3120,7 @@ namespace Raven.Server.ServerWide
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)
         {
             var actions = new List<Action> { () => ValueChanged?.Invoke(this, (index, type)) };
-
+            var databases = new List<string>();
             foreach (var update in toUpdate)
             {
                 using (Slice.From(context.Allocator, update.Key, out var valueName))
@@ -2994,11 +3128,11 @@ namespace Raven.Server.ServerWide
                 {
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
-
+                databases.Add(update.DatabaseName);
                 actions.Add(() => DatabaseChanged?.Invoke(this, (update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
             }
 
-            ExecuteManyOnDispose(context, index, type, actions);
+            ExecuteManyOnDispose(context, index, type, actions, databases);
         }
 
         public const string SnapshotInstalled = "SnapshotInstalled";
