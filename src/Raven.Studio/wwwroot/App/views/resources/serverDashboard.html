@@ -292,7 +292,7 @@
                         <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
                         <div class="margin-right" data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
                             <div class="text-center margin-bottom">
-                                Total DB(s) size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize())"></strong>
+                                Total DB(s) size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize(), 1), attr: { title: $root.sizeFormatter(totalDocumentsSize(), 2)}"></strong>
                             </div>
                             <div class="graph-container" id="storageChart">
                             </div>
@@ -302,7 +302,7 @@
                             <div class="flex-horizontal disk-usage flex-noshrink">
                                 <div class="usage server-usage">
                                     <i class="usage-rect"></i>
-                                    <strong data-bind="text: $root.sizeFormatter(totalDocumentsSpaceUsed(), 0)"></strong>
+                                    <strong data-bind="text: $root.sizeFormatter(totalDocumentsSpaceUsed(), 1), attr: { title: $root.sizeFormatter(totalDocumentsSpaceUsed(), 2)}"></strong>
                                     <small>RAVENDB</small>
                                 </div>
                                 <div class="usage total-usage">
