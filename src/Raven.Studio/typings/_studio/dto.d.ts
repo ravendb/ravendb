@@ -93,6 +93,7 @@ interface documentMetadataDto {
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
     '@expires'?: string;
+    '@refresh'?: string;
 }
 
 interface updateDatabaseConfigurationsResult {
