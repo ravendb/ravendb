@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -130,6 +131,9 @@ namespace Raven.Server.Web.System
                 {
                     var backup = JsonDeserializationServer.ServerWideBackupConfiguration(backupBlittable);
                     backup.BackupDestinations = backup.GetDestinations();
+                    backup.IsEncrypted = backup.BackupEncryptionSettings != null &&
+                                         backup.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
+
                     backupsResult.Results.Add(backup);
                 }
                 
@@ -211,6 +215,7 @@ namespace Raven.Server.Web.System
     {
         public OngoingTaskState TaskState { get; set; }
         public List<string> BackupDestinations { get; set; }
+        public bool IsEncrypted { get; set; }
         
         public ServerWideBackupConfigurationForStudio()
         {
@@ -222,6 +227,7 @@ namespace Raven.Server.Web.System
             var json = base.ToJson();
             json[nameof(TaskState)] = TaskState;
             json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
+            json[nameof(IsEncrypted)] = IsEncrypted;
             return json;
         }
     }

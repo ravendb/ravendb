@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _periodicBackup = periodicBackup;
             _configuration = periodicBackup.Configuration;
             _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
-            _isBackupEncrypted = IsBackupEncrypted();
+            _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _previousBackupStatus = periodicBackup.BackupStatus;
             _isFullBackup = isFullBackup;
             _backupToLocalFolder = backupToLocalFolder;
@@ -369,13 +369,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private bool IsBackupEncrypted()
+        public static bool IsBackupEncrypted(DocumentDatabase database, PeriodicBackupConfiguration configuration)
         {
-            if (_database.MasterKey != null && _configuration.BackupEncryptionSettings == null)
+            if (database.MasterKey != null && configuration.BackupEncryptionSettings == null)
                 return true;
 
-            return _configuration.BackupEncryptionSettings != null &&
-                   _configuration.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
+            return configuration.BackupEncryptionSettings != null &&
+                   configuration.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
         }
 
         private long GetDatabaseEtagForBackup()
