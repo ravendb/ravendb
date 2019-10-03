@@ -16,28 +16,33 @@ class collectionMenuItem implements menuItem {
             if (!item) {
                 return false;
             }
-
-            if (item instanceof leafMenuItem && item.route === "databases/documents") {
-                const instruction = router.activeInstruction();
-                if (!instruction || !instruction.params) {
-                    return false;
-                }
-                const param0 = instruction.params[0] as any;
-                if (!param0) {
-                    return false;
-                }
-
-                if (coll.isAllDocuments && !param0.collection) {
+            
+            if (item instanceof leafMenuItem) {
+                if (item.route === "databases/documents/revisions/bin" && coll.isRevisionsBin) {
                     return true;
                 }
 
-                return param0.collection === coll.name;
+                if (item.route === "databases/documents") {
+                    const instruction = router.activeInstruction();
+                    if (!instruction || !instruction.params) {
+                        return false;
+                    }
+                    const param0 = instruction.params[0] as any;
+                    if (!param0) {
+                        return false;
+                    }
+
+                    if (coll.isAllDocuments && !param0.collection) {
+                        return true;
+                    }
+
+                    return param0.collection === coll.name;
+                }
             }
 
             return false;
         });
     }
-
 }
 
 export = collectionMenuItem;
