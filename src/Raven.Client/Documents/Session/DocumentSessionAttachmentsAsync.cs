@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -41,6 +42,21 @@ namespace Raven.Client.Documents.Session
 
             var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
             return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
+        }
+
+        public Task<Dictionary<string, AttachmentResult>> GetAsync(string documentId, IEnumerable<string> names, CancellationToken token = default)
+        {
+            var operation = new GetAttachmentsOperation(documentId, names, AttachmentType.Document, null);
+            return Session.Operations.SendAsync(operation, SessionInfo, token);
+        }
+
+        public Task<Dictionary<string, AttachmentResult>> GetAsync(object entity, IEnumerable<string> names, CancellationToken token = default)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSessionOrMissingId(entity);
+
+            var operation = new GetAttachmentsOperation(document.Id, names, AttachmentType.Document, null);
+            return Session.Operations.SendAsync(operation, SessionInfo, token);
         }
 
         public Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default)

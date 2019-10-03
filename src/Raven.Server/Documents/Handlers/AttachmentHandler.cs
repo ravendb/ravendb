@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Runtime.ExceptionServices;
@@ -61,6 +62,96 @@ namespace Raven.Server.Documents.Handlers
         public Task GetPost()
         {
             return GetAttachment(false);
+        }
+
+        [RavenAction("/databases/*/attachments/list", "POST", AuthorizationStatus.ValidUser)]
+        public async Task GetAttachments()
+        {
+            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var bodyStream = TryGetRequestFromStream("ChangeVectorAndType") ?? RequestBodyStream();
+                var request = context.Read(bodyStream, "GetAttachments");
+
+                if (request.TryGet("Type", out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
+                    throw new ArgumentException("The 'Type' field in the body request is mandatory");
+
+                if (request.TryGet("ChangeVector", out string changeVector) == false && changeVector != null)
+                    throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
+
+                if (request.TryGet("Names", out BlittableJsonReaderArray names) == false)
+                    throw new ArgumentException("The 'Names' field in the body request is mandatory");
+
+                var attachmentsStreams = new Dictionary<string, Stream>();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("AttachmentsMetadata");
+                    writer.WriteStartArray();
+                    var first = true;
+                    var index = 0;
+                    foreach (LazyStringValue lsv in names)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, lsv, type, changeVector);
+                        attachment.Size = attachment.Stream.Length;
+                        attachmentsStreams.Add(lsv, attachment.Stream);
+                        WriteAttachmentWithoutStream(writer, attachment, documentId, index);
+                        index++;
+                    }
+
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+
+                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+                {
+                    foreach (var kvp in attachmentsStreams)
+                    {
+                        using (var tmpStream = kvp.Value)
+                        {
+                            var responseStream = ResponseBodyStream();
+                            var count = tmpStream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                            while (count > 0)
+                            {
+                                await responseStream.WriteAsync(buffer.Buffer.Array, buffer.Buffer.Offset, count, Database.DatabaseShutdown);
+                                count = tmpStream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void WriteAttachmentWithoutStream(BlittableJsonTextWriter writer, Attachment attachment, string documentId, int index)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Name");
+            writer.WriteString(attachment.Name);
+            writer.WriteComma();
+            writer.WritePropertyName("Hash");
+            writer.WriteString(attachment.Base64Hash.ToString());
+            writer.WriteComma();
+            writer.WritePropertyName("ContentType");
+            writer.WriteString(attachment.ContentType);
+            writer.WriteComma();
+            writer.WritePropertyName("Size");
+            writer.WriteInteger(attachment.Size);
+            writer.WriteComma();
+            writer.WritePropertyName("ChangeVector");
+            writer.WriteString(attachment.ChangeVector);
+            writer.WriteComma();
+            writer.WritePropertyName("DocumentId");
+            writer.WriteString(documentId);
+            writer.WriteComma();
+            writer.WritePropertyName("Index");
+            writer.WriteInteger(index);
+            writer.WriteEndObject();
         }
 
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]

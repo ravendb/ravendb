@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Attachments;
 
 namespace Raven.Client.Documents.Session
@@ -27,6 +28,16 @@ namespace Raven.Client.Documents.Session
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
         AttachmentResult Get(object entity, string name);
+
+        /// <summary>
+        /// Returns dictionary of attachments by the document id and list of attachment names.
+        /// </summary>
+        Dictionary<string, AttachmentResult> Get(string documentId, IEnumerable<string> names);
+
+        /// <summary>
+        /// Returns dictionary of attachments by the entity and list of attachment names.
+        /// </summary>
+        Dictionary<string, AttachmentResult> Get(object entity, IEnumerable<string> names);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.

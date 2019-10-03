@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
@@ -29,6 +30,16 @@ namespace Raven.Client.Documents.Session
         /// Returns the attachment by the document id and attachment name.
         /// </summary>
         Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default);
+
+        /// <summary>
+        /// Returns dictionary of attachments by the document id and list of attachment names.
+        /// </summary>
+        Task<Dictionary<string, AttachmentResult>> GetAsync(string documentId, IEnumerable<string> names, CancellationToken token = default);
+
+        /// <summary>
+        /// Returns dictionary of attachments by the entity and list of attachment names.
+        /// </summary>
+        Task<Dictionary<string, AttachmentResult>> GetAsync(object entity, IEnumerable<string> names, CancellationToken token = default);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
