@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         public LocalRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, string folderPath)
             : base(parameters)
         {
-            _folderPath = folderPath;
+            _folderPath = PathUtil.ToFullPath(folderPath, null);
         }
 
         protected override GetFoldersResult GetSortedFolders()
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
             catch (DirectoryNotFoundException)
             {
-                return (GetBackupFolderFilesResult)null;
+                return null;
             }
         }
 

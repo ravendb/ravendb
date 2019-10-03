@@ -31,7 +31,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
-                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var backupPath = NewDataPath(suffix: "BackupFolder") + "/Backups/Admin\\..\\..";
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                     (configuration, _) =>
                     {
