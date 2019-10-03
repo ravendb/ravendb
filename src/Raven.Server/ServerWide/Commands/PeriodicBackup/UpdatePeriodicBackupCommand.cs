@@ -43,7 +43,8 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             }
             else if (Configuration.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException($"Can't {(newTask ? "create" : "update")} task: '{Configuration.Name}'. A regular (non server-wide) backup task name can't start with prefix 'server wide backup'");
+                throw new InvalidOperationException($"Can't {(newTask ? "create" : "update")} task: '{Configuration.Name}'. " +
+                                                             $"A regular (non server-wide) backup task name can't start with prefix '{ServerWideBackupConfiguration.NamePrefix}'");
             }
 
             EnsureTaskNameIsNotUsed(record, Configuration.Name);
