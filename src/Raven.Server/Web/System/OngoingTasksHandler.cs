@@ -534,7 +534,8 @@ namespace Raven.Server.Web.System
                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                 },
                 BackupDestinations = backupDestinations,
-                RetentionPolicy =  backupConfiguration.RetentionPolicy
+                RetentionPolicy = backupConfiguration.RetentionPolicy,
+                IsEncrypted = BackupTask.IsBackupEncrypted(Database, backupConfiguration)
             };
         }
 
