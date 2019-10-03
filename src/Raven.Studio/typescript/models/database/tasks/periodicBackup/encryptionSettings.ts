@@ -44,19 +44,23 @@ class encryptionSettings {
         
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
-
-        this.enabled(encryptedDatabase);
         this.key(dto ? dto.Key : undefined);
 
         if (!dto) {
-            // new one or wasn't set in the client API
-            this.mode("UseDatabaseKey");
+            if (encryptedDatabase) {
+                // new one or wasn't set in the client API
+                this.enabled(encryptedDatabase);
+                this.mode("UseDatabaseKey");
+            }
         }
         else if (dto.EncryptionMode) {
             this.mode(dto.EncryptionMode);
+
             if (dto.EncryptionMode === "None") {
                 // it was already confirmed
                 this.allowUnencryptedBackupForEncryptedDatabase(true);
+            } else {
+                this.enabled(true);
             }
         } else {
             this.mode(backupType() === "Backup" ? "UseProvidedKey": "UseDatabaseKey");
