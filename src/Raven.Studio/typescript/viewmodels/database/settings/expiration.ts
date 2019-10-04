@@ -130,7 +130,7 @@ class expiration extends viewModelBase {
                 .done(() => {
                     this.dirtyFlag().reset();
                     messagePublisher.reportSuccess(`Expiration configuration has been saved`);
-                    db.isExpirationConfigurationActive(!dto.Disabled);
+                    db.hasExpirationConfiguration(!dto.Disabled);
                 })
                 .always(() => {
                     this.spinners.save(false);
