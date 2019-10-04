@@ -159,7 +159,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         },
                         new CollectionQueryResultsIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
                         {
-                            Start = query.Start, Take = query.PageSize
+                            Start = query.Start, 
+                            Take = query.PageSize
                         });
                 }
 
