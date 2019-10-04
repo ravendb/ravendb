@@ -74,7 +74,7 @@ namespace Raven.Server.Config.Categories
         [Description("Number of megabytes occupied by encryption buffers (if database is encrypted) or mapped 32 bites buffers (when running on 32 bits) after which a read transaction will be renewed to reduce memory usage during long running operations like backups or streaming")]
         [DefaultValue(16)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Database.PulseReadTransactionLimit", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }
     }
 }

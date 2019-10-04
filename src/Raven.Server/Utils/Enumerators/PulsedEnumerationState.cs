@@ -18,7 +18,7 @@ namespace Raven.Server.Utils.Enumerators
             _pulseLimit = pulseLimit;
         }
 
-        public int ReadCount { get; set; }
+        public int ReadCount;
 
         public virtual bool ShouldPulseTransaction()
         {

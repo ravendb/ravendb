@@ -11,12 +11,12 @@ namespace Raven.Server.Documents.Handlers.Streaming
         {
         }
 
-        public string StartsWith { get; set; }
-        public string Excludes { get; set; }
-        public string Matches { get; set; }
-        public string StartAfter { get; set; }
-        public int Start { get; set; }
-        public int Take { get; set; }
+        public string StartsWith;
+        public string Excludes;
+        public string Matches;
+        public string StartAfter;
+        public int Start;
+        public int Take;
         public long? LastIteratedEtag;
         public Reference<int> Skip;
 
