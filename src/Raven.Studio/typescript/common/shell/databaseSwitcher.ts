@@ -19,6 +19,8 @@ class databaseSwitcher {
     private databases: KnockoutComputed<database[]>;
     private databasesManager = databasesManager.default;
 
+    highlightedItem = ko.observable<string>(null);
+
     private readonly hideHandler = (e: Event) => {
         if (this.shouldConsumeHideEvent(e)) {
             this.hide();
@@ -64,6 +66,10 @@ class databaseSwitcher {
             e.stopPropagation();
         });
 
+        this.filter.subscribe(() => {
+            this.highlightedItem(null);
+        });
+        
         const self = this;
         $('.box-container', this.$selectDatabaseContainer).on('click', "a", function (e: Event) {
             e.stopPropagation();
@@ -71,10 +77,50 @@ class databaseSwitcher {
             let a: HTMLAnchorElement = this as HTMLAnchorElement;
             ko.postbox.publish(EVENTS.DatabaseSwitcher.ItemSelected, a.href);
         });
+        
+        this.$filter.keydown(e => {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                this.changeHighlightedItem(e.key === "ArrowDown" ? "down" : "up");
+                return false; // prevent default
+            } else if (e.key === "Enter") {
+                this.dispatchGoToDatabase();
+                return false;
+            }
+
+            return true;
+        });
+    }
+    
+    private changeHighlightedItem(direction: "up" | "down") {
+        const enabledRelevantDatabases = this.filteredDatabases().filter(x => !x.disabled() && x.relevant());
+
+        const currentName = this.highlightedItem();
+        const currentIdx = enabledRelevantDatabases.findIndex(x => x.name === currentName);
+        
+        const indexToUse = currentIdx === -1 ?
+            (direction === "down" ? -1 : enabledRelevantDatabases.length) :
+            currentIdx;
+
+        const nextIdx = direction === "down" ?
+            (indexToUse + 1) % enabledRelevantDatabases.length :
+            ((indexToUse - 1) + enabledRelevantDatabases.length) % enabledRelevantDatabases.length;
+
+        this.highlightedItem(enabledRelevantDatabases[nextIdx].name);
     }
 
-    selectDatabase(db: database, $event: JQueryEventObject) {
-        if ($event.ctrlKey) {
+    private dispatchGoToDatabase() {
+        const highlight = this.highlightedItem();
+        if (highlight) {
+            const db = this.filteredDatabases().find(x => x.name === highlight);
+            if (db) {
+                this.highlightedItem(null);
+                this.selectDatabase(db);
+            }
+        }
+    }
+
+    selectDatabase(db: database, $event?: JQueryEventObject) {
+        if ($event && $event.ctrlKey) {
             window.open(appUrl.forDocumentsByDatabaseName(null, db.name));
         } else {
             this.databasesManager.activate(db);
