@@ -156,8 +156,9 @@ class sqlMigrationDetails extends abstractOperationDetails {
 
     private syncScrolls() {
         const messages = $(".migration-messages")[0];
-        messages.scrollTop = messages.scrollHeight;
-        
+        if (messages) {
+            messages.scrollTop = messages.scrollHeight;
+        }
         
         const inProgressItemIdx = _.findIndex(this.items(), x => x.stage() === "processing");
         if (inProgressItemIdx !== -1) {
