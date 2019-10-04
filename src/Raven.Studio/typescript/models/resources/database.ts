@@ -11,8 +11,7 @@ class database {
     relevant = ko.observable<boolean>(true);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
     hasExpirationConfiguration = ko.observable<boolean>(false);
-    isExpirationConfigurationActive = ko.observable<boolean>(false);
-    isRefreshConfigurationActive = ko.observable<boolean>(false);
+    hasRefreshConfiguration = ko.observable<boolean>(false);
     isEncrypted = ko.observable<boolean>(false);
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
@@ -48,8 +47,7 @@ class database {
         this.isEncrypted(incomingCopy.IsEncrypted);
         this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.hasExpirationConfiguration(incomingCopy.HasExpirationConfiguration);
-        this.isExpirationConfigurationActive(incomingCopy.IsExpirationConfigurationActive);
-        this.isRefreshConfigurationActive(incomingCopy.IsRefreshConfigurationActive);
+        this.hasRefreshConfiguration(incomingCopy.HasRefreshConfiguration);
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);

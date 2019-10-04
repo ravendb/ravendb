@@ -338,7 +338,7 @@ class editDocument extends viewModelBase {
         this.documentExpirationEnabled = ko.pureComputed(() => {
             const db = this.activeDatabase();
             if (db) {
-                return db.isExpirationConfigurationActive();
+                return db.hasExpirationConfiguration();
             } else {
                 return false;
             }
@@ -347,7 +347,7 @@ class editDocument extends viewModelBase {
         this.documentRefreshEnabled = ko.pureComputed(() => {
             const db = this.activeDatabase();
             if (db) {
-                return db.isRefreshConfigurationActive();
+                return db.hasRefreshConfiguration();
             } else {
                 return false;
             }
