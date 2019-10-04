@@ -199,6 +199,21 @@ namespace Raven.Client.Documents
         public event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
         public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
+        private event EventHandler<FailedRequestEventArgs> _onFailedRequest;
+        public event EventHandler<FailedRequestEventArgs> OnFailedRequest
+        {
+            add
+            {
+                AssertNotInitialized(nameof(OnFailedRequest));
+                _onFailedRequest += value;
+            }
+            remove
+            {
+                AssertNotInitialized(nameof(OnFailedRequest));
+                _onFailedRequest -= value;
+            }
+        }
+
         /// <summary>
         /// The default database name
         /// </summary>
@@ -252,6 +267,11 @@ namespace Raven.Client.Documents
             session.OnAfterConversionToDocument += OnAfterConversionToDocument;
             session.OnBeforeConversionToEntity += OnBeforeConversionToEntity;
             session.OnAfterConversionToEntity += OnAfterConversionToEntity;
+        }
+
+        protected internal void RegisterEvents(RequestExecutor requestExecutor)
+        {
+            requestExecutor.OnFailedRequest += _onFailedRequest;
         }
 
         protected void AfterSessionCreated(InMemoryDocumentSessionOperations session)
