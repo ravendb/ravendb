@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
         private readonly Logger _logger;
-        private readonly IDocumentStore _store;
+        private readonly DocumentStore _store;
         private readonly string _dbName;
         private CancellationTokenSource _processingCts = new CancellationTokenSource();
         private readonly SubscriptionWorkerOptions _options;
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
 
-        internal SubscriptionWorker(SubscriptionWorkerOptions options, IDocumentStore documentStore, string dbName)
+        internal SubscriptionWorker(SubscriptionWorkerOptions options, DocumentStore documentStore, string dbName)
         {
             _options = options;
             if (string.IsNullOrEmpty(options.SubscriptionName))
@@ -232,6 +232,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 _subscriptionLocalRequestExecutor?.Dispose();
                 _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
+                _store.RegisterEvents(_subscriptionLocalRequestExecutor);
 
                 return _stream;
             }
