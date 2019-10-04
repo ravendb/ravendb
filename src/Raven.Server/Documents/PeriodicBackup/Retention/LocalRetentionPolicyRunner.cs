@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
-using Voron.Util.Settings;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         public LocalRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, string folderPath)
             : base(parameters)
         {
-            _folderPath = PathUtil.ToFullPath(folderPath, null);
+            _folderPath = new PathSetting(folderPath).FullPath;
         }
 
         protected override GetFoldersResult GetSortedFolders()
