@@ -76,22 +76,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
-                    _converter = new LuceneDocumentConverter(fields);
+                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull);
                     break;
                 case IndexType.AutoMapReduce:
-                    _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
+                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, reduceOutput: true);
                     break;
                 case IndexType.MapReduce:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: true);
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, reduceOutput: true);
                     break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap);
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull);
                     break;
                 case IndexType.JavaScriptMap:
-                    _converter = new JintLuceneDocumentConverter(fields);
+                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull);
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter(fields, reduceOutput: true);
+                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, reduceOutput: true);
                     break;
                 case IndexType.Faulty:
                     _converter = null;

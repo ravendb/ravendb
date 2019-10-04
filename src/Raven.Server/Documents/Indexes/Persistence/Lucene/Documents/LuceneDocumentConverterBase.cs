@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<int> _multipleItemsSameFieldCount = new List<int>();
 
         protected readonly Dictionary<string, IndexField> _fields;
-
+        private readonly bool _indexImplicitNull;
         protected readonly bool _reduceOutput;
 
         private byte[] _reduceValueBuffer;
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool reduceOutput = false)
+        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull, bool reduceOutput)
         {
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
@@ -93,8 +93,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _fields = dictionary;
 
             if (_fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out _allFields) == false)
-                _allFields = new IndexField(); 
+                _allFields = new IndexField();
 
+            _indexImplicitNull = indexImplicitNull;
             _reduceOutput = reduceOutput;
 
             if (reduceOutput)
@@ -181,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.DynamicNull)
             {
                 var dynamicNull = (DynamicNullObject)value;
-                if (dynamicNull.IsExplicitNull)
+                if (dynamicNull.IsExplicitNull || _indexImplicitNull)
                 {
                     instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                     newFields++;
