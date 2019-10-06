@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Server.Dashboard;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -41,7 +42,6 @@ namespace Raven.Server.Utils
                 var processThreads = GetProcessThreads(process);
                 var previousProcessTimes = _processTimes;
                 _processTimes = CpuHelper.GetProcessTimes(process);
-
                 var processorTimeDiff = _processTimes.TotalProcessorTimeTicks - previousProcessTimes.TotalProcessorTimeTicks;
                 var timeDiff = _processTimes.TimeTicks - previousProcessTimes.TimeTicks;
                 var activeCores = CpuHelper.GetNumberOfActiveCores(process);
@@ -59,11 +59,11 @@ namespace Raven.Server.Utils
                 {
                     try
                     {
-                        var threadCpuUsage = GetThreadCpuUsage(thread, processorTimeDiff, cpuUsage);
+                        var threadCpuUsage = GetThreadCpuUsage(thread, processorTimeDiff, cpuUsage, activeCores);
                         threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
                         if (threadCpuUsage == null)
                         {
-                            // no previous info about the TotalProcessorTime of this thread
+                            // no previous info about the TotalProcessorTime for this thread
                             continue;
                         }
 
@@ -141,7 +141,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        private double? GetThreadCpuUsage(ProcessThread thread, long processorTimeDiff, double cpuUsage)
+        private double? GetThreadCpuUsage(ProcessThread thread, long processorTimeDiff, double cpuUsage, long activeCores)
         {
             if (_threadTimesInfo.TryGetValue(thread.Id, out var previousTotalProcessorTimeTicks) == false)
             {
@@ -157,6 +157,13 @@ namespace Raven.Server.Utils
             }
 
             var threadCpuUsage = threadTimeDiff * 1.0 / processorTimeDiff * cpuUsage;
+
+            if (PlatformDetails.RunningOnLinux)
+            {
+                // we need to divide the result by the number of cores since
+                // a .net thread is a process in linux
+                threadCpuUsage /= activeCores;
+            }
 
             return threadCpuUsage;
         }
