@@ -41,14 +41,17 @@ namespace Sparrow.Utils
             private WeakReference<Thread> _threadInstance = new WeakReference<Thread>(null);
             public readonly int ManagedThreadId;
             private string _lastName = "Unknown";
+
             public string Name
             {
                 get
                 {
-                    if (_threadInstance.TryGetTarget(out var thread))
+                    var threadInstance = _threadInstance;
+                    if (threadInstance != null && threadInstance.TryGetTarget(out var thread))
                     {
-                        return thread?.Name??_lastName;
+                        return thread?.Name ?? _lastName;
                     }
+
                     return _lastName;
                 }
             }
@@ -65,7 +68,6 @@ namespace Sparrow.Utils
 
                 if (_threadInstance.TryGetTarget(out var copy) == false)
                     return false;
-                
 
                 if (copy == null)
                     return false;
