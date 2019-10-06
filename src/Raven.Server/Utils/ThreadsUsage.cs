@@ -59,8 +59,9 @@ namespace Raven.Server.Utils
                 {
                     try
                     {
-                        var threadCpuUsage = GetThreadCpuUsage(thread, processorTimeDiff, cpuUsage, activeCores);
-                        threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
+                        var threadTotalProcessorTime = thread.TotalProcessorTime;
+                        var threadCpuUsage = GetThreadCpuUsage(thread.Id, threadTotalProcessorTime, processorTimeDiff, cpuUsage, activeCores);
+                        threadTimesInfo[thread.Id] = threadTotalProcessorTime.Ticks;
                         if (threadCpuUsage == null)
                         {
                             // no previous info about the TotalProcessorTime for this thread
@@ -85,8 +86,8 @@ namespace Raven.Server.Utils
                             Name = threadName ?? "Unmanaged Thread",
                             ManagedThreadId = managedThreadId,
                             StartingTime = GetThreadInfoOrDefault<DateTime?>(() => thread.StartTime.ToUniversalTime()),
-                            Duration = thread.TotalProcessorTime.TotalMilliseconds,
-                            TotalProcessorTime = thread.TotalProcessorTime,
+                            Duration = threadTotalProcessorTime.TotalMilliseconds,
+                            TotalProcessorTime = threadTotalProcessorTime,
                             PrivilegedProcessorTime = thread.PrivilegedProcessorTime,
                             UserProcessorTime = thread.UserProcessorTime,
                             State = threadState,
@@ -141,15 +142,15 @@ namespace Raven.Server.Utils
             }
         }
 
-        private double? GetThreadCpuUsage(ProcessThread thread, long processorTimeDiff, double cpuUsage, long activeCores)
+        private double? GetThreadCpuUsage(int threadId, TimeSpan threadTotalProcessorTime, long processorTimeDiff, double cpuUsage, long activeCores)
         {
-            if (_threadTimesInfo.TryGetValue(thread.Id, out var previousTotalProcessorTimeTicks) == false)
+            if (_threadTimesInfo.TryGetValue(threadId, out var previousTotalProcessorTimeTicks) == false)
             {
                 // no previous info for this thread yet
                 return null;
             }
 
-            var threadTimeDiff = thread.TotalProcessorTime.Ticks - previousTotalProcessorTimeTicks;
+            var threadTimeDiff = threadTotalProcessorTime.Ticks - previousTotalProcessorTimeTicks;
             if (threadTimeDiff == 0 || processorTimeDiff == 0)
             {
                 // no cpu usage
