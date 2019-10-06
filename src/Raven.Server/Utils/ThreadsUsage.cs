@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Dashboard;
@@ -96,6 +97,10 @@ namespace Raven.Server.Utils
                         });
                     }
                     catch (InvalidOperationException)
+                    {
+                        // thread has exited
+                    }
+                    catch (Win32Exception e) when (e.Message.Contains("Access is denied", StringComparison.OrdinalIgnoreCase))
                     {
                         // thread has exited
                     }
