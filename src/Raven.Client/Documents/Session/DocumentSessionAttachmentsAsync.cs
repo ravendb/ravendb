@@ -59,6 +59,21 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.SendAsync(operation, SessionInfo, token);
         }
 
+        public Task<Dictionary<string, AttachmentResult>> GetAllAsync(string documentId, CancellationToken token = default)
+        {
+            var operation = new GetAttachmentsOperation(documentId, AttachmentType.Document);
+            return Session.Operations.SendAsync(operation, SessionInfo, token);
+        }
+
+        public Task<Dictionary<string, AttachmentResult>> GetAllAsync(object entity, CancellationToken token = default)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSessionOrMissingId(entity);
+
+            var operation = new GetAttachmentsOperation(document.Id, AttachmentType.Document);
+            return Session.Operations.SendAsync(operation, SessionInfo, token);
+        }
+
         public Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);

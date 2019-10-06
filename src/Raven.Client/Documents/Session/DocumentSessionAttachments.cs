@@ -57,6 +57,21 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.Send(operation, SessionInfo);
         }
 
+        public Dictionary<string, AttachmentResult> GetAll(string documentId)
+        {
+            var operation = new GetAttachmentsOperation(documentId, AttachmentType.Document);
+            return Session.Operations.Send(operation, SessionInfo);
+        }
+
+        public Dictionary<string, AttachmentResult> GetAll(object entity)
+        {
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                ThrowEntityNotInSessionOrMissingId(entity);
+
+            var operation = new GetAttachmentsOperation(document.Id, AttachmentType.Document);
+            return Session.Operations.Send(operation, SessionInfo);
+        }
+
         public AttachmentResult GetRevision(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
