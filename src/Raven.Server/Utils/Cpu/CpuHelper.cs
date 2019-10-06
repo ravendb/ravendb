@@ -76,12 +76,12 @@ namespace Raven.Server.Utils.Cpu
             try
             {
                 var timeTicks = SystemTime.UtcNow.Ticks;
-                var totalProcessorTime = process.TotalProcessorTime.Ticks;
+                var totalProcessorTime = GetTotalProcessorTimeInTicks(process);
                 return (TotalProcessorTimeTicks: totalProcessorTime, TimeTicks: timeTicks);
             }
             catch (NotSupportedException)
             {
-                return TryGetProcessTimesForLinux();
+                return (0, 0);
             }
             catch (Exception e)
             {
@@ -92,48 +92,42 @@ namespace Raven.Server.Utils.Cpu
             }
         }
 
-        private static (long TotalProcessorTimeTicks, long TimeTicks) TryGetProcessTimesForLinux()
+        private static long GetTotalProcessorTimeInTicks(Process process)
         {
             if (PlatformDetails.RunningOnLinux == false)
-                return (0, 0);
+                return process.TotalProcessorTime.Ticks;
+
+            // Linux: TotalProcessorTime is calling to: proc/{processId}/stat and parsing the whole result
+            // while we only need the stime + utime
 
             try
             {
-                long timeTicks;
-                long tmsStime;
-                long tmsUtime;
+                long stime;
+                long utime;
 
                 if (PlatformDetails.Is32Bits == false)
                 {
                     var timeSample = new TimeSample();
-                    timeTicks = Syscall.times(ref timeSample);
-                    tmsStime = timeSample.tms_stime;
-                    tmsUtime = timeSample.tms_utime;
+                    Syscall.times(ref timeSample);
+                    stime = timeSample.tms_stime;
+                    utime = timeSample.tms_utime;
                 }
                 else
                 {
                     var timeSample = new TimeSample_32bit();
-                    timeTicks = Syscall.times(ref timeSample);
-                    tmsStime = timeSample.tms_stime;
-                    tmsUtime = timeSample.tms_utime;
+                    Syscall.times(ref timeSample);
+                    stime = timeSample.tms_stime;
+                    utime = timeSample.tms_utime;
                 }
 
-                if (timeTicks == -1)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Got overflow time using the times system call " + Marshal.GetLastWin32Error());
-
-                    return (0, 0);
-                }
-
-                return (TotalProcessorTimeTicks: tmsUtime + tmsStime, TimeTicks: timeTicks);
+                return utime + stime;
             }
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failure to get process times for linux, error: {e.Message}", e);
 
-                return (0, 0);
+                return process.TotalProcessorTime.Ticks;
             }
         }
     }
