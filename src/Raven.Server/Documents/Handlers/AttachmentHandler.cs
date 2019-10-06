@@ -72,14 +72,10 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var bodyStream = TryGetRequestFromStream("ChangeVectorAndType") ?? RequestBodyStream();
-                var request = context.Read(bodyStream, "GetAttachments");
+                var request = context.Read(RequestBodyStream(), "GetAttachments");
 
                 if (request.TryGet("Type", out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
                     throw new ArgumentException("The 'Type' field in the body request is mandatory");
-
-                if (request.TryGet("ChangeVector", out string changeVector) == false && changeVector != null)
-                    throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
 
                 if (request.TryGet("Names", out BlittableJsonReaderArray names) == false)
                     throw new ArgumentException("The 'Names' field in the body request is mandatory");
@@ -98,7 +94,7 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteComma();
                         first = false;
 
-                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, lsv, type, changeVector);
+                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, lsv, type, changeVector: null);
                         attachment.Size = attachment.Stream.Length;
                         attachmentsStreams.Add(lsv, attachment.Stream);
                         WriteAttachmentWithoutStream(writer, attachment, documentId, index);

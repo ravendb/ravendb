@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
 
         public Task<Dictionary<string, AttachmentResult>> GetAsync(string documentId, IEnumerable<string> names, CancellationToken token = default)
         {
-            var operation = new GetAttachmentsOperation(documentId, names, AttachmentType.Document, null);
+            var operation = new GetAttachmentsOperation(documentId, names, AttachmentType.Document);
             return Session.Operations.SendAsync(operation, SessionInfo, token);
         }
 
@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Session
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSessionOrMissingId(entity);
 
-            var operation = new GetAttachmentsOperation(document.Id, names, AttachmentType.Document, null);
+            var operation = new GetAttachmentsOperation(document.Id, names, AttachmentType.Document);
             return Session.Operations.SendAsync(operation, SessionInfo, token);
         }
 

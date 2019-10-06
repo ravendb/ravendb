@@ -86,7 +86,7 @@ namespace SlowTests.Client.Attachments
         }
 
         [Fact]
-        public void CanExposeStream()
+        public void CanConsumeStream()
         {
             var size = 32 * 1024;
             using (var stream = new MemoryStream(Enumerable.Repeat((byte)0x20, size).ToArray()))
@@ -115,13 +115,13 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(stream.Read(buffer1, 0, size), attachments[$"{attachmentName}"].Stream.Read(buffer2, 0, size));
                         Assert.True(buffer1.SequenceEqual(buffer2));
 
-                        // expose stream 1
+                        // consume stream 1
                         buffer1 = new byte[size];
                         buffer2 = new byte[size];
                         Assert.Equal(stream.Read(buffer1, 0, size), attachments[$"{attachmentName}"].Stream.Read(buffer2, 0, size));
                         Assert.True(buffer1.SequenceEqual(buffer2));
 
-                        // expose stream 2
+                        // consume stream 2
                         Assert.True(CompareStreams(stream, attachments[$"{attachmentName}"].Stream));
                     }
                 }
