@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 IncludeCountersCommand includeCountersCommand = null;
-                if (query.Metadata.HasCounters)
+                if (query.Metadata.HasCounterIncludes)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
                         Database,
@@ -227,7 +227,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
-            var bufferSize = query.HasCounters ? 4 : 3;
+            var bufferSize = 3;
+            if (query.HasCounters)
+                bufferSize++;
+
             var collection = query.CollectionName;
             var buffer = stackalloc long[bufferSize];
 

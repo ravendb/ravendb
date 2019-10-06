@@ -117,7 +117,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasTimings { get; private set; }
 
-        public bool HasCounters { get; private set; }
+        public bool HasCounters => _hasCounterSelect || HasCounterIncludes;
+
+        public bool HasCounterIncludes => CounterIncludes != null;
 
         public bool IsCollectionQuery { get; private set; } = true;
 
@@ -164,6 +166,8 @@ namespace Raven.Server.Documents.Queries
         public DateTime CreatedAt;
 
         public DateTime LastQueriedAt;
+
+        private bool _hasCounterSelect;
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
@@ -463,7 +467,6 @@ namespace Raven.Server.Documents.Queries
                                 if (CounterIncludes == null)
                                 {
                                     CounterIncludes = new CounterIncludesField();
-                                    HasCounters = true;
                                 }
 
                                 AddToCounterIncludes(CounterIncludes, me, parameters);
@@ -1144,6 +1147,8 @@ namespace Raven.Server.Documents.Queries
                         {
                             counterField.FunctionArgs = new SelectField[0];
                         }
+
+                        _hasCounterSelect = true;
 
                         return counterField;
                     }
