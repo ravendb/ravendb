@@ -21,19 +21,17 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly string _documentId;
         private readonly IEnumerable<string> _names;
         private readonly AttachmentType _type;
-        private readonly string _changeVector;
 
-        public GetAttachmentsOperation(string documentId, IEnumerable<string> names, AttachmentType type, string changeVector)
+        public GetAttachmentsOperation(string documentId, IEnumerable<string> names, AttachmentType type)
         {
             _documentId = documentId;
             _names = names;
             _type = type;
-            _changeVector = changeVector;
         }
 
         public RavenCommand<Dictionary<string, AttachmentResult>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentsCommand(context, _documentId, _names, _type, _changeVector);
+            return new GetAttachmentsCommand(context, _documentId, _names, _type);
         }
 
         private class GetAttachmentsCommand : RavenCommand<Dictionary<string, AttachmentResult>>
@@ -42,21 +40,16 @@ namespace Raven.Client.Documents.Operations.Attachments
             private readonly string _documentId;
             private readonly IEnumerable<string> _names;
             private readonly AttachmentType _type;
-            private readonly string _changeVector;
 
-            public GetAttachmentsCommand(JsonOperationContext context, string documentId, IEnumerable<string> names, AttachmentType type, string changeVector)
+            public GetAttachmentsCommand(JsonOperationContext context, string documentId, IEnumerable<string> names, AttachmentType type)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
-
-                if (type != AttachmentType.Document && changeVector == null)
-                    throw new ArgumentNullException(nameof(changeVector), $"Change Vector cannot be null for attachment type {type}");
 
                 _context = context;
                 _documentId = documentId;
                 _names = names ?? throw new ArgumentNullException(nameof(names));
                 _type = type;
-                _changeVector = changeVector;
 
                 ResponseType = RavenCommandResponseType.Empty;
             }
@@ -79,10 +72,6 @@ namespace Raven.Client.Documents.Operations.Attachments
                             writer.WriteComma();
 
                             writer.WriteArray("Names", _names);
-                            writer.WriteComma();
-
-                            writer.WritePropertyName("ChangeVector");
-                            writer.WriteString(_changeVector);
 
                             writer.WriteEndObject();
                         }
@@ -111,14 +100,13 @@ namespace Raven.Client.Documents.Operations.Attachments
                         throw new Exception("cannot parse stream");
 
                     if (state.CurrentTokenType != JsonParserToken.StartObject)
-                        throw new Exception("got unexpected token");
+                        throw new Exception($"Expected token {nameof(JsonParserToken.StartObject)}, but got {nameof(state.CurrentTokenType)}");
 
                     await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
                     BlittableJsonReaderObject data = builder.CreateReader();
                     attachmentsMetadata = JsonDeserializationClient.AttachmentAdvancedDetails(data);
 
-                    builder.Reset();
                     buffer.Used = parser.BufferOffset;
                     buffer.Valid = parser.BufferSize;
 

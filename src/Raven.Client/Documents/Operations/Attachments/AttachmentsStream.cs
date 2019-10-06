@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments
@@ -21,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public int CurrentIndex;
         public long CurrentPosition;
-        public bool BufferExposed;
+        public bool BufferConsumed;
     }
 
     internal class AttachmentsStream : Stream
@@ -52,13 +53,15 @@ namespace Raven.Client.Documents.Operations.Attachments
             CheckDisposed();
 
             if (buffer == null)
-                throw new ArgumentNullException($"buffer is null.");
-
-            if (offset + Math.Min(_size, count) > buffer.Length)
-                throw new ArgumentException($"The sum of offset and count({Math.Min(_size, count)}) is larger than the buffer length.");
+                throw new ArgumentNullException($"{nameof(buffer)} is null.");
 
             if (offset < 0 || count < 0)
-                throw new ArgumentOutOfRangeException($"offset or count is negative.");
+                throw new ArgumentOutOfRangeException($"{nameof(offset)} or {nameof(count)} is negative.");
+
+            count = Math.Min(_size, count);
+
+            if (offset + count > buffer.Length)
+                throw new ArgumentException($"The sum of {nameof(offset)} and {nameof(count)} is larger than the {nameof(buffer)} length.");
 
             lock (_info)
             {
@@ -67,10 +70,9 @@ namespace Raven.Client.Documents.Operations.Attachments
                     if (memoryStream.Position == memoryStream.Length)
                         return 0;
 
-                    var size = Math.Min(_size, count);
-                    var read = memoryStream.Read(buffer, offset, size);
+                    var read = memoryStream.Read(buffer, offset, count);
 
-                    Debug.Assert(size == read);
+                    Debug.Assert(count == read);
                     _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += read;
 #if DEBUG
                     if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
@@ -82,7 +84,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                 var startPosition = GetStartPosition();
 
-                if (_info.BufferExposed == false)
+                if (_info.BufferConsumed == false)
                 {
                     return ReadFromBuffer(startPosition, buffer, offset, count);
                 }
@@ -91,13 +93,13 @@ namespace Raven.Client.Documents.Operations.Attachments
                 {
                     if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Size)
                     {
-                        // exposed stream
+                        // consumed stream
                         return 0;
                     }
 
-                    var read = _baseStream.Read(buffer, offset, Math.Min(_size, count));
+                    var read = _baseStream.Read(buffer, offset, count);
                     if (read == 0)
-                        throw new EndOfStreamException("You have reached the end of the stream.");
+                        throw new EndOfStreamException($"You have reached the end of the stream. {GetDebugInfo(count)}");
 
                     _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += read;
                     if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
@@ -135,7 +137,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                         read = ReadInternal(tmpBuffer, (int)tmpStream.Length, toRead);
                         Debug.Assert(toRead == read);
 
-                        WriteBufferToStream(tmpBuffer, 0, bSize, _info.CurrentIndex, toRead);
+                        CreateMemoryStreamFromBuffer(tmpBuffer, 0, bSize, _info.CurrentIndex, toRead);
                         _info.CurrentIndex++;
 
                         // dispose
@@ -149,19 +151,19 @@ namespace Raven.Client.Documents.Operations.Attachments
                         byte[] tmpBuffer = new byte[localCount];
 
                         ReadInternal(tmpBuffer, 0, localCount);
-                        WriteBufferToStream(tmpBuffer, 0, localCount, i);
+                        CreateMemoryStreamFromBuffer(tmpBuffer, 0, localCount, i);
                     }
 #if DEBUG
                     if (startPosition != _info.CurrentPosition)
                     {
-                        throw new Exception($"Attachment start on startPosition: {startPosition}, but stream CurrentPosition is {_info.CurrentPosition}. Name: {_name}, index: {_index}, merged: {_merged}. Stream CurrentIndex: {_info.CurrentIndex}, bufferExposed: {_info.BufferExposed}");
+                        throw new Exception($"Attachment start on startPosition: {startPosition}, but stream CurrentPosition is {_info.CurrentPosition}. {GetDebugInfo(count)}");
                     }
 #endif
                     _info.CurrentIndex = _index;
 
-                    var n = _baseStream.Read(buffer, offset, Math.Min(_size, count));
+                    var n = _baseStream.Read(buffer, offset, count);
                     if (n == 0)
-                        throw new EndOfStreamException("You have reached the end of the stream.");
+                        throw new EndOfStreamException($"You have reached the end of the base stream. {GetDebugInfo(count)}");
 
                     _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += n;
                     if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
@@ -171,7 +173,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     return n;
                 }
 
-                ThrowOnInvalidPosition(startPosition);
+                ThrowOnInvalidPosition(startPosition, count);
                 return 0;
             }
         }
@@ -182,8 +184,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             {
                 Debug.Assert(_info.CurrentIndex == _index);
 
-                var size = Math.Min(_size, count);
-                if (size + _info.Buffer.Used > _info.Buffer.Valid)
+                if (count + _info.Buffer.Used > _info.Buffer.Valid)
                 {
                     var bufferRead = _info.Buffer.Valid - _info.Buffer.Used;
                     Array.Copy(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, buffer, offset, bufferRead);
@@ -193,21 +194,21 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                     // continue write to buffer from the base stream
                     _merged = true;
-                    _info.BufferExposed = true;
-                    return Read(buffer, offset + bufferRead, size - bufferRead);
+                    _info.BufferConsumed = true;
+                    return Read(buffer, offset + bufferRead, count - bufferRead);
                 }
 
                 // read only from buffer
-                Array.Copy(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, buffer, offset, size);
+                Array.Copy(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, buffer, offset, count);
 
-                _info.CurrentPosition += size;
-                _info.Buffer.Used += size;
-                _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += size;
+                _info.CurrentPosition += count;
+                _info.Buffer.Used += count;
+                _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += count;
 
                 if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
                     _info.CurrentIndex = _index + 1;
 
-                return size;
+                return count;
             }
 
             if (startPosition > _info.CurrentPosition)
@@ -217,15 +218,15 @@ namespace Raven.Client.Documents.Operations.Attachments
                 if (attachmentSize > bufferCount)
                 {
                     // read to stream and add to dictionary
-                    WriteBufferToStream(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, bufferCount, _info.CurrentIndex);
+                    CreateMemoryStreamFromBuffer(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, bufferCount, _info.CurrentIndex);
                     _info.Buffer.Used += bufferCount;
 
                     // continue write to memory stream from the base stream
-                    _info.BufferExposed = true;
+                    _info.BufferConsumed = true;
                     return Read(buffer, offset, count);
                 }
 
-                WriteBufferToStream(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, attachmentSize, _info.CurrentIndex);
+                CreateMemoryStreamFromBuffer(_info.Buffer.Buffer.Array, _info.Buffer.Buffer.Offset + _info.Buffer.Used, attachmentSize, _info.CurrentIndex);
 
                 _info.Buffer.Used += attachmentSize;
                 _info.CurrentIndex++;
@@ -233,11 +234,11 @@ namespace Raven.Client.Documents.Operations.Attachments
                 return Read(buffer, offset, count);
             }
 
-            ThrowOnInvalidPosition(startPosition);
+            ThrowOnInvalidPosition(startPosition, count);
             return 0;
         }
 
-        private void WriteBufferToStream(byte[] buffer, int offset, int count, int index, int? pos = null)
+        private void CreateMemoryStreamFromBuffer(byte[] buffer, int offset, int count, int index, int? pos = null)
         {
             _info.AllStreams[_info.AttachmentAdvancedDetails.AttachmentsMetadata[index].Name] = new MemoryStream(buffer, offset, count, writable: false);
             _info.CurrentPosition += pos ?? count;
@@ -252,6 +253,24 @@ namespace Raven.Client.Documents.Operations.Attachments
             }
 
             return start + _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read;
+        }
+
+        private string GetDebugInfo(int count)
+        {
+            var s = $"\nCurrentPosition is {_info.CurrentPosition} / {_info.AttachmentAdvancedDetails.AttachmentsMetadata.Sum(x => x.Size)}, CurrentIndex: {_info.CurrentIndex}, bufferConsumed: {_info.BufferConsumed}, count: {count}. Requested attachment name: {_name}, startPosition: {GetStartPosition()} index: {_index}, merged: {_merged}.";
+            s += "\nAttachments:";
+            foreach (var attachment in _info.AttachmentAdvancedDetails.AttachmentsMetadata)
+            {
+                s += $"\n Name: {attachment.Name}, Index: {attachment.Index}, Read/Size: {attachment.Read} / {attachment.Size}";
+            }
+
+            s += "\nMemoryStreams:";
+            foreach (var kvp in _info.AllStreams)
+            {
+                s += $"\n Name {kvp.Key}, length: {kvp.Value.Length}, position: {kvp.Value.Position}";
+            }
+
+            return s;
         }
 
         private int ReadInternal(byte[] buffer, int offset, int count)
@@ -356,11 +375,11 @@ namespace Raven.Client.Documents.Operations.Attachments
             throw new NotSupportedException("Writing to attachments stream is forbidden.");
         }
 
-        private void ThrowOnInvalidPosition(long startPosition)
+        private void ThrowOnInvalidPosition(long startPosition, int count)
         {
             if (startPosition < _info.CurrentPosition)
             {
-                throw new ArgumentException($"The requested stream should have been in the dictionary already. Name: {_name}, index: {_index}, merged: {_merged}. Stream CurrentIndex: {_info.CurrentIndex}, bufferExposed: {_info.BufferExposed}");
+                throw new ArgumentException($"The requested stream should have been in the dictionary already. {GetDebugInfo(count)}");
             }
         }
     }
