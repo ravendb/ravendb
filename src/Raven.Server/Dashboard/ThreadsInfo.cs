@@ -27,9 +27,9 @@ namespace Raven.Server.Dashboard
             return new DynamicJsonValue
             {
                 [nameof(Date)] = Date,
-                [nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson())),
                 [nameof(CpuUsage)] = CpuUsage,
-                [nameof(ActiveCores)] = ActiveCores
+                [nameof(ActiveCores)] = ActiveCores,
+                [nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson()))
             };
         }
     }
