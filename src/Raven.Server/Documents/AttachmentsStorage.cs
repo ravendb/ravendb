@@ -6,16 +6,10 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Voron;
-using Voron.Data.Tables;
-using Voron.Impl;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -23,6 +17,9 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Voron;
+using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 
@@ -491,7 +488,7 @@ namespace Raven.Server.Documents
             return hasDoc;
         }
 
-        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, Slice prefixSlice)
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, Slice prefixSlice, bool includeStreams = false)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
@@ -500,7 +497,19 @@ namespace Raven.Server.Documents
                 if (attachment == null)
                     continue;
 
-                attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
+                if (includeStreams == false)
+                {
+                    attachment.Size = GetAttachmentStreamLength(context, attachment.Base64Hash);
+                }
+                else
+                {
+                    var stream = GetAttachmentStream(context, attachment.Base64Hash);
+                    if (stream == null)
+                        throw new FileNotFoundException($"Attachment's stream {attachment.Name} on {prefixSlice.ToString()} was not found. This should not happen and is likely a bug.");
+
+                    attachment.Stream = stream;
+                    attachment.Size = stream.Length;
+                }
 
                 yield return attachment;
             }

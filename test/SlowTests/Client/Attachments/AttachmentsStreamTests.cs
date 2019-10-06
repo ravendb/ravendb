@@ -13,13 +13,19 @@ namespace SlowTests.Client.Attachments
     public class AttachmentsStreamTests : RavenTestBase
     {
         [Theory]
-        [InlineData(1024)]
-        [InlineData(32 * 1024)]
-        [InlineData(256 * 1024)]
-        [InlineData(1024 * 1024)]
-        [InlineData(128 * 1024 * 1024)]
-        [InlineData(1024 * 1024 * 1024)]
-        public void CanGetOneAttachment(int size)
+        [InlineData(1024, true)]
+        [InlineData(32 * 1024, true)]
+        [InlineData(256 * 1024, true)]
+        [InlineData(1024 * 1024, true)]
+        [InlineData(128 * 1024 * 1024, true)]
+        [InlineData(1024 * 1024 * 1024, true)]
+        [InlineData(1024, false)]
+        [InlineData(32 * 1024, false)]
+        [InlineData(256 * 1024, false)]
+        [InlineData(1024 * 1024, false)]
+        [InlineData(128 * 1024 * 1024, false)]
+        [InlineData(1024 * 1024 * 1024, false)]
+        public void CanGetOneAttachment(int size, bool readAll)
         {
             using (var stream = new MemoryStream(Enumerable.Repeat((byte)0x20, size).ToArray()))
             {
@@ -40,7 +46,7 @@ namespace SlowTests.Client.Attachments
                     {
                         var user = session.Load<User>(id);
                         var attachmentsNames = session.Advanced.Attachments.GetNames(user);
-                        Dictionary<string, AttachmentResult> attachments = session.Advanced.Attachments.Get(user, attachmentsNames.Select(x => x.Name));
+                        Dictionary<string, AttachmentResult> attachments = readAll ? session.Advanced.Attachments.GetAll(user) : session.Advanced.Attachments.Get(user, attachmentsNames.Select(x => x.Name));
 
                         var buffer1 = new byte[size];
                         var buffer2 = new byte[size];
@@ -51,8 +57,10 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
-        public async Task CanGetOneAttachmentAsync()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CanGetOneAttachmentAsync(bool readAll)
         {
             int size = 1024;
             using (var stream = new MemoryStream(Enumerable.Repeat((byte)0x20, size).ToArray()))
@@ -74,7 +82,9 @@ namespace SlowTests.Client.Attachments
                     {
                         var user = await session.LoadAsync<User>(id);
                         var attachmentsNames = session.Advanced.Attachments.GetNames(user);
-                        Dictionary<string, AttachmentResult> attachments = await session.Advanced.Attachments.GetAsync(user, attachmentsNames.Select(x => x.Name));
+                        Dictionary<string, AttachmentResult> attachments = readAll
+                            ? await session.Advanced.Attachments.GetAllAsync(user)
+                            : await session.Advanced.Attachments.GetAsync(user, attachmentsNames.Select(x => x.Name));
 
                         var buffer1 = new byte[size];
                         var buffer2 = new byte[size];
@@ -146,7 +156,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -200,7 +209,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -251,7 +259,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     await session.StoreAsync(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -304,7 +311,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -367,7 +373,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -428,7 +433,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -491,7 +495,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var stream = new MemoryStream(bArr);
@@ -577,7 +580,7 @@ namespace SlowTests.Client.Attachments
         [Theory]
         [InlineData(1)]
         [InlineData(10)]
-        [InlineData(15)]
+        //[InlineData(15)] todo: mvoe to stress test
         public void CanGetListOfDifferentAttachmentsAndRead(int count)
         {
             var attachmentDictionary = new Dictionary<string, MemoryStream>();
@@ -591,7 +594,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var factorial = Factorial(i);
@@ -647,7 +649,6 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = new User { Name = "su" };
                     session.Store(user, id);
-                    Random r = new Random();
                     for (var i = 0; i < count; i++)
                     {
                         var factorial = Factorial(i);
@@ -756,6 +757,60 @@ namespace SlowTests.Client.Attachments
                     Assert.Empty(attachments);
                 }
             }
+        }
+
+        [Theory]
+        [InlineData(10, 3)]
+        [InlineData(10, 1024)]
+        [InlineData(10, 32768)]
+        public void CanGetPartialListOfAttachmentsAndReadOrdered(int count, int size)
+        {
+            var attachmentDictionary = new Dictionary<string, MemoryStream>();
+            byte[] bArr = Enumerable.Repeat((byte)0x20, size).ToArray();
+
+            const string id = "users/1";
+            const string attachmentName = "Typical attachment name";
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "su" };
+                    session.Store(user, id);
+                    for (var i = 0; i < count; i++)
+                    {
+                        var stream = new MemoryStream(bArr);
+                        session.Advanced.Attachments.Store(id, $"{attachmentName}_{i}", stream, "application/zip");
+                        attachmentDictionary[$"{attachmentName}_{i}"] = stream;
+                    }
+
+                    session.SaveChanges();
+                }
+
+                foreach (var stream in attachmentDictionary.Values)
+                    stream.Position = 0;
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => x.Name).ToArray();
+                    Random r = new Random();
+                    int skip = r.Next(0, 4);
+                    int take = r.Next(2, 4);
+                    Dictionary<string, AttachmentResult> attachments = session.Advanced.Attachments.Get(user, attachmentsNames.Skip(skip).Take(take));
+
+                    for (int i = skip; i < skip + take; i++)
+                    {
+                        var buffer1 = new byte[size];
+                        var buffer2 = new byte[size];
+                        Assert.Equal(attachmentDictionary[$"{attachmentName}_{i}"].Read(buffer1, 0, size), attachments[$"{attachmentName}_{i}"].Stream.Read(buffer2, 0, size));
+                        Assert.True(buffer1.SequenceEqual(buffer2));
+                    }
+                }
+            }
+
+
+            foreach (var stream in attachmentDictionary.Values)
+                stream.Dispose();
         }
 
         private static bool CompareStreams(Stream a, Stream b)

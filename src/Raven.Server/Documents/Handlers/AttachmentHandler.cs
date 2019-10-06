@@ -77,8 +77,8 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("Type", out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
                     throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                if (request.TryGet("Names", out BlittableJsonReaderArray names) == false)
-                    throw new ArgumentException("The 'Names' field in the body request is mandatory");
+                if (request.TryGet("ReadAll", out bool readAll) == false)
+                    throw new ArgumentException("The 'ReadAll' field in the body request is mandatory");
 
                 var attachmentsStreams = new Dictionary<string, Stream>();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -88,18 +88,41 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartArray();
                     var first = true;
                     var index = 0;
-                    foreach (LazyStringValue lsv in names)
+                    if (readAll == false)
                     {
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
+                        if (request.TryGet("Names", out BlittableJsonReaderArray names) == false)
+                            throw new ArgumentException("The 'Names' field in the body request is mandatory");
 
-                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, lsv, type, changeVector: null);
-                        attachment.Size = attachment.Stream.Length;
-                        attachmentsStreams.Add(lsv, attachment.Stream);
-                        WriteAttachmentWithoutStream(writer, attachment, documentId, index);
-                        index++;
+                        foreach (LazyStringValue lsv in names)
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+                            first = false;
+
+                            var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, lsv, type, changeVector: null);
+                            attachment.Size = attachment.Stream.Length;
+                            attachmentsStreams.Add(lsv, attachment.Stream);
+                            WriteAttachmentWithoutStream(writer, attachment, documentId, index);
+                            index++;
+                        }
                     }
+                    else
+                    {
+                        using (Slice.From(context.Allocator, documentId.ToLowerInvariant(), out Slice lowerDocumentIdSlice))
+                        {
+                            foreach (var attachment in Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, lowerDocumentIdSlice, includeStreams: true))
+                            {
+                                if (first == false)
+                                    writer.WriteComma();
+                                first = false;
+
+                                attachmentsStreams.Add(attachment.Name, attachment.Stream);
+                                WriteAttachmentWithoutStream(writer, attachment, documentId, index);
+                                index++;
+                            }
+                        }
+                    }
+
 
                     writer.WriteEndArray();
                     writer.WriteEndObject();

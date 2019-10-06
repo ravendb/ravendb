@@ -21,6 +21,14 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly string _documentId;
         private readonly IEnumerable<string> _names;
         private readonly AttachmentType _type;
+        private readonly bool _readAll;
+
+        public GetAttachmentsOperation(string documentId, AttachmentType type)
+        {
+            _documentId = documentId;
+            _type = type;
+            _readAll = true;
+        }
 
         public GetAttachmentsOperation(string documentId, IEnumerable<string> names, AttachmentType type)
         {
@@ -31,7 +39,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public RavenCommand<Dictionary<string, AttachmentResult>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetAttachmentsCommand(context, _documentId, _names, _type);
+            return new GetAttachmentsCommand(context, _documentId, _names, _type, _readAll);
         }
 
         private class GetAttachmentsCommand : RavenCommand<Dictionary<string, AttachmentResult>>
@@ -40,16 +48,20 @@ namespace Raven.Client.Documents.Operations.Attachments
             private readonly string _documentId;
             private readonly IEnumerable<string> _names;
             private readonly AttachmentType _type;
+            private readonly bool _readAll;
 
-            public GetAttachmentsCommand(JsonOperationContext context, string documentId, IEnumerable<string> names, AttachmentType type)
+            public GetAttachmentsCommand(JsonOperationContext context, string documentId, IEnumerable<string> names, AttachmentType type, bool readAll)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
 
                 _context = context;
                 _documentId = documentId;
-                _names = names ?? throw new ArgumentNullException(nameof(names));
+                _readAll = readAll;
                 _type = type;
+
+                if (_readAll == false)
+                    _names = names ?? throw new ArgumentNullException(nameof(names));
 
                 ResponseType = RavenCommandResponseType.Empty;
             }
@@ -70,8 +82,14 @@ namespace Raven.Client.Documents.Operations.Attachments
                             writer.WritePropertyName("Type");
                             writer.WriteString(_type.ToString());
                             writer.WriteComma();
+                            writer.WritePropertyName("ReadAll");
+                            writer.WriteBool(_readAll);
 
-                            writer.WriteArray("Names", _names);
+                            if (_readAll == false)
+                            {
+                                writer.WriteComma();
+                                writer.WriteArray("Names", _names);
+                            }
 
                             writer.WriteEndObject();
                         }
@@ -100,7 +118,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                         throw new Exception("cannot parse stream");
 
                     if (state.CurrentTokenType != JsonParserToken.StartObject)
-                        throw new Exception($"Expected token {nameof(JsonParserToken.StartObject)}, but got {nameof(state.CurrentTokenType)}");
+                        throw new Exception($"Expected token {nameof(JsonParserToken.StartObject)}, but got {nameof(state.CurrentTokenType)}.");
 
                     await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 

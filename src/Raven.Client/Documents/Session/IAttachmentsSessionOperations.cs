@@ -40,6 +40,16 @@ namespace Raven.Client.Documents.Session
         Dictionary<string, AttachmentResult> Get(object entity, IEnumerable<string> names);
 
         /// <summary>
+        /// Returns dictionary of all attachments by the entity.
+        /// </summary>
+        Dictionary<string, AttachmentResult> GetAll(string documentId);
+
+        /// <summary>
+        /// Returns dictionary of all attachments by the document id.
+        /// </summary>
+        Dictionary<string, AttachmentResult> GetAll(object entity);
+
+        /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
         AttachmentResult GetRevision(string documentId, string name, string changeVector);
