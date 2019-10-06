@@ -16,15 +16,15 @@ namespace Raven.Server.Utils.Cli
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    RavenProcess.Start("cmd", $"/c start {url}");
+                    RavenProcess.Start("cmd", $"/c start {url}",null);
                 }
                 else if (PlatformDetails.RunningOnMacOsx)
                 {
-                    RavenProcess.Start("open", url);
+                    RavenProcess.Start("open", url, null);
                 }
                 else
                 {
-                    RavenProcess.Start("xdg-open", url);
+                    RavenProcess.Start("xdg-open", url, null);
                 }
 
                 return true;

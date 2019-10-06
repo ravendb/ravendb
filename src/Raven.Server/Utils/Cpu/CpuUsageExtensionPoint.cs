@@ -68,38 +68,39 @@ namespace Raven.Server.Utils.Cpu
                     var cts = new CancellationTokenSource();
                     using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, ctk))
                     {
-                        void LineOutHandler(object sender, EventArgs args)
+                        var lineOutHandler = new Action<object, string>((p, l) =>
                         {
                             Interlocked.Exchange(ref _isDataValid, 1);
-                            var l = args as LineOutputEventArgs;
 
-                            if (l?.Line == null)
+                            if (l == null)
                             {
                                 if (DateTime.UtcNow - lastReceivedLine > TimeSpan.FromSeconds(60))
                                 {
                                     Interlocked.Exchange(ref _isDataValid, 0);
-                                    NotifyWarning("Cpu usage process hanged (no output for 60 seconds), killing the process", new TimeoutException("no output from process for 60 seconds"));
+                                    NotifyWarning("Cpu usage process hanged (no output for 60 seconds), killing the process",
+                                        new TimeoutException("no output from process for 60 seconds"));
                                     cts.Cancel();
                                 }
+
                                 return;
                             }
 
                             lastReceivedLine = DateTime.UtcNow;
-                            var errString = HandleInfoReceived(l?.Line);
+                            var errString = HandleInfoReceived(l);
                             if (errString != null)
                             {
                                 Interlocked.Exchange(ref _isDataValid, 0);
                                 NotifyWarning(errString);
                                 cts.Cancel();
                             }
-                        }
+                        });
 
                         RavenProcess.Execute(
                             _startInfo.FileName,
                             _startInfo.Arguments,
                             1,
                             null,
-                            LineOutHandler,
+                            lineOutHandler,
                             linkedCts.Token);
 
                         Interlocked.Exchange(ref _isDataValid, 0);

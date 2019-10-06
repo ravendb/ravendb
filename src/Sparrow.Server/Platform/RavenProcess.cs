@@ -15,11 +15,6 @@ namespace Sparrow.Server.Platform
         public IntPtr Pid { get; set; }
     }
 
-    public class LineOutputEventArgs : EventArgs
-    {
-        public string Line { get; set; }
-    }
-
     public class RavenProcess : IDisposable
     {
         public ProcessStartInfo StartInfo { get; set; }
@@ -32,17 +27,17 @@ namespace Sparrow.Server.Platform
             handler?.Invoke(this, e);
         }
 
-        public event EventHandler LineOutput;
-        private void OnLineOutput(EventArgs e, CancellationToken ctk)
+        public event Action<object, string> LineOutput;
+        private void OnLineOutput(string line, CancellationToken ctk)
         {
             if (ctk.IsCancellationRequested == false)
             {
-                EventHandler handler = LineOutput;
-                handler?.Invoke(this, e);
+                var handler = LineOutput;
+                handler?.Invoke(this, line);
             }
         }
 
-        public delegate void StreamWriteDelegate(MemoryStream tw, int count);
+        public delegate void StreamWriteDelegate(Span<byte> bytes);
 
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenProcess>("RavenProcess");
         private IntPtr _pid = IntPtr.Zero;
@@ -74,18 +69,14 @@ namespace Sparrow.Server.Platform
 
         private void ReadTo(StreamWriteDelegate outputDel)
         {
-            using (var ms = new MemoryStream())
+            var bytes = new byte[4096];
             using (var fs = new FileStream(StandardOutAndErr, FileAccess.Read))
             {
-                var buffer = new byte[4096];
-                var read = fs.Read(buffer, 0, 4096);
+                var read = fs.Read(bytes, 0, 4096);
                 while (read != 0)
                 {
-                    ms.Position = 0;
-                    ms.Write(buffer, 0, read);
-                    ms.Flush();
-                    outputDel?.Invoke(ms, read);
-                    read = fs.Read(buffer, 0, 4096);
+                    outputDel?.Invoke(new Span<byte>(bytes, 0, read));
+                    read = fs.Read(bytes, 0, 4096);
                 }
             }
         }
@@ -109,49 +100,34 @@ namespace Sparrow.Server.Platform
             }
         }
 
-
-        private void ReadLines(StreamReader sr, CancellationToken ctk)
+        private void ReadLines(StreamReader sr, Action<object, string> lineOutputHandler, CancellationToken ctk)
         {
-            string read = null;
-            do
+            while (ctk.IsCancellationRequested == false)
             {
-                var t = sr.ReadLineAsync();
-                if (t.Wait(-1, ctk) == false)
+                var lineTask = sr.ReadLineAsync();
+                if (lineTask.Wait(-1, ctk) == false)
                     break;
-
-                read = t.Result;
-                if (read != null)
-                {
-                    var args = new LineOutputEventArgs() {Line = read};
-                    OnLineOutput(args, ctk);
-                }
-                else
-                {
-                    var args = new LineOutputEventArgs() {Line = null};
-                    OnLineOutput(args, ctk);
-                }
-
-            } while (read != null && ctk.IsCancellationRequested == false);
-
+                var line = lineTask.Result;
+                OnLineOutput(line, ctk);
+                if (line == null)
+                    break;
+            }
         }
 
-        public static void Execute(string command, string arguments, int pollingTimeoutInSeconds, EventHandler exitHandler, EventHandler lineOutputHandler, CancellationToken ctk)
+        public static void Execute(string command, string arguments, int pollingTimeoutInSeconds, EventHandler exitHandler, Action<object, string> lineOutputHandler, CancellationToken ctk)
         {
             var startInfo = new ProcessStartInfo
             {
                 FileName = command,
                 Arguments = arguments
             };
-
             using (var process = new RavenProcess { StartInfo = startInfo })
             {
                 if (exitHandler != null)
                     process.ProcessExited += exitHandler;
                 if (lineOutputHandler != null)
                     process.LineOutput += lineOutputHandler;
-
                 process.Start(ctk);
-
                 using (var fs = new FileStream(process.StandardOutAndErr, FileAccess.Read))
                 using (var sr = new StreamReader(fs, Encoding.UTF8))
                 {
@@ -167,25 +143,22 @@ namespace Sparrow.Server.Platform
                                 ExitCode = exitCode,
                                 Pid = process._pid
                             };
-
                             try
                             {
-                                process.ReadLines(sr, ctk);
+                                process.ReadLines(sr, lineOutputHandler, ctk);
                             }
                             catch
                             {
                                 // ignore, just flush stdout
                             }
-
                             process.OnProcessExited(args);
                             break;
                         }
-                        process.ReadLines(sr, ctk);
+                        process.ReadLines(sr, lineOutputHandler, ctk);
                     }
                 }
             }
         }
-
 
         public void Dispose()
         {
