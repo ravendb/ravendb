@@ -17,6 +17,8 @@ namespace Raven.Server.Dashboard
 
         public long ActiveCores { get; set; }
 
+        public long ThreadsCount => List.Count;
+
         public ThreadsInfo()
         {
             List = new List<ThreadInfo>();
@@ -29,6 +31,7 @@ namespace Raven.Server.Dashboard
                 [nameof(Date)] = Date,
                 [nameof(CpuUsage)] = CpuUsage,
                 [nameof(ActiveCores)] = ActiveCores,
+                [nameof(ThreadsCount)] = ThreadsCount,
                 [nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson()))
             };
         }
