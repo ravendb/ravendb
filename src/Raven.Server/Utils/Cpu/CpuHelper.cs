@@ -92,9 +92,11 @@ namespace Raven.Server.Utils.Cpu
             }
         }
 
+        private static bool _timesSyscallSupported = true;
+
         private static long GetTotalProcessorTimeInTicks(Process process)
         {
-            if (PlatformDetails.RunningOnLinux == false)
+            if (PlatformDetails.RunningOnLinux == false || _timesSyscallSupported == false)
                 return process.TotalProcessorTime.Ticks;
 
             // Linux: TotalProcessorTime is calling to: proc/{processId}/stat and parsing the whole result
@@ -124,6 +126,9 @@ namespace Raven.Server.Utils.Cpu
             }
             catch (Exception e)
             {
+                // some linux distros don't support this call
+                _timesSyscallSupported = false;
+
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failure to get process times for linux, error: {e.Message}", e);
 
