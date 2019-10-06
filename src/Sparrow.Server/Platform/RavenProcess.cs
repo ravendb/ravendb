@@ -109,6 +109,32 @@ namespace Sparrow.Server.Platform
             }
         }
 
+
+        private void ReadLines(StreamReader sr, CancellationToken ctk)
+        {
+            string read = null;
+            do
+            {
+                var t = sr.ReadLineAsync();
+                if (t.Wait(-1, ctk) == false)
+                    break;
+
+                read = t.Result;
+                if (read != null)
+                {
+                    var args = new LineOutputEventArgs() {Line = read};
+                    OnLineOutput(args, ctk);
+                }
+                else
+                {
+                    var args = new LineOutputEventArgs() {Line = null};
+                    OnLineOutput(args, ctk);
+                }
+
+            } while (read != null && ctk.IsCancellationRequested == false);
+
+        }
+
         public static void Execute(string command, string arguments, int pollingTimeoutInSeconds, EventHandler exitHandler, EventHandler lineOutputHandler, CancellationToken ctk)
         {
             var startInfo = new ProcessStartInfo
@@ -127,6 +153,7 @@ namespace Sparrow.Server.Platform
                 process.Start(ctk);
 
                 using (var fs = new FileStream(process.StandardOutAndErr, FileAccess.Read))
+                using (var sr = new StreamReader(fs, Encoding.UTF8))
                 {
                     while (ctk.IsCancellationRequested == false)
                     {
@@ -141,59 +168,24 @@ namespace Sparrow.Server.Platform
                                 Pid = process._pid
                             };
 
+                            try
+                            {
+                                process.ReadLines(sr, ctk);
+                            }
+                            catch
+                            {
+                                // ignore, just flush stdout
+                            }
+
                             process.OnProcessExited(args);
-                        }
-
-
-                        string read = null;
-                        do
-                        {
-                            read = process.ReadLineAsync(fs, ctk);
-//                            using (var sr = new StreamReader(fs, Encoding.UTF8))
-//                                read = sr.ReadLine();
-
-                            if (read != null)
-                            {
-                                var args = new LineOutputEventArgs() {Line = read};
-                                process.OnLineOutput(args, ctk);
-                            }
-                            else
-                            {
-                                var args = new LineOutputEventArgs() {Line = null};
-                                process.OnLineOutput(args, ctk);
-                            }
-                        } while (read != null && ctk.IsCancellationRequested == false);
-
-                        if (process._hasExited)
                             break;
+                        }
+                        process.ReadLines(sr, ctk);
                     }
                 }
             }
         }
 
-        private string ReadLineAsync(FileStream fs, CancellationToken ctk)
-        {
-            StringBuilder sb = null;
-            var buffer = new byte[1];
-            var read = fs.Read(buffer, 0, 1);
-            while (read != 0)
-            {
-                if (sb == null)
-                    sb = new StringBuilder();
-                var c = Encoding.UTF8.GetString(buffer, 0, read);
-
-                if (buffer[0] == '\n')
-                    break;
-
-                sb.Append(c);
-
-                if (ctk.IsCancellationRequested)
-                    break;
-
-                read = fs.Read(buffer, 0, 1);
-            }
-            return sb?.ToString();
-        }
 
         public void Dispose()
         {
