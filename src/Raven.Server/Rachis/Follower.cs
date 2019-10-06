@@ -499,17 +499,16 @@ namespace Raven.Server.Rachis
 
             var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
 
-
-                while (task.Wait(timeToWait) == false)
+            while (task.Wait(timeToWait) == false)
+            {
+                using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    {
-                        // this may take a while, so we let the other side know that
-                        // we are still processing, and we reset our own timer while
-                        // this is happening
-                        MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
-                    }
+                    // this may take a while, so we let the other side know that
+                    // we are still processing, and we reset our own timer while
+                    // this is happening
+                    MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
                 }
+            }
 
             if (task.IsFaulted)
             {

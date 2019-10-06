@@ -790,6 +790,9 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var db in _engine.StateMachine.GetDatabaseNames(context))
                 {
+                    var queue = Cluster.ChangesHolder.GetOrAdd(db, _ => new ConcurrentQueue<(long Index, ClusterStateMachine.DatabaseRecordChange Change)>());
+                    queue.Enqueue((0, ClusterStateMachine.DatabaseRecordChange.All));
+
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 

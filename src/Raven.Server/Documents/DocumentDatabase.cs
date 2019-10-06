@@ -239,12 +239,12 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
-        private long _lastRaftIndexForStateChange;
+        private long _lastDatabaseRecordIndex = -1;
 
-        public long LastRaftIndexForStateChange
+        public long LastDatabaseRecordIndex
         {
-            get => Volatile.Read(ref _lastRaftIndexForStateChange);
-            private set => _lastRaftIndexForStateChange = value; // we write this always under lock
+            get => Volatile.Read(ref _lastDatabaseRecordIndex);
+            private set => _lastDatabaseRecordIndex = value; // we write this always under lock
         }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        NotifyFeaturesAboutStateChange(record, index, ClusterStateMachine.All);
+                        NotifyFeaturesAboutStateChange(record, index, ClusterStateMachine.DatabaseRecordChange.All);
                     }
                     catch
                     {
@@ -1066,7 +1066,7 @@ namespace Raven.Server.Documents
 
                 StudioConfiguration = record.Studio;
 
-                NotifyFeaturesAboutStateChange(record, index);
+                NotifyFeaturesAboutStateChange(record, index, ClusterStateMachine.DatabaseRecordChange.None);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1089,9 +1089,9 @@ namespace Raven.Server.Documents
             }
         }
         
-        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index , ClusterStateMachine.DatabaseRecordChange changes = ClusterStateMachine.DatabaseRecordChange.None)
+        private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index , ClusterStateMachine.DatabaseRecordChange changes)
         {
-            if (CanSkipStateChange(record.DatabaseName, index))
+            if (CanSkip(record.DatabaseName, index))
                 return;
 
             var taken = false;
@@ -1100,7 +1100,7 @@ namespace Raven.Server.Documents
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    if (CanSkipStateChange(record.DatabaseName, index))
+                    if (CanSkip(record.DatabaseName, index))
                         return;
 
                     if (taken == false)
@@ -1112,14 +1112,13 @@ namespace Raven.Server.Documents
                         $"{Name} != {record.DatabaseName}");
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (last {LastRaftIndexForStateChange}) for {record.DatabaseName}.");
+                        _logger.Info($"Starting to process record {index} (last {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
 
                     try
                     {
                         DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
 
-                        if (changes == ClusterStateMachine.DatabaseRecordChange.None && 
-                            ServerStore.Cluster.CommandsHolder.TryGetValue(Name, out var queue))
+                        if (ServerStore.Cluster.ChangesHolder.TryGetValue(Name, out var queue))
                         {
                             while (queue.TryPeek(out var result) && result.Index <= index)
                             {
@@ -1150,7 +1149,7 @@ namespace Raven.Server.Documents
                             InitializeFromDatabaseRecord(record);
                         }
 
-                        if (changes.HasFlag(ClusterStateMachine.DatabaseRecordChange.ETL))
+                        if (changes.HasFlag(ClusterStateMachine.DatabaseRecordChange.Etl))
                         {
                             EtlLoader?.HandleDatabaseRecordChange(record);
                         }
@@ -1162,7 +1161,7 @@ namespace Raven.Server.Documents
 
                         OnDatabaseRecordChanged(record);
 
-                        LastRaftIndexForStateChange = index;
+                        LastDatabaseRecordIndex = index;
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1199,13 +1198,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkipStateChange(string database, long index)
+        private bool CanSkip(string database, long index)
         {
-            if (LastRaftIndexForStateChange > index)
+            if (LastDatabaseRecordIndex > index)
             {
-                // index and LastRaftIndexForStateChange could have equal values when we transit from/to passive and want to update the tasks. 
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record state change in index {index} (current {LastRaftIndexForStateChange}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping record state change in index {index} (current {LastDatabaseRecordIndex}) for {database} because it was already precessed.");
                 return true;
             }
 
@@ -1224,7 +1223,7 @@ namespace Raven.Server.Documents
             {
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
-            NotifyFeaturesAboutStateChange(record, index, ClusterStateMachine.All);
+            NotifyFeaturesAboutStateChange(record, index, ClusterStateMachine.DatabaseRecordChange.All);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)

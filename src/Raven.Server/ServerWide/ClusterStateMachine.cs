@@ -982,16 +982,19 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Action> actions, List<string> affectedDatabases)
         {
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            {
+                foreach (var database in affectedDatabases)
+                {
+                    var queue = ChangesHolder.GetOrAdd(database, _ => new ConcurrentQueue<(long Index, DatabaseRecordChange Type)>());
+                    queue.Enqueue((index, GetChangeType(type)));
+                }
+            };
+
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
-                    foreach (var database in affectedDatabases)
-                    {
-                        var queue = CommandsHolder.GetOrAdd(database, new ConcurrentQueue<(long Index, DatabaseRecordChange Type)>());
-                        queue.Enqueue((index, GetChangeType(type)));
-                    }
-
                     _rachisLogIndexNotifications.AddTask(index);
                     var count = actions.Count;
 
@@ -1708,37 +1711,40 @@ namespace Raven.Server.ServerWide
         {
             None = 0,
             Index = 1,
-            Backup = 2,
-            Replication = 4,
-            ETL = 8,
-            Subscription = 16,
-            Configuration = 32,
+            Backup = 1 << 1,
+            Replication = 1 << 2,
+            Etl = 1 << 3,
+            Subscription = 1 << 4,
+            Configuration = 1 << 5,
+
+            All = Index |
+                  Backup |
+                  Replication |
+                  Etl |
+                  Subscription |
+                  Configuration,
+
+            TopologyAffected = Backup |
+                               Replication |
+                               Etl |
+                               Subscription,
         }
 
-        public static DatabaseRecordChange All = DatabaseRecordChange.Index | 
-                                                 DatabaseRecordChange.Backup | 
-                                                 DatabaseRecordChange.Replication | 
-                                                 DatabaseRecordChange.ETL | 
-                                                 DatabaseRecordChange.Subscription | 
-                                                 DatabaseRecordChange.Configuration;
-
-        public static DatabaseRecordChange TopologyAffected = DatabaseRecordChange.Backup |
-                                                              DatabaseRecordChange.Replication |
-                                                              DatabaseRecordChange.ETL |
-                                                              DatabaseRecordChange.Subscription;
-
-        public ConcurrentDictionary<string, ConcurrentQueue<(long Index, DatabaseRecordChange Change)>> CommandsHolder =
+        public ConcurrentDictionary<string, ConcurrentQueue<(long Index, DatabaseRecordChange Change)>> ChangesHolder =
             new ConcurrentDictionary<string, ConcurrentQueue<(long Index, DatabaseRecordChange Change)>>();
 
         private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
         {
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+            {
+                var queue = ChangesHolder.GetOrAdd(databaseName, _ => new ConcurrentQueue<(long Index, DatabaseRecordChange Type)>());
+                queue.Enqueue((index, GetChangeType(type)));
+            };
+
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
-                    var queue = CommandsHolder.GetOrAdd(databaseName, new ConcurrentQueue<(long Index, DatabaseRecordChange Type)>());
-                    queue.Enqueue((index, GetChangeType(type)));
-
                     ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
                 }
             };
@@ -1775,8 +1781,12 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdateTopologyCommand):
                 case nameof(DeleteDatabaseCommand):
                 case nameof(PromoteDatabaseNodeCommand):
-                case "ClusterTopologyChanged":
-                    return TopologyAffected;
+
+                case nameof(ToggleTaskStateCommand):
+                case nameof(DeleteOngoingTaskCommand):
+
+                case ClusterTopologyChanged:
+                    return DatabaseRecordChange.TopologyAffected;
 
                 case nameof(PutSubscriptionBatchCommand):
                 case nameof(PutSubscriptionCommand):
@@ -1808,25 +1818,20 @@ namespace Raven.Server.ServerWide
                 case nameof(UpdatePullReplicationAsSinkCommand):
                     return DatabaseRecordChange.Replication;
 
-                case nameof(ToggleTaskStateCommand):
-                case nameof(DeleteOngoingTaskCommand):
-                    return DatabaseRecordChange.Backup |
-                           DatabaseRecordChange.Replication |
-                           DatabaseRecordChange.ETL |
-                           DatabaseRecordChange.Subscription;
-
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(UpdateRavenEtlCommand):
                 case nameof(UpdateSqlEtlCommand):
-                case nameof(PutRavenConnectionStringCommand):
                 case nameof(PutSqlConnectionStringCommand):
-                case nameof(RemoveRavenConnectionStringCommand):
                 case nameof(RemoveSqlConnectionStringCommand):
                 case nameof(RemoveEtlProcessStateCommand):
-                    return DatabaseRecordChange.ETL;
-                
-                 
+                    return DatabaseRecordChange.Etl;
+
+                case nameof(RemoveRavenConnectionStringCommand):
+                case nameof(PutRavenConnectionStringCommand):
+                    return DatabaseRecordChange.Etl |
+                           DatabaseRecordChange.Replication;
+
                 case nameof(UpdatePeriodicBackupCommand):
                 case nameof(PutServerWideBackupConfigurationCommand):
                 case nameof(DeleteServerWideBackupConfigurationCommand):
@@ -1834,7 +1839,7 @@ namespace Raven.Server.ServerWide
 
                 default:
                     Debug.Assert(false,$"unknown type {type}");
-                    return All;
+                    return DatabaseRecordChange.All;
             }
         }
 
@@ -2100,6 +2105,8 @@ namespace Raven.Server.ServerWide
             PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
         }
 
+        private const string ClusterTopologyChanged = "ClusterTopologyChanged";
+
         private void ShrinkClusterTopology(TransactionOperationContext context, ClusterTopology clusterTopology, string newTag, long index)
         {
             _parent.UpdateNodeTag(context, newTag);
@@ -2182,7 +2189,6 @@ namespace Raven.Server.ServerWide
 
             var actions = new List<Action>();
             var databases = new List<string>();
-            var type = "ClusterTopologyChanged";
 
             foreach (var record in toShrink)
             {
@@ -2202,11 +2208,11 @@ namespace Raven.Server.ServerWide
                 }
 
                 actions.Add(() => DatabaseChanged?.Invoke(this,
-                    (record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                    (record.DatabaseName, index, ClusterTopologyChanged, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
                 databases.Add(record.DatabaseName);
             }
 
-            ExecuteManyOnDispose(context, index, type, actions, databases);
+            ExecuteManyOnDispose(context, index, ClusterTopologyChanged, actions, databases);
         }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
@@ -3139,6 +3145,8 @@ namespace Raven.Server.ServerWide
 
         public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore, CancellationToken token)
         {
+            Task t = null;
+
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
@@ -3154,29 +3162,22 @@ namespace Raven.Server.ServerWide
                 }
 
                 token.ThrowIfCancellationRequested();
+                var listOfDatabaseName = GetDatabaseNames(context).ToList();
 
-                // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
-                var onDatabaseChanged = DatabaseChanged;
-                if (onDatabaseChanged != null)
+                context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
                 {
-                    var listOfDatabaseName = GetDatabaseNames(context).ToList();
-                    TaskExecutor.Execute(_ =>
+                    // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                    t = Task.Run(() =>
                     {
-                        foreach (var db in listOfDatabaseName)
+                        ValueChanged?.Invoke(this, (lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand)));
+                        foreach (string database in listOfDatabaseName)
                         {
-                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                            var queue = ChangesHolder.GetOrAdd(database, __ => new ConcurrentQueue<(long, DatabaseRecordChange)>());
+                            queue.Enqueue((lastIncludedIndex, DatabaseRecordChange.All));
+                            DatabaseChanged?.Invoke(this, (database, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                         }
-                    }, null);
-                }
-
-                var onValueChanged = ValueChanged;
-                if (onValueChanged != null)
-                {
-                    TaskExecutor.Execute(_ =>
-                    {
-                        onValueChanged.Invoke(this, (lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand)));
-                    }, null);
-                }
+                    }, token);
+                };
                 context.Transaction.Commit();
             }
             token.ThrowIfCancellationRequested();
@@ -3184,6 +3185,8 @@ namespace Raven.Server.ServerWide
             // reload license can send a notification which will open a write tx
             serverStore.LicenseManager.ReloadLicense();
             await serverStore.LicenseManager.CalculateLicenseLimits();
+            if (t != null)
+                await t;
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
