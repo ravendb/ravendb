@@ -2444,7 +2444,7 @@ namespace Raven.Server.Documents.Indexes
                                     query.Metadata.Includes,
                                     fieldsToFetch.IsProjection);
 
-                                if (query.Metadata.HasCounters)
+                                if (query.Metadata.HasCounterIncludes)
                                 {
                                     includeCountersCommand = new IncludeCountersCommand(
                                         DocumentDatabase,
