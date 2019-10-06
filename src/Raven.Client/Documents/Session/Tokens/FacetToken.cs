@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Session.Tokens
@@ -42,7 +43,7 @@ namespace Raven.Client.Documents.Session.Tokens
         public static FacetToken Create(Facet facet, Func<object, string> addQueryParameter)
         {
             var optionsParameterName = GetOptionsParameterName(facet, addQueryParameter);
-            var token = new FacetToken(facet.FieldName, facet.DisplayFieldName, null, optionsParameterName);
+            var token = new FacetToken(QueryFieldUtil.EscapeIfNecessary(facet.FieldName), QueryFieldUtil.EscapeIfNecessary(facet.DisplayFieldName), null, optionsParameterName);
 
             ApplyAggregations(facet, token);
 
@@ -52,7 +53,7 @@ namespace Raven.Client.Documents.Session.Tokens
         public static FacetToken Create(RangeFacet facet, Func<object, string> addQueryParameter)
         {
             var optionsParameterName = GetOptionsParameterName(facet, addQueryParameter);
-            var token = new FacetToken(null, facet.DisplayFieldName, facet.Ranges, optionsParameterName);
+            var token = new FacetToken(null, QueryFieldUtil.EscapeIfNecessary(facet.DisplayFieldName), facet.Ranges, optionsParameterName);
 
             ApplyAggregations(facet, token);
 
@@ -67,7 +68,7 @@ namespace Raven.Client.Documents.Session.Tokens
             foreach (var expression in facet.Ranges)
                 ranges.Add(RangeFacet<T>.Parse(null, expression, addQueryParameter));
 
-            var token = new FacetToken(null, facet.DisplayFieldName, ranges, optionsParameterName);
+            var token = new FacetToken(null, QueryFieldUtil.EscapeIfNecessary(facet.DisplayFieldName), ranges, optionsParameterName);
 
             ApplyAggregations(facet, token);
 
