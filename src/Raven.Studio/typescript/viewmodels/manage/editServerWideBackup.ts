@@ -8,7 +8,6 @@ import getServerWideBackupsCommand = require("commands/resources/getServerWideBa
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
-import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import cronEditor = require("viewmodels/common/cronEditor");
 import saveServerWideBackupCommand = require("commands/resources/saveServerWideBackupCommand");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
@@ -23,8 +22,6 @@ class editServerWideBackup extends viewModelBase {
     incrementalBackupCronEditor = ko.observable<cronEditor>();
 
     isAddingNewBackupTask = ko.observable<boolean>(true);    
-    
-    encryptionSection: setupEncryptionKey;
     
     constructor() {
         super();
@@ -73,20 +70,10 @@ class editServerWideBackup extends viewModelBase {
 
             return deferred
                 .then(() => {
-                    const encryptionSettings = this.configuration().encryptionSettings();
-                    this.encryptionSection = setupEncryptionKey.forServerWideBackup(encryptionSettings.key, encryptionSettings.keyConfirmation); 
-                    
                     this.dirtyFlag = this.configuration().dirtyFlag;
 
                     this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
                     this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
-
-                    if (!encryptionSettings.key()) {
-                        return this.encryptionSection.generateEncryptionKey()
-                            .done(() => {
-                                encryptionSettings.dirtyFlag().reset();
-                            });
-                    }
                 });
         };
 
@@ -112,10 +99,6 @@ class editServerWideBackup extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-
-        this.encryptionSection.syncQrCode();
-
-        this.configuration().encryptionSettings().key.subscribe(() => this.encryptionSection.syncQrCode());
 
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
 
@@ -172,6 +155,8 @@ class editServerWideBackup extends viewModelBase {
     }
 
     saveServerWideBackup() {
+        this.configuration().encryptionSettings().setKeyUsedBeforeSave();
+        
         if (!this.validate()) {
             return;
         }
@@ -222,7 +207,7 @@ class editServerWideBackup extends viewModelBase {
         if (!this.isValid(this.configuration().validationGroup))
             valid = false;
 
-        if (!this.isValid(this.configuration().encryptionSettings().validationGroup))
+        if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
             valid = false;
 
         if (!this.isValid(this.configuration().localSettings().validationGroup))

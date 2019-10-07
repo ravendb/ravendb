@@ -249,6 +249,10 @@
                                             <span data-bind="if: isServerWide()"><span data-bind="text: taskName"></span></span>
                                         </h3>
                                     </div>
+                                    <div>
+                                        <small title="Backup is encrypted" data-bind="visible: isBackupEncrypted"><i class="icon-encryption text-success"></i></small>
+                                        <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray"></i></small>
+                                    </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'backup-actions-template' }"></div>

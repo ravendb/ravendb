@@ -10,7 +10,6 @@ import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
-import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import cronEditor = require("viewmodels/common/cronEditor");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
 
@@ -24,8 +23,6 @@ class editPeriodicBackupTask extends viewModelBase {
     isAddingNewBackupTask = ko.observable<boolean>(true);
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
-
-    encryptionSection: setupEncryptionKey;
 
     constructor() {
         super();
@@ -68,23 +65,10 @@ class editPeriodicBackupTask extends viewModelBase {
 
             return deferred
                 .then(() => {
-                    const dbName = ko.pureComputed(() => {
-                        const db = this.activeDatabase();
-                        return db ? db.name : null;
-                    });
-                    const encryptionSettings = this.configuration().encryptionSettings();
-                    this.encryptionSection = setupEncryptionKey.forBackup(encryptionSettings.key, encryptionSettings.keyConfirmation, dbName);
                     this.dirtyFlag = this.configuration().dirtyFlag;
 
                     this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
                     this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
-                    
-                    if (!encryptionSettings.key()) {
-                        return this.encryptionSection.generateEncryptionKey()
-                            .done(() => {
-                                encryptionSettings.dirtyFlag().reset();
-                            });
-                    }
                 });
         };
 
@@ -116,10 +100,6 @@ class editPeriodicBackupTask extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
-
-        this.encryptionSection.syncQrCode(); 
-        
-        this.configuration().encryptionSettings().key.subscribe(() => this.encryptionSection.syncQrCode());
         
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
         
@@ -171,6 +151,8 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     savePeriodicBackup() {
+        this.configuration().encryptionSettings().setKeyUsedBeforeSave();
+        
         if (!this.validate()) {
              return;
         }
@@ -221,7 +203,7 @@ class editPeriodicBackupTask extends viewModelBase {
         if (!this.isValid(this.configuration().validationGroup))
             valid = false;
         
-        if (!this.isValid(this.configuration().encryptionSettings().validationGroup))
+        if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
             valid = false;
 
         if (!this.isValid(this.configuration().localSettings().validationGroup))
