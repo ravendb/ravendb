@@ -98,7 +98,7 @@ namespace Raven.Server.Utils.Cpu
                         RavenProcess.Execute(
                             _startInfo.FileName,
                             _startInfo.Arguments,
-                            1,
+                            60,
                             null,
                             lineOutHandler,
                             linkedCts.Token);

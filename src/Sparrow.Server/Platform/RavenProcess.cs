@@ -20,10 +20,10 @@ namespace Sparrow.Server.Platform
         public ProcessStartInfo StartInfo { get; set; }
         private bool _hasExited;
 
-        public event EventHandler ProcessExited;
-        private void OnProcessExited(EventArgs e)
+        public event EventHandler<ProcessExitedEventArgs> ProcessExited;
+        private void OnProcessExited(ProcessExitedEventArgs e)
         {
-            EventHandler handler = ProcessExited;
+            var handler = ProcessExited;
             handler?.Invoke(this, e);
         }
 
@@ -81,12 +81,12 @@ namespace Sparrow.Server.Platform
             }
         }
 
-        public Task<string> ReadToEndAsync()
+        private async Task<string> ReadToEndAsync()
         {
             using (var fs = new FileStream(StandardOutAndErr, FileAccess.Read))
             using (var sr = new StreamReader(fs))
             {
-                return sr.ReadToEndAsync();
+                return await sr.ReadToEndAsync().ConfigureAwait(false);
             }
         }
 
@@ -114,7 +114,7 @@ namespace Sparrow.Server.Platform
             }
         }
 
-        public static void Execute(string command, string arguments, int pollingTimeoutInSeconds, EventHandler exitHandler, Action<object, string> lineOutputHandler, CancellationToken ctk)
+        public static void Execute(string command, string arguments, int waitForExitTimeoutInSeconds, EventHandler<ProcessExitedEventArgs> exitHandler, Action<object, string> lineOutputHandler, CancellationToken ctk)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -131,30 +131,26 @@ namespace Sparrow.Server.Platform
                 using (var fs = new FileStream(process.StandardOutAndErr, FileAccess.Read))
                 using (var sr = new StreamReader(fs, Encoding.UTF8))
                 {
-                    while (ctk.IsCancellationRequested == false)
+                    try
                     {
-                        var rc = Pal.rvn_wait_for_close_process(process._pid, pollingTimeoutInSeconds, out var exitCode, out var errorCode);
-                        if (rc == PalFlags.FailCodes.Success ||
-                            rc == PalFlags.FailCodes.FailChildProcessFailure)
-                        {
-                            process._hasExited = true;
-                            var args = new ProcessExitedEventArgs
-                            {
-                                ExitCode = exitCode,
-                                Pid = process._pid
-                            };
-                            try
-                            {
-                                process.ReadLines(sr, lineOutputHandler, ctk);
-                            }
-                            catch
-                            {
-                                // ignore, just flush stdout
-                            }
-                            process.OnProcessExited(args);
-                            break;
-                        }
                         process.ReadLines(sr, lineOutputHandler, ctk);
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
+
+                    var rc = Pal.rvn_wait_for_close_process(process._pid, waitForExitTimeoutInSeconds, out var exitCode, out var errorCode);
+                    if (rc == PalFlags.FailCodes.Success ||
+                        rc == PalFlags.FailCodes.FailChildProcessFailure)
+                    {
+                        process._hasExited = true;
+                        var args = new ProcessExitedEventArgs
+                        {
+                            ExitCode = exitCode,
+                            Pid = process._pid
+                        };
+                        process.OnProcessExited(args);
                     }
                 }
             }
@@ -165,7 +161,17 @@ namespace Sparrow.Server.Platform
             if (_hasExited == false)
             {
                 _hasExited = true;
-                var task = new Task(() => ReadToEndAsync());
+                var task = new Task(async () =>
+                {
+                    try
+                    {
+                        await ReadToEndAsync().ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // nothing.. just flush
+                    }
+                });
                 try
                 {
                     task.Start();
@@ -174,6 +180,7 @@ namespace Sparrow.Server.Platform
                 {
                     // nothing.. just flush
                 }
+
 
 
                 var rc = Pal.rvn_wait_for_close_process(_pid, 5, out var exitCode, out var errorCode);
@@ -195,9 +202,7 @@ namespace Sparrow.Server.Platform
                 try
                 {
                     if (task.IsFaulted == false)
-                    {
-                        Task.WaitAny(new [] {task}, TimeSpan.FromSeconds(15));
-                    }
+                        task.Wait(TimeSpan.FromSeconds(15));
                 }
                 catch
                 {

@@ -28,21 +28,40 @@ _parse_cmd_line(char* line, char *filename)
 {
     int argc = 2;
     char** argv = malloc(argc);
+    if (argv == NULL)
+        return NULL;
     argv[0] = filename;
     argv[--argc] = NULL;    
     if (line == NULL || *line == '\0')
+    {
+        char **tmpargv = realloc(argv, sizeof(long)*(argc + 2));
+        if (tmpargv == NULL)
+        {
+            free(argv);
+            return NULL;
+        }
+        argv = tmpargv;        
+        argv[1] = "";
+        argv[2] = NULL;
         return argv;
+    }
     
     char *rest = line;
     char *token;
 
-    while((token = strtok_r(rest, " \t\n", &rest)))
-    {
+    const char delimiters[] = " \t\n";
+    while((token = strtok_r(rest, delimiters, &rest)))
+    {        
         argv[argc++] = token;
-        argv = realloc(argv, argc + 1);
+        char **tmpargv = realloc(argv, sizeof(long)*(argc + 1));
+        if (tmpargv == NULL)
+        {
+            free(argv);
+            return NULL;
+        }
+        argv = tmpargv;
     }
     argv[argc] = NULL;
-
     return argv;
 }
 
@@ -123,7 +142,7 @@ _redirect_std(int fd, int fileno)
 {
     int32_t result = dup2(fd, fileno);
     while ( result < 0 && errno == EINTR)
-        result = dup2(fd, STDOUT_FILENO);
+        result = dup2(fd, fileno);
     return result;
 }
 
@@ -158,6 +177,11 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     sigset_t old_signal_set;
 
     char *modified = malloc(strlen(filename) + 3);
+    if (modified == NULL)
+    {
+        *detailed_error_code = errno;
+        return FAIL_NOMEM;
+    }
     *modified = '\0';
     if (filename[0] != '/')
     {
@@ -166,9 +190,15 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     }
     strcat(modified, (char *)filename);
 
-    char **argv = _parse_cmd_line(cmdline, modified);
-
     int32_t rc = SUCCESS;
+    
+    char **argv = _parse_cmd_line(cmdline, modified);
+    if (argv == NULL)
+    {
+        *detailed_error_code = errno;
+        free(modified);
+        return FAIL_NOMEM;
+    }
 
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &thread_cancel_state);
     
@@ -314,7 +344,7 @@ rvn_wait_for_close_process(void* pid, int32_t closewait_timeout_seconds, int32_t
             
             if (WIFSIGNALED(status) || WIFSTOPPED(status))
             {
-                *exit_code = WIFSIGNALED(status) || WIFSTOPPED(status);
+                *exit_code = WIFSIGNALED(status) | WIFSTOPPED(status);
                 return FAIL_CHILD_PROCESS_FAILURE;
             }
             *exit_code = -1;
