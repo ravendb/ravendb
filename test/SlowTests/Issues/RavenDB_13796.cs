@@ -24,7 +24,6 @@ namespace SlowTests.Issues
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
-            string tag1, tag2, tag3;
             using (var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
