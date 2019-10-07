@@ -54,7 +54,7 @@ namespace SlowTests.Issues
 
                     var mre = new ManualResetEvent(false);
 
-                    reqEx.FailedRequest += (x, y) =>
+                    reqEx.OnFailedRequest += (sender, args) =>
                     {
                         mre.WaitOne();
                     };
