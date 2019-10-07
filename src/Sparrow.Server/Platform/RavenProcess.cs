@@ -47,7 +47,7 @@ namespace Sparrow.Server.Platform
         public void Start(CancellationToken ctk)
         {
             if (StartInfo?.FileName == null)
-                throw new InvalidOperationException("RavenProcess Start() must be supplied with valid startInfo object and set Filename");
+                throw new InvalidOperationException($"RavenProcess {nameof(Start)} must be supplied with valid {nameof(StartInfo)} object and set {nameof(StartInfo.FileName)}");
 
             var rc = Pal.rvn_spawn_process(StartInfo.FileName, StartInfo.Arguments, out var pid, out var stdin, out var stdout, out var errorCode);
             if (rc != PalFlags.FailCodes.Success)
@@ -105,7 +105,7 @@ namespace Sparrow.Server.Platform
             while (ctk.IsCancellationRequested == false)
             {
                 var lineTask = sr.ReadLineAsync();
-                if (lineTask.Wait(-1, ctk) == false)
+                if (lineTask.Wait(Timeout.Infinite, ctk) == false)
                     break;
                 var line = lineTask.Result;
                 OnLineOutput(line, ctk);
@@ -195,8 +195,8 @@ namespace Sparrow.Server.Platform
                 }
                 catch (Exception ex)
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Kill {StartInfo.FileName} failed", ex);
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Kill {StartInfo.FileName} failed", ex);
                 }
 
                 try

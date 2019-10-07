@@ -86,7 +86,7 @@ namespace Raven.Server.Utils.Cpu
                             }
 
                             lastReceivedLine = DateTime.UtcNow;
-                            var errString = HandleInfoReceived(l);
+                            var errString = TryHandleInfoReceived(l);
                             if (errString != null)
                             {
                                 Interlocked.Exchange(ref _isDataValid, 0);
@@ -128,7 +128,7 @@ namespace Raven.Server.Utils.Cpu
             }
         }
 
-        private string HandleInfoReceived(string data)
+        private string TryHandleInfoReceived(string data)
         {
             if (data == null)
             {
