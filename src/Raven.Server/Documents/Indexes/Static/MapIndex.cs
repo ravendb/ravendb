@@ -114,14 +114,14 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_referencedCollections.Count == 0)
                 return base.CalculateIndexEtag(documentsContext, indexContext, query, isStale);
 
-            var minLength = MinimumSizeForCalculateIndexEtagLength();
+            var minLength = MinimumSizeForCalculateIndexEtagLength(query);
             var length = minLength +
                          sizeof(long) * 2 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
 
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
-            UseAllDocumentsEtag(documentsContext, query, length, indexEtagBytes);
+            UseAllDocumentsAndCounterEtag(documentsContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 

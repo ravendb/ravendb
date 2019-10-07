@@ -3081,13 +3081,13 @@ namespace Raven.Server.Documents.Indexes
         protected virtual unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext,
             TransactionOperationContext indexContext, QueryMetadata q, bool isStale)
         {
-            var length = MinimumSizeForCalculateIndexEtagLength();
+            var length = MinimumSizeForCalculateIndexEtagLength(q);
 
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
-            UseAllDocumentsEtag(documentsContext, q, length, indexEtagBytes);
+            UseAllDocumentsAndCounterEtag(documentsContext, q, length, indexEtagBytes);
 
             unchecked
             {
@@ -3095,7 +3095,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsEtag(DocumentsOperationContext documentsContext, QueryMetadata q, int length, byte* indexEtagBytes)
+        protected static unsafe void UseAllDocumentsAndCounterEtag(DocumentsOperationContext documentsContext, QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q?.HasIncludeOrLoad == true)
             {
@@ -3107,14 +3107,25 @@ namespace Raven.Server.Documents.Indexes
                 //buffer[2] - last processed doc etag
                 //buffer[3] - last process tombstone etag
             }
-        }
 
-        protected int MinimumSizeForCalculateIndexEtagLength()
+            if (q?.CounterIncludes != null || q?.HasCounterSelect == true)
+            {
+                Debug.Assert(length > sizeof(long) * 4);
+
+                *(long*)(indexEtagBytes + length - sizeof(long)) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
+            }
+        }   
+
+        protected int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
         {
             var length = sizeof(long) * 4 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
                          1 + // isStale
                          1; // index state
+
+            if (q.CounterIncludes != null || q.HasCounterSelect)
+                length += sizeof(long); // last counter etag
+
             return length;
         }
 
