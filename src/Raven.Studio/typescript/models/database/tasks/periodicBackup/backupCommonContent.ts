@@ -44,7 +44,7 @@
     static readonly serverwideSnapshotEncryptionInfo =
         "When selecting the <strong>'Snapshot'</strong> backup-type, encryption is dependant on the database the task is operating on.<br></li>" +
         "<ul>" +
-            "<li>If the database backed up is <strong>encrypted</strong> - the Snapshot will also be encrypted.<br></li>" +
+            "<li>If the database backed up is <strong>encrypted</strong> - the Snapshot will also be encrypted (using the database key).<br></li>" +
             "<li>If the database backed up is <strong>not-encrypted</strong> - the Snapshot will not be encrytped as well.</li>" +
         "</ul>";
     
