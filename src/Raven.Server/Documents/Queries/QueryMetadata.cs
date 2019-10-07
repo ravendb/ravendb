@@ -117,9 +117,7 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasTimings { get; private set; }
 
-        public bool HasCounters => _hasCounterSelect || HasCounterIncludes;
-
-        public bool HasCounterIncludes => CounterIncludes != null;
+        public bool HasCounterSelect { get; internal set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
 
@@ -166,8 +164,6 @@ namespace Raven.Server.Documents.Queries
         public DateTime CreatedAt;
 
         public DateTime LastQueriedAt;
-
-        private bool _hasCounterSelect;
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
@@ -539,7 +535,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 Query.SelectFunctionBody.Program = ValidateScript(parameters);
-                HasLoadOrIncludeInProjection(Query.SelectFunctionBody.Program);
+                HasLoadOrIncludeOrCounterInProjection(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
             {
@@ -1036,7 +1032,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
-                        HasLoadOrIncludeInProjection(tuple.Program);
+                        HasLoadOrIncludeOrCounterInProjection(tuple.Program);
 
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
@@ -1148,7 +1144,7 @@ namespace Raven.Server.Documents.Queries
                             counterField.FunctionArgs = new SelectField[0];
                         }
 
-                        _hasCounterSelect = true;
+                        HasCounterSelect = true;
 
                         return counterField;
                     }
@@ -1205,13 +1201,13 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
-        private void HasLoadOrIncludeInProjection(Esprima.Ast.Program ast)
+        private void HasLoadOrIncludeOrCounterInProjection(Esprima.Ast.Program ast)
         {
-            if (HasIncludeOrLoad)
+            if (HasIncludeOrLoad && CounterIncludes != null)
                 return;
 
-            var loadVisitor = new EsprimaHasLoadOrIncludeVisitor(this);
-            loadVisitor.Visit(ast);
+            var visitor = new EsprimaHasLoadOrIncludeOrCounterVisitor(this);
+            visitor.Visit(ast);
         }
 
         private SuggestionField CreateSuggest(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)

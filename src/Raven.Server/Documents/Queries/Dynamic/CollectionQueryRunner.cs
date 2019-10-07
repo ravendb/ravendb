@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 IncludeCountersCommand includeCountersCommand = null;
-                if (query.Metadata.HasCounterIncludes)
+                if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
                         Database,
@@ -228,7 +228,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
             var bufferSize = 3;
-            if (query.HasCounters)
+            var hasCounters = query.HasCounterSelect || query.CounterIncludes != null;
+            if (hasCounters)
                 bufferSize++;
 
             var collection = query.CollectionName;
@@ -244,7 +245,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(context.Transaction.InnerTransaction);
                 buffer[2] = numberOfDocuments;
 
-                if (query.HasCounters)
+                if (hasCounters)
                     buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
 
                 resultToFill.TotalResults = (int)numberOfDocuments;
@@ -256,7 +257,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
                 buffer[2] = collectionStats.Count;
 
-                if (query.HasCounters)
+                if (hasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
