@@ -263,7 +263,7 @@ namespace Raven.Server.Utils.Cpu
             string exec,
             string args,
             NotificationCenter.NotificationCenter notificationCenter,
-            CancellationToken serverStoreServerShutdown)
+            CancellationToken serverShutdown)
         {
             _inspector = new CpuUsageExtensionPoint(
                 contextPool,
@@ -271,7 +271,7 @@ namespace Raven.Server.Utils.Cpu
                 args,
                 notificationCenter
             );
-            _serverShutdown = CancellationToken.None;
+            _serverShutdown = serverShutdown;
         }
 
         public (double MachineCpuUsage, double ProcessCpuUsage) Calculate()

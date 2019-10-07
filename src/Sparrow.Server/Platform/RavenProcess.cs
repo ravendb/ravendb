@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -19,6 +20,8 @@ namespace Sparrow.Server.Platform
     {
         public ProcessStartInfo StartInfo { get; set; }
         private bool _hasExited;
+
+        private const int StreamReadLength = 4096;
 
         public event EventHandler<ProcessExitedEventArgs> ProcessExited;
         private void OnProcessExited(ProcessExitedEventArgs e)
@@ -69,15 +72,22 @@ namespace Sparrow.Server.Platform
 
         private void ReadTo(StreamWriteDelegate outputDel)
         {
-            var bytes = new byte[4096];
-            using (var fs = new FileStream(StandardOutAndErr, FileAccess.Read))
+            var bytes = ArrayPool<byte>.Shared.Rent(StreamReadLength);
+            try
             {
-                var read = fs.Read(bytes, 0, 4096);
-                while (read != 0)
+                using (var fs = new FileStream(StandardOutAndErr, FileAccess.Read))
                 {
-                    outputDel?.Invoke(new Span<byte>(bytes, 0, read));
-                    read = fs.Read(bytes, 0, 4096);
+                    var read = fs.Read(bytes, 0, StreamReadLength);
+                    while (read != 0)
+                    {
+                        outputDel?.Invoke(new Span<byte>(bytes, 0, read));
+                        read = fs.Read(bytes, 0, StreamReadLength);
+                    }
                 }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(bytes);
             }
         }
 

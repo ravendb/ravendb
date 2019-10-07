@@ -65,7 +65,7 @@ namespace Raven.Server.Utils.Cpu
                 var lastReceivedLine = DateTime.UtcNow;
                 while (retry-- > 0)
                 {
-                    var cts = new CancellationTokenSource();
+                    using (var cts = new CancellationTokenSource())
                     using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, ctk))
                     {
                         var lineOutHandler = new Action<object, string>((p, l) =>
