@@ -9,6 +9,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
@@ -64,6 +65,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (_locker.Obtain() == false)
                     throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{_indexName}' index.");
+            }
+            catch (Exception e) when (e.IsOutOfMemory())
+            {
+                throw;
             }
             catch (Exception e)
             {

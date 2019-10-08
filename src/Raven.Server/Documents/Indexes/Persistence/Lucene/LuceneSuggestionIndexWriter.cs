@@ -250,6 +250,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_indexWriter == null)
                     CreateIndexWriter(state);
             }
+            catch (Exception e) when (e.IsOutOfMemory())
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new IndexWriterCreationException(e, _field);

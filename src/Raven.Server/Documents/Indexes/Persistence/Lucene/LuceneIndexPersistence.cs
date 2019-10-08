@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
@@ -292,6 +293,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
                     IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase, state);
             }
+            catch (Exception e) when (e.IsOutOfMemory())
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new IndexWriteException(e);
@@ -307,7 +312,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var item in _fields)
             {
-                if (!item.Value.HasSuggestions)
+                if (item.Value.HasSuggestions == false)
                     continue;
 
                 string field = item.Key;
@@ -320,6 +325,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                         _index._indexStorage.DocumentDatabase, state);
 
                     _suggestionsIndexWriters[field] = writer;
+                }
+                catch (Exception e) when (e.IsOutOfMemory())
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {
