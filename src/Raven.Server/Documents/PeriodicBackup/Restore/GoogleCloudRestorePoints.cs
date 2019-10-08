@@ -57,9 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override Task<ZipArchive> GetZipArchive(string filePath)
         {
-            var stream = new EchoStream(32);
-            _ = _client.DownloadObjectAsync(filePath, stream);
-            return Task.FromResult(new ZipArchive(stream, ZipArchiveMode.Read));
+            return Task.FromResult(new ZipArchive(_client.DownloadObject(filePath), ZipArchiveMode.Read));
         }
 
         protected override string GetFileName(string fullPath)

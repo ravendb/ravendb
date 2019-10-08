@@ -12,6 +12,7 @@ using Google.Cloud.Storage.V1;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
+using Sparrow.Server.Utils;
 using Object = Google.Apis.Storage.v1.Data.Object;
 
 namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
@@ -114,18 +115,24 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 }));
         }
 
-        public Task DownloadObjectAsync(string fileName, Stream stream)
+        public Stream DownloadObject(string fileName)
         {
-            return _client.DownloadObjectAsync(
-                _bucketName,
-                fileName,
-                destination: stream,
-                new DownloadObjectOptions
-                {
-                    ChunkSize = (int)DownloadChunkSize.GetValue(SizeUnit.Bytes)
-                },
-                cancellationToken: CancellationToken
-            );
+            var stream = new EchoStream(maxQueueDepth: 32)
+            {
+                ReadTimeout = (int)TimeSpan.FromSeconds(100).TotalMilliseconds
+            };
+
+            stream.TaskToWatch(_client.DownloadObjectAsync(
+               _bucketName,
+               fileName,
+               destination: stream,
+               new DownloadObjectOptions
+               {
+                   ChunkSize = (int)DownloadChunkSize.GetValue(SizeUnit.Bytes)
+               },
+               cancellationToken: CancellationToken));
+
+            return stream;
         }
 
         public Task<Object> GetObjectAsync(string fileName)

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
@@ -22,16 +23,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override Task<Stream> GetStream(string path)
         {
-            Stream stream = new EchoStream(32);
-            _ = _client.DownloadObjectAsync(path, stream);
-            return Task.FromResult(stream);
+            return Task.FromResult(_client.DownloadObject(path));
         }
 
         protected override Task<ZipArchive> GetZipArchiveForSnapshot(string path)
         {
-            var stream = new EchoStream(32);
-            _ = _client.DownloadObjectAsync(path, stream);
-            return Task.FromResult(new ZipArchive(stream, ZipArchiveMode.Read));
+            return Task.FromResult(new ZipArchive(_client.DownloadObject(path), ZipArchiveMode.Read));
         }
 
         protected override Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path)
