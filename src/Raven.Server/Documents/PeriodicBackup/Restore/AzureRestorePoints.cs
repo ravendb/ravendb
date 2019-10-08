@@ -47,11 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (TryExtractDateFromFileName(obj.Name, out var lastModified) == false)
                     lastModified = Convert.ToDateTime(obj.LastModified);
 
-                filesInfo.Add(new FileInfoDetails
-                {
-                    FullPath = obj.Name,
-                    LastModified = lastModified
-                });
+                filesInfo.Add(new FileInfoDetails(obj.Name, null, lastModified));
             }
 
             return filesInfo;

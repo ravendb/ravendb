@@ -42,11 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (TryExtractDateFromFileName(filePath, out var lastModified) == false)
                     lastModified = File.GetLastWriteTimeUtc(filePath).ToLocalTime();
 
-                filesInfo.Add(new FileInfoDetails
-                {
-                    FullPath = filePath,
-                    LastModified = lastModified
-                });
+                filesInfo.Add(new FileInfoDetails(filePath, Path.GetDirectoryName(filePath), lastModified));
             }
 
             return Task.FromResult(filesInfo);
@@ -69,7 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         public override void Dispose()
-        {            
+        {
         }
     }
 }

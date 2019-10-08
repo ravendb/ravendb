@@ -121,8 +121,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 .ThenBy(x => Path.GetExtension(x.FullPath), PeriodicBackupFileExtensionComparer.Instance)
                 .ThenBy(x => x.LastModified);
 
-            var folderDetails = ParseFolderNameFrom(path);
-            var filesCount = 0;
             var firstFile = true;
             var snapshotRestore = false;
             var isEncrypted = false;
@@ -153,26 +151,33 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 }
 
                 firstFile = false;
-                filesCount++;
 
                 while (_sortedList.ContainsKey(fileInfo.LastModified))
                 {
                     fileInfo.LastModified = fileInfo.LastModified.AddMilliseconds(1);
                 }
 
+                var folderDetails = ParseFolderNameFrom(fileInfo.DirectoryPath);
+
                 _sortedList.Add(fileInfo.LastModified,
                     new RestorePoint
                     {
                         DateTime = fileInfo.LastModified,
-                        Location = path,
+                        Location = fileInfo.DirectoryPath,
                         FileName = fileInfo.FullPath,
                         IsSnapshotRestore = snapshotRestore,
                         IsIncremental = BackupUtils.IsIncrementalBackupFile(extension),
                         IsEncrypted = isEncrypted,
-                        FilesToRestore = filesCount,
                         DatabaseName = folderDetails.DatabaseName,
                         NodeTag = folderDetails.NodeTag
                     });
+            }
+
+            foreach (var restorePointGroup in _sortedList.Values.GroupBy(x => x.Location))
+            {
+                var count = restorePointGroup.Count();
+                foreach (var restorePoint in restorePointGroup)
+                    restorePoint.FilesToRestore = count--;
             }
         }
 
@@ -218,4 +223,4 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     }
 }
 
-    
+
