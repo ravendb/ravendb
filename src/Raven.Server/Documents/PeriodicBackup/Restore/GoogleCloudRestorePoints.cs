@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)
         {
-            var objects = await _client.ListObjectsAsync(path, "/");
+            var objects = await _client.ListObjectsAsync(path, delimiter: null);
 
             var filesInfo = new List<FileInfoDetails>();
 
@@ -37,14 +37,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (TryExtractDateFromFileName(obj.Name, out var lastModified) == false)
                     lastModified = Convert.ToDateTime(obj.Updated);
 
-                filesInfo.Add(new FileInfoDetails
-                {
-                    FullPath = obj.Name,
-                    LastModified = lastModified
-                });
+                var fullPath = obj.Name;
+                var directoryPath = GetDirectoryName(fullPath);
+                filesInfo.Add(new FileInfoDetails(fullPath, directoryPath, lastModified));
             }
 
             return filesInfo;
+
+            string GetDirectoryName(string path)
+            {
+                var index = path.LastIndexOf('/');
+                if (index <= 0)
+                    return string.Empty;
+
+                return path.Substring(0, index + 1);
+            }
         }
 
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)
