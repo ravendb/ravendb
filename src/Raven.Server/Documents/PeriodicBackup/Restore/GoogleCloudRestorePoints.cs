@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -54,11 +55,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return ParseFolderName(lastFolderName);
         }
 
-        protected override async Task<ZipArchive> GetZipArchive(string filePath)
+        protected override Task<ZipArchive> GetZipArchive(string filePath)
         {
-            var file = new MemoryStream();
-            await _client.DownloadObjectAsync(filePath, file);
-            return new ZipArchive(file, ZipArchiveMode.Read);
+            var stream = new EchoStream(32);
+            _ = _client.DownloadObjectAsync(filePath, stream);
+            return Task.FromResult(new ZipArchive(stream, ZipArchiveMode.Read));
         }
 
         protected override string GetFileName(string fullPath)
