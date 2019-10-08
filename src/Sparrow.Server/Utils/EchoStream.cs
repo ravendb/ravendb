@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,23 +49,24 @@ namespace Sparrow.Server.Utils
             }
         }
 
-        private long _Length;
+        private long _length;
 
         public override long Length
         {
             get
             {
-                return _Length;
+                return _length;
             }
         }
 
-        private long _Position;
+        private long _position;
+        private Task _task;
 
         public override long Position
         {
             get
             {
-                return _Position;
+                return _position;
             }
             set
             {
@@ -102,6 +104,8 @@ namespace Sparrow.Server.Utils
             if (m_Closed || buffer.Length - offset < count || count <= 0)
                 return;
 
+            AssertTask();
+
             byte[] newBuffer;
             if (!CopyBufferOnWrite && offset == 0 && count == buffer.Length)
                 newBuffer = buffer;
@@ -113,7 +117,7 @@ namespace Sparrow.Server.Utils
             if (!_buffers.TryAdd(newBuffer, WriteTimeout))
                 throw new TimeoutException("EchoStream Write() Timeout");
 
-            _Length += count;
+            _length += count;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -122,6 +126,8 @@ namespace Sparrow.Server.Utils
                 return 0;
             lock (_lock)
             {
+                AssertTask();
+
                 if (m_count == 0 && _buffers.Count == 0)
                 {
                     if (m_Closed)
@@ -133,7 +139,10 @@ namespace Sparrow.Server.Utils
                         m_count = m_buffer.Length;
                     }
                     else
+                    {
+                        AssertTask();
                         return m_Closed ? -1 : 0;
+                    }
                 }
 
                 int returnBytes = 0;
@@ -147,7 +156,10 @@ namespace Sparrow.Server.Utils
                             m_count = m_buffer.Length;
                         }
                         else
+                        {
+                            AssertTask();
                             break;
+                        }
                     }
 
                     var bytesToCopy = (count < m_count) ? count : m_count;
@@ -160,16 +172,24 @@ namespace Sparrow.Server.Utils
                     returnBytes += bytesToCopy;
                 }
 
-                _Position += returnBytes;
+                _position += returnBytes;
 
                 return returnBytes;
             }
         }
 
+        internal void TaskToWatch(Task task)
+        {
+            if (task == null)
+                throw new ArgumentNullException(nameof(task));
+
+            _task = task;
+        }
+
         public override int ReadByte()
         {
             byte[] returnValue = new byte[1];
-            return (Read(returnValue, 0, 1) <= 0 ? -1 : (int)returnValue[0]);
+            return Read(returnValue, 0, 1) <= 0 ? -1 : returnValue[0];
         }
 
         public override void Flush()
@@ -184,6 +204,17 @@ namespace Sparrow.Server.Utils
         public override void SetLength(long value)
         {
             throw new NotImplementedException();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertTask()
+        {
+            var task = _task;
+            if (task == null)
+                return;
+
+            if (task.IsFaulted)
+                task.Wait();
         }
     }
 }
