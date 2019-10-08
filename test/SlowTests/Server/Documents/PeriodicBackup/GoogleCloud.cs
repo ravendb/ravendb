@@ -17,14 +17,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             using (var client = new RavenGoogleCloudClient(GoogleCloudFact.GoogleCloudSettings))
             {
-                var buckets =client.ListBuckets();
+                var buckets = client.ListBuckets();
                 foreach (var b in buckets)
                 {
                     Assert.NotNull(b.Name);
                 }
             }
         }
-        
+
         [GoogleCloudFact]
         public async Task uploading_objects()
         {
@@ -58,9 +58,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         fileName,
                         new MemoryStream(Encoding.UTF8.GetBytes("123"))
                     );
-                    var file = new MemoryStream();
-                    await client.DownloadObjectAsync(fileName, file);
-                    Assert.Equal("123", Encoding.ASCII.GetString(file.ToArray()));
+                    var stream = client.DownloadObject(fileName);
+                    using (var sr = new StreamReader(stream))
+                    {
+                        Assert.Equal("123", sr.ReadToEnd());
+                    }
                 }
 
                 finally
@@ -95,7 +97,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 try
                 {
                     await client.UploadObjectAsync(
-                        fileName, 
+                        fileName,
                         new MemoryStream(Encoding.UTF8.GetBytes("456")),
                         new Dictionary<string, string>
                         {
@@ -113,7 +115,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
-        
+
         [GoogleCloudFact]
         public async Task list_objects()
         {
@@ -125,8 +127,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     // Upload some files
                     var content = Encoding.UTF8.GetBytes("hello, world");
-                    await client.UploadObjectAsync(file1,  new MemoryStream(content));
-                    await client.UploadObjectAsync(file2,  new MemoryStream(content));
+                    await client.UploadObjectAsync(file1, new MemoryStream(content));
+                    await client.UploadObjectAsync(file2, new MemoryStream(content));
 
                     var objects = await client.ListObjectsAsync();
                     Assert.Contains(objects, o => o.Name == file1);
