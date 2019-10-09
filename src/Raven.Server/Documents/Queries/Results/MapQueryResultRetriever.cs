@@ -27,11 +27,7 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
                 if (FieldsToFetch.IsProjection)
-                {
-                    var proj = GetProjection(input, id, state, lucene);
-                    FinishDocumentSetup(proj, lucene);
-                    return proj;
-                }
+                    return GetProjection(input, id, state, lucene);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {

@@ -129,9 +129,9 @@ namespace Raven.Server.Documents
 
         public static SpatialResult Invalid = new SpatialResult
         {
-            Distance = double.MaxValue,
-            Latitude = double.MaxValue,
-            Longitude = double.MaxValue
+            Distance = double.NaN,
+            Latitude = double.NaN,
+            Longitude = double.NaN
         };
 
         public DynamicJsonValue ToJson()
