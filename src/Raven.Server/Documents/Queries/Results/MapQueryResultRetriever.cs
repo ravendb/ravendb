@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc lucene, IState state)
+        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
         {
             using (RetrieverScope?.Start())
             {
@@ -27,13 +27,13 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
                 if (FieldsToFetch.IsProjection)
-                    return GetProjection(input, id, state, lucene);
+                    return GetProjection(input, scoreDoc, id, state);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {
                     var doc = DirectGet(null, id, DocumentFields, state);
 
-                    FinishDocumentSetup(doc, lucene);
+                    FinishDocumentSetup(doc, scoreDoc);
                     return doc;
                 }
             }

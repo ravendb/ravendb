@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public abstract Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc lucene, IState state);
+        public abstract Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state);
 
         public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input, string lowerId, IState state, Lucene.Net.Search.ScoreDoc scoreDoc)
+        protected Document GetProjection(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, string lowerId, IState state)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
