@@ -166,6 +166,8 @@ namespace Raven.Client.Documents
             RequestExecutor CreateRequestExecutor()
             {
                 var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions);
+                RegisterEvents(requestExecutor);
+
                 RequestExecutorCreated?.Invoke(this, requestExecutor);
                 return requestExecutor;
             }
@@ -173,6 +175,8 @@ namespace Raven.Client.Documents
             RequestExecutor CreateRequestExecutorForSingleNode()
             {
                 var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions);
+                RegisterEvents(forSingleNode);
+
                 RequestExecutorCreated?.Invoke(this, forSingleNode);
                 return forSingleNode;
             }

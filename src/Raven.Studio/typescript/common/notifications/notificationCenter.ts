@@ -28,6 +28,7 @@ import virtualUpdateByQueryDetails = require("viewmodels/common/notificationCent
 import virtualDeleteByQueryDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualDeleteByQueryDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import revertRevisionsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/revertRevisionsDetails");
+import enforceRevisionsConfigurationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/enforceRevisionsConfigurationDetails");
 import replayTransactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/replayTransactionCommandsDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
 import generateClientCertificateDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails");
@@ -129,6 +130,7 @@ class notificationCenter {
             deleteDocumentsDetails,
             bulkInsertDetails,
             revertRevisionsDetails,
+            enforceRevisionsConfigurationDetails,
             compactDatabaseDetails,
             replayTransactionCommandsDetails,
             transactionCommandsDetails,

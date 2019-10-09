@@ -1213,12 +1213,19 @@ namespace Raven.Server.Json
 
         public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out int numberOfResults)
         {
+            WriteDocuments(writer, context, documents.GetEnumerator(), metadataOnly, out numberOfResults);
+        }
+
+        public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly,
+            out int numberOfResults)
+        {
             numberOfResults = 0;
 
             writer.WriteStartArray();
 
             var first = true;
-            foreach (var document in documents)
+
+            while (documents.MoveNext())
             {
                 numberOfResults++;
 
@@ -1226,7 +1233,8 @@ namespace Raven.Server.Json
                     writer.WriteComma();
                 first = false;
 
-                WriteDocument(writer, context, document, metadataOnly);
+
+                WriteDocument(writer, context, documents.Current, metadataOnly);
             }
 
             writer.WriteEndArray();

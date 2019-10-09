@@ -157,4 +157,20 @@ namespace Raven.Client.Documents.Session
             Entity = entity;
         }
     }
+
+    public class FailedRequestEventArgs : EventArgs
+    {
+        public string Database { get; }
+
+        public string Url { get; }
+
+        public Exception Exception { get; }
+
+        internal FailedRequestEventArgs(string database, string url, Exception exception)
+        {
+            Database = database;
+            Url = url;
+            Exception = exception;
+        }
+    }
 }

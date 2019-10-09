@@ -98,8 +98,8 @@
     </div>
     <h3>Encryption
         <span data-bind="visible: !$parent.isAddingNewBackupTask()">
-            <small title="Backup is encrypted" data-bind="visible: isBackupEncryped"><i class="icon-encryption text-success encryption-lock-icon"></i></small>
-            <small title="Backup is not encrypted" data-bind="visible: !isBackupEncryped()"><i class="icon-unlock text-gray encryption-lock-icon"></i></small>
+            <small title="Backup is encrypted" data-bind="visible: isBackupEncrypted"><i class="icon-encryption text-success encryption-lock-icon"></i></small>
+            <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray encryption-lock-icon"></i></small>
         </span>
     </h3>
     <div class="panel" data-bind="with: encryptionSettings">

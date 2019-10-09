@@ -16,12 +16,17 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Voron;
 
 namespace Raven.Server.Documents.Expiration
 {
     public class ExpiredDocumentsCleaner : BackgroundWorkBase
     {
+        internal static int BatchSize = PlatformDetails.Is32Bits == false
+            ? 4096
+            : 1024;
+
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _refreshPeriod;
         private readonly TimeSpan _expirationPeriod;
@@ -57,7 +62,11 @@ namespace Raven.Server.Documents.Expiration
                 }
 
                 expiredDocumentsCleaner?.Dispose();
-                if (dbRecord.Expiration?.Disabled == true && dbRecord.Refresh?.Disabled == true)
+
+                var hasExpiration = dbRecord.Expiration?.Disabled == false;
+                var hasRefresh = dbRecord.Refresh?.Disabled == false;
+
+                if (hasExpiration == false && hasRefresh == false)
                     return null;
 
                 var cleaner = new ExpiredDocumentsCleaner(database, dbRecord.Expiration, dbRecord.Refresh);
@@ -127,30 +136,42 @@ namespace Raven.Server.Documents.Expiration
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Trying to find {(forExpiration ? "expired" : "require refreshing")} documents to delete");
 
+                DatabaseTopology topology;
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
+                }
+
+                var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    DatabaseTopology topology;
-                    using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                    using (serverContext.OpenReadTransaction())
+                    while (true)
                     {
-                        topology = _database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, _database.Name);
-                    }
+                        context.Reset();
+                        context.Renew();
 
-                    var isFirstInTopology = string.Equals(topology.AllNodes.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
+                        using (context.OpenReadTransaction())
+                        {
+                            var expired =
+                                forExpiration ?
+                                    _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, BatchSize, out var count, out var duration, CancellationToken) :
+                                    _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, BatchSize, out count, out duration, CancellationToken);
 
-                    using (context.OpenReadTransaction())
-                    {
-                        var expired =
-                            forExpiration ?
-                                _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, isFirstInTopology, out var duration, CancellationToken) :
-                                _database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, currentTime, isFirstInTopology, out duration, CancellationToken);
-                        if (expired == null || expired.Count == 0)
-                            return;
+                            if (expired == null || expired.Count == 0 || count == 0)
+                                return;
 
-                        var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration);
-                        await _database.TxMerger.Enqueue(command);
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                            var command = new DeleteExpiredDocumentsCommand(expired, _database, forExpiration);
+                            await _database.TxMerger.Enqueue(command);
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Successfully {(forExpiration ? "deleted" : "refreshed")} {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
+
+                            // precaution
+                            if (command.DeletionCount == 0)
+                                return;
+                        }
                     }
                 }
             }
@@ -168,13 +189,13 @@ namespace Raven.Server.Documents.Expiration
 
         internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> _expired;
+            private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _expired;
             private readonly DocumentDatabase _database;
             private readonly bool _forExpiration;
 
             public int DeletionCount;
 
-            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired, DocumentDatabase database, bool forExpiration)
+            public DeleteExpiredDocumentsCommand(Dictionary<Slice, List<(Slice LowerId, string Id)>> expired, DocumentDatabase database, bool forExpiration)
             {
                 _expired = expired;
                 _database = database;
@@ -194,7 +215,7 @@ namespace Raven.Server.Documents.Expiration
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
 
-                var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>[_expired.Count];
+                var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_expired.Count];
                 var i = 0;
                 foreach (var item in _expired)
                 {
@@ -215,7 +236,7 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var expired = new Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>>();
+            var expired = new Dictionary<Slice, List<(Slice LowerId, string Id)>>();
             foreach (var item in Expired)
             {
                 expired[item.Key] = item.Value;
@@ -226,6 +247,6 @@ namespace Raven.Server.Documents.Expiration
 
         public bool ForExpiration { get; set; }
 
-        public KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>[] Expired { get; set; }
+        public KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[] Expired { get; set; }
     }
 }

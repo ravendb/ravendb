@@ -16,7 +16,7 @@ export abstract class restoreSettings {
     abstract getFolderPathOptions(): JQueryPromise<string[]>;
     
     abstract getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
-                                                selectedRestorePoint: string): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase
+                                                backupLocation: string): Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase
     abstract isValid(): boolean;
     
     abstract onCredentialsChange(onChange: () => void): void;
@@ -49,10 +49,10 @@ export class localServerCredentials extends restoreSettings {
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
-                                       selectedRestorePoint: string) {
+                                       backupLocation: string) {
         const localConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
-        localConfiguration.BackupLocation = selectedRestorePoint;
-        (localConfiguration as any as restoreTypeAware).Type = "Local" as Raven.Client.Documents.Operations.Backups.RestoreType;
+        localConfiguration.BackupLocation = backupLocation;
+        (localConfiguration as any as restoreTypeAware).Type = "Local";
         return localConfiguration;
     }
 
@@ -130,10 +130,11 @@ export class amazonS3Credentials extends restoreSettings {
     }
 
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
-                                       selectedRestorePoint: string) {
+                                       backupLocation: string) {
         const amazonS3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
         amazonS3Configuration.Settings = this.toDto();
-        (amazonS3Configuration as any as restoreTypeAware).Type = "S3" as Raven.Client.Documents.Operations.Backups.RestoreType;
+        amazonS3Configuration.Settings.RemoteFolderName = backupLocation;
+        (amazonS3Configuration as any as restoreTypeAware).Type = "S3";
         return amazonS3Configuration;
     }
 
@@ -142,7 +143,7 @@ export class amazonS3Credentials extends restoreSettings {
     }
 
     onCredentialsChange(onChange: () => void) {
-        this.accessKey.throttle(300).subscribe((onChange));
+        this.accessKey.throttle(300).subscribe(onChange);
         this.secretKey.throttle(300).subscribe(onChange);
         this.regionName.throttle(300).subscribe(onChange);
         this.bucketName.throttle(300).subscribe(onChange);
@@ -188,10 +189,11 @@ export class azureCredentials extends restoreSettings {
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
-                                       selectedRestorePoint: string) {
+                                       backupLocation: string) {
         const azureConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromAzureConfiguration;
         azureConfiguration.Settings = this.toDto();
-        (azureConfiguration as any as restoreTypeAware).Type = "Azure" as Raven.Client.Documents.Operations.Backups.RestoreType;
+        azureConfiguration.Settings.RemoteFolderName = backupLocation;
+        (azureConfiguration as any as restoreTypeAware).Type = "Azure";
         return azureConfiguration;
     }
     
@@ -242,10 +244,11 @@ export class googleCloudCredentials extends restoreSettings {
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
-                                       selectedRestorePoint: string) {
+                                       backupLocation: string) {
         const googleCloudConfiguration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromGoogleCloudConfiguration;
         googleCloudConfiguration.Settings = this.toDto();
-        (googleCloudConfiguration as any as restoreTypeAware).Type = "GoogleCloud" as Raven.Client.Documents.Operations.Backups.RestoreType;
+        googleCloudConfiguration.Settings.RemoteFolderName = backupLocation;
+        (googleCloudConfiguration as any as restoreTypeAware).Type = "GoogleCloud";
         return googleCloudConfiguration;
     }
     
@@ -334,10 +337,11 @@ export class ravenCloudCredentials extends restoreSettings {
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
-                                       selectedRestorePoint: string) {
+                                       backupLocation: string) {
         const s3Configuration = baseConfiguration as Raven.Client.Documents.Operations.Backups.RestoreFromS3Configuration;
         s3Configuration.Settings = this.toAmazonS3Dto();
-        (s3Configuration as any as restoreTypeAware).Type = "S3" as Raven.Client.Documents.Operations.Backups.RestoreType;
+        s3Configuration.Settings.RemoteFolderName = backupLocation;
+        (s3Configuration as any as restoreTypeAware).Type = "S3";
         return s3Configuration;
     }
     

@@ -24,9 +24,11 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            bool newTask = false;
             if (Configuration.TaskId == 0)
             {
                 // this is a new backup configuration
+                newTask = true;
                 Configuration.TaskId = etag;
             }
             else
@@ -41,7 +43,8 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             }
             else if (Configuration.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException($"Can't update task name '{Configuration.Name}', because it is a server-wide backup task");
+                throw new InvalidOperationException($"Can't {(newTask ? "create" : "update")} task: '{Configuration.Name}'. " +
+                                                             $"A regular (non server-wide) backup task name can't start with prefix '{ServerWideBackupConfiguration.NamePrefix}'");
             }
 
             EnsureTaskNameIsNotUsed(record, Configuration.Name);

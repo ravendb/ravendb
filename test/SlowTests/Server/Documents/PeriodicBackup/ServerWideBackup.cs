@@ -133,7 +133,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 backupConfiguration.TaskId = 0;
                 backupConfiguration.Name = currentBackupConfiguration.Name;
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                expectedError = $"Can't update task name '{taskName}', because it is a server-wide backup task";
+                expectedError = $"Can't create task: '{taskName}'. A regular (non server-wide) backup task name can't start with prefix '{ServerWideBackupConfiguration.NamePrefix}'";
                 Assert.Contains(expectedError, e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 backupConfiguration.TaskId = 0;
                 backupConfiguration.Name = currentBackupConfiguration.Name;
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration)));
-                expectedError = $"Can't update task name '{taskName}', because it is a server-wide backup task";
+                expectedError = $"Can't create task: '{taskName}'. A regular (non server-wide) backup task name can't start with prefix '{ServerWideBackupConfiguration.NamePrefix}'";
                 Assert.Contains(expectedError, e.Message);
 
                 e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(serverWideBackupTaskId, OngoingTaskType.Backup)));

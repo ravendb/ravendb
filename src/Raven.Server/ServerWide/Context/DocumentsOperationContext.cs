@@ -37,6 +37,18 @@ namespace Raven.Server.ServerWide.Context
             _documentDatabase = documentDatabase;
         }
 
+        protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
+        {
+            var clonedTransaction = new DocumentsTransaction(this,
+                _documentDatabase.DocumentsStorage.Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator),
+                _documentDatabase.Changes
+            );
+
+            previous.Dispose();
+
+            return clonedTransaction;
+        }
+
         protected override DocumentsTransaction CreateReadTransaction()
         {
             return new DocumentsTransaction(this, _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator), _documentDatabase.Changes);

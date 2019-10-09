@@ -24,12 +24,12 @@ namespace Raven.Client.Documents.Subscriptions
 {
     public class DocumentSubscriptions : IDisposable
     {
-        private readonly IDocumentStore _store;
+        private readonly DocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
 
         public DocumentSubscriptions(IDocumentStore store)
         {
-            _store = store;
+            _store = (DocumentStore)store;
         }
 
         /// <summary>

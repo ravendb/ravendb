@@ -8,6 +8,8 @@ import generalUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
+import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 class revisions extends viewModelBase {
 
@@ -22,6 +24,7 @@ class revisions extends viewModelBase {
     currentBackingItem = ko.observable<revisionsConfigurationEntry>(null); // original item which is edited
 
     revertRevisionsUrl: KnockoutComputed<string>;
+    enforceButtonTitle: KnockoutComputed<string>;
     
     spinners = {
         save: ko.observable<boolean>(false)
@@ -33,7 +36,7 @@ class revisions extends viewModelBase {
         this.bindToCurrentInstance("createDefaultConfiguration", "saveChanges",
             "deleteItem", "editItem", "applyChanges",
             "exitEditMode", "enableConfiguration",
-            "disableConfiguration", "toggleSelectAll");
+            "disableConfiguration", "toggleSelectAll", "enforceConfiguration");
 
         this.initObservables();
     }
@@ -51,6 +54,13 @@ class revisions extends viewModelBase {
         
         this.revertRevisionsUrl = ko.pureComputed(() => {
             return appUrl.forRevertRevisions(this.activeDatabase());
+        });
+        
+        this.enforceButtonTitle = ko.pureComputed(() => {
+            if (this.perCollectionConfigurations().length !== 0 || this.defaultConfiguration()) {
+                return this.isSaveEnabled() ? "Save current configuration before enforcing" : "Enforce the defined revisions configuration on all documents per collection";
+            }
+            return "No configuration has been created yet";
         });
     }
 
@@ -276,6 +286,25 @@ class revisions extends viewModelBase {
 
     formatedDurationObservable(observable: KnockoutObservable<number>) {
         return ko.pureComputed(() => generalUtils.formatTimeSpan(observable() * 1000));
+    }
+
+    enforceConfiguration() {
+        const db = this.activeDatabase();
+
+        this.confirmationMessage("Enforce Revisions Configuration",
+            "<small>Clicking '<strong>Enforce</strong>' will enforce the current revisions configuration on <strong>all</strong> existing revisions in the database per collection.<br><br>" +
+            "<strong>Note</strong>: Revisions might be removed depending on the current configuration rules.</small>",
+            { buttons: ["Cancel", "Enforce Revisions Configuration"], html: true })
+            .done (result => {
+                if (result.can) {
+                    new enforceRevisionsConfigurationCommand(db)
+                        .execute()
+                        .done((operationIdDto: operationIdDto) => {
+                            const operationId = operationIdDto.OperationId;
+                            notificationCenter.instance.openDetailsForOperationById(db, operationId);
+                        });
+                }
+            });
     }
 }
 

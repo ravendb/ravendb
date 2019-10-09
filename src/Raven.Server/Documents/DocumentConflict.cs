@@ -4,8 +4,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentConflict
+    public class DocumentConflict : IDisposable
     {
+        private bool _disposed;
+
         public LazyStringValue LowerId;
         public LazyStringValue Id;
         public BlittableJsonReaderObject Doc;
@@ -32,7 +34,27 @@ namespace Raven.Server.Documents
             };
         }
 
-        public static DocumentConflict From(JsonOperationContext ctx,Document doc)
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            Id?.Dispose();
+            Id = null;
+
+            LowerId?.Dispose();
+            LowerId = null;
+
+            Doc?.Dispose();
+            Doc = null;
+
+            Collection?.Dispose();
+            Collection = null;
+
+            _disposed = true;
+        }
+
+        public static DocumentConflict From(JsonOperationContext ctx, Document doc)
         {
             if (doc == null)
                 return null;
@@ -69,6 +91,5 @@ namespace Raven.Server.Documents
                 Flags = tombstone.Flags
             };
         }
-
     }
 }

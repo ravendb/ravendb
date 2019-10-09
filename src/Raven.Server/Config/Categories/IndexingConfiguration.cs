@@ -178,6 +178,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit { get; protected set; }
 
+        [Description("Indicates if missing fields should be indexed same as 'null' values or not. Default: false")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.IndexMissingFieldsAsNull", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool IndexMissingFieldsAsNull { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();

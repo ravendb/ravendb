@@ -386,7 +386,8 @@ namespace Raven.Server.Web.System
 
                     DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
                     HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
-                    HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
+                    HasExpirationConfiguration = (db?.ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false, 
+                    HasRefreshConfiguration = (db?.ExpiredDocumentsCleaner?.RefreshConfiguration?.Disabled ?? true) == false,
                     IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
                     IndexingStatus = indexingStatus,
                     Environment = studioEnvironment,

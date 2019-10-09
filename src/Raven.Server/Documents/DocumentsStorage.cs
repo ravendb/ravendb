@@ -583,7 +583,7 @@ namespace Raven.Server.Documents
             }
         }
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
-            int start, int take)
+            int start, int take, Reference<int> skip = null)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
@@ -593,7 +593,7 @@ namespace Raven.Server.Documents
             using (DocumentIdWorker.GetSliceFromId(context, idPrefix, out Slice prefixSlice))
             using (isStartAfter ? (IDisposable)DocumentIdWorker.GetSliceFromId(context, startAfterId, out startAfterSlice) : null)
             {
-                foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, 0))
+                foreach (var result in table.SeekByPrimaryKeyPrefix(prefixSlice, startAfterSlice, skip?.Value ?? 0))
                 {
                     var document = TableValueToDocument(context, ref result.Value.Reader);
                     string documentId = document.Id;
@@ -602,10 +602,18 @@ namespace Raven.Server.Documents
 
                     var idTest = documentId.Substring(idPrefix.Length);
                     if (WildcardMatcher.Matches(matches, idTest) == false || WildcardMatcher.MatchesExclusion(exclude, idTest))
+                    {
+                        if (skip != null)
+                            skip.Value++;
+
                         continue;
+                    }
 
                     if (start > 0)
                     {
+                        if (skip != null)
+                            skip.Value++;
+
                         start--;
                         continue;
                     }
@@ -624,6 +632,19 @@ namespace Raven.Server.Documents
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], start))
+            {
+                if (take-- <= 0)
+                    yield break;
+                yield return TableValueToDocument(context, ref result.Reader);
+            }
+        }
+
+        public IEnumerable<Document> GetDocumentsInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, int take, int skip)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, skip))
             {
                 if (take-- <= 0)
                     yield break;
@@ -741,7 +762,6 @@ namespace Raven.Server.Documents
                 }
 
                 yield return doc;
-
             }
         }
 

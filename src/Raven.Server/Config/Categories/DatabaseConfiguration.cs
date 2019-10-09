@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -69,5 +70,11 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.FrequencyToCheckForIdleInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting FrequencyToCheckForIdle { get; set; }
+
+        [Description("Number of megabytes occupied by encryption buffers (if database is encrypted) or mapped 32 bites buffers (when running on 32 bits) after which a read transaction will be renewed to reduce memory usage during long running operations like backups or streaming")]
+        [DefaultValue(16)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size PulseReadTransactionLimit { get; set; }
     }
 }

@@ -10,7 +10,7 @@ namespace Raven.Server.SqlMigration.MySQL
     {
         public const string SelectColumns = "select c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE " +
                                             " from information_schema.COLUMNS c join information_schema.TABLES t " +
-                                            " using (TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME) " +
+                                            " on c.TABLE_CATALOG = t.TABLE_CATALOG and c.TABLE_SCHEMA = t.TABLE_SCHEMA and c.TABLE_NAME = t.TABLE_NAME " +
                                             " where c.TABLE_SCHEMA = @schema and t.TABLE_TYPE <> 'VIEW' ";
 
         public const string SelectPrimaryKeys = "select TABLE_NAME, COLUMN_NAME, TABLE_SCHEMA from information_schema.KEY_COLUMN_USAGE " +

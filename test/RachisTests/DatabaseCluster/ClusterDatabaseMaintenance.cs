@@ -133,6 +133,77 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+
+        [Fact]
+        public async Task ReshuffleAfterPromotion()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, false, 0, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
+            });
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+            }.Initialize())
+            {
+                var names = new List<string>();
+                for (int i = 0; i < 30; i++)
+                {
+                    var name = GetDatabaseName();
+                    names.Add(name);
+                    var doc = new DatabaseRecord(name);
+                    var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                    Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
+                }
+
+                var nodeInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[2]);
+
+                // wait for moving all of the nodes to rehab state
+                foreach (string name in names)
+                {
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize - 1);
+                    Assert.Equal(clusterSize - 1, val);
+                    val = await WaitForValueAsync(async () => await GetRehabCount(store, name), 1);
+                    Assert.Equal(1, val);
+                }
+
+                cluster.Nodes[2] = GetNewServer(new ServerCreationOptions
+                {
+                    DeletePrevious = false,
+                    RunInMemory = false,
+                    PartialPath = nodeInfo.DataDir,
+                    CustomSettings = new Dictionary<string, string>
+                    {
+                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeInfo.Url
+                    }
+                });
+
+                var preferredCount = new Dictionary<string, int>
+                {
+                    ["A"] = 0,
+                    ["B"] = 0,
+                    ["C"] = 0
+                };
+
+                // wait for recovery of all of the nodes back to member
+                foreach (string name in names)
+                {
+                    var val = await WaitForValueAsync(async () => await GetMembersCount(store, name), clusterSize);
+                    Assert.Equal(clusterSize, val);
+
+                    var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(name));
+
+                    var preferred = res.Topology.Members[0];
+                    preferredCount[preferred]++;
+                }
+
+                Assert.True(preferredCount["A"] > 1);
+                Assert.True(preferredCount["B"] > 1);
+                Assert.True(preferredCount["C"] > 1);
+            }
+        }
+
         [Fact]
         public async Task PromoteOnCatchingUp()
         {

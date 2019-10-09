@@ -1303,7 +1303,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
-            NegateIfNeeded(tokens, fieldName);
+            NegateIfNeeded(tokens, fieldName: null); // RavenDB-14088
 
             tokens.AddLast(WhereToken.Create(WhereOperator.Exists, fieldName, null));
         }

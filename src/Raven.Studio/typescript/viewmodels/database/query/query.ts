@@ -484,7 +484,7 @@ class query extends viewModelBase {
         this.columnsSelector.init(grid,
             (s, t, c) => this.effectiveFetcher()(s, t),
             (w, r) => {
-                if (this.currentTab() === "results") {
+                if (this.currentTab() === "results" || this.currentTab() instanceof perCollectionIncludes) {
                     return documentsProvider.findColumns(w, r);
                 } else if (this.currentTab() === "explanations") {
                     return this.explanationsColumns(grid);

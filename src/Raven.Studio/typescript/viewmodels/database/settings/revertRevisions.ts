@@ -3,10 +3,12 @@ import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindi
 import revertRevisionsCommand = require("commands/database/documents/revertRevisionsCommand");
 import revertRevisionsRequest = require("models/database/documents/revertRevisionsRequest");
 import notificationCenter = require("common/notifications/notificationCenter");
+import appUrl = require("common/appUrl");
 
 class revertRevisions extends viewModelBase {
 
     model = new revertRevisionsRequest();
+    revisionsUrl: KnockoutComputed<string>;
     
     datePickerOptions = {
         format: revertRevisionsRequest.defaultDateFormat
@@ -20,6 +22,10 @@ class revertRevisions extends viewModelBase {
 
     constructor() {
         super();
+
+        this.revisionsUrl = ko.pureComputed(() => {
+            return appUrl.forRevisions(this.activeDatabase());
+        });
         
         this.bindToCurrentInstance("setMagnitude");
         datePickerBindingHandler.install();
@@ -33,7 +39,7 @@ class revertRevisions extends viewModelBase {
         if (this.isValid(this.model.validationGroup)) {
             const db = this.activeDatabase();
             
-            this.confirmationMessage("Revert revisions", "Do you want to revert documents state to date: " + this.model.pointInTimeFormatted() + " UTC?", {
+            this.confirmationMessage("Revert Revisions", "Do you want to revert documents state to date: " + this.model.pointInTimeFormatted() + " UTC?", {
                 buttons: ["No", "Yes, revert"]
                 })
                 .done(result => {

@@ -51,6 +51,7 @@ namespace Raven.Client.ServerWide.Operations
         public long? DocumentsCount { get; set; }
         public bool HasRevisionsConfiguration { get; set; }
         public bool HasExpirationConfiguration { get; set; }
+        public bool HasRefreshConfiguration { get; set; }
         public int? IndexesCount { get; set; }
         public IndexRunningStatus IndexingStatus { get; set; }
 
@@ -90,6 +91,7 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(DocumentsCount)] = DocumentsCount,
                 [nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration,
                 [nameof(HasExpirationConfiguration)] = HasExpirationConfiguration,
+                [nameof(HasRefreshConfiguration)] = HasRefreshConfiguration,
                 [nameof(IndexesCount)] = IndexesCount,
                 [nameof(IndexingStatus)] = IndexingStatus.ToString(),
 

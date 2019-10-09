@@ -129,7 +129,7 @@ class refresh extends viewModelBase {
                 .done(() => {
                     this.dirtyFlag().reset();
                     messagePublisher.reportSuccess(`Refresh configuration has been saved`);
-                    db.hasExpirationConfiguration(!dto.Disabled);
+                    db.hasRefreshConfiguration(!dto.Disabled);
                 })
                 .always(() => {
                     this.spinners.save(false);

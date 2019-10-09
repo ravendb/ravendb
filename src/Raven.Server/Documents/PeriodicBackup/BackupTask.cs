@@ -52,6 +52,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public readonly OperationCancelToken TaskCancelToken;
         private readonly BackupResult _backupResult;
         private readonly bool _isServerWide;
+        private readonly bool _isBackupEncrypted;
         private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
         private Action<IOperationProgress> _onProgress;
 
@@ -72,6 +73,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _periodicBackup = periodicBackup;
             _configuration = periodicBackup.Configuration;
             _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
+            _isBackupEncrypted = IsBackupEncrypted();
             _previousBackupStatus = periodicBackup.BackupStatus;
             _isFullBackup = isFullBackup;
             _backupToLocalFolder = backupToLocalFolder;
@@ -171,8 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
-                var isEncrypted = CheckIfEncrypted();
-                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, isEncrypted, out string backupFilePath);
+                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, out string backupFilePath);
                 var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
@@ -368,14 +369,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private bool CheckIfEncrypted()
+        private bool IsBackupEncrypted()
         {
-            if (_database.MasterKey != null &&
-                _configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
+            if (_database.MasterKey != null && _configuration.BackupEncryptionSettings == null)
                 return true;
 
             return _configuration.BackupEncryptionSettings != null &&
-                   _configuration.BackupEncryptionSettings?.EncryptionMode != EncryptionMode.None;
+                   _configuration.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
         }
 
         private long GetDatabaseEtagForBackup()
@@ -471,15 +471,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             return InProgressExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string GetFileName(
+        private string GetFileName(
             bool isFullBackup,
             string backupFolder,
             string now,
             BackupType backupType,
-            bool isEncrypted,
             out string backupFilePath)
         {
-            var backupExtension = GetBackupExtension(backupType, isFullBackup, isEncrypted);
+            var backupExtension = GetBackupExtension(backupType, isFullBackup);
             var fileName = isFullBackup ?
                 GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath, throwWhenFileExists: true) :
                 GetFileNameFor(backupExtension, now, backupFolder, out backupFilePath);
@@ -487,19 +486,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             return fileName;
         }
 
-        private static string GetBackupExtension(BackupType type, bool isFullBackup, bool isEncrypted)
+        private string GetBackupExtension(BackupType type, bool isFullBackup)
         {
             if (isFullBackup == false)
-                return isEncrypted ? Constants.Documents.PeriodicBackup.EncryptedIncrementalBackupExtension :
+                return _isBackupEncrypted ? Constants.Documents.PeriodicBackup.EncryptedIncrementalBackupExtension :
                     Constants.Documents.PeriodicBackup.IncrementalBackupExtension;
 
             switch (type)
             {
                 case BackupType.Backup:
-                    return isEncrypted ?
+                    return _isBackupEncrypted ?
                         Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension : Constants.Documents.PeriodicBackup.FullBackupExtension;
                 case BackupType.Snapshot:
-                    return isEncrypted ?
+                    return _isBackupEncrypted ?
                         Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension : Constants.Documents.PeriodicBackup.SnapshotExtension;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -650,7 +649,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_configuration.BackupType == BackupType.Snapshot && _isFullBackup && 
                 _configuration.BackupEncryptionSettings != null && 
                 _configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)
-                throw new InvalidOperationException("Can't snapshot encrypted database with different key");
+                throw new InvalidOperationException("Can't snapshot an encrypted database with a different key");
         }
 
         private void EnsureSnapshotProcessed(DatabaseSummary databaseSummary, SmugglerResult snapshotSmugglerResult, long indexesCount)
@@ -737,29 +736,17 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Stream GetOutputStream(Stream fileStream)
         {
-            if ((_database.MasterKey == null) &&
-                (_configuration.BackupEncryptionSettings == null))
+            if (_isBackupEncrypted == false)
                 return fileStream;
 
-            if ((_database.MasterKey == null) &&
-                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.None))
-                return fileStream;
+            if (_database.MasterKey != null && _configuration.BackupEncryptionSettings == null)
+                return new EncryptingXChaCha20Poly1305Stream(fileStream, _database.MasterKey);
 
-            if ((_database.MasterKey != null) &&
-                (_configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.None))
-                return fileStream;
+            if (_configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseDatabaseKey)
+                return new EncryptingXChaCha20Poly1305Stream(fileStream, _database.MasterKey);
 
-            if ((_database.MasterKey != null) && (_configuration?.BackupEncryptionSettings == null))
-                return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                    _database.MasterKey);
-
-            if (_configuration?.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
-                return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                    _database.MasterKey);
-
-            var key = _configuration?.BackupEncryptionSettings?.Key;
             return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                Convert.FromBase64String(key));
+                Convert.FromBase64String(_configuration.BackupEncryptionSettings.Key));
         }
 
         private void UploadToServer(string backupPath, string folderName, string fileName)

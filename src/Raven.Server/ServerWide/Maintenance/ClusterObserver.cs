@@ -436,7 +436,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 periodicBackupTaskIds = rawRecord.GetPeriodicBackupsTaskIds();
                 if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
-                return 0;
+                    return 0;
             }
 
             foreach (var taskId in periodicBackupTaskIds)
@@ -713,6 +713,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     databaseTopology.Members.Add(promotable);
                     databaseTopology.PredefinedMentors.Remove(promotable);
                     RemoveOtherNodesIfNeeded(state, ref deletions);
+                    databaseTopology.Members.Sort(Shuffle);
+
                     return $"Promoting node {promotable} to member";
                 }
                 if (tryPromote.UpdateTopologyReason != null)
@@ -774,6 +776,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             databaseTopology.Members.Add(rehab);
                             databaseTopology.Rehabs.Remove(rehab);
                             RemoveOtherNodesIfNeeded(state, ref deletions);
+                            databaseTopology.Members.Sort(Shuffle);
+
                             return $"Node {rehab} was recovered from rehabilitation and promoted back to member";
                         }
                         if (tryPromote.UpdateTopologyReason != null)
@@ -1298,7 +1302,7 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, DeletionInProgressStatus> ReadDeletionInProgress()
             {
                 return RawDatabase.GetDeletionInProgressStatus();
-                }
+            }
 
             public bool ReadDatabaseDisabled()
             {
@@ -1313,7 +1317,14 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, string> ReadSettings()
             {
                 return RawDatabase.GetSettings();
-                }
             }
         }
+
+        private readonly Random _random = new Random();
+
+        public int Shuffle(string _, string __)
+        {
+            return _random.Next(-100, 100);
+        }
     }
+}

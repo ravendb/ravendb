@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +12,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -46,7 +48,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IndexName = indexName;
 
-                ExecuteCollectionQuery(result, query, collection, documentsContext, token.Token);
+                ExecuteCollectionQuery(result, query, collection, documentsContext, pulseReadingTransaction: false, token.Token);
 
                 return Task.FromResult(result);
             }
@@ -66,7 +68,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IndexName = indexName;
 
-                ExecuteCollectionQuery(result, query, collection, documentsContext, token.Token);
+                ExecuteCollectionQuery(result, query, collection, documentsContext, pulseReadingTransaction: true, token.Token);
 
                 result.Flush();
 
@@ -110,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             throw new NotSupportedException("Collection query is handled directly by documents storage so suggestions aren't supported");
         }
 
-        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)
+        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, bool pulseReadingTransaction, CancellationToken cancellationToken)
         {
             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
@@ -133,7 +135,35 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var fieldsToFetch = new FieldsToFetch(query, null);
                 var includeDocumentsCommand = new IncludeDocumentsCommand(Database.DocumentsStorage, context, query.Metadata.Includes, fieldsToFetch.IsProjection);
                 var totalResults = new Reference<int>();
-                var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context, includeDocumentsCommand, totalResults);
+
+                IEnumerator<Document> enumerator;
+
+                if (pulseReadingTransaction == false)
+                {
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context, includeDocumentsCommand, totalResults);
+
+                    enumerator = documents.GetEnumerator();
+                }
+                else
+                {
+                    enumerator = new PulsedTransactionEnumerator<Document, CollectionQueryResultsIterationState>(context,
+                        state =>
+                        {
+                            query.Start = state.Start;
+                            query.PageSize = state.Take;
+
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context,
+                                includeDocumentsCommand, totalResults);
+
+                            return documents;
+                        },
+                        new CollectionQueryResultsIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
+                        {
+                            Start = query.Start, 
+                            Take = query.PageSize
+                        });
+                }
+
                 IncludeCountersCommand includeCountersCommand = null;
                 if (query.Metadata.HasCounters)
                 {
@@ -145,16 +175,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 try
                 {
-                    foreach (var document in documents)
+                    using (enumerator)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
+                        while (enumerator.MoveNext())
+                        {
+                            var document = enumerator.Current;
 
-                        resultToFill.AddResult(document);
+                            cancellationToken.ThrowIfCancellationRequested();
 
-                        using (gatherScope?.Start())
-                            includeDocumentsCommand.Gather(document);
+                            resultToFill.AddResult(document);
 
-                        includeCountersCommand?.Fill(document);
+                            using (gatherScope?.Start())
+                                includeDocumentsCommand.Gather(document);
+
+                            includeCountersCommand?.Fill(document);
+                        }
                     }
                 }
                 catch (Exception e)
