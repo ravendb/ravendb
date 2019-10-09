@@ -14,9 +14,11 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers
+namespace Raven.Server.Documents.Handlers.Streaming
 {
     public class StreamingHandler : DatabaseRequestHandler
     {
@@ -29,28 +31,44 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                IEnumerable<Document> documents;
+                var initialState = new DocsStreamingIterationState(context, Database.Configuration.Databases.PulseReadTransactionLimit)
+                {
+                    Start = start,
+                    Take = pageSize
+                };
+
                 if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
-                    documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
-                        HttpContext.Request.Query["startsWith"],
-                        HttpContext.Request.Query["matches"],
-                        HttpContext.Request.Query["excludes"],
-                        HttpContext.Request.Query["startAfter"],
-                        start,
-                        pageSize);
+                    initialState.StartsWith = HttpContext.Request.Query["startsWith"];
+                    initialState.Excludes = HttpContext.Request.Query["excludes"];
+                    initialState.Matches = HttpContext.Request.Query["matches"];
+                    initialState.StartAfter = HttpContext.Request.Query["startAfter"];
+                    initialState.Skip = new Reference<int>();
                 }
-                else // recent docs
-                {
-                    documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
-                }
+
+                var documentsEnumerator = new PulsedTransactionEnumerator<Document, DocsStreamingIterationState>(context, state =>
+                    {
+                        if (string.IsNullOrEmpty(state.StartsWith) == false)
+                        {
+                            return Database.DocumentsStorage.GetDocumentsStartingWith(context, state.StartsWith, state.Matches, state.Excludes, state.StartAfter,
+                                state.LastIteratedEtag == null ? state.Start : 0, // if we iterated already some docs then we pass 0 as Start and rely on state.Skip
+                                state.Take,
+                                state.Skip);
+                        }
+
+                        if (state.LastIteratedEtag != null)
+                            return Database.DocumentsStorage.GetDocumentsInReverseEtagOrderFrom(context, state.LastIteratedEtag.Value, state.Take, skip: 1); // we seek to LastIteratedEtag but skip 1 item because we iterated it already
+
+                        return Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, state.Start, state.Take);
+                    },
+                    initialState);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
-                    writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out int _);
+                    writer.WriteDocuments(context, documentsEnumerator, metadataOnly: false, numberOfResults: out int _);
 
                     writer.WriteEndObject();
                 }

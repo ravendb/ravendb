@@ -20,6 +20,7 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Rachis;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Web.System
 {
@@ -183,7 +184,8 @@ namespace Raven.Server.Web.System
             var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000; 
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
 
-            await BackupConfigurationHelper.GetFullBackupDataDirectory(path, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
+            var pathSetting = new PathSetting(path);
+            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, databaseName: null, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
         }
     }
     

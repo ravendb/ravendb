@@ -16,6 +16,15 @@ namespace Raven.Server.ServerWide.Context
             _environment = environment;
         }
 
+        protected override RavenTransaction CloneReadTransaction(RavenTransaction previous)
+        {
+            var clonedTx = new RavenTransaction(_environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator));
+
+            previous.Dispose();
+
+            return clonedTx;
+        }
+
         protected override RavenTransaction CreateReadTransaction()
         {
             return new RavenTransaction(_environment.ReadTransaction(PersistentContext, Allocator));
@@ -54,6 +63,19 @@ namespace Raven.Server.ServerWide.Context
             return Transaction;
         }
 
+
+        public TTransaction CloneReadTransaction()
+        {
+            if (Transaction == null || Transaction.Disposed || Transaction.InnerTransaction.IsWriteTransaction)
+                ThrowReadTransactionMustBeOpen();
+
+            Transaction = CloneReadTransaction(Transaction);
+
+            return Transaction;
+        }
+
+        protected abstract TTransaction CloneReadTransaction(TTransaction previous);
+
         public bool HasTransaction => Transaction != null && Transaction.Disposed == false;
 
         public short TransactionMarkerOffset;
@@ -78,6 +100,11 @@ namespace Raven.Server.ServerWide.Context
         private static void ThrowWriteTransactionMustBeOpen()
         {
             throw new InvalidOperationException("Write transaction must be opened");
+        }
+
+        private static void ThrowReadTransactionMustBeOpen()
+        {
+            throw new InvalidOperationException("Read transaction must be opened");
         }
 
         protected abstract TTransaction CreateReadTransaction();

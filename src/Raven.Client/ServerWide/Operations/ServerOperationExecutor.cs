@@ -18,6 +18,8 @@ namespace Raven.Client.ServerWide.Operations
                 ? ClusterRequestExecutor.CreateForSingleNode(store.Urls[0], store.Certificate, store.Conventions)
                 : ClusterRequestExecutor.Create(store.Urls, store.Certificate, store.Conventions);
 
+            store.RegisterEvents(_requestExecutor);
+
             store.AfterDispose += (sender, args) => _requestExecutor.Dispose();
         }
 

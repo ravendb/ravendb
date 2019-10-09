@@ -19,6 +19,7 @@ using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -422,8 +423,9 @@ namespace Raven.Server.Web.System
             var path = GetStringQueryString("path", required: true);
             var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000;
             var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-            
-            await BackupConfigurationHelper.GetFullBackupDataDirectory(path, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
+
+            var pathSetting = new PathSetting(path);
+            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, Database.Name, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]

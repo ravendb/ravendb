@@ -530,6 +530,45 @@ namespace Voron
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.Read, context);
             return new Transaction(newLowLevelTransaction);
         }
+        public Transaction CloneReadTransaction(Transaction previous, TransactionPersistentContext transactionPersistentContext = null, ByteStringContext context = null)
+        {
+            if (previous.IsWriteTransaction)
+                throw new ArgumentException("Only read transactions can be cloned");
+
+            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+            transactionPersistentContext = transactionPersistentContext ?? new TransactionPersistentContext();
+
+            try
+            {
+                IncrementUsageOnNewTransaction();
+
+                LowLevelTransaction tx;
+
+                _txCommit.EnterReadLock();
+                try
+                {
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                    tx = new LowLevelTransaction(previous.LowLevelTransaction, transactionPersistentContext, context);
+
+                    ActiveTransactions.Add(tx);
+                }
+                finally
+                {
+                    _txCommit.ExitReadLock();
+                }
+
+                var state = _dataPager.PagerState;
+                tx.EnsurePagerStateReference(state);
+
+                return new Transaction(tx);
+            }
+            catch (Exception)
+            {
+                DecrementUsageOnTransactionCreationFailure();
+                throw;
+            }
+        }
 
         public Transaction WriteTransaction(TransactionPersistentContext transactionPersistentContext, ByteStringContext context = null, TimeSpan? timeout = null)
         {

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
@@ -130,6 +131,8 @@ namespace Raven.Server.Documents.Queries
                 if (result.Metadata.HasFacet && httpContext.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var clientVersion))
                     result.ClientVersion = clientVersion;
 
+                AssertPaging(result);
+
                 return result;
             }
             catch (Exception e)
@@ -217,6 +220,8 @@ namespace Raven.Server.Documents.Queries
                 if (tracker != null)
                     tracker.Query = result.Query;
 
+                AssertPaging(result);
+
                 return result;
             }
             catch (Exception e)
@@ -233,6 +238,21 @@ namespace Raven.Server.Documents.Queries
 
                 throw;
             }
+        }
+
+        private static void AssertPaging(IndexQueryServerSide indexQuery)
+        {
+            if (indexQuery.Offset < 0)
+                throw new InvalidQueryException($"{nameof(Offset)} ({nameof(Start)}) cannot be negative, but was {indexQuery.Offset}.", indexQuery.Query, indexQuery.QueryParameters);
+
+            if (indexQuery.Limit < 0)
+                throw new InvalidQueryException($"{nameof(Limit)} ({nameof(PageSize)}) cannot be negative, but was {indexQuery.Limit}.", indexQuery.Query, indexQuery.QueryParameters);
+
+            if (indexQuery.Start < 0)
+                throw new InvalidQueryException($"{nameof(Start)} cannot be negative, but was {indexQuery.Start}.", indexQuery.Query, indexQuery.QueryParameters);
+
+            if (indexQuery.PageSize < 0)
+                throw new InvalidQueryException($"{nameof(PageSize)} cannot be negative, but was {indexQuery.PageSize}.", indexQuery.Query, indexQuery.QueryParameters);
         }
     }
 }

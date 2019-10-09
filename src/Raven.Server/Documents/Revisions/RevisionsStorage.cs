@@ -1087,6 +1087,9 @@ namespace Raven.Server.Documents.Revisions
 
             var result = new EnforceConfigurationResult();
             var ids = new List<string>();
+            
+            // send initial progress
+            parameters.OnProgress?.Invoke(result);
 
             var hasMore = true;
             while (hasMore)

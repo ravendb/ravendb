@@ -18,6 +18,8 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Documents.Iteration;
+using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
 using Voron;
 
@@ -134,16 +136,43 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var documents = collectionsToExport.Count != 0
-                ? _database.DocumentsStorage.GetDocumentsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
-                : _database.DocumentsStorage.GetDocumentsFrom(_context, _startDocumentEtag, 0, int.MaxValue);
+            var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
+                state =>
+                {
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetDocumentsFromCollections(_context, state);
 
-            foreach (var document in documents)
+                    return _database.DocumentsStorage.GetDocumentsFrom(_context, state.StartEtag, 0, int.MaxValue);
+                },
+                new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
+                {
+                    StartEtag = _startDocumentEtag, 
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
             {
                 yield return new DocumentItem
                 {
-                    Document = document
+                    Document = enumerator.Current
                 };
+            }
+        }
+
+        private IEnumerable<Document> GetDocumentsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)
+        {
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var document in _database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    yield return document;
+                }
             }
         }
 
@@ -155,16 +184,47 @@ namespace Raven.Server.Smuggler.Documents
             if (revisionsStorage.Configuration == null)
                 yield break;
 
-            var documents = collectionsToExport.Count != 0
-                ? revisionsStorage.GetRevisionsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
-                : revisionsStorage.GetRevisionsFrom(_context, _startDocumentEtag, int.MaxValue);
+            var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
+                state =>
+                {
+                    if(state.StartEtagByCollection.Count != 0)
+                        return GetRevisionsFromCollections(_context, state);
 
-            foreach (var document in documents)
+                    return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, int.MaxValue);
+                },
+                new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
+                {
+                    StartEtag = _startDocumentEtag,
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
             {
                 yield return new DocumentItem
                 {
-                    Document = document
+                    Document = enumerator.Current
                 };
+            }
+        }
+
+        private IEnumerable<Document> GetRevisionsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)
+        {
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    continue;
+
+                state.CurrentCollection = collection;
+
+                foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collectionName, etag, int.MaxValue))
+                {
+                    yield return document.current;
+                }
             }
         }
 
@@ -197,13 +257,39 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var tombstones = collectionsToExport.Count > 0
-                ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
-                : _database.DocumentsStorage.GetTombstonesFrom(_context, _startDocumentEtag, 0, int.MaxValue);
-            
-            foreach (var tombstone in tombstones)
+            var enumerator = new PulsedTransactionEnumerator<Tombstone, TombstonesIterationState>(_context,
+                state =>
+                {
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetTombstonesFromCollections(_context, state);
+
+                    return _database.DocumentsStorage.GetTombstonesFrom(_context, state.StartEtag, 0, int.MaxValue);
+                },
+                new TombstonesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
+                {
+                    StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
             {
-                yield return tombstone;
+                yield return enumerator.Current;
+            }
+        }
+
+        private IEnumerable<Tombstone> GetTombstonesFromCollections(DocumentsOperationContext context, TombstonesIterationState state)
+        {
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var counter in _database.DocumentsStorage.GetTombstonesFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    yield return counter;
+                }
             }
         }
 
@@ -211,23 +297,35 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, _startDocumentEtag);
-
-            if (collectionsToExport.Count > 0)
-            {
-                foreach (var conflict in conflicts)
+            var enumerator = new PulsedTransactionEnumerator<DocumentConflict, DocumentConflictsIterationState>(_context,
+                state =>
                 {
-                    if (collectionsToExport.Contains(conflict.Collection) == false)
-                        continue;
+                    if (collectionsToExport.Count != 0)
+                        return GetConflictsFromCollections(_context, collectionsToExport.ToHashSet(), state);
 
-                    yield return conflict;
+                    return _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, state.StartEtag);
+                },
+                new DocumentConflictsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
+                {
+                    StartEtag = _startDocumentEtag,
+                });
+
+            while (enumerator.MoveNext())
+            {
+                yield return enumerator.Current;
+            }
+        }
+
+        private IEnumerable<DocumentConflict> GetConflictsFromCollections(DocumentsOperationContext context, HashSet<string> collections, DocumentConflictsIterationState state)
+        {
+            foreach (var conflict in _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(context, state.StartEtag))
+            {
+                if (collections.Contains(conflict.Collection) == false)
+                {
+                    state.StartEtag = conflict.Etag + 1; // when skipping an item we need to increment StartEtag
+                    continue;
                 }
 
-                yield break;
-            }
-
-            foreach (var conflict in conflicts)
-            {
                 yield return conflict;
             }
         }
@@ -304,28 +402,46 @@ namespace Raven.Server.Smuggler.Documents
 
             return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.Name);
         }
+
         public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
         {
             Debug.Assert(_context != null);
 
-            if (collectionsToExport?.Count > 0)
-            {
-                foreach (var collection in collectionsToExport)
+            var enumerator = new PulsedTransactionEnumerator<CounterGroupDetail, CountersIterationState>(_context,
+                state =>
                 {
-                    foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, collection, _startDocumentEtag, 0, int.MaxValue))
-                    {
-                        yield return counter;
-                    }
-                }
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetCounterValuesFromCollections(_context, state);
 
-                yield break;
-            }
+                    return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, state.StartEtag, 0, int.MaxValue);
+                },
+                new CountersIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
+                {
+                    StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
 
-            foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue))
+            while (enumerator.MoveNext())
             {
-                yield return counter;
+                yield return enumerator.Current;
             }
-        } 
+        }
+
+        private IEnumerable<CounterGroupDetail> GetCounterValuesFromCollections(DocumentsOperationContext context, CountersIterationState state)
+        {
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var counter in _database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, etag, 0, int.MaxValue))
+                {
+                    yield return counter;
+                }
+            }
+        }
 
         public IEnumerable<CounterDetail> GetLegacyCounterValues()
         {

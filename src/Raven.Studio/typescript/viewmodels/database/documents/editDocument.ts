@@ -93,6 +93,7 @@ class editDocument extends viewModelBase {
     });
     
     documentExpirationEnabled: KnockoutComputed<boolean>;
+    documentRefreshEnabled: KnockoutComputed<boolean>;
 
     private docEditor: AceAjax.Editor;
     private docEditorRight: AceAjax.Editor;
@@ -338,6 +339,15 @@ class editDocument extends viewModelBase {
             const db = this.activeDatabase();
             if (db) {
                 return db.hasExpirationConfiguration();
+            } else {
+                return false;
+            }
+        });
+
+        this.documentRefreshEnabled = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (db) {
+                return db.hasRefreshConfiguration();
             } else {
                 return false;
             }
@@ -770,6 +780,8 @@ class editDocument extends viewModelBase {
                     continue;
                 if (prop === "@collection" && savedDocumentDto["@collection"] === "@empty")
                     continue;
+                if (prop === "RevisionCreated") 
+                   continue;
                 metadata[prop] = (savedDocumentDto as any)[prop];
             }
         }

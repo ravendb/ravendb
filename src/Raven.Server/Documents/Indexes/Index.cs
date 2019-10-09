@@ -44,6 +44,7 @@ using Raven.Server.ServerWide.Memory;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Json;
@@ -96,6 +97,8 @@ namespace Raven.Server.Documents.Indexes
         internal const int LowMemoryPressure = 10;
 
         private const int AllocationCleanupRequestsLimit = 10;
+
+        private readonly Size MappedSizeLimitOn32Bits = new Size(8, SizeUnit.Megabytes);
 
         protected Logger _logger;
 
@@ -2310,7 +2313,7 @@ namespace Raven.Server.Documents.Indexes
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
-            await QueryInternal(result, query, documentsContext, token);
+            await QueryInternal(result, query, documentsContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
 
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
@@ -2331,7 +2334,7 @@ namespace Raven.Server.Documents.Indexes
             OperationCancelToken token)
         {
             var result = new DocumentQueryResult();
-            await QueryInternal(result, query, documentsContext, token);
+            await QueryInternal(result, query, documentsContext, false, token);
             return result;
         }
 
@@ -2339,6 +2342,7 @@ namespace Raven.Server.Documents.Indexes
             TQueryResult resultToFill,
             IndexQueryServerSide query,
             DocumentsOperationContext documentsContext,
+            bool pulseDocsReadingTransaction,
             OperationCancelToken token)
             where TQueryResult : QueryResultServerSide<Document>
         {
@@ -2486,28 +2490,45 @@ namespace Raven.Server.Documents.Indexes
 
                                 try
                                 {
-                                    foreach (var document in documents)
+                                    var enumerator = documents.GetEnumerator();
+
+                                    if (pulseDocsReadingTransaction)
                                     {
-                                        resultToFill.TotalResults = totalResults.Value;
-                                        if (query.Offset != null || query.Limit != null)
+                                        var originalEnumerator = enumerator;
+
+                                        enumerator = new PulsedTransactionEnumerator<(Document Result, Dictionary<string,Dictionary<string,string[]>> Highlightings, ExplanationResult Explanation), QueryResultsIterationState>(documentsContext,
+                                            state => originalEnumerator,
+                                            new QueryResultsIterationState(documentsContext, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
+                                    }
+
+                                    using (enumerator)
+                                    {
+                                        while (enumerator.MoveNext())
                                         {
-                                            resultToFill.CappedMaxResults = Math.Min(
-                                                query.Limit ?? int.MaxValue,
-                                                totalResults.Value - (query.Offset ?? 0)
+                                            var document = enumerator.Current;
+
+                                            resultToFill.TotalResults = totalResults.Value;
+                                            if (query.Offset != null || query.Limit != null)
+                                            {
+                                                resultToFill.CappedMaxResults = Math.Min(
+                                                    query.Limit ?? int.MaxValue,
+                                                    totalResults.Value - (query.Offset ?? 0)
                                                 );
+                                            }
+
+                                            resultToFill.AddResult(document.Result);
+
+                                            if (document.Highlightings != null)
+                                                resultToFill.AddHighlightings(document.Highlightings);
+
+                                            if (document.Explanation != null)
+                                                resultToFill.AddExplanation(document.Explanation);
+
+                                            using (gatherScope?.Start())
+                                                includeDocumentsCommand.Gather(document.Result);
+
+                                            includeCountersCommand?.Fill(document.Result);
                                         }
-                                        resultToFill.AddResult(document.Result);
-
-                                        if (document.Highlightings != null)
-                                            resultToFill.AddHighlightings(document.Highlightings);
-
-                                        if (document.Explanation != null)
-                                            resultToFill.AddExplanation(document.Explanation);
-
-                                        using (gatherScope?.Start())
-                                            includeDocumentsCommand.Gather(document.Result);
-
-                                        includeCountersCommand?.Fill(document.Result);
                                     }
                                 }
                                 catch (Exception e)
@@ -3351,17 +3372,17 @@ namespace Raven.Server.Documents.Indexes
             {
                 IPagerLevelTransactionState pagerLevelTransactionState = documentsOperationContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
-                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#0} kb mapped in docs ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
                     return false;
                 }
 
                 pagerLevelTransactionState = indexingContext.Transaction?.InnerTransaction?.LowLevelTransaction;
                 total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
-                if (total32BitsMappedSize > 8 * Voron.Global.Constants.Size.Megabyte)
+                if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize / 1024:#,#0} kb mapped in index ctx");
+                    stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
                     return false;
                 }
             }

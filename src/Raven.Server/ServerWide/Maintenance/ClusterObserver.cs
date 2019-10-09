@@ -713,6 +713,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     databaseTopology.Members.Add(promotable);
                     databaseTopology.PredefinedMentors.Remove(promotable);
                     RemoveOtherNodesIfNeeded(state, ref deletions);
+                    databaseTopology.Members.Sort(Shuffle);
+
                     return $"Promoting node {promotable} to member";
                 }
                 if (tryPromote.UpdateTopologyReason != null)
@@ -774,6 +776,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             databaseTopology.Members.Add(rehab);
                             databaseTopology.Rehabs.Remove(rehab);
                             RemoveOtherNodesIfNeeded(state, ref deletions);
+                            databaseTopology.Members.Sort(Shuffle);
+
                             return $"Node {rehab} was recovered from rehabilitation and promoted back to member";
                         }
                         if (tryPromote.UpdateTopologyReason != null)
@@ -1315,5 +1319,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 return RawDatabase.GetSettings();
                 }
             }
+        }
+
+        private readonly Random _random = new Random();
+
+        public int Shuffle(string _, string __)
+        {
+            return _random.Next(-100, 100);
         }
     }

@@ -62,6 +62,10 @@ namespace Raven.Server.Smuggler.Documents
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options, database);
 
+            Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false, 
+                "When both source and destination are database, we might get into a delayed write for the dest while the " +
+                "source already pulsed its' read transaction, resulting in bad memory read.");
+            
             _time = time;
             _onProgress = onProgress ?? (progress => { });
         }

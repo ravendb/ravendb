@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Threading;
@@ -76,22 +77,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
-                    _converter = new LuceneDocumentConverter(fields);
+                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull);
                     break;
                 case IndexType.AutoMapReduce:
-                    _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
+                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, reduceOutput: true);
                     break;
                 case IndexType.MapReduce:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: true);
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, reduceOutput: true);
                     break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap);
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull);
                     break;
                 case IndexType.JavaScriptMap:
-                    _converter = new JintLuceneDocumentConverter(fields);
+                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull);
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter(fields, reduceOutput: true);
+                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, reduceOutput: true);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
@@ -292,6 +293,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
                     IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase, state);
             }
+            catch (Exception e) when (e.IsOutOfMemory())
+            {
+                throw;
+            }
             catch (Exception e)
             {
                 throw new IndexWriteException(e);
@@ -307,7 +312,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var item in _fields)
             {
-                if (!item.Value.HasSuggestions)
+                if (item.Value.HasSuggestions == false)
                     continue;
 
                 string field = item.Key;
@@ -320,6 +325,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                         _index._indexStorage.DocumentDatabase, state);
 
                     _suggestionsIndexWriters[field] = writer;
+                }
+                catch (Exception e) when (e.IsOutOfMemory())
+                {
+                    throw;
                 }
                 catch (Exception e)
                 {

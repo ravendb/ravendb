@@ -211,7 +211,6 @@ namespace FastTests.Server.Documents.Tombstones
             using (var index = MapIndex.CreateNew(indexDefinition, database))
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             {
-                DocumentsStorage.PutOperationResults result;
                 using (var tx = context.OpenWriteTransaction())
                 {
                     using (var doc = CreateDocument(context, "key/1", new DynamicJsonValue

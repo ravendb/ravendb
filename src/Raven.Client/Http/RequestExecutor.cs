@@ -141,12 +141,80 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        public event Action<string, Exception> FailedRequest;
+        private class FailedRequestTranslator
+        {
+            public Action<string, Exception> FailedRequest;
+
+            public void Translate(object sender, FailedRequestEventArgs args)
+            {
+                FailedRequest(args.Url, args.Exception);
+            }
+        }
+
+        [Obsolete("Use OnFailedRequest instead")]
+        public event Action<string, Exception> FailedRequest
+        {
+            add
+            {
+                lock (_locker)
+                {
+                    var failedRequestTranslator = new FailedRequestTranslator
+                    {
+                        FailedRequest = value
+                    };
+
+                    OnFailedRequest += failedRequestTranslator.Translate;
+                }
+            }
+
+            remove
+            {
+                lock (_locker)
+                {
+                    if (_onFailedRequest == null)
+                        return;
+
+                    var invocationList = _onFailedRequest.GetInvocationList();
+                    if (invocationList == null || invocationList.Length == 0)
+                        return;
+
+                    foreach (var invocation in invocationList)
+                    {
+                        if (invocation.Target is FailedRequestTranslator frt && frt.FailedRequest == value)
+                        {
+                            _onFailedRequest -= frt.Translate;
+                        }
+                    }
+                }
+            }
+        }
+
+        private event EventHandler<FailedRequestEventArgs> _onFailedRequest;
+
+        public event EventHandler<FailedRequestEventArgs> OnFailedRequest
+        {
+            add
+            {
+                lock (_locker)
+                {
+                    _onFailedRequest += value;
+                }
+            }
+
+            remove
+            {
+                lock (_locker)
+                {
+                    _onFailedRequest -= value;
+                }
+            }
+        }
+
         public event Action<Topology> TopologyUpdated;
 
-        private void OnFailedRequest(string url, Exception e)
+        private void OnFailedRequestInvoke(string url, Exception e)
         {
-            FailedRequest?.Invoke(url, e);
+            _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e));
         }
 
         private HttpClient GetHttpClient()
@@ -698,7 +766,7 @@ namespace Raven.Client.Http
             CancellationToken token = default)
         {
             if (command.FailoverTopologyEtag == InitialTopologyEtag)
-            {                
+            {
                 command.FailoverTopologyEtag = _nodeSelector?.Topology?.Etag ?? InitialTopologyEtag;
             }
             var request = CreateRequest(context, chosenNode, command, out string url);
@@ -1065,7 +1133,7 @@ namespace Raven.Client.Http
                 }
             }
 
-            while (Interlocked.Read(ref numberOfFailedTasks )< tasks.Length)
+            while (Interlocked.Read(ref numberOfFailedTasks) < tasks.Length)
             {
                 // here we rely on WhenAny NOT throwing if the completed
                 // task has failed
@@ -1256,7 +1324,7 @@ namespace Raven.Client.Http
 
             var (currentIndex, currentNode, topologyEtag) = _nodeSelector.GetPreferredNodeWithTopology();
 
-            if (command.FailoverTopologyEtag!= topologyEtag)
+            if (command.FailoverTopologyEtag != topologyEtag)
             {
                 command.FailedNodes.Clear();
                 command.FailoverTopologyEtag = topologyEtag;
@@ -1268,7 +1336,7 @@ namespace Raven.Client.Http
                 return false; //we tried all the nodes...nothing left to do
             }
 
-            OnFailedRequest(url, e);
+            OnFailedRequestInvoke(url, e);
 
             await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
@@ -1281,7 +1349,7 @@ namespace Raven.Client.Http
             _nodeSelector?.OnFailedRequest(nodeIndex);
             var (_, serverNode) = await GetPreferredNode().ConfigureAwait(false);
             await UpdateTopologyAsync(serverNode, 0, true, debugTag: "handle-server-not-responsive").ConfigureAwait(false);
-            OnFailedRequest(url, e);
+            OnFailedRequestInvoke(url, e);
             return serverNode;
         }
 

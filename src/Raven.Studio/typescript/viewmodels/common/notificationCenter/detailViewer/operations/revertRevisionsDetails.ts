@@ -76,7 +76,7 @@ class revertRevisionsDetails extends abstractOperationDetails {
             ];
         });
 
-        this.columnPreview.install(".revertRevisionsDetails", ".js-revert-revisions-details-tooltip",
+        this.columnPreview.install(".revisionsDetails", ".js-revisions-details-tooltip",
             (details: gridItem,
              column: textColumn<gridItem>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
@@ -104,7 +104,6 @@ class revertRevisionsDetails extends abstractOperationDetails {
     static showDetailsFor(op: operation, center: notificationCenter) {
         return app.showBootstrapDialog(new revertRevisionsDetails(op, center));
     }
-
 }
 
 export = revertRevisionsDetails;

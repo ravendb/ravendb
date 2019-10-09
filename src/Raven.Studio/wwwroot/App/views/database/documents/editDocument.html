@@ -196,6 +196,18 @@
                                data-original-title="Document expiration is turned off. <Br />This document won't be deleted on specified point in time."></i>
                         </dd>
                     </div>
+                    <div data-bind="if: refreshDateInterval">
+                        <dt>Refresh:</dt>
+                        <dd>
+                             <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
+                                   data-bind="attr: { 'data-original-title': '<h4>Refresh Date</h4>' + refreshDateFullDate() }">
+                                <span data-bind="text: refreshDateInterval"></span>
+                            </span>
+                            <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true"
+                               data-bind="visible: !$root.documentRefreshEnabled()"
+                               data-original-title="Document refresh is turned off. <Br />This document won't be refreshed on specified point in time."></i>
+                        </dd>
+                    </div>
                     <dt>Size:</dt>
                     <dd>
                         <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"

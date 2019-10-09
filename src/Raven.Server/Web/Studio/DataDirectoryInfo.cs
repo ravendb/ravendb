@@ -212,7 +212,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private class GetDataDirectoryInfoCommand : RavenCommand<SingleNodeDataDirectoryResult>
+        internal class GetDataDirectoryInfoCommand : RavenCommand<SingleNodeDataDirectoryResult>
         {
             private readonly string _path;
             private readonly string _name;
