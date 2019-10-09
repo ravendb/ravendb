@@ -21,6 +21,7 @@ using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions.PeriodicBackup;
 using Sparrow.Logging;
 
@@ -473,7 +474,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     return listBlobsResult
                         .Descendants("Blobs")
                         .Descendants("Name")
-                        .Select(x => GetDirectoryName(x.Value))
+                        .Select(x => RestorePointsBase.GetDirectoryName(x.Value))
                         .Distinct()
                         .Select(x => new BlobProperties
                         {
