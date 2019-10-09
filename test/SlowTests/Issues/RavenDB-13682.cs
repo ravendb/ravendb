@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
@@ -14,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_13682 : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public double Lat, Lng;
             public string Name;
@@ -103,6 +101,7 @@ order by spatial.distance(spatial.point(a.Lat, a.Lng), spatial.point(35.1, -106.
                     };
             }
         }
+
         [Fact]
         public void CanUseDynamicQueryOrderBySpatial_WithAlias()
         {

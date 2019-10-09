@@ -21,8 +21,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Static.Spatial;
-using Spatial4n.Core.Distance;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -71,7 +69,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return;
 
             doc.IndexScore = lucene.Score;
-            if (_query.Distances != null) 
+            if (_query.Distances != null)
             {
                 doc.Distance = _query.Distances.Get(lucene.Doc);
             }
@@ -89,7 +87,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input,string lowerId, IState state, Lucene.Net.Search.ScoreDoc lucene)
+        protected Document GetProjection(Lucene.Net.Documents.Document input, string lowerId, IState state, Lucene.Net.Search.ScoreDoc scoreDoc)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
@@ -101,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     if (doc == null)
                         return null;
-                    return GetProjectionFromDocument(doc, input, lucene, FieldsToFetch, _context, state);
+                    return GetProjectionFromDocument(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
                 var documentLoaded = false;
@@ -149,7 +147,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (doc == null)
                         continue;
 
-                    if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
+                    if (TryGetValue(fieldToFetch, doc, input, scoreDoc, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
                     {
                         if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
                         {
@@ -190,10 +188,10 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false &&
-                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)  
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, scoreDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false &&
+                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
                     continue;
-                
+
                 var immediateResult = AddProjectionToResult(doc, fieldsToFetch, result, key, fieldVal);
 
                 if (immediateResult != null)
@@ -407,7 +405,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, IState state, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value)
+        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, IState state, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -423,7 +421,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, state, indexFields, anyDynamicIndexFields, out key, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, luceneDoc, scoreDoc, state, indexFields, anyDynamicIndexFields, out key, out args[i]);
                     if (ReferenceEquals(args[i], document))
                     {
                         args[i] = Tuple.Create(document, luceneDoc, state, indexFields, anyDynamicIndexFields);

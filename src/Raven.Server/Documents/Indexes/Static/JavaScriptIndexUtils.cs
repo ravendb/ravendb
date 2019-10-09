@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
                 changeVector = cv;
 
-            if(dbj.TryGetDocument(out var doc))
+            if (dbj.TryGetDocument(out var doc))
             {
                 jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, doc);
             }
@@ -120,6 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, lastModified, changeVector);
             }
+
             return true;
         }
 
