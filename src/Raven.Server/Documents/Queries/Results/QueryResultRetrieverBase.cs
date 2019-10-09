@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return;
 
             doc.IndexScore = lucene.Score;
-            if (_query.Distances != null)
+            if (_query?.Distances != null)
             {
                 doc.Distance = _query.Distances.Get(lucene.Doc);
             }
