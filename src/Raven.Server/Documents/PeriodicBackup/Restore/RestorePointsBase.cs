@@ -213,6 +213,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             throw new InvalidOperationException("Can't find settings file in backup archive.");
         }
 
+        protected static string GetDirectoryName(string path, char delimiter = '/')
+        {
+            var index = path.LastIndexOf(delimiter);
+            if (index <= 0)
+                return string.Empty;
+
+            return path.Substring(0, index + 1);
+        }
+
         public class DescendedDateComparer : IComparer<DateTime>
         {
             public int Compare(DateTime x, DateTime y)
