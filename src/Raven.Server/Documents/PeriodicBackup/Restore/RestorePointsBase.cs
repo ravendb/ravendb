@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             throw new InvalidOperationException("Can't find settings file in backup archive.");
         }
 
-        protected static string GetDirectoryName(string path, char delimiter = '/')
+        protected internal static string GetDirectoryName(string path, char delimiter = '/')
         {
             var index = path.LastIndexOf(delimiter);
             if (index <= 0)
