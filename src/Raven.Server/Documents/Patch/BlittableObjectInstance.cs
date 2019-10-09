@@ -308,7 +308,9 @@ namespace Raven.Server.Documents.Patch
         public BlittableObjectInstance(Engine engine,
             BlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
-            string id, DateTime? lastModified, string changeVector = null) : base(engine)
+            string id,
+            DateTime? lastModified,
+            string changeVector = null) : base(engine)
         {
             _parent = parent;
             blittable.NoCache = true;
@@ -322,7 +324,7 @@ namespace Raven.Server.Documents.Patch
         public BlittableObjectInstance(Engine engine,
             BlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
-            Document doc) : this(engine,parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
+            Document doc) : this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
         {
             _doc = doc;
         }

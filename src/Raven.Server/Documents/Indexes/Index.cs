@@ -2501,7 +2501,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<(Document Result, Dictionary<string,Dictionary<string,string[]>> Highlightings, ExplanationResult Explanation), QueryResultsIterationState>(documentsContext,
+                                        enumerator = new PulsedTransactionEnumerator<IndexReadOperation.QueryResult, QueryResultsIterationState>(documentsContext,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(documentsContext, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
                                     }
