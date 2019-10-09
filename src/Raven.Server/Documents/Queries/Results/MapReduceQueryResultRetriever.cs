@@ -72,11 +72,7 @@ namespace Raven.Server.Documents.Queries.Results
         public override Document Get(Lucene.Net.Documents.Document input, ScoreDoc lucene, IState state)
         {
             if (FieldsToFetch.IsProjection)
-            {
-                var proj = GetProjection(input, null,state, lucene);
-                FinishDocumentSetup(proj, lucene);
-                return proj;
-            }
+                return GetProjection(input, null, state, lucene);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
