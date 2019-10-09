@@ -43,15 +43,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             return filesInfo;
-
-            string GetDirectoryName(string path)
-            {
-                var index = path.LastIndexOf('/');
-                if (index <= 0)
-                    return string.Empty;
-
-                return path.Substring(0, index + 1);
-            }
         }
 
         protected override ParsedBackupFolderName ParseFolderNameFrom(string path)

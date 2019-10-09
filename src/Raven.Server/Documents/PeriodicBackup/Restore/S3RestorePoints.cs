@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public override async Task FetchRestorePoints(string path)
         {
             path = path.TrimEnd('/');
-            var objects = await _client.ListAllObjectsAsync(string.IsNullOrEmpty(path) ? "" : path + "/", "/", true);
+            var objects = await _client.ListAllObjectsAsync(string.IsNullOrEmpty(path) ? "" : path + "/", "/", listFolders: true);
             var folders = objects.Select(x => x.FullPath).ToList();
 
             if (folders.Count == 0)
@@ -50,7 +50,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (TryExtractDateFromFileName(obj.FullPath, out var lastModified) == false)
                     lastModified = Convert.ToDateTime(obj.LastModifiedAsString);
 
-                filesInfo.Add(new FileInfoDetails(obj.FullPath, null, lastModified));
+                var fullPath = obj.FullPath;
+                var directoryPath = GetDirectoryName(fullPath);
+                filesInfo.Add(new FileInfoDetails(fullPath, directoryPath, lastModified));
             }
 
             return filesInfo;

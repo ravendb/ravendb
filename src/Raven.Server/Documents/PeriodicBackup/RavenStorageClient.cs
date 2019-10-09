@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public class ListBlobResult
         {
-            public IEnumerable<BlobProperties> ListBlob { get; set; }
+            public List<BlobProperties> ListBlob { get; set; }
 
             public string NextMarker { get; set; }
         }
