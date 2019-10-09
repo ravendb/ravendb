@@ -436,7 +436,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 periodicBackupTaskIds = rawRecord.GetPeriodicBackupsTaskIds();
                 if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
-                return 0;
+                    return 0;
             }
 
             foreach (var taskId in periodicBackupTaskIds)
@@ -1302,7 +1302,7 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, DeletionInProgressStatus> ReadDeletionInProgress()
             {
                 return RawDatabase.GetDeletionInProgressStatus();
-                }
+            }
 
             public bool ReadDatabaseDisabled()
             {
@@ -1317,7 +1317,6 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, string> ReadSettings()
             {
                 return RawDatabase.GetSettings();
-                }
             }
         }
 
@@ -1328,3 +1327,4 @@ namespace Raven.Server.ServerWide.Maintenance
             return _random.Next(-100, 100);
         }
     }
+}

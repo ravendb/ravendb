@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Patch
                         return (long)value;
                     case BlittableJsonToken.LazyNumber:
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
-                        return GetJSValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
+                        return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
                     case BlittableJsonToken.String:
 
                         return value.ToString();
