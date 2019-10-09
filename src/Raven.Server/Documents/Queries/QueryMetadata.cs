@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Queries
 
             if (spatial != null && IsDynamic)
             {
-                indexFieldName = new QueryFieldName(fieldName, true);
+                indexFieldName = new QueryFieldName(fieldName.Value, fieldName.IsQuoted);
             }
             else
             {
