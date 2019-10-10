@@ -3098,7 +3098,10 @@ namespace Raven.Server.Documents.Indexes
         protected static unsafe void UseAllDocumentsCounterAndCmpXngEtags(DocumentsOperationContext documentsContext, 
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
-            if (q?.HasIncludeOrLoad == true)
+            if (q == null)
+                return;
+            
+            if (q.HasIncludeOrLoad)
             {
                 Debug.Assert(length > sizeof(long) * 4);
 
@@ -3109,7 +3112,7 @@ namespace Raven.Server.Documents.Indexes
                 //buffer[3] - last process tombstone etag
             }
 
-            if (q?.CounterIncludes != null || q?.HasCounterSelect == true)
+            if (q.CounterIncludes != null || q.HasCounterSelect)
             {
                 Debug.Assert(length > sizeof(long) * 5);
 
@@ -3118,7 +3121,7 @@ namespace Raven.Server.Documents.Indexes
                 *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
             }
 
-            if (q?.HasCmpXchg == true || q?.HasCmpXchgSelect == true)
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)
             {
                 Debug.Assert(length > sizeof(long) * 5);
 
@@ -3139,6 +3142,9 @@ namespace Raven.Server.Documents.Indexes
                          sizeof(int) + // definition hash
                          1 + // isStale
                          1; // index state
+
+            if (q == null)
+                return length;
 
             if (q.CounterIncludes != null || q.HasCounterSelect)
                 length += sizeof(long); // last counter etag
