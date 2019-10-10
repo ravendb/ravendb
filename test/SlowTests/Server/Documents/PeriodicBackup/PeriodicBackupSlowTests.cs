@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // get by reflection the maxTimerTimeoutInMilliseconds field
                 // this field is the maximum interval acceptable in .Net's threading timer
-                // if the requested backup interval is bigger than this maximum interval, 
+                // if the requested backup interval is bigger than this maximum interval,
                 // a timer with maximum interval will be used several times until the interval cumulatively
                 // will be equal to requested interval
                 typeof(PeriodicBackupRunner)
@@ -155,7 +155,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // get by reflection the maxTimerTimeoutInMilliseconds field
                 // this field is the maximum interval acceptable in .Net's threading timer
-                // if the requested backup interval is bigger than this maximum interval, 
+                // if the requested backup interval is bigger than this maximum interval,
                 // a timer with maximum interval will be used several times until the interval cumulatively
                 // will be equal to requested interval
                 typeof(PeriodicBackupRunner)
@@ -465,7 +465,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -593,9 +593,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         var val = await session.CountersFor("users/1").GetAsync("likes");
                         Assert.Equal(100, val);
-                        val = await session.CountersFor("users/2").GetAsync( "downloads");
+                        val = await session.CountersFor("users/2").GetAsync("downloads");
                         Assert.Equal(200, val);
-
                     }
 
                     var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -806,7 +805,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                     Assert.True(await WaitForDocumentInClusterAsync<User>(session.Advanced.RequestExecutor.TopologyNodes, "users/1", u => u.Name == "oren",
                         TimeSpan.FromSeconds(15)));
-
                 }
 
                 var config = new PeriodicBackupConfiguration
@@ -893,7 +891,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
                 RunBackup(result.TaskId, documentDatabase, true, store);    // FULL BACKUP
-              
+
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
@@ -941,13 +939,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "users/1"}, "users/1");
+                    await session.StoreAsync(new User { Name = "users/1" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
                 var config = new PeriodicBackupConfiguration
                 {
-                    LocalSettings = new LocalSettings {FolderPath = backupPath},
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
@@ -963,7 +961,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "users/2"}, "users/2");
+                    await session.StoreAsync(new User { Name = "users/2" }, "users/2");
                     await session.SaveChangesAsync();
                 }
 
@@ -979,7 +977,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "users/3"}, "users/3");
+                    await session.StoreAsync(new User { Name = "users/3" }, "users/3");
                     await session.SaveChangesAsync();
                 }
 
@@ -989,26 +987,26 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(lastEtag, value);
 
                 var databaseName = GetDatabaseName() + "restore";
-                var restoreConfig = new RestoreBackupConfiguration()
+
+                using (RestoreDatabase(
+                    store,
+                    new RestoreBackupConfiguration()
+                    {
+                        BackupLocation = backupFolder,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = lastBackupToRestore.Last()
+                    },
+                    TimeSpan.FromSeconds(60)))
                 {
-                    BackupLocation = backupFolder,
-                    DatabaseName = databaseName,
-                    LastFileNameToRestore = lastBackupToRestore.Last()
-                };
-
-                var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                store.Maintenance.Server.Send(restoreOperation)
-                    .WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                using (var session = store.OpenAsyncSession(databaseName))
-                {
-
-                    var bestUser = await session.LoadAsync<User>("users/1");
-                    var mediocreUser1 = await session.LoadAsync<User>("users/2");
-                    var mediocreUser2 = await session.LoadAsync<User>("users/3");
-                    Assert.NotNull(bestUser);
-                    Assert.NotNull(mediocreUser1);
-                    Assert.Null(mediocreUser2);
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var bestUser = await session.LoadAsync<User>("users/1");
+                        var mediocreUser1 = await session.LoadAsync<User>("users/2");
+                        var mediocreUser2 = await session.LoadAsync<User>("users/3");
+                        Assert.NotNull(bestUser);
+                        Assert.NotNull(mediocreUser1);
+                        Assert.Null(mediocreUser2);
+                    }
                 }
             }
         }
@@ -1045,7 +1043,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Debug.Assert(indexOf != -1);
                 datePrefix = folderName.Substring(0, indexOf);
             }
-        
+
             var fileExtension = incremental
                 ? Constants.Documents.PeriodicBackup.IncrementalBackupExtension
                 : Constants.Documents.PeriodicBackup.FullBackupExtension;
