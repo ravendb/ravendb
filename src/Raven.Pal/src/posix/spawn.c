@@ -46,12 +46,14 @@ _parse_cmd_line(char* line, char *filename)
         return argv;
     }
     
-    char *rest = line;
+    char *rest = NULL;
     char *token;
+    char *str = line;
 
-    const char delimiters[] = " \t\n";
-    while((token = strtok_r(rest, delimiters, &rest)))
-    {        
+    const char delimiters[] = " \t\n";    
+    while((token = strtok_r(str, delimiters, &rest)))
+    {   
+        str = NULL;
         argv[argc++] = token;
         char **tmpargv = realloc(argv, sizeof(long)*(argc + 1));
         if (tmpargv == NULL)
