@@ -103,6 +103,37 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
+        public static unsafe void GetDbPrefixAndLastSlices(
+            ByteStringContext allocator, string db,
+            out (Slice Slice, ByteStringContext.ExternalScope Scope) prefix,
+            out (Slice Slice, ByteStringContext.ExternalScope Scope) last)
+        {
+            var reservedSpace = Encoding.UTF8.GetMaxByteCount(db.Length) + 1; 
+
+            using (allocator.Allocate(reservedSpace, out var prefixBuffer)) // db + '/'
+            using (allocator.Allocate(reservedSpace, out var lastBuffer)) // db + (char)('/'+1)
+            {
+                fixed (char* pDb = db)
+                {
+                    var len = Encoding.UTF8.GetBytes(pDb, db.Length, prefixBuffer.Ptr, prefixBuffer.Length);
+
+                    prefixBuffer.Ptr[len] = (byte)'/';
+                    prefixBuffer.Truncate(len + 1);
+
+                    allocator.ToLowerCase(ref prefixBuffer);
+
+                    prefixBuffer.CopyTo(lastBuffer.Ptr);
+
+                    lastBuffer.Ptr[len++] = '/' + 1;
+                    lastBuffer.Truncate(len);
+                }
+
+                prefix.Scope = Slice.External(allocator, prefixBuffer, prefixBuffer.Length, out prefix.Slice);
+                last.Scope = Slice.External(allocator, lastBuffer, lastBuffer.Length, out last.Slice);
+
+            }
+        }
+
         public unsafe bool Validate(TransactionOperationContext context, Table items, long index, out long currentIndex)
         {
             currentIndex = -1;

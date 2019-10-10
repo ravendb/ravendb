@@ -3,18 +3,18 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class EsprimaHasLoadOrIncludeOrCounterVisitor : EsprimaVisitor
+    public class HasLoadIncludeCounterOrCmpXcngVisitor : EsprimaVisitor
     {
         private readonly QueryMetadata _queryMetadata;
 
-        public EsprimaHasLoadOrIncludeOrCounterVisitor(QueryMetadata queryMetadata)
+        public HasLoadIncludeCounterOrCmpXcngVisitor(QueryMetadata queryMetadata)
         {
             _queryMetadata = queryMetadata;
         }
 
         public override void VisitCallExpression(CallExpression callExpression)
         {
-            if (_queryMetadata.HasIncludeOrLoad && _queryMetadata.HasCounterSelect)
+            if (_queryMetadata.HasIncludeOrLoad && _queryMetadata.HasCounterSelect && _queryMetadata.HasCmpXchgSelect)
                 return;
 
             if (callExpression.Callee is Identifier id )
@@ -26,6 +26,10 @@ namespace Raven.Server.Documents.Queries
                 else if (id.Name.Equals("counter") || id.Name.Equals("counterRaw"))
                 {
                     _queryMetadata.HasCounterSelect = true;
+                }
+                else if (id.Name.Equals("cmpxchg"))
+                {
+                    _queryMetadata.HasCmpXchgSelect = true;
                 }
             }
 

@@ -229,7 +229,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var bufferSize = 3;
             var hasCounters = query.HasCounterSelect || query.CounterIncludes != null;
+
             if (hasCounters)
+                bufferSize++;
+            if (query.HasCmpXchgSelect)
                 bufferSize++;
 
             var collection = query.CollectionName;
@@ -247,7 +250,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (hasCounters)
                     buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
-
+                
                 resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
@@ -261,6 +264,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
+            }
+
+            if (query.HasCmpXchgSelect)
+            {
+                using (context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+                using (transactionContext.OpenReadTransaction())
+                {
+                    buffer[bufferSize - 1] = Database.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(transactionContext, Database.Name);
+                }
             }
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);

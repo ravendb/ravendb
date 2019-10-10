@@ -2252,7 +2252,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, int take)
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, int take)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
@@ -2272,6 +2272,24 @@ namespace Raven.Server.ServerWide
                         yield return (key, index, value);
                     }
                 }
+            }
+        }
+
+        public long GetLastCompareExchangeIndexForDatabase(TransactionOperationContext context, string databaseName)
+        {
+            CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
+
+            using (prefix.Scope)
+            using (last.Scope)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+               
+                var tvh = table.SeekOneBackwardFrom(CompareExchangeSchema.Indexes[CompareExchangeIndex], prefix.Slice, last.Slice);
+
+                if (tvh == null)
+                    return 0;
+
+                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);             
             }
         }
 

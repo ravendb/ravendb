@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
-            UseAllDocumentsAndCounterEtag(documentsContext, query, length, indexEtagBytes);
+            UseAllDocumentsCounterAndCmpXngEtags(documentsContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 
