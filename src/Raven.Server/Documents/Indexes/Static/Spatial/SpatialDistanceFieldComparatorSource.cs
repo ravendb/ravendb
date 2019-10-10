@@ -115,7 +115,6 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         private struct DistanceValue : IComparable
         {
             public double Value;
-
             public int CompareTo(object obj)
             {
                 if (obj == null)

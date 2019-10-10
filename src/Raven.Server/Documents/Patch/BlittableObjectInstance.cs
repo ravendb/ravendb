@@ -21,7 +21,6 @@ namespace Raven.Server.Documents.Patch
     {
         public bool Changed;
         private readonly BlittableObjectInstance _parent;
-        private readonly Document _doc;
         private bool _put;
 
         public readonly DateTime? LastModified;
@@ -29,18 +28,13 @@ namespace Raven.Server.Documents.Patch
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
-
         public Dictionary<string, BlittableObjectProperty> OwnValues =
             new Dictionary<string, BlittableObjectProperty>();
-
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
         public Dictionary<string, IndexField> LuceneIndexFields;
         public bool LuceneAnyDynamicIndexFields;
-
-        //public SpatialResult? Distance => _doc?.Distance;
-        public float? Score => _doc?.IndexScore;
 
         private void MarkChanged()
         {
@@ -173,7 +167,6 @@ namespace Raven.Server.Documents.Patch
                         case Client.Constants.Documents.Indexing.Fields.NullValue:
                             value = JsValue.Null;
                             return true;
-
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
                             value = string.Empty;
                             return true;
@@ -260,26 +253,20 @@ namespace Raven.Server.Documents.Patch
                 {
                     case BlittableJsonToken.Null:
                         return JsValue.Null;
-
                     case BlittableJsonToken.Boolean:
                         return (bool)value ? JsBoolean.True : JsBoolean.False;
-
                     case BlittableJsonToken.Integer:
                         // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);
                         return (long)value;
-
                     case BlittableJsonToken.LazyNumber:
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                         return GetJSValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
-
                     case BlittableJsonToken.String:
 
                         return value.ToString();
-
                     case BlittableJsonToken.CompressedString:
                         return value.ToString();
-
                     case BlittableJsonToken.StartObject:
                         Changed = true;
                         _parent.MarkChanged();
@@ -288,13 +275,11 @@ namespace Raven.Server.Documents.Patch
                         return new BlittableObjectInstance(owner.Engine,
                             owner,
                             blittable, null, null);
-
                     case BlittableJsonToken.StartArray:
                         Changed = true;
                         _parent.MarkChanged();
                         var bjra = (BlittableJsonReaderArray)value;
                         return GetArrayInstanceFromBlittableArray(owner.Engine, bjra, owner);
-
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());
                 }
@@ -303,7 +288,7 @@ namespace Raven.Server.Documents.Patch
             public static JsValue GetJSValueForLazyNumber(Engine engine, LazyNumberValue value)
             {
                 // First, try and see if the number is withing double boundaries.
-                // We use double's tryParse and it actually may round the number,
+                // We use double's tryParse and it actually may round the number, 
                 // But that are Jint's limitations
                 if (value.TryParseDouble(out double doubleVal))
                 {
@@ -313,32 +298,24 @@ namespace Raven.Server.Documents.Patch
                 // If number is not in double boundaries, we return the LazyNumberValue
                 return new ObjectWrapper(engine, value);
             }
+
         }
 
         public BlittableObjectInstance(Engine engine,
             BlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
-            string id,
-            DateTime? lastModified,
-            string changeVector = null) : base(engine)
+            string docId,
+            DateTime? lastModified, string changeVector = null) : base(engine)
         {
             _parent = parent;
             blittable.NoCache = true;
             LastModified = lastModified;
             ChangeVector = changeVector;
             Blittable = blittable;
-            DocumentId = id;
+            DocumentId = docId;
             Prototype = engine.Object.PrototypeObject;
         }
 
-        public BlittableObjectInstance(Engine engine,
-            BlittableObjectInstance parent,
-            BlittableJsonReaderObject blittable,
-            Document doc) : this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
-        {
-            throw new NotSupportedException("AAAAA!");
-            _doc = doc;
-        }
 
         public override bool Delete(string propertyName, bool throwOnError)
         {

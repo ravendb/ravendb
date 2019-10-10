@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Queries.Results
         public Document Get(Document doc)
         {
             return GetProjectionFromDocument(doc, null, 0, FieldsToFetch, _context, null);
-        }
+        }      
 
         public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {
@@ -94,23 +94,18 @@ namespace Raven.Server.Documents.Queries.Results
                                 doc.EnsureMetadata();
                                 args[i] = doc;
                                 break;
-
                             case BlittableJsonReaderObject bjro:
                                 args[i] = bjro;
                                 break;
-
                             case List<Match> matchList:
                                 CreateArgsFromMatchList(matchList, args, i);
                                 break;
-
                             case MatchCollection matchCollection:
                                 CreateArgsFromMatchList(matchCollection, args, i);
                                 break;
-
                             case string s:
                                 args[i] = s;
                                 break;
-
                             default:
                                 args[i] = null;
                                 break;
@@ -131,26 +126,26 @@ namespace Raven.Server.Documents.Queries.Results
                     switch (val)
                     {
                         case Document d:
-                            {
-                                if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
-                                    continue;
-                                d.EnsureMetadata();
-                                var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
-                                if (immediateResult != null)
-                                    return immediateResult;
-                                break;
-                            }
+                        {
+                            if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
+                                continue;
+                            d.EnsureMetadata();
+                            var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
+                            if (immediateResult != null)
+                                return immediateResult;
+                            break;
+                        }
                         case BlittableJsonReaderObject bjro:
-                            {
-                                var doc = new Document { Data = bjro };
-                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
-                                    continue;
-                                doc.EnsureMetadata();
-                                var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
-                                if (immediateResult != null)
-                                    return immediateResult;
-                                break;
-                            }
+                        {
+                            var doc = new Document { Data = bjro };
+                            if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
+                                continue;
+                            doc.EnsureMetadata();
+                            var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
+                            if (immediateResult != null)
+                                return immediateResult;
+                            break;
+                        }
                         case MatchCollection matches:
                             var array = new DynamicJsonArray();
                             foreach (var m in matches)
@@ -175,16 +170,15 @@ namespace Raven.Server.Documents.Queries.Results
                             }
                             result[key] = array;
                             break;
-
                         case string s:
                             result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = s;
                             break;
-
                         default:
                             result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = null;
                             continue;
                     }
                 }
+
             }
 
             return new Document

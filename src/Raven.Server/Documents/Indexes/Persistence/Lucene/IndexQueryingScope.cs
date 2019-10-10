@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_fieldsToFetch.IsDistinct)
                 return _alreadySeenProjections.Add(document.DataHash);
-
+            
             return true;
         }
     }

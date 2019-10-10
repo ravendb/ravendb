@@ -179,9 +179,9 @@ namespace Raven.Server.Documents.Queries.Results
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
                 if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false &&
-                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
+                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)  
                     continue;
-
+                
                 var immediateResult = AddProjectionToResult(doc, score, fieldsToFetch, result, key, fieldVal);
 
                 if (immediateResult != null)
@@ -218,6 +218,7 @@ namespace Raven.Server.Documents.Queries.Results
                     newDoc = d;
                     newDoc.IndexScore = score;
                 }
+
                 else
                     ThrowInvalidQueryBodyResponse(fieldVal);
 
@@ -382,7 +383,6 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     case Constants.Documents.Indexing.Fields.NullValue:
                         return null;
-
                     case Constants.Documents.Indexing.Fields.EmptyString:
                         return string.Empty;
                 }
@@ -498,6 +498,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     _loadedDocumentIds.Add(fieldToFetch.QueryField.SourceAlias);
                 }
+
                 else if (fieldToFetch.QueryField.IsParameter)
                 {
                     if (_query.QueryParameters == null)
@@ -508,6 +509,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     _loadedDocumentIds.Add(id.ToString());
                 }
+
                 else if (fieldToFetch.QueryField.LoadFromAlias != null)
                 {
                     if (_loadedDocumentsByAliasName.TryGetValue(fieldToFetch.QueryField.LoadFromAlias, out var loadedDoc))
@@ -515,6 +517,7 @@ namespace Raven.Server.Documents.Queries.Results
                         IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
                     }
                 }
+
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
                     if (luceneDoc != null)
@@ -527,10 +530,12 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                     }
                 }
+
                 else
                 {
                     IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
                 }
+
             }
             else
             {

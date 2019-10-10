@@ -24,8 +24,6 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         private readonly NtsSpatialContext _ntsContext;
         private readonly ShapeStringReadWriter _shapeStringReadWriter;
 
-        public SpatialUnits Units => _options.Units;
-
         static SpatialField()
         {
             GeometryServiceProvider.Instance = new NtsGeometryServices();
