@@ -3114,7 +3114,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (q.CounterIncludes != null || q.HasCounterSelect)
             {
-                Debug.Assert(length > sizeof(long) * 5);
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
                 var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1)) ;
 
@@ -3123,7 +3123,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (q.HasCmpXchg || q.HasCmpXchgSelect)
             {
-                Debug.Assert(length > sizeof(long) * 5);
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last compare exchange index");
 
                 using (documentsContext.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
                 using (transactionContext.OpenReadTransaction())
