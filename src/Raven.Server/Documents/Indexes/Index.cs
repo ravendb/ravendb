@@ -1405,9 +1405,6 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(
-                        $"{new Size(beforeFree, SizeUnit.Bytes)} is used by '{Name}', reducing memory utilization.");
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
@@ -1418,8 +1415,13 @@ namespace Raven.Server.Documents.Indexes
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
                 var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"After cleanup, using {new Size(afterFree, SizeUnit.Bytes)} by '{Name}'.");
+
+                if (_logger.IsInfoEnabled && beforeFree != afterFree)
+                {
+                    _logger.Info($"Reduced the memory usage of index '{Name}'. " +
+                                 $"Before: {new Size(beforeFree, SizeUnit.Bytes)}, " +
+                                 $"after: {new Size(afterFree, SizeUnit.Bytes)}");
+                }
             }
             finally
             {
