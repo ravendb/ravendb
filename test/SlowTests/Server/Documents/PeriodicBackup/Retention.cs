@@ -207,9 +207,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
             var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+            PeriodicBackupStatus status = null;
+
             var value = WaitForValue(() =>
             {
-                var status = store.Maintenance.Send(operation).Status;
+                status = store.Maintenance.Send(operation).Status;
                 if (status?.LastEtag == null)
                     return false;
 
@@ -220,7 +222,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 return true;
             }, true, timeout: timeout);
 
-            Assert.True(value);
+            Assert.True(value, $"Got status: {status != null}, exception: {status?.Error?.Exception}");
 
             return lastEtag;
         }
