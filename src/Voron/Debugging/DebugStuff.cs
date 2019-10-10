@@ -205,7 +205,7 @@ namespace Voron.Debugging
                     }
                 })
                 {
-                    process.Start(CancellationToken.None);
+                    process.Start();
                 }
 
                 return;

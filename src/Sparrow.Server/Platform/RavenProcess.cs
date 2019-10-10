@@ -47,7 +47,7 @@ namespace Sparrow.Server.Platform
         private SafeFileHandle StandardOutAndErr { get; set; }
         private SafeFileHandle StandardIn { get; set; }
 
-        public void Start(CancellationToken ctk)
+        public void Start()
         {
             if (StartInfo?.FileName == null)
                 throw new InvalidOperationException($"RavenProcess {nameof(Start)} must be supplied with valid {nameof(StartInfo)} object and set {nameof(StartInfo.FileName)}");
@@ -65,7 +65,7 @@ namespace Sparrow.Server.Platform
         {
             using (var ravenProcess = new RavenProcess {StartInfo = new ProcessStartInfo {FileName = filename, Arguments = arguments}})
             {
-                ravenProcess.Start(CancellationToken.None);
+                ravenProcess.Start();
                 ravenProcess.ReadTo(outputDel);
             }
         }
@@ -137,7 +137,7 @@ namespace Sparrow.Server.Platform
                     process.ProcessExited += exitHandler;
                 if (lineOutputHandler != null)
                     process.LineOutput += lineOutputHandler;
-                process.Start(ctk);
+                process.Start();
                 using (var fs = new FileStream(process.StandardOutAndErr, FileAccess.Read))
                 using (var sr = new StreamReader(fs, Encoding.UTF8))
                 {
