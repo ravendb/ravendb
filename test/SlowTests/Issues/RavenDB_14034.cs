@@ -47,10 +47,6 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    /*var query = session.Query<User>()
-                        .Where(u => u.Name == RavenQuery.CmpXchg<string>(key));*/
-
-
                     var query = session.Advanced.RawQuery<User>("from Users Where Name == cmpxchg('names/oren')");
                         
 
