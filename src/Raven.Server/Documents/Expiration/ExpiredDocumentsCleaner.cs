@@ -133,9 +133,6 @@ namespace Raven.Server.Documents.Expiration
 
             try
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Trying to find {(forExpiration ? "expired" : "require refreshing")} documents to delete");
-
                 DatabaseTopology topology;
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
@@ -183,7 +180,7 @@ namespace Raven.Server.Documents.Expiration
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to expire/refresh documents on {_database.Name} which are older than {currentTime}", e);
+                    Logger.Operations($"Failed to {(forExpiration ? "delete" : "refresh")} documents on {_database.Name} which are older than {currentTime}", e);
             }
         }
 
