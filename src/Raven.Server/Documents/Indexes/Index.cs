@@ -3087,7 +3087,7 @@ namespace Raven.Server.Documents.Indexes
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
-            UseAllDocumentsAndCounterEtag(documentsContext, q, length, indexEtagBytes);
+            UseAllDocumentsCounterAndCmpXngEtags(documentsContext, q, length, indexEtagBytes);
 
             unchecked
             {
@@ -3095,7 +3095,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsAndCounterEtag(DocumentsOperationContext documentsContext, QueryMetadata q, int length, byte* indexEtagBytes)
+        protected static unsafe void UseAllDocumentsCounterAndCmpXngEtags(DocumentsOperationContext documentsContext, 
+            QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q?.HasIncludeOrLoad == true)
             {
@@ -3110,9 +3111,25 @@ namespace Raven.Server.Documents.Indexes
 
             if (q?.CounterIncludes != null || q?.HasCounterSelect == true)
             {
-                Debug.Assert(length > sizeof(long) * 4);
+                Debug.Assert(length > sizeof(long) * 5);
 
-                *(long*)(indexEtagBytes + length - sizeof(long)) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
+                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1)) ;
+
+                *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
+            }
+
+            if (q?.HasCmpXchg == true || q?.HasCmpXchgSelect == true)
+            {
+                Debug.Assert(length > sizeof(long) * 5);
+
+                using (documentsContext.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+                using (transactionContext.OpenReadTransaction())
+                {
+                    *(long*)(indexEtagBytes + length - sizeof(long)) =
+                        documentsContext.DocumentDatabase.ServerStore.Cluster
+                            .GetLastCompareExchangeIndexForDatabase(transactionContext, documentsContext.DocumentDatabase.Name);
+                }
+
             }
         }   
 
@@ -3126,6 +3143,9 @@ namespace Raven.Server.Documents.Indexes
             if (q.CounterIncludes != null || q.HasCounterSelect)
                 length += sizeof(long); // last counter etag
 
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)           
+                length += sizeof(long); //last cmpxng etag
+            
             return length;
         }
 

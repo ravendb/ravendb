@@ -119,6 +119,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasCounterSelect { get; internal set; }
 
+        public bool HasCmpXchgSelect { get; internal set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
@@ -535,7 +537,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 Query.SelectFunctionBody.Program = ValidateScript(parameters);
-                HasLoadOrIncludeOrCounterInProjection(Query.SelectFunctionBody.Program);
+                CheckIfProjectionHasLoadIncludeCounterOrCmpXng(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
             {
@@ -1032,7 +1034,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
-                        HasLoadOrIncludeOrCounterInProjection(tuple.Program);
+                        CheckIfProjectionHasLoadIncludeCounterOrCmpXng(tuple.Program);
 
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
@@ -1201,12 +1203,12 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
-        private void HasLoadOrIncludeOrCounterInProjection(Esprima.Ast.Program ast)
+        private void CheckIfProjectionHasLoadIncludeCounterOrCmpXng(Esprima.Ast.Program ast)
         {
-            if (HasIncludeOrLoad && CounterIncludes != null)
+            if (HasIncludeOrLoad && CounterIncludes != null && HasCmpXchg)
                 return;
 
-            var visitor = new EsprimaHasLoadOrIncludeOrCounterVisitor(this);
+            var visitor = new HasLoadIncludeCounterOrCmpXcngVisitor(this);
             visitor.Visit(ast);
         }
 
