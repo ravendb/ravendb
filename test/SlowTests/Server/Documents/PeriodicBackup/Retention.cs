@@ -31,7 +31,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 BackupConfigurationHelper.SkipMinimumBackupAgeToKeepValidation = true;
 
-                var backupPath = NewDataPath(suffix: "BackupFolder") + "/Backups/Admin/../..";
+                var basePath = NewDataPath(suffix: "BackupFolder");
+                var backupPath = Path.Combine(basePath, "/Backups/Admin/../..");
+
                 await CanDeleteBackupsByDate(backupAgeInSeconds, numberOfBackupsToCreate,
                     (configuration, _) =>
                     {
@@ -217,6 +219,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 lastEtag = status.LastEtag.Value;
                 return true;
             }, true, timeout: timeout);
+
             Assert.True(value);
 
             return lastEtag;
