@@ -32,7 +32,6 @@ namespace Raven.Server.Documents
     /// </summary>
     public class TransactionOperationsMerger : IDisposable
     {
-
         private readonly DocumentDatabase _parent;
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
@@ -105,6 +104,7 @@ namespace Raven.Server.Documents
 
             [JsonIgnore]
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
             public Exception Exception;
 
             public bool RetryOnError = false;
@@ -120,13 +120,12 @@ namespace Raven.Server.Documents
             _operations.Enqueue(cmd);
             _waitHandle.Set();
 
-
             if (_concurrentOperations.TryAddCount() == false)
                 ThrowTxMergerWasDisposed();
 
             try
             {
-                await cmd.TaskCompletionSource.Task;
+                await cmd.TaskCompletionSource.Task.ConfigureAwait(false);
             }
             finally
             {
@@ -251,12 +250,10 @@ namespace Raven.Server.Documents
 
                 public override void Record(DocumentsOperationContext context, MergedTransactionCommand cmd)
                 {
-
                 }
 
                 internal override void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true)
                 {
-
                 }
 
                 public override void Prepare(ref RecordingState state)
@@ -283,7 +280,6 @@ namespace Raven.Server.Documents
 
                 public override void Dispose()
                 {
-
                 }
             }
 
@@ -391,9 +387,9 @@ namespace Raven.Server.Documents
                             e);
                     }
                     Interlocked.Exchange(ref _edi, ExceptionDispatchInfo.Capture(e));
-                    // cautionary, we make sure that stuff that is waiting on the 
+                    // cautionary, we make sure that stuff that is waiting on the
                     // queue is notified about this catastrophic3 error and we wait
-                    // just a bit more to verify that nothing racy can still get 
+                    // just a bit more to verify that nothing racy can still get
                     // there
                     while (_runTransactions)
                     {
@@ -460,7 +456,6 @@ namespace Raven.Server.Documents
             {
                 cmd.TaskCompletionSource.TrySetResult(null);
             }
-
         }
 
         private void MergeTransactionsOnce()
@@ -558,9 +553,11 @@ namespace Raven.Server.Documents
                                 NotifyOnThreadPool(pendingOps);
                             }
                             return;
+
                         case PendingOperations.HasMore:
                             MergeTransactionsWithAsyncCommit(ref context, ref returnContext, pendingOps);
                             return;
+
                         default:
                             Debug.Assert(false, "Should never happen");
                             return;
@@ -667,7 +664,6 @@ namespace Raven.Server.Documents
                         var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
                         try
                         {
-
                             result = ExecutePendingOperationsInTransaction(
                                 currentPendingOps, current,
                                 previous.Transaction.InnerTransaction.LowLevelTransaction.AsyncCommit, ref transactionMeter);
@@ -739,9 +735,11 @@ namespace Raven.Server.Documents
                             }
                             NotifyOnThreadPool(currentPendingOps);
                             return;
+
                         case PendingOperations.HasMore:
                             previousPendingOps = currentPendingOps;
                             break;
+
                         default:
                             Debug.Assert(false);
                             return;
@@ -813,7 +811,7 @@ namespace Raven.Server.Documents
             var sp = Stopwatch.StartNew();
             do
             {
-                // RavenDB-7732 - Even if we merged multiple separate operations into 
+                // RavenDB-7732 - Even if we merged multiple separate operations into
                 // a single transaction in Voron, we're still going to have a separate
                 // tx marker for them for the purpose of replication, to avoid creating
                 // overly large replication batches.
@@ -839,7 +837,7 @@ namespace Raven.Server.Documents
                         break; // nothing remaining to do, let's us close this work
 
                     if (sp.ElapsedMilliseconds > _maxTimeToWaitForPreviousTxInMs)
-                        break; // too much time 
+                        break; // too much time
 
                     if (modifiedSize > _maxTxSizeInBytes)
                         break; // transaction is too big, let's clean it
@@ -857,7 +855,6 @@ namespace Raven.Server.Documents
 
                 UnlikelyRejectOperations(previousOperation, sp, llt, modifiedSize);
                 break;
-
             } while (true);
 
             var status = GetPendingOperationsStatus(context, pendingOps.Count == 0);
@@ -972,7 +969,7 @@ namespace Raven.Server.Documents
             if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager)
                 return PendingOperations.CompletedAll;
 
-            // This optimization is disabled when encryption is on	
+            // This optimization is disabled when encryption is on
             if (context.Environment.Options.EncryptionEnabled)
                 return PendingOperations.CompletedAll;
 
@@ -994,7 +991,6 @@ namespace Raven.Server.Documents
             TaskExecutor.Execute(DoCommandsNotification, cmds);
         }
 
-
         private void RunEachOperationIndependently(List<MergedTransactionCommand> pendingOps)
         {
             try
@@ -1011,7 +1007,6 @@ namespace Raven.Server.Documents
                                 _recording.State?.Record(context, TxInstruction.BeginTx);
                                 using (var tx = context.OpenWriteTransaction())
                                 {
-
                                     op.RetryOnError = false;
 
                                     op.Execute(context, _recording.State);
@@ -1064,9 +1059,9 @@ namespace Raven.Server.Documents
             _recording.State?.Dispose();
             _recording.Stream?.Dispose();
 
-            // make sure that the queue is empty and there are no pending 
-            // transactions waiting. 
-            // this is probably a bit more aggressive that what is needed, but it is better 
+            // make sure that the queue is empty and there are no pending
+            // transactions waiting.
+            // this is probably a bit more aggressive that what is needed, but it is better
             // to be cautious and slower on rare dispose than hang
 
             while (done == false)
@@ -1107,9 +1102,9 @@ namespace Raven.Server.Documents
             _recording.Stream = new GZipStream(recordingFileStream, CompressionMode.Compress);
             _recording.StopAction = stopAction;
         }
-        
+
         public bool RecordingEnabled => _recording.State != null;
-        
+
         public void StopRecording()
         {
             var recordingState = _recording.State;
