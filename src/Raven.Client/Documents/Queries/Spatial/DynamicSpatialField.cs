@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Queries.Spatial
     {
         public abstract string ToField(Func<string, bool, string> ensureValidFieldName);
 
-        public double RoundFactor;
+        public double RoundFactor { get; private set; }
 
         public DynamicSpatialField RoundTo(double factor)
         {
