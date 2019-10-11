@@ -13,6 +13,7 @@ namespace Raven.Client.Documents.Session.Tokens
         private OrderByToken(string fieldName, bool descending, string sorterName)
         {
             _fieldName = fieldName;
+            Console.WriteLine($"OrderByToken: ${fieldName}");
             _descending = descending;
             _sorterName = sorterName;
         }
@@ -20,6 +21,7 @@ namespace Raven.Client.Documents.Session.Tokens
         private OrderByToken(string fieldName, bool descending, OrderingType ordering)
         {
             _fieldName = fieldName;
+            Console.WriteLine($"OrderByToken: ${fieldName}");
             _descending = descending;
             _ordering = ordering;
         }
@@ -94,7 +96,6 @@ namespace Raven.Client.Documents.Session.Tokens
 
             WriteField(writer, _fieldName);
 
-
             if (_sorterName != null)
             {
                 writer
@@ -109,9 +110,11 @@ namespace Raven.Client.Documents.Session.Tokens
                     case OrderingType.Long:
                         writer.Append(" as long");
                         break;
+
                     case OrderingType.Double:
                         writer.Append(" as double");
                         break;
+
                     case OrderingType.AlphaNumeric:
                         writer.Append(" as alphaNumeric");
                         break;
