@@ -30,30 +30,24 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public static OrderByToken ScoreDescending = new OrderByToken("score()", descending: true, ordering: OrderingType.String);
 
-        public static OrderByToken CreateDistanceAscending(string fieldName, string latitudeParameterName, string longitudeParameterName, string roundFactorParameterName)
+        public static OrderByToken CreateDistanceAscending(string fieldName, string latitudeParameterName, string longitudeParameterName)
         {
-            return new OrderByToken($"spatial.distance({fieldName}, spatial.point(${latitudeParameterName}, " +
-                $"${longitudeParameterName}" +
-                $"){(roundFactorParameterName == null ? "" : ", $" + roundFactorParameterName)})", false, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.point(${latitudeParameterName}, ${longitudeParameterName}))", false, OrderingType.String);
         }
 
-        public static OrderByToken CreateDistanceAscending(string fieldName, string shapeWktParameterName, string roundFactorParameterName)
+        public static OrderByToken CreateDistanceAscending(string fieldName, string shapeWktParameterName)
         {
-            return new OrderByToken($"spatial.distance({fieldName}, spatial.wkt(${shapeWktParameterName}" +
-                $"){(roundFactorParameterName == null ? "" : ", $" + roundFactorParameterName)})", false, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.wkt(${shapeWktParameterName}))", false, OrderingType.String);
         }
 
-        public static OrderByToken CreateDistanceDescending(string fieldName, string latitudeParameterName, string longitudeParameterName, string roundFactorParameterName)
+        public static OrderByToken CreateDistanceDescending(string fieldName, string latitudeParameterName, string longitudeParameterName)
         {
-            return new OrderByToken($"spatial.distance({fieldName}, " +
-                $"spatial.point(${latitudeParameterName}, ${longitudeParameterName}" +
-                $"){(roundFactorParameterName == null ? "" : ", $" + roundFactorParameterName)})", true, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.point(${latitudeParameterName}, ${longitudeParameterName}))", true, OrderingType.String);
         }
 
-        public static OrderByToken CreateDistanceDescending(string fieldName, string shapeWktParameterName, string roundFactorParameterName)
+        public static OrderByToken CreateDistanceDescending(string fieldName, string shapeWktParameterName)
         {
-            return new OrderByToken($"spatial.distance({fieldName}, spatial.wkt(${shapeWktParameterName}" +
-                $"){(roundFactorParameterName == null ? "" : ", $" + roundFactorParameterName)})", true, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.wkt(${shapeWktParameterName}))", true, OrderingType.String);
         }
 
         public static OrderByToken CreateRandom(string seed)

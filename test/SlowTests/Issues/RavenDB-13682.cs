@@ -12,6 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_13682 : RavenTestBase
     {
+        /*
         private class Item
         {
             public double Lat, Lng;
@@ -206,5 +207,6 @@ select {
                 }
             }
         }
+        */
     }
 }

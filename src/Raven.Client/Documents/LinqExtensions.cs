@@ -1090,31 +1090,17 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
         {
-            return OrderByDistance<T>(source, path, latitude, longitude, 0);
+            return source.OrderByDistance(path.ToPropertyPath(), latitude, longitude);
         }
 
-        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude, double roundFactor)
-        {
-            return source.OrderByDistance(path.ToPropertyPath(), latitude, longitude, roundFactor);
-        }
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
-        {
-            return OrderByDistance<T>(source, fieldName, latitude, longitude, 0);
-        }
-
-        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude, double roundFactor)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(
-                Expression.Call(null, currentMethod, expression, 
-                    Expression.Constant(fieldName), 
-                    Expression.Constant(latitude), 
-                    Expression.Constant(longitude), 
-                    Expression.Constant(roundFactor)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1162,39 +1148,23 @@ namespace Raven.Client.Documents
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, 
-                    Expression.Constant(field), 
-                    Expression.Constant(latitude), 
-                    Expression.Constant(longitude)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IOrderedQueryable<T>)queryable;
         }
+
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
         {
-            return OrderByDistanceDescending(source, path, latitude, longitude, 0);
-        }
-
-        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude, double roundFactor)
-        {
-            return source.OrderByDistanceDescending(path.ToPropertyPath(), latitude, longitude, roundFactor);
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), latitude, longitude);
         }
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
-        {
-            return OrderByDistanceDescending(source, fieldName, latitude, longitude, 0);
-        }
-        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude, double roundFactor)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(
-                Expression.Call(null, currentMethod, expression, 
-                Expression.Constant(fieldName), 
-                Expression.Constant(latitude), 
-                Expression.Constant(longitude),
-                Expression.Constant(roundFactor)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1216,30 +1186,17 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
         {
-            return OrderByDistanceDescending(source, path, shapeWkt, 0);
-        }
-        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt, double roundFactor)
-        {
-            return source.OrderByDistanceDescending(path.ToPropertyPath(), shapeWkt, roundFactor);
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), shapeWkt);
         }
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
-        {
-            return OrderByDistanceDescending<T>(source, fieldName, shapeWkt, 0);
-        }
-
-        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt, double roundFactor)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(
-                Expression.Call(null, currentMethod, expression, 
-                    Expression.Constant(fieldName), 
-                    Expression.Constant(shapeWkt),
-                    Expression.Constant(roundFactor)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
             return (IOrderedQueryable<T>)queryable;
         }
 
