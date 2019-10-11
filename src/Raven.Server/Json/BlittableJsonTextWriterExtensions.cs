@@ -957,6 +957,14 @@ namespace Raven.Server.Json
             writer.WriteString(indexDefinition.OutputReduceToCollection);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(indexDefinition.ReduceOutputIndex));
+
+            if (indexDefinition.ReduceOutputIndex.HasValue)
+                writer.WriteInteger(indexDefinition.ReduceOutputIndex.Value);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(indexDefinition.Configuration));
             writer.WriteStartObject();
             var isFirstInternal = true;

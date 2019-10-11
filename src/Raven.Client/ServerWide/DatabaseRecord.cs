@@ -106,25 +106,29 @@ namespace Raven.Client.ServerWide
             Sorters?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt)
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex)
         {
             var lockMode = IndexLockMode.Unlock;
+
+            IndexDefinitionCompareDifferences? differences = null;
 
             if (Indexes.TryGetValue(definition.Name, out var existingDefinition))
             {
                 if (existingDefinition.LockMode != null)
                     lockMode = existingDefinition.LockMode.Value;
 
-                var result = existingDefinition.Compare(definition);
-                if (result != IndexDefinitionCompareDifferences.All)
+                differences = existingDefinition.Compare(definition);
+                if (differences != IndexDefinitionCompareDifferences.All)
                 {
-                    if (result == IndexDefinitionCompareDifferences.LockMode &&
+                    if (differences == IndexDefinitionCompareDifferences.LockMode &&
                         definition.LockMode == null)
                         return;
 
-                    if (result == IndexDefinitionCompareDifferences.None)
+                    if (differences == IndexDefinitionCompareDifferences.None)
                         return;
                 }
+
+                
             }
 
             if (lockMode == IndexLockMode.LockedIgnore)
@@ -133,6 +137,26 @@ namespace Raven.Client.ServerWide
             if (lockMode == IndexLockMode.LockedError)
             {
                 throw new IndexAlreadyExistException($"Cannot edit existing index {definition.Name} with lock mode {lockMode}");
+            }
+
+            if (definition.OutputReduceToCollection != null)
+            {
+                long? version = raftIndex;
+
+                if (differences != null)
+                {
+                    if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && 
+                        differences.Value.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false &&
+                        differences.Value.HasFlag(IndexDefinitionCompareDifferences.Fields) == false &&
+                        differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalSources) == false)
+                    {
+                        // index definition change does not affect the output documents - version need to stay the same
+
+                        version = existingDefinition.ReduceOutputIndex;
+                    }
+                }
+
+                definition.ReduceOutputIndex = version;
             }
 
             Indexes[definition.Name] = definition;

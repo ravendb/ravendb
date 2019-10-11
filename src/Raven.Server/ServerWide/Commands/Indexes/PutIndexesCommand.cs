@@ -34,7 +34,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (Static != null)
             {
                 foreach (var definition in Static)
-                    record.AddIndex(definition, Source, CreatedAt);
+                    record.AddIndex(definition, Source, CreatedAt, etag);
             }
 
             if (Auto != null)

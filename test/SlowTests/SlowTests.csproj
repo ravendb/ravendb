@@ -17,7 +17,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
+    <None Remove="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <None Remove="Data\RavenDB-12785.ravendbdump" />
+    <None Remove="Data\RavenDB_11488\ravendb-11488.ravendb-snapshot" />
     <None Remove="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <None Remove="Data\RavenDB_13468\counters-snapshot-document.json" />
     <None Remove="Data\RavenDB_13468\counters.test.4.1.6.ravendb-snapshot" />
@@ -45,6 +47,7 @@
     <EmbeddedResource Include="Data\oraclesql.basic.insert.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.create.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-12785.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-13937.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
@@ -63,6 +66,7 @@
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values.txt" />
     <EmbeddedResource Include="Data\places.txt" />
     <EmbeddedResource Include="Data\RavenDB_10404\northwind.4.0.0.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_11488\ravendb-11488.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_11664\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_12022\counters.4.1.4.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
