@@ -1431,7 +1431,7 @@ namespace Raven.Server.Documents
         }
 
         // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, long take = long.MaxValue)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1452,6 +1452,9 @@ namespace Raven.Server.Documents
                         var deleteOperationResult = Delete(context, id, null);
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
+
+                        if (--take < 0)
+                            break;
                     }
                 }
             }

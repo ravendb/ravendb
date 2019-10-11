@@ -40,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 {
                     throw new InvalidOperationException($"Can not add index: {Definition.Name} because an index with the same name but different casing already exist");
                 }
-                record.AddIndex(Definition, Source, CreatedAt);
+                record.AddIndex(Definition, Source, CreatedAt, etag);
             }
             catch (Exception e)
             {

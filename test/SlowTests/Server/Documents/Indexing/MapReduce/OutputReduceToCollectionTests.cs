@@ -1,13 +1,19 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Orders;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
@@ -100,30 +106,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new DailyInvoice
-                    {
-                        Amount = 1,
-                        Date = new DateTime(2017, 1, 1)
-                    });
+                    await session.StoreAsync(new DailyInvoice {Amount = 1, Date = new DateTime(2017, 1, 1)});
                     await session.SaveChangesAsync();
                 }
 
                 var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await CreateDataAndIndexes(store));
                 Assert.Contains("Index 'DailyInvoicesIndex' is defined to output the Reduce results to documents in Collection 'DailyInvoices'." +
                                 " This collection currently has 1 document . All documents in Collection 'DailyInvoices' must be deleted first.", exception.Message);
-            }
-        }
-
-        [Fact]
-        public async Task ForbidSideBySideIndexingWithoutClearingTheOutputReduceToCollectionValueFirst()
-        {
-            using (var store = GetDocumentStore())
-            {
-                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
-                var exception = await Assert.ThrowsAsync<IndexInvalidException>(async () => await store.ExecuteIndexAsync(new Replacement.DailyInvoicesIndex()));
-                Assert.Contains("In order to create the 'ReplacementOf/DailyInvoicesIndex' side by side index " +
-                                "you firstly need to set OutputReduceToCollection to be null on the 'DailyInvoicesIndex' index " +
-                                "and than delete all of the documents in the 'DailyInvoices' collection.", exception.Message);
             }
         }
 
@@ -135,11 +124,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 await CreateDataAndIndexes(store);
 
                 await store.ExecuteIndexAsync(new Reset.DailyInvoicesIndex());
-                store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM DailyInvoices" })).WaitForCompletion(TimeSpan.FromSeconds(60));
+                store.Operations.Send(new DeleteByQueryOperation(new IndexQuery {Query = "FROM DailyInvoices"})).WaitForCompletion(TimeSpan.FromSeconds(60));
                 // We need to wait for the cluster to update the index before overwriting the index again
                 WaitForIndexing(store);
 
-                await store.ExecuteIndexAsync(new Replacement.DailyInvoicesIndex());
+                await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
                 WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
@@ -172,6 +161,273 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     Assert.Equal(31, await session.Query<MonthlyInvoice>().CountAsync());
                     Assert.Equal(4, await session.Query<YearlyInvoice>().CountAsync());
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdateIndexAsSideBySide()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new DailyInvoicesIndex());
+
+                var date = new DateTime(2017, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddHours(i * 6)});
+                    }
+
+                    date = date.AddYears(1);
+
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 6)});
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 12)});
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 18)});
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store);
+                await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(93, await session.Query<DailyInvoice>().CountAsync());
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanEditExistingSideBySideIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new DailyInvoicesIndex());
+
+                var date = new DateTime(2017, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddHours(i * 6)});
+                    }
+
+                    date = date.AddYears(1);
+
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 6)});
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 12)});
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 18)});
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
+
+                await store.ExecuteIndexAsync(new Replacement_CountFieldAdded.DailyInvoicesIndex());
+
+                var db = await GetDatabase(store.Database);
+
+                var indexes = db.IndexStore.GetIndexes().ToList();
+
+                var replacement = (MapReduceIndex)indexes.First(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
+
+                // new replacement needs to delete docs created by original index
+                Assert.Equal(2, replacement.ReduceOutputs.GetPrefixesOfDocumentsToDelete().Count);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(93, await session.Query<DailyInvoice>().CountAsync());
+
+                    Assert.True((await session.Query<DailyInvoice>().FirstAsync()).Count > 0);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanChangeOutputReduceToCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new DailyInvoicesIndex());
+
+                var date = new DateTime(2017, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddHours(i * 6)});
+                    }
+
+                    date = date.AddYears(1);
+
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 6)});
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 12)});
+                        await session.StoreAsync(new Invoice {Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 18)});
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store);
+
+                await store.ExecuteIndexAsync(new Replacement_OutputReduceToCollection_Changed.DailyInvoicesIndex());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(0, await session.Query<DailyInvoice>().CountAsync());
+                    Assert.Equal(93, await session.Query<MyDailyInvoice>().CountAsync());
+                }
+            }
+        }
+
+        [Fact]
+        public void MustNotAllowToDoSideBySideIfUsingLegacyIndexDefinitionWithoutReduceOutputIndex()
+        {
+            var backupPath = NewDataPath(forceCreateDir: true);
+            var fullBackupPath = Path.Combine(backupPath, "ravendb-11488.ravendb-snapshot");
+
+            ExtractFile(fullBackupPath, "RavenDB_11488.ravendb-11488.ravendb-snapshot");
+
+            using (var store = GetDocumentStore())
+            {
+                var databaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = backupPath, DatabaseName = databaseName}))
+                {
+                    var exception = Assert.Throws<IndexInvalidException>(() => new Replacement_FieldNamesChanged.Orders_ByCompany().Execute(store, database: databaseName));
+
+                    Assert.Contains("Index 'Orders/ByCompany' is defined to output the Reduce results to documents in Collection 'OrdersByCompany'. " +
+                                    "This collection currently has 89 documents. All documents in Collection 'OrdersByCompany' must be deleted first.", exception.Message);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task WillProduceOutputResultsDocsAfterIndexImport()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var stream = GetDump("RavenDB_11488.ravendb-11488-artificial-docs-not-included.ravendbdump"))
+                {
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(89, await session.Query<OrderByCompany>(collectionName: "OrdersByCompany").CountAsync());
+
+                    var doc = await session.Query<OrderByCompany>(collectionName: "OrdersByCompany").FirstAsync();
+
+                    var db = await GetDatabase(store.Database);
+
+                    var indexes = db.IndexStore.GetIndexes().ToList();
+
+                    var index = (MapReduceIndex)indexes.First(x => x.Name == "Orders/ByCompany");
+
+                    Assert.StartsWith($"OrdersByCompany/{index.Definition.ReduceOutputIndex}/", doc.Id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task WhenDeletingSideBySideIndexTheOriginalOneWillDeleteItsDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new DailyInvoicesIndex());
+
+                var date = new DateTime(2017, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddHours(i * 6) });
+                    }
+
+                    date = date.AddYears(1);
+
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 6) });
+                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 12) });
+                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddMonths(i).AddHours(i * 18) });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                await store.ExecuteIndexAsync(new Replacement_AverageFieldAdded.DailyInvoicesIndex());
+
+                var db = await GetDatabase(store.Database);
+
+                var replacementIndex = (MapReduceIndex)db.IndexStore.GetIndexes().Single(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
+                var replacementIndexReduceOutputIndex = replacementIndex.Definition.ReduceOutputIndex.Value;
+
+                store.Maintenance.Send(new DeleteIndexOperation("ReplacementOf/DailyInvoicesIndex"));
+
+                var indexes = db.IndexStore.GetIndexes().ToList();
+
+                var originalIndex = (MapReduceIndex)indexes.Single();
+
+                // original index needs to delete docs created by replacement index
+
+                Assert.Equal(1, originalIndex.ReduceOutputs.GetPrefixesOfDocumentsToDelete().Count);
+                Assert.Equal($"DailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.ReduceOutputs.GetPrefixesOfDocumentsToDelete().First());
+
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal(93, await session.Query<DailyInvoice>().CountAsync());
+                }
+            }
+        }
+
+        private static Stream GetDump(string name)
+        {
+            var assembly = typeof(OutputReduceToCollectionTests).Assembly;
+            return assembly.GetManifestResourceStream("SlowTests.Data." + name);
+        }
+
+
+        private static void ExtractFile(string extractPath, string name)
+        {
+            var assembly = typeof(OutputReduceToCollectionTests).Assembly;
+
+            using (var file = File.Create(extractPath))
+            using (var stream = assembly.GetManifestResourceStream("SlowTests.Data." + name))
+            {
+                stream.CopyTo(file);
             }
         }
 
@@ -233,6 +489,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             public DateTime Date { get; set; }
             public decimal Amount { get; set; }
             public decimal Average { get; set; }
+            public decimal Count { get; set; }
+        }
+
+        public class MyDailyInvoice
+        {
+            public DateTime Date { get; set; }
+            public decimal Amount { get; set; }
         }
 
         public class MonthlyInvoice
@@ -245,6 +508,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             public DateTime Date { get; set; }
             public decimal Amount { get; set; }
+        }
+
+        private class OrderByCompany
+        {
+            public string Id { get; set; }
         }
 
         public class DailyInvoicesIndex : AbstractIndexCreationTask<Invoice, DailyInvoice>
@@ -460,7 +728,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        private static class Replacement
+        private static class Replacement_AverageFieldAdded
         {
             public class DailyInvoicesIndex : AbstractIndexCreationTask<Invoice, DailyInvoice>
             {
@@ -487,6 +755,92 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                         };
 
                     OutputReduceToCollection = "DailyInvoices";
+                }
+            }
+        }
+
+        private static class Replacement_CountFieldAdded
+        {
+            public class DailyInvoicesIndex : AbstractIndexCreationTask<Invoice, DailyInvoice>
+            {
+                public DailyInvoicesIndex()
+                {
+                    Map = invoices =>
+                        from invoice in invoices
+                        select new DailyInvoice
+                        {
+                            Date = invoice.IssuedAt.Date,
+                            Amount = invoice.Amount,
+                            Count = 1
+                        };
+
+                    Reduce = results =>
+                        from r in results
+                        group r by r.Date
+                        into g
+                        select new DailyInvoice
+                        {
+                            Date = g.Key,
+                            Amount = g.Sum(x => x.Amount),
+                            Count = g.Sum(x => x.Count)
+                        };
+
+                    OutputReduceToCollection = "DailyInvoices";
+                }
+            }
+        }
+
+        private static class Replacement_OutputReduceToCollection_Changed
+        {
+            public class DailyInvoicesIndex : AbstractIndexCreationTask<Invoice, MyDailyInvoice>
+            {
+                public DailyInvoicesIndex()
+                {
+                    Map = invoices =>
+                        from invoice in invoices
+                        select new MyDailyInvoice
+                        {
+                            Date = invoice.IssuedAt.Date,
+                            Amount = invoice.Amount,
+                        };
+
+                    Reduce = results =>
+                        from r in results
+                        group r by r.Date
+                        into g
+                        select new MyDailyInvoice
+                        {
+                            Date = g.Key,
+                            Amount = g.Sum(x => x.Amount),
+                        };
+
+                    OutputReduceToCollection = "MyDailyInvoices";
+                }
+            }
+        }
+
+        private static class Replacement_FieldNamesChanged
+        {
+            public class Orders_ByCompany : AbstractIndexCreationTask<Order, Orders_ByCompany.Result>
+            {
+                public class Result
+                {
+                    public string Company2 { get; set; }
+                    public int Count2 { get; set; }
+                    public decimal Total2 { get; set; }
+                }
+
+                public Orders_ByCompany()
+                {
+                    Map = orders => from order in orders
+                        select new Result { Company2 = order.Company, Count2 = 1, Total2 = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount)) };
+
+                    Reduce = results => from result in results
+                        group result by result.Company2
+                        into g
+                        select new { Company2 = g.Key, Count2 = g.Sum(x => x.Count2), Total2 = g.Sum(x => x.Total2) };
+
+                    OutputReduceToCollection = "OrdersByCompany";
                 }
             }
         }

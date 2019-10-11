@@ -47,8 +47,6 @@ namespace FastTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Throws<IndexInvalidException>(() => new MapReduce2().Execute(store));
-
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfIndexes);
             }
