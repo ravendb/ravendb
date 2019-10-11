@@ -116,7 +116,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public void OrderByDistance(string fieldName, string shapeWkt)
         {
-            OrderByDistance(fieldName, shapeWkt);
+            OrderByDistance(fieldName, shapeWkt, 0);
         }
 
         /// <inheritdoc />
