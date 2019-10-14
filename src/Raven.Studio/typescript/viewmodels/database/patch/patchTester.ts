@@ -83,6 +83,18 @@ class patchTester extends viewModelBase {
             });
     }
 
+    formatAsJson(input: KnockoutObservable<any> | any) {
+        return ko.pureComputed(() => {
+            const value = ko.unwrap(input);
+            if (_.isUndefined(value)) {
+                return "";
+            } else {
+                const json = JSON.stringify(value, null, 4);
+                return Prism.highlight(json, (Prism.languages as any).javascript);
+            }
+        });
+    }
+
     private initObservables() {
         this.testMode.subscribe(testMode => {
             this.$body.toggleClass('show-test', testMode);
