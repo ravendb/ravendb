@@ -28,8 +28,8 @@
                         </div>
                         <div class="margin-left margin-left-lg">
                             <div class="toggle">
-                                <input id="importAttachments" type="checkbox" 
-                                       data-bind="checked: includeAttachments"/>
+                                <input id="importAttachments" type="checkbox"
+                                       data-bind="checked: includeAttachments" />
                                 <label for="importAttachments">Include Attachments</label>
                             </div>
                             <div class="toggle">
@@ -38,7 +38,7 @@
                                 <label for="importLegacyAttachments">Include Legacy Attachments</label>
                             </div>
                             <div class="toggle">
-                                <input id="importCounters" type="checkbox" 
+                                <input id="importCounters" type="checkbox"
                                        data-bind="checked: includeCounters">
                                 <label for="importCounters">Include Counters</label>
                             </div>
@@ -52,14 +52,18 @@
                                 <label for="importExpiredDocuments">Include Expired Documents</label>
                             </div>
                             <div class="toggle">
-                                <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments"/>
+                                <input id="importArtificialDocuments" type="checkbox" data-bind="checked: includeArtificialDocuments">
+                                <label for="importArtificialDocuments">Include Artificial Documents</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                 <label for="importRevisions">Include Revisions</label>
                             </div>
                             <div class="toggle">
                                 <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts">
                                 <label for="importConflicts">Include Conflicts</label>
                             </div>
-                           
+
                         </div>
                     </div>
                     <div class="col-lg-5">

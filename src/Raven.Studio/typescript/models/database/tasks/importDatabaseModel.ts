@@ -22,6 +22,7 @@ class importDatabaseModel {
     encryptionKey = ko.observable<string>();
 
     includeExpiredDocuments = ko.observable(true);
+    includeArtificialDocuments = ko.observable(false);
     removeAnalyzers = ko.observable(false);
     
     transformScript = ko.observable<string>();
@@ -110,6 +111,7 @@ class importDatabaseModel {
         
         return {
             IncludeExpired: this.includeExpiredDocuments(),
+            IncludeArtificial: this.includeArtificialDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             EncryptionKey: this.encryptedInput() ? this.encryptionKey() : undefined,

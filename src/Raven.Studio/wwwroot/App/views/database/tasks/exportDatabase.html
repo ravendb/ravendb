@@ -22,14 +22,19 @@
                         </div>
                         <div class="margin-left margin-left-lg">
                             <div class="toggle">
-                                <input id="toggleAttachments" type="checkbox" 
+                                <input id="toggleAttachments" type="checkbox"
                                        data-bind="checked: includeAttachments">
                                 <label for="toggleAttachments">Include Attachments</label>
                             </div>
                             <div class="toggle">
-                                <input id="toggleCounters" type="checkbox" 
+                                <input id="toggleCounters" type="checkbox"
                                        data-bind="checked: includeCounters">
                                 <label for="toggleCounters">Include Counters</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleArtificial" type="checkbox"
+                                       data-bind="checked: includeArtificialDocuments">
+                                <label for="toggleArtificial">Include Artificial Documents</label>
                             </div>
                             <div class="toggle" data-toggle="tooltip" data-placement="top"
                                  data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
