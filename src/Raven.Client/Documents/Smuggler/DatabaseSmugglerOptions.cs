@@ -34,6 +34,7 @@ namespace Raven.Client.Documents.Smuggler
             OperateOnDatabaseRecordTypes = DefaultOperateOnDatabaseRecordTypes;
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
             IncludeExpired = true;
+            IncludeArtificial = false;
         }
 
         public DatabaseItemType OperateOnTypes { get; set; }
@@ -41,6 +42,8 @@ namespace Raven.Client.Documents.Smuggler
         public DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
 
         public bool IncludeExpired { get; set; }
+
+        public bool IncludeArtificial { get; set; }
 
         public bool RemoveAnalyzers { get; set; }
 
@@ -62,6 +65,7 @@ namespace Raven.Client.Documents.Smuggler
         DatabaseItemType OperateOnTypes { get; set; }
         DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
         bool IncludeExpired { get; set; }
+        bool IncludeArtificial { get; set; }
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }

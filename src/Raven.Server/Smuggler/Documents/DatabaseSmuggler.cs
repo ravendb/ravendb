@@ -608,6 +608,12 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
+                    if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
+                    {
+                        SkipDocument(item, result);
+                        continue;
+                    }
+
                     if (_patcher != null)
                     {
                         item.Document = _patcher.Transform(item.Document, actions.GetContextForNewDocument());
