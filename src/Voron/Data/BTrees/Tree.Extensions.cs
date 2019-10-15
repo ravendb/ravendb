@@ -140,6 +140,16 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
+        public void MultiDelete(Slice key, string value)
+        {
+            Slice valueSlice;
+            using (Slice.From(_llt.Allocator, value, ByteStringType.Immutable, out valueSlice))
+            {
+                MultiDelete(key, valueSlice);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void MultiDelete(string key, Slice value)
         {
             Slice keySlice;

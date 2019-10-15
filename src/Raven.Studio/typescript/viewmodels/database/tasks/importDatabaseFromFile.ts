@@ -152,6 +152,10 @@ class importDatabaseFromFile extends viewModelBase {
         popoverUtils.longWithHover($("#js-ongoing-tasks-disabled"), {
             content: "Imported ongoing tasks will be disabled by default."
         });
+
+        popoverUtils.longWithHover($("#js-import-artificial-documents"), {
+            content: "Importing artificial documents might cause import error of Map-Reduce indexes with OutputReduceToCollection."
+        });
         
         this.updateHelpLink("YD9M1R");
     }

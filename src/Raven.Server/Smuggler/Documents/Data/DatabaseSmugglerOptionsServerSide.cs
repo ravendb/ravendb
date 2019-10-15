@@ -36,6 +36,8 @@ namespace Raven.Server.Smuggler.Documents.Data
                         result.OperateOnTypes = (DatabaseItemType)Enum.Parse(typeof(DatabaseItemType), item.Value[0]);
                     else if (string.Equals(key, nameof(IncludeExpired), StringComparison.OrdinalIgnoreCase))
                         result.IncludeExpired = bool.Parse(item.Value[0]);
+                    else if (string.Equals(key, nameof(IncludeArtificial), StringComparison.OrdinalIgnoreCase))
+                        result.IncludeArtificial = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, nameof(RemoveAnalyzers), StringComparison.OrdinalIgnoreCase))
                         result.RemoveAnalyzers = bool.Parse(item.Value[0]);
                     else if (string.Equals(key, nameof(TransformScript), StringComparison.OrdinalIgnoreCase))

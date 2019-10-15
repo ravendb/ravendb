@@ -511,9 +511,15 @@ namespace Raven.Client.Http
 
         public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
         {
-            if (string.IsNullOrEmpty(cmd.SelectedNodeTag) == false)
+            if (_disableTopologyUpdates == false)
             {
-                return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
+                // when we disable topology updates we cannot rely on the node tag,
+                // because the initial topology will not have them
+
+                if (string.IsNullOrEmpty(cmd.SelectedNodeTag) == false)
+                {
+                    return _nodeSelector.GetRequestedNode(cmd.SelectedNodeTag);
+                }
             }
 
             if (cmd.IsReadRequest == false)
@@ -1109,8 +1115,8 @@ namespace Raven.Client.Http
                         {
                             if (x.Exception != null)
                             {
-                                // we need to make sure that the response is 
-                                // properly disposed from all the calls 
+                                // we need to make sure that the response is
+                                // properly disposed from all the calls
                                 x.Result.Dispose();
                             }
                         }

@@ -856,6 +856,8 @@ namespace Raven.Server.Documents
 
             try
             {
+                var sp = Stopwatch.StartNew();
+
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
@@ -863,6 +865,9 @@ namespace Raven.Server.Documents
 
                 DocumentsStorage.Environment.Cleanup();
                 ConfigurationStorage.Environment.Cleanup();
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Ran idle operations for database '{Name}', took: {sp.ElapsedMilliseconds}ms");
             }
             finally
             {

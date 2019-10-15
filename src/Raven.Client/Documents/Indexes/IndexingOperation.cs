@@ -52,6 +52,8 @@ namespace Raven.Client.Documents.Indexes
             public static string GetMapEntriesTree = "GetMapEntriesTree";
             public static string GetMapEntries = "GetMapEntries";
             public static string SaveOutputDocuments = "SaveOutputDocuments";
+            public static string DeleteOutputDocuments = "DeleteOutputDocuments";
+
         }
     }
 }

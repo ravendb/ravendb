@@ -564,7 +564,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var options = new DatabaseSmugglerOptionsServerSide
                         {
                             AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
+                            IncludeArtificial = true // we want to include artificial in backup
                         };
+
                         if (_isFullBackup == false)
                         {
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
@@ -646,8 +648,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _configuration.BackupEncryptionSettings?.EncryptionMode == EncryptionMode.UseDatabaseKey)
                 throw new InvalidOperationException("Can't use database key for backup encryption, the key doesn't exist");
 
-            if (_configuration.BackupType == BackupType.Snapshot && _isFullBackup && 
-                _configuration.BackupEncryptionSettings != null && 
+            if (_configuration.BackupType == BackupType.Snapshot && _isFullBackup &&
+                _configuration.BackupEncryptionSettings != null &&
                 _configuration.BackupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey)
                 throw new InvalidOperationException("Can't snapshot an encrypted database with a different key");
         }

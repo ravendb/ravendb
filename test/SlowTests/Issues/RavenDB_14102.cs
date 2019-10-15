@@ -1,0 +1,44 @@
+﻿using System;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents.Operations;
+using Xunit;
+
+namespace SlowTests.Issues
+{
+    public class RavenDB_14102 : RavenTestBase
+    {
+        private class Item
+        {
+            public string Path;
+        }
+
+        [Fact]
+        public async Task CanEscapeLastCharInString()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenAsyncSession())
+                {
+                    await s.StoreAsync(new Item { Path = @"D:\Oren" }, "items/oren");
+                    await s.SaveChangesAsync();
+                }
+
+                var op = await store.Operations.SendAsync(new PatchByQueryOperation(@"
+from Items
+update
+{
+    this.Path = this.Path.replace('D:\\', '/d/');
+}
+"));
+                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                using (var s = store.OpenAsyncSession())
+                {
+                    var i = await s.LoadAsync<Item>("items/oren");
+                    Assert.Equal("/d/Oren", i.Path);
+                }
+            }
+        }
+    }
+}

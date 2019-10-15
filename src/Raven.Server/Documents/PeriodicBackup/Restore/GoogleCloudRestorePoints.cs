@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task<List<FileInfoDetails>> GetFiles(string path)
         {
-            var objects = await _client.ListObjectsAsync(path, "/");
+            var objects = await _client.ListObjectsAsync(path, delimiter: null);
 
             var filesInfo = new List<FileInfoDetails>();
 
@@ -36,11 +37,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (TryExtractDateFromFileName(obj.Name, out var lastModified) == false)
                     lastModified = Convert.ToDateTime(obj.Updated);
 
-                filesInfo.Add(new FileInfoDetails
-                {
-                    FullPath = obj.Name,
-                    LastModified = lastModified
-                });
+                var fullPath = obj.Name;
+                var directoryPath = GetDirectoryName(fullPath);
+                filesInfo.Add(new FileInfoDetails(fullPath, directoryPath, lastModified));
             }
 
             return filesInfo;
@@ -54,11 +53,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return ParseFolderName(lastFolderName);
         }
 
-        protected override async Task<ZipArchive> GetZipArchive(string filePath)
+        protected override Task<ZipArchive> GetZipArchive(string filePath)
         {
-            var file = new MemoryStream();
-            await _client.DownloadObjectAsync(filePath, file);
-            return new ZipArchive(file, ZipArchiveMode.Read);
+            return Task.FromResult(new ZipArchive(_client.DownloadObject(filePath), ZipArchiveMode.Read));
         }
 
         protected override string GetFileName(string fullPath)

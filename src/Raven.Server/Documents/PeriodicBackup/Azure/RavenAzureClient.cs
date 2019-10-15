@@ -21,6 +21,7 @@ using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions.PeriodicBackup;
 using Sparrow.Logging;
 
@@ -431,7 +432,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 url += $"&maxresults={maxResult}";
 
             if (marker != null)
-                url += $"&maxresults={marker}";
+                url += $"&marker={marker}";
 
             var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
             {
@@ -448,7 +449,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return new ListBlobResult
                 {
-                    ListBlob = new BlobProperties[] { }
+                    ListBlob = new List<BlobProperties>()
                 };
 
             if (response.IsSuccessStatusCode == false)
@@ -466,28 +467,31 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 NextMarker = nextMarker == "true" ? listBlobsResult.Root.Element("NextMarker")?.Value : null
             };
 
-            IEnumerable<BlobProperties> GetResult()
+            List<BlobProperties> GetResult()
             {
                 if (listFolders)
                 {
-
-                    foreach (var element in listBlobsResult.Descendants("Blobs").Descendants("Name").Select(x => new BlobProperties { Name = x.Value }))
-                    {
-                        yield return element;
-                    }
+                    return listBlobsResult
+                        .Descendants("Blobs")
+                        .Descendants("Name")
+                        .Select(x => RestorePointsBase.GetDirectoryName(x.Value))
+                        .Distinct()
+                        .Select(x => new BlobProperties
+                        {
+                            Name = x
+                        })
+                        .ToList();
                 }
                 else
                 {
-                    var blobs = listBlobsResult.Descendants("Blob").ToList();
-                    foreach (var blob in blobs)
-                    {
-                        yield return new BlobProperties
+                    return listBlobsResult
+                        .Descendants("Blob")
+                        .Select(x => new BlobProperties
                         {
-                            Name = blob.Element("Name")?.Value,
-                            LastModified = Convert.ToDateTime(blob.Element("Properties")?.Element("Last-Modified")?.Value)
-                        };
-                    }
-
+                            Name = x.Element("Name")?.Value,
+                            LastModified = Convert.ToDateTime(x.Element("Properties")?.Element("Last-Modified")?.Value)
+                        })
+                        .ToList();
                 }
             }
         }

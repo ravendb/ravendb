@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetAll()
         {
             var start = GetStart();

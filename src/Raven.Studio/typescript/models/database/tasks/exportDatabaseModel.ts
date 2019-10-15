@@ -26,6 +26,7 @@ class exportDatabaseModel {
     savedKeyConfirmation = ko.observable<boolean>(false);
 
     includeExpiredDocuments = ko.observable(true);
+    includeArtificialDocuments = ko.observable(false);
     removeAnalyzers = ko.observable(false);
 
     includeAllCollections = ko.observable(true);
@@ -114,6 +115,7 @@ class exportDatabaseModel {
             Collections: this.includeAllCollections() ? null : this.includedCollections(),
             FileName: this.exportFileName(),
             IncludeExpired: this.includeExpiredDocuments(),
+            IncludeArtificial: this.includeArtificialDocuments(),
             TransformScript: this.transformScript(),
             RemoveAnalyzers: this.removeAnalyzers(),
             EncryptionKey: this.encryptOutput() ? this.encryptionKey() : undefined,

@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var workers = new List<IIndexingWork>
             {
-                new CleanupDeletedDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
+                new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
             if (_referencedCollections.Count > 0)

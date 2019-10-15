@@ -558,7 +558,7 @@ namespace Raven.Server.Web.System
 
                 restorePoints.List = sortedList.Values.ToList();
                 if (restorePoints.List.Count == 0)
-                    throw new InvalidOperationException("Couldn't locate any backup files!");
+                    throw new InvalidOperationException("Couldn't locate any backup files.");
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
