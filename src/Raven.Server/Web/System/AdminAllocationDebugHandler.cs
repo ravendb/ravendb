@@ -40,7 +40,13 @@ namespace Raven.Server.Web.System
 
                     first = false;
                     writer.WritePropertyName(alloc.Type);
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Memory");
                     writer.WriteString(new Size((long)alloc.Allocations, SizeUnit.Bytes).ToString());
+                    writer.WriteComma();
+                    writer.WritePropertyName("Allocations");
+                    writer.WriteInteger(alloc.NumberOfAllocations);
+                    writer.WriteEndObject();
                 }
 
                 writer.WriteEndObject();
@@ -51,6 +57,7 @@ namespace Raven.Server.Web.System
         {
             public string Type;
             public ulong Allocations;
+            public long NumberOfAllocations;
         }
 
 
@@ -82,6 +89,7 @@ namespace Raven.Server.Web.System
                             };
                         }
                         info.Allocations += (ulong)eventData.Payload[3];
+                        info.NumberOfAllocations++;
                         break;
                 }
             }
