@@ -4,8 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using User = Raven.Tests.Core.Utils.Entities.User;
@@ -503,28 +501,20 @@ namespace SlowTests.Issues
         [Fact]
         public void CanGetLastCmpXchgIndexForDatabase()
         {
-            using (var store = GetDocumentStore())
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {
-                var newDbName = store.Database + "_new";
-                var dbRecord = new DatabaseRecord
-                {
-                    DatabaseName = newDbName
-                };
-
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(dbRecord));
-
                 var key = "names/ayende/";
                 var keys = new string [10];
 
                 // put compare exchange values on both databases
 
-                foreach (var db in new [] { store.Database, newDbName })
+                foreach (var store in new [] { store1, store2 })
                 {
                     for (int i = 0; i < 10; i++)
                     {
                         using (var session = store.OpenSession(new SessionOptions
                         {
-                            Database = db,
                             TransactionMode = TransactionMode.ClusterWide
                         }))
                         {
@@ -540,11 +530,10 @@ namespace SlowTests.Issues
 
                 // update one compare exchange value from each database
 
-                foreach (var db in new[] {store.Database, newDbName})
+                foreach (var store in new[] { store1, store2 })
                 {
                     using (var session = store.OpenSession(new SessionOptions
                     {
-                        Database = db,
                         TransactionMode = TransactionMode.ClusterWide
                     }))
                     {
@@ -562,11 +551,10 @@ namespace SlowTests.Issues
 
                 // verify that GetLastCompareExchangeIndexForDatabase() returns the correct result 
 
-                foreach (var db in new[] {store.Database, newDbName})
+                foreach (var store in new[] { store1, store2 })
                 {
                     using (var session = store.OpenSession(new SessionOptions
                     {
-                        Database = db,
                         TransactionMode = TransactionMode.ClusterWide
                     }))
                     {
@@ -579,7 +567,7 @@ namespace SlowTests.Issues
                         using (transactionContext.OpenReadTransaction())
                         {
                             var lastCmpXchgIndex = documentDatabase.ServerStore.Cluster
-                                .GetLastCompareExchangeIndexForDatabase(transactionContext, db);
+                                .GetLastCompareExchangeIndexForDatabase(transactionContext, store.Database);
 
                             Assert.Equal(expectedIndex, lastCmpXchgIndex);
                         }
