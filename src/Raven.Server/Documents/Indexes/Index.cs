@@ -3089,7 +3089,7 @@ namespace Raven.Server.Documents.Indexes
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
-            UseAllDocumentsCounterAndCmpXngEtags(documentsContext, q, length, indexEtagBytes);
+            UseAllDocumentsCounterAndCmpXchgEtags(documentsContext, q, length, indexEtagBytes);
 
             unchecked
             {
@@ -3097,7 +3097,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsCounterAndCmpXngEtags(DocumentsOperationContext documentsContext, 
+        protected static unsafe void UseAllDocumentsCounterAndCmpXchgEtags(DocumentsOperationContext documentsContext, 
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q == null)
