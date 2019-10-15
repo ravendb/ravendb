@@ -345,6 +345,11 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public string OutputReduceToCollection { get; set; }
 
+        /// <summary>
+        /// If not null then this number will be part of identifier of a created document being output of reduce function
+        /// </summary>
+        public long? ReduceOutputIndex { get; set; }
+
         public override string ToString()
         {
             return Name;
@@ -387,7 +392,8 @@ namespace Raven.Client.Documents.Indexes
 #if FEATURE_TEST_INDEX
                 IsTestIndex = IsTestIndex,
 #endif
-                OutputReduceToCollection = OutputReduceToCollection
+                OutputReduceToCollection = OutputReduceToCollection,
+                ReduceOutputIndex = ReduceOutputIndex,
             };
 
             foreach (var kvp in _configuration)

@@ -351,7 +351,7 @@ namespace Raven.Server.Smuggler.Documents
                 var first = true;
                 foreach (var config in settings)
                 {
-                    if (!(DoNotBackUp.Contains(config.Key) || 
+                    if (!(DoNotBackUp.Contains(config.Key) ||
                           ServerWideKeys.Contains(config.Key)))
                     {
                         if (first == false)
@@ -708,7 +708,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _context.Write(_writer, subscriptionState.ToJson());
             }
-         }
+        }
 
         private class StreamDocumentActions : StreamActionsBase, IDocumentActions
         {
@@ -742,7 +742,11 @@ namespace Raven.Server.Smuggler.Documents
 
                     document.EnsureMetadata(_modifier);
 
-                    _context.Write(Writer, document.Data);
+                    using (var old = document.Data)
+                    using (var data = _context.ReadObject(document.Data, document.Id))
+                    {
+                        _context.Write(Writer, data);
+                    }
                 }
             }
 

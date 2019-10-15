@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.ETL.Handlers
 {
     public class EtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetStats()
         {
             var etlStats = GetProcessesToReportOn().Select(x => new EtlTaskStats
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             }
         }
 
-        [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task Progress()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

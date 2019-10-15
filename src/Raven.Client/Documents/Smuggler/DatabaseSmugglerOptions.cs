@@ -32,6 +32,7 @@
             OperateOnDatabaseRecordTypes = DefaultOperateOnDatabaseRecordTypes;
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
             IncludeExpired = true;
+            IncludeArtificial = false;
         }
 
         public DatabaseItemType OperateOnTypes { get; set; }
@@ -39,6 +40,8 @@
         public DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
 
         public bool IncludeExpired { get; set; }
+
+        public bool IncludeArtificial { get; set; }
 
         public bool RemoveAnalyzers { get; set; }
 
@@ -54,6 +57,7 @@
         DatabaseItemType OperateOnTypes { get; set; }
         DatabaseRecordItemType OperateOnDatabaseRecordTypes { get; set; }
         bool IncludeExpired { get; set; }
+        bool IncludeArtificial { get; set; }
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }

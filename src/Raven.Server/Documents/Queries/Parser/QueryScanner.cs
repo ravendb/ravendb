@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 else if (_q[i] != quoteChar)
                     continue;
 
-                if (i + 1 < _q.Length && _q[i + 1] == quoteChar)
+                if (i + 1 < _q.Length && (_q[i + 1] == quoteChar || (_q[i] == '\\' && _q[i + 1] == '\\')))
                 {
                     i++; // escape char
                     hasEscape = true;

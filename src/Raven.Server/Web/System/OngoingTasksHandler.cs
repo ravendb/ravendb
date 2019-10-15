@@ -38,7 +38,7 @@ namespace Raven.Server.Web.System
 {
     public class OngoingTasksHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetOngoingTasks()
         {
             var result = GetOngoingTasksInternal();

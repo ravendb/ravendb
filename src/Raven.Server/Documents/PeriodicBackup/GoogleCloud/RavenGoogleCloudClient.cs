@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -12,12 +11,16 @@ using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Sparrow;
+using Sparrow.Server.Utils;
 using Object = Google.Apis.Storage.v1.Data.Object;
 
 namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 {
     public class RavenGoogleCloudClient : IDisposable
     {
+        private static readonly Size DownloadChunkSize = new Size(1, SizeUnit.Megabytes);
+
         private readonly StorageClient _client;
         private readonly string _projectId;
         protected readonly CancellationToken CancellationToken;
@@ -112,33 +115,43 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 }));
         }
 
-        public ConfiguredTaskAwaitable DownloadObjectAsync(string fileName, Stream stream)
+        public Stream DownloadObject(string fileName)
         {
-            return _client.DownloadObjectAsync(
-                _bucketName,
-                fileName,
-                cancellationToken: CancellationToken,
-                destination: stream
-            ).ConfigureAwait(false);
+            var stream = new EchoStream(maxQueueDepth: 32)
+            {
+                ReadTimeout = (int)TimeSpan.FromSeconds(100).TotalMilliseconds
+            };
+
+            stream.TaskToWatch(_client.DownloadObjectAsync(
+               _bucketName,
+               fileName,
+               destination: stream,
+               new DownloadObjectOptions
+               {
+                   ChunkSize = (int)DownloadChunkSize.GetValue(SizeUnit.Bytes)
+               },
+               cancellationToken: CancellationToken));
+
+            return stream;
         }
 
-        public ConfiguredTaskAwaitable<Object> GetObjectAsync(string fileName)
+        public Task<Object> GetObjectAsync(string fileName)
         {
             return _client.GetObjectAsync(
                 _bucketName,
                 fileName,
                 cancellationToken: CancellationToken
-            ).ConfigureAwait(false);
+            );
         }
 
-        public ConfiguredTaskAwaitable DeleteObjectAsync(string fileName)
+        public Task DeleteObjectAsync(string fileName)
         {
             return _client.DeleteObjectAsync(
                 _bucketName,
                 fileName,
                 null,
                 CancellationToken
-            ).ConfigureAwait(false);
+            );
         }
 
         public PagedEnumerable<Buckets, Bucket> ListBuckets()

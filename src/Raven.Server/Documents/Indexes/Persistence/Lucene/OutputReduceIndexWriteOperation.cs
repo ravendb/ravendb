@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -24,8 +25,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             : base(index, directory, converter, writeTransaction, persistence)
         {
             var outputReduceToCollection = index.Definition.OutputReduceToCollection;
+            var reduceOutputVersion = index.Definition.ReduceOutputIndex;
+
             Debug.Assert(string.IsNullOrWhiteSpace(outputReduceToCollection) == false);
-            _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection, index, indexContext);
+            _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection, reduceOutputVersion, index, indexContext);
         }
 
         public override void Commit(IndexingStatsScope stats)
@@ -77,6 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             private readonly DocumentDatabase _database;
             private readonly string _outputReduceToCollection;
+            private readonly long? _reduceOutputIndex;
             private readonly MapReduceIndex _index;
             private readonly List<string> _reduceKeyHashesToDelete = new List<string>();
 
@@ -84,8 +88,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 new Dictionary<string, List<BlittableJsonReaderObject>>();
             private readonly JsonOperationContext _indexContext;
 
-            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index, JsonOperationContext context)
-                : this(database, outputReduceToCollection)
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex, MapReduceIndex index, JsonOperationContext context)
+                : this(database, outputReduceToCollection, reduceOutputIndex)
             {
                 _index = index;
                 _indexContext = context;
@@ -94,16 +98,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             /// <summary>
             ///This constructor should be used for replay transaction operations only
             /// </summary>
-            internal OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, Dictionary<string, List<BlittableJsonReaderObject>> reduceDocuments)
-                : this(database, outputReduceToCollection)
+            internal OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex, Dictionary<string, List<BlittableJsonReaderObject>> reduceDocuments)
+                : this(database, outputReduceToCollection, reduceOutputIndex)
             {
                 _reduceDocuments = reduceDocuments;
             }
 
-            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex)
             {
                 _database = database;
                 _outputReduceToCollection = outputReduceToCollection;
+                _reduceOutputIndex = reduceOutputIndex;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -142,6 +147,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return new OutputReduceToCollectionCommandDto
                 {
                     OutputReduceToCollection = _outputReduceToCollection,
+                    ReduceOutputIndex = _reduceOutputIndex,
                     ReduceDocuments = _reduceDocuments
                 };
             }
@@ -186,8 +192,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
+            public static bool IsOutputDocumentPrefix(string prefix)
+            {
+                var parts = prefix.Split("/", StringSplitOptions.RemoveEmptyEntries);
+
+                if (parts.Length < 2)
+                    return false;
+
+                string numeric = parts.Last();
+
+                if (long.TryParse(numeric, out _) == false)
+                    return false;
+
+                return true;
+            }
+
+            public static string GetOutputDocumentPrefix(string collectionName, long reduceOutputIndex)
+            {
+                return collectionName + "/" + reduceOutputIndex + "/";
+            }
+
             private string GetOutputDocumentKey(string reduceKeyHash)
             {
+                if (_reduceOutputIndex != null)
+                    return GetOutputDocumentPrefix(_outputReduceToCollection, _reduceOutputIndex.Value) + reduceKeyHash;
+
                 return _outputReduceToCollection + "/" + reduceKeyHash;
             }
 
@@ -217,11 +246,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     public class OutputReduceToCollectionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand>
     {
         public string OutputReduceToCollection;
+        public long? ReduceOutputIndex;
         public Dictionary<string, List<BlittableJsonReaderObject>> ReduceDocuments;
 
         public OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand(database, OutputReduceToCollection, ReduceDocuments);
+            var command = new OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand(database, OutputReduceToCollection, ReduceOutputIndex, ReduceDocuments);
             return command;
         }
     }

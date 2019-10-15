@@ -114,15 +114,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
-                var restoreFromS3Configuration = new RestoreFromS3Configuration
+
+                using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
                     DatabaseName = databaseName,
                     Settings = localS3Settings
-                };
-                var s3Operation = new RestoreBackupOperation(restoreFromS3Configuration);
-                var restoreOperation = store.Maintenance.Server.Send(s3Operation);
-
-                restoreOperation.WaitForCompletion(TimeSpan.FromSeconds(30));
+                }, TimeSpan.FromSeconds(60)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -216,7 +213,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     DatabaseName = restoredDatabaseName,
                     Settings = localS3Settings
-
                 }))
                 {
                     using (var session = store.OpenAsyncSession(restoredDatabaseName))
@@ -373,7 +369,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
@@ -402,8 +397,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
                 localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
 
-
-
                 using (RestoreDatabaseFromCloud(store,
                     new RestoreFromS3Configuration
                     {
@@ -424,7 +417,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
-
 
         [S3Fact, Trait("Category", "Smuggler")]
         public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key()

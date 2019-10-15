@@ -312,8 +312,27 @@ namespace Raven.Server.Documents.Indexes
                     Debug.Assert(currentIndex != null);
 
                     var replacementIndex = GetIndex(replacementIndexName);
+
                     if (replacementIndex != null)
+                    {
+                        if (replacementIndex is MapReduceIndex replacementMapReduceIndex && replacementMapReduceIndex.ReduceOutputs != null)
+                        {
+                            if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null)
+                            {
+                                var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
+                                    definition.OutputReduceToCollection, replacementMapReduceIndex.Definition.ReduceOutputIndex.Value);
+
+                                if (currentIndex is MapReduceIndex currentMapReduceIndex)
+                                {
+                                    // original index needs to delete docs created by side-by-side indexing
+
+                                    currentMapReduceIndex.ReduceOutputs?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
+                                }
+                            }
+                        }
+                        
                         DeleteIndexInternal(replacementIndex);
+                    }
 
                     return;
                 }
@@ -333,9 +352,18 @@ namespace Raven.Server.Documents.Indexes
 
                 UpdateStaticIndexLockModeAndPriority(definition, currentIndex, currentDifferences);
 
+                var prefixesOfDocumentsToDelete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                 if (creationOptions == IndexCreationOptions.Update)
                 {
                     Debug.Assert(currentIndex != null);
+
+                    if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.ReduceOutputs != null)
+                    {
+                        // we need to delete reduce output docs of existing index
+                        
+                        CollectPrefixesOfDocumentsToDelete(oldMapReduceIndex, ref prefixesOfDocumentsToDelete);
+                    }
 
                     definition.Name = replacementIndexName;
                     var replacementIndex = GetIndex(replacementIndexName);
@@ -351,6 +379,13 @@ namespace Raven.Server.Documents.Indexes
                             return;
                         }
 
+                        if (replacementIndex is MapReduceIndex oldReplacementMapReduceIndex && oldReplacementMapReduceIndex.ReduceOutputs != null)
+                        {
+                            // existing replacement index could already produce some reduce output documents, new replacement index needs to delete them
+                            
+                            CollectPrefixesOfDocumentsToDelete(oldReplacementMapReduceIndex, ref prefixesOfDocumentsToDelete);
+                        }
+
                         DeleteIndexInternal(replacementIndex);
                     }
                 }
@@ -364,7 +399,12 @@ namespace Raven.Server.Documents.Indexes
                         break;
                     case IndexType.MapReduce:
                     case IndexType.JavaScriptMapReduce:
-                        index = MapReduceIndex.CreateNew(definition, _documentDatabase);
+                        var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
+
+                        if (mapReduceIndex.ReduceOutputs != null && prefixesOfDocumentsToDelete.Count > 0)
+                            mapReduceIndex.ReduceOutputs.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                        index = mapReduceIndex;
                         break;
                     default:
                         throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
@@ -375,6 +415,29 @@ namespace Raven.Server.Documents.Indexes
             finally
             {
                 indexLock.Release();
+            }
+        }
+
+        private static void CollectPrefixesOfDocumentsToDelete(MapReduceIndex mapReduceIndex, ref HashSet<string> prefixesOfDocumentsToDelete)
+        {
+            var definition = mapReduceIndex.Definition;
+            
+            if (definition.ReduceOutputIndex != null)
+            {
+                var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
+                    definition.OutputReduceToCollection, definition.ReduceOutputIndex.Value);
+
+                prefixesOfDocumentsToDelete.Add(prefix);
+            }
+
+            var toDelete = mapReduceIndex.ReduceOutputs.GetPrefixesOfDocumentsToDelete();
+
+            if (toDelete != null)
+            {
+                foreach (var prefix in toDelete)
+                {
+                    prefixesOfDocumentsToDelete.Add(prefix);
+                }
             }
         }
 
