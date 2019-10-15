@@ -239,12 +239,20 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
-        private long _lastDatabaseRecordIndex;
+        private long _lastDatabaseRecordChangeIndex;
 
-        public long LastDatabaseRecordIndex
+        public long LastDatabaseRecordChangeIndex
         {
-            get => Volatile.Read(ref _lastDatabaseRecordIndex);
-            private set => _lastDatabaseRecordIndex = value; // we write this always under lock
+            get => Volatile.Read(ref _lastDatabaseRecordChangeIndex);
+            private set => _lastDatabaseRecordChangeIndex = value; // we write this always under lock
+        }
+
+        private long _lastValueChangeIndex;
+
+        public long LastValueChangeIndex
+        {
+            get => Volatile.Read(ref _lastValueChangeIndex);
+            private set => _lastValueChangeIndex = value; // we write this always under lock
         }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
@@ -1124,7 +1132,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            if (CanSkip(record.DatabaseName, index))
+            if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
 
             var taken = false;
@@ -1133,7 +1141,7 @@ namespace Raven.Server.Documents
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    if (CanSkip(record.DatabaseName, index))
+                    if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                         return;
 
                     if (taken == false)
@@ -1145,7 +1153,7 @@ namespace Raven.Server.Documents
                         $"{Name} != {record.DatabaseName}");
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
+                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
 
                     try
                     {
@@ -1153,12 +1161,14 @@ namespace Raven.Server.Documents
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
-                        LastDatabaseRecordIndex = index;
                         IndexStore.HandleDatabaseRecordChange(record, index);
                         ReplicationLoader?.HandleDatabaseRecordChange(record);
                         EtlLoader?.HandleDatabaseRecordChange(record);
-                        OnDatabaseRecordChanged(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
+
+                        OnDatabaseRecordChanged(record);
+
+                        LastDatabaseRecordChangeIndex = index;
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1195,13 +1205,26 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkip(string database, long index)
+        private bool CanSkipDatabaseRecordChange(string database, long index)
         {
-            if (LastDatabaseRecordIndex > index)
+            if (LastDatabaseRecordChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {database} because it was already precessed.");
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CanSkipValueChange(string database, long index)
+        {
+            if (LastValueChangeIndex > index)
+            {
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
                 return true;
             }
 
@@ -1210,7 +1233,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
         {
-            if (CanSkip(record.DatabaseName, index))
+            if (CanSkipValueChange(record.DatabaseName, index))
                 return;
 
             var taken = false;
@@ -1219,16 +1242,17 @@ namespace Raven.Server.Documents
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    if (CanSkip(record.DatabaseName, index))
+                    if (CanSkipValueChange(record.DatabaseName, index))
                         return;
 
                     if (taken == false)
                         continue;
                 
-                    LastDatabaseRecordIndex = index;
                     DatabaseShutdown.ThrowIfCancellationRequested();
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
+
+                    LastDatabaseRecordChangeIndex = index;
                 }
                 finally
                 {
