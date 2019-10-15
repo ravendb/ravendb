@@ -3084,15 +3084,17 @@ namespace Raven.Server.ServerWide
 
         public async Task WaitForIndexNotification(long index, CancellationToken token)
         {
+            Task<bool> waitAsync;
             while (true)
             {
                 // first get the task, then wait on it
-                var waitAsync = _notifiedListeners.WaitAsync(token);
+                waitAsync = _notifiedListeners.WaitAsync(token);
 
                 if (index <= Interlocked.Read(ref LastModifiedIndex))
                     break;
 
-                token.ThrowIfCancellationRequested();
+                if(token.IsCancellationRequested)
+                    ThrowCanceledException(index, LastModifiedIndex, isExecution: false);
 
                 if (await waitAsync == false)
                 {
@@ -3101,6 +3103,33 @@ namespace Raven.Server.ServerWide
                         break;
                 }
             }
+
+            if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
+            {
+                // the task has already completed
+                // let's check if we had errors in it
+                foreach (var error in _errors)
+                {
+                    if (error.Index == index)
+                        error.Exception.Throw();// rethrow
+                }
+                return;
+            }
+
+            var task = tcs.Task;
+
+            if (task.IsCompleted)
+                return;
+
+            var result = await Task.WhenAny(task, waitAsync);
+
+            if (result.IsFaulted)
+                throw result.Exception;
+
+            if (result == task)
+                return;
+
+            ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
         }
 
         public async Task WaitForIndexNotification(long index, TimeSpan timeout)
@@ -3149,6 +3178,22 @@ namespace Raven.Server.ServerWide
                 return;
 
             ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+        }
+
+        private void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
+        {
+            var openingString = isExecution
+                ? $"Cancelled while waiting for task with index {index} to complete. "
+                : $"Cancelled while waiting to get an index notification for {index}. ";
+
+            var closingString = isExecution
+                ? string.Empty
+                : Environment.NewLine +
+                  PrintLastNotifications();
+
+            throw new OperationCanceledException(openingString +
+                                       $"Last commit index is: {lastModifiedIndex}. " +
+                                       $"Number of errors is: {_numberOfErrors}." + closingString);
         }
 
         private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)
