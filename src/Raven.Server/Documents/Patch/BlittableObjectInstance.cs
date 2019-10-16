@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Patch
         public bool LuceneAnyDynamicIndexFields;
 
         public SpatialResult? Distance => _doc?.Distance;
-        public float? Score => _doc?.IndexScore;
+        public float? IndexScore => _doc?.IndexScore;
 
         private void MarkChanged()
         {
