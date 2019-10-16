@@ -64,8 +64,8 @@ namespace Raven.Server.Monitoring.Snmp
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "oids");
-                if (json.TryGet("Oids", out BlittableJsonReaderArray array) == false)
-                    ThrowRequiredPropertyNameInRequest("Oids");
+                if (json.TryGet("OIDs", out BlittableJsonReaderArray array) == false)
+                    ThrowRequiredPropertyNameInRequest("OIDs");
 
                 var length = array?.Length ?? 0;
                 var oids = new string[length];
