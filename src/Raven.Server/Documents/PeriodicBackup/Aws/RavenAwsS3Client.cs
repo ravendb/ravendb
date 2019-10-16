@@ -770,32 +770,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return allObjects;
         }
 
-        public Blob GetObject(string key)
-        {
-            var url = $"{GetUrl()}/{key}";
-            var now = SystemTime.UtcNow;
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return null;
-
-            if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
-
-            var data = response.Content.ReadAsStreamAsync().Result;
-            var metadataHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
-
-            return new Blob(data, metadataHeaders);
-        }
-
         public async Task<Blob> GetObjectAsync(string key)
         {
             var url = $"{GetUrl()}/{key}";
