@@ -307,18 +307,18 @@
                                 </div>
                                 <div class="usage total-usage">
                                     <i class="usage-rect"></i>
-                                    <strong data-bind="text: $root.sizeFormatter(usedSpace(), 0)"></strong>
+                                    <strong data-bind="text: $root.sizeFormatter(usedSpace(), 1)"></strong>
                                     <small>USED</small>
                                 </div>
                                 <div class="usage free-space" data-bind="css: { 'free-space-warning': isLowSpace }, attr: { title: isLowSpace() ? 'Free space is below configured threshold' : '' }">
                                     <i class="usage-rect"></i>
                                     <i class="icon-warning"></i>
-                                    <strong data-bind="text: $root.sizeFormatter(freeSpace(), 0)"></strong>
+                                    <strong data-bind="text: $root.sizeFormatter(freeSpace(), 1)"></strong>
                                     <small>FREE</small>
                                 </div>
                                 <div class="flex-separator"></div>
                                 <div class="total-capacity">
-                                    <strong data-bind="text: $root.sizeFormatter(totalCapacity(), 0)"></strong>
+                                    <strong data-bind="text: $root.sizeFormatter(totalCapacity(), 1)"></strong>
                                     <small>TOTAL</small>
                                 </div>
                             </div>
