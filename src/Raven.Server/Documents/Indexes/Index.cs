@@ -108,6 +108,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly SemaphoreSlim _indexingInProgress = new SemaphoreSlim(1, 1);
 
+        private long _allocatedAfterPreviousCleanup = 0;
+
         /// <summary>
         /// Cancelled if the database is in shutdown process.
         /// </summary>
@@ -1404,7 +1406,9 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
+                var allocatedBeforeCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                if (allocatedBeforeCleanup == _allocatedAfterPreviousCleanup)
+                    return;
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
@@ -1414,13 +1418,12 @@ namespace Raven.Server.Documents.Indexes
 
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-                var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
-
-                if (_logger.IsInfoEnabled && beforeFree != afterFree)
+                _allocatedAfterPreviousCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Reduced the memory usage of index '{Name}'. " +
-                                 $"Before: {new Size(beforeFree, SizeUnit.Bytes)}, " +
-                                 $"after: {new Size(afterFree, SizeUnit.Bytes)}");
+                                 $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
+                                 $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
             }
             finally
