@@ -106,18 +106,18 @@ namespace Raven.Server.Documents.Indexes.Static
 
             dbj.EnsureMetadata();
 
-            if (dbj[Constants.Documents.Metadata.LastModified] is DateTime lm)
-                lastModified = lm;
-
-            if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
-                changeVector = cv;
-
             if (dbj.TryGetDocument(out var doc))
             {
                 jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, doc);
             }
             else
             {
+                if (dbj[Constants.Documents.Metadata.LastModified] is DateTime lm)
+                    lastModified = lm;
+
+                if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
+                    changeVector = cv;
+
                 jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, lastModified, changeVector);
             }
 
