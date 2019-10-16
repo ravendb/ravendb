@@ -12,11 +12,6 @@ namespace SlowTests.Issues
         [Fact]
         public void ShouldReportCorrectErrorWhenUsingTooManyBooleanClausesIsThrown()
         {
-            var l = new List<string>();
-            for (var i = 0; i < 1040; i++)
-            {
-                l.Add("orders/" + i+ "-A");
-            }
             using (var store = GetDocumentStore())
             {
                 using (var bulk = store.BulkInsert())
@@ -24,7 +19,6 @@ namespace SlowTests.Issues
                     for (var i = 0; i < 1040; i++)
                     {
                         var id = "orders/" + i+ "-A";
-                        l.Add(id);
                         bulk.Store(new Order
                         {
                             Name = id
@@ -34,7 +28,12 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-                    var e = Assert.Throws<RavenException>(() => session.Query<Order>().Where(x => x.Name.In(l)).ToList());
+                    var e = Assert.Throws<RavenException>(() =>
+                    {
+                        var q = session.Advanced.DocumentQuery<Order>()
+                            .WhereLucene("Name", string.Join(" OR ", Enumerable.Range(0, 1040).Select(i => "Name:"+i)))
+                            .ToList();
+                    });
                     Assert.Contains("maxClauseCount is set to", e.Message);
                 }
             }
