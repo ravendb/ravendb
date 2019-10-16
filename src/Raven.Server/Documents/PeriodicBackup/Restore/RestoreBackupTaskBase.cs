@@ -99,7 +99,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected abstract Task<Stream> GetStream(string path);
-
         protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
         protected abstract Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path);
 

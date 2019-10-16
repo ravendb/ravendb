@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
