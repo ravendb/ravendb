@@ -19,12 +19,6 @@ namespace Sparrow.Server.Platform.Posix
         public static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long times(ref TimeSample info);
-        
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern long times(ref TimeSample_32bit info);
-
-        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int readlink(
             [MarshalAs(UnmanagedType.LPStr)] string path,
             byte* buffer, int bufferSize);
