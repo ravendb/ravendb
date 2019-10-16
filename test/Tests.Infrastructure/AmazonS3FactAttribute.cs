@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class S3FactAttribute : FactAttribute
+    public class AmazonS3FactAttribute : FactAttribute
     {
         private const string S3CredentialEnvironmentVariable = "S3_CREDENTIAL";
 
@@ -14,7 +14,7 @@ namespace Tests.Infrastructure
 
         private static readonly string ParsingError;
 
-        static S3FactAttribute()
+        static AmazonS3FactAttribute()
         {
             var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
 
@@ -28,7 +28,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        public S3FactAttribute([CallerMemberName] string memberName = "")
+        public AmazonS3FactAttribute([CallerMemberName] string memberName = "")
         {
             if (string.IsNullOrEmpty(ParsingError) == false)
             {

@@ -13,11 +13,14 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Basic.Entities;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromGoogleCloud : RavenTestBase
     {
+        private readonly string _cloudPathPrefix = $"{nameof(RestoreFromGoogleCloud)}-{Guid.NewGuid()}";
+        
         [Fact]
         public void restore_google_cloud_settings_tests()
         {
@@ -107,16 +110,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                googleCloudSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
-                var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration()
+                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(backupStatus.Status.FolderName);
+                
+                var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
                     DatabaseName = databaseName,
-                    Settings = googleCloudSettings
+                    Settings = subfolderGoogleCloudSettings
                 };
-                var googleCloudOperation = new RestoreBackupOperation(restoreFromGoogleCloudConfiguration);
-                var restoreOperation = store.Maintenance.Server.Send(googleCloudOperation);
 
-                restoreOperation.WaitForCompletion(TimeSpan.FromSeconds(30));
+                using (RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(30)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -206,11 +208,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
-                googleCloudSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(backupStatus.Status.FolderName);
+                
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
                     DatabaseName = databaseName,
-                    Settings = googleCloudSettings
+                    Settings = subfolderGoogleCloudSettings
                 };
 
                 using (RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(300)))
@@ -244,16 +247,51 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private GoogleCloudSettings GetGoogleCloudSettings()
+        private GoogleCloudSettings GetGoogleCloudSettings(string subPath = null)
         {
             var testSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+
+            var remoteFolderName = string.IsNullOrEmpty(subPath)
+                ? _cloudPathPrefix
+                : $"{_cloudPathPrefix}/{subPath}";
             
             return new GoogleCloudSettings
             {
                 BucketName = testSettings.BucketName,
                 GoogleCredentialsJson = testSettings.GoogleCredentialsJson,
-                RemoteFolderName = testSettings.RemoteFolderName
+                RemoteFolderName = remoteFolderName
             };
+        }
+        
+        public override void Dispose()
+        {
+            var settings = GetGoogleCloudSettings();
+
+            try
+            {
+                using (var client = new RavenGoogleCloudClient(settings))
+                {
+                    var cloudObjects = client.ListObjectsAsync(settings.RemoteFolderName).GetAwaiter().GetResult();
+
+                    foreach (var cloudObject in cloudObjects)
+                    {
+                        try
+                        {
+                            client.DeleteObjectAsync(cloudObject.Name).GetAwaiter().GetResult();
+                        }
+                        catch (Exception)
+                        {
+                            // ignored
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            base.Dispose();
         }
     }
 }
