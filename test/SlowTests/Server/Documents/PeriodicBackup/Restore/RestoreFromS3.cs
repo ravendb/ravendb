@@ -16,7 +16,7 @@ using FastTests.Server.Basic.Entities;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 
-namespace SlowTests.Server.Documents.PeriodicBackup
+namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromS3 : RavenTestBase
     {
@@ -376,7 +376,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 string lastFileToRestore;
                 var backupStatus = store.Maintenance.Send(operation);
-                using (var client = new RavenAwsS3Client(S3Fact.S3Settings))
+                using (var client = new RavenAwsS3Client(S3FactAttribute.S3Settings))
                 {
                     lastFileToRestore = (await client.ListObjectsAsync(backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
                 }
@@ -593,12 +593,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             return new S3Settings
             {
-                BucketName = S3Fact.S3Settings.BucketName,
-                RemoteFolderName = S3Fact.S3Settings.RemoteFolderName,
-                AwsAccessKey = S3Fact.S3Settings.AwsAccessKey,
-                AwsRegionName = S3Fact.S3Settings.AwsRegionName,
-                AwsSecretKey = S3Fact.S3Settings.AwsSecretKey,
-                AwsSessionToken = S3Fact.S3Settings.AwsSessionToken,
+                BucketName = S3FactAttribute.S3Settings.BucketName,
+                RemoteFolderName = S3FactAttribute.S3Settings.RemoteFolderName,
+                AwsAccessKey = S3FactAttribute.S3Settings.AwsAccessKey,
+                AwsRegionName = S3FactAttribute.S3Settings.AwsRegionName,
+                AwsSecretKey = S3FactAttribute.S3Settings.AwsSecretKey,
+                AwsSessionToken = S3FactAttribute.S3Settings.AwsSessionToken,
             };
         }
     }
