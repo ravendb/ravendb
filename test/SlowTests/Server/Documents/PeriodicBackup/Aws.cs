@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json;
@@ -25,7 +26,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Theory(Skip = "Requires Amazon AWS Credentials")]
         [InlineData(EastRegion1)]
         [InlineData(WestRegion2)]
-        public void put_object(string region)
+        public async Task put_object(string region)
         {
             var bucketName = $"testing-{Guid.NewGuid()}";
             var key = $"test-key-{Guid.NewGuid()}";
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var e = Assert.Throws<StorageException>(() => client.DeleteBucket());
                     Assert.True(e.Message.Contains("The bucket you tried to delete is not empty"));
 
-                    var @object = client.GetObject(key);
+                    var @object = await client.GetObjectAsync(key);
                     Assert.NotNull(@object);
 
                     using (var reader = new StreamReader(@object.Data))
@@ -146,14 +147,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(EastRegion1, 14, true, UploadType.Chunked)]
         [InlineData(WestRegion2, 14, true, UploadType.Chunked)]
         // ReSharper disable once InconsistentNaming
-        public void put_object_multipart(string region, 
-            int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
+        public async Task put_object_multipart(string region, int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
-            PutObject(region, sizeInMB, testBlobKeyAsFolder, uploadType);
+            await PutObject(region, sizeInMB, testBlobKeyAsFolder, uploadType);
         }
 
         // ReSharper disable once InconsistentNaming
-        private static void PutObject(string region, 
+        private static async Task PutObject(string region, 
             int sizeInMB, bool testBlobKeyAsFolder, UploadType uploadType)
         {
             var bucketName = $"testing-{Guid.NewGuid()}";
@@ -199,7 +199,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             });
                     }
 
-                    var @object = client.GetObject(key);
+                    var @object = await client.GetObjectAsync(key);
                     Assert.NotNull(@object);
 
                     using (var reader = new StreamReader(@object.Data))
