@@ -3111,7 +3111,7 @@ namespace Raven.Server.ServerWide
                 if (index <= Interlocked.Read(ref LastModifiedIndex))
                     break;
 
-                if(token.IsCancellationRequested)
+                if (token.IsCancellationRequested)
                     ThrowCanceledException(index, LastModifiedIndex, isExecution: false);
 
                 if (await waitAsync == false)
@@ -3122,34 +3122,12 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
-            {
-                // the task has already completed
-                // let's check if we had errors in it
-                foreach (var error in _errors)
-                {
-                    if (error.Index == index)
-                        error.Exception.Throw();// rethrow
-                }
-                return;
-            }
-
-            var task = tcs.Task;
-
-            if (task.IsCompleted)
-                return;
-
-            var result = await Task.WhenAny(task, waitAsync);
-
-            if (result.IsFaulted)
-                throw result.Exception;
-
-            if (result == task)
+            if (await WaitForTaskCompletion(index, new Lazy<Task>(waitAsync)))
                 return;
 
             ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
         }
-
+        
         public async Task WaitForIndexNotification(long index, TimeSpan timeout)
         {
             while (true)
@@ -3170,6 +3148,14 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            if (await WaitForTaskCompletion(index, new Lazy<Task>(TimeoutManager.WaitFor(timeout))))
+                return;
+
+            ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+        }
+
+        private async Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
+        {
             if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
             {
                 // the task has already completed
@@ -3177,25 +3163,25 @@ namespace Raven.Server.ServerWide
                 foreach (var error in _errors)
                 {
                     if (error.Index == index)
-                        error.Exception.Throw();// rethrow
+                        error.Exception.Throw(); // rethrow
                 }
-                return;
+
+                return true;
             }
 
             var task = tcs.Task;
 
             if (task.IsCompleted)
-                return;
+                return true;
 
-            var result = await Task.WhenAny(task, TimeoutManager.WaitFor(timeout));
+            var result = await Task.WhenAny(task, waitingTask.Value);
 
             if (result.IsFaulted)
-                throw result.Exception;
+                await result; // will throw
 
             if (result == task)
-                return;
-
-            ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+                return true;
+            return false;
         }
 
         private void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)

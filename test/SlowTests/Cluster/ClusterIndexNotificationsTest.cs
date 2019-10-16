@@ -103,11 +103,14 @@ namespace SlowTests.Cluster
                 var indexes = new List<Task>();
                 for (int i = 0; i < 100; i++)
                 {
-                    var index = new Index();
+                    var index = new Index($"test{i}");
                     indexes.Add(index.ExecuteAsync(store));
                 }
 
                 await Task.WhenAll(indexes);
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(100, record.Indexes.Count);
             }
         }
 

@@ -16,6 +16,15 @@ namespace SlowTests.Issues
 
     class Index : AbstractIndexCreationTask<MyEntity>
     {
+        private readonly string _indexName;
+
+        public override string IndexName => _indexName ?? base.IndexName;
+
+        public Index(string name):this()
+        {
+            _indexName = name;
+        }
+
         public Index()
         {
             Map = entities => from e in entities
