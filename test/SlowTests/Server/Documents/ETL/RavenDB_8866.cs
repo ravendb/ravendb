@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Issues;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
@@ -124,6 +126,43 @@ namespace SlowTests.Server.Documents.ETL
                         var t2 = src.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(src.Database, set));
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanResetEtl3()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var configuration = new RavenEtlConfiguration()
+                {
+                    ConnectionStringName = "test", Name = "myConfiguration", Transforms = {new Transformation() {Name = "allUsers", Collections = {"Users"}}}
+                };
+
+                AddEtl(src, configuration, new RavenConnectionString {Name = "test", TopologyDiscoveryUrls = dest.Urls, Database = dest.Database,});
+
+                var t = Task.Run(async () =>
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        await src.Maintenance.SendAsync(new ResetEtlOperation("myConfiguration", "allUsers"));
+                        await Task.Delay(100);
+                    }
+                });
+
+                var indexes = new List<Task>();
+                for (int i = 0; i < 100; i++)
+                {
+                    var index = new Index($"test{i}");
+                    indexes.Add(index.ExecuteAsync(src));
+                }
+
+                await Task.WhenAll(indexes);
+                await t;
+
+                var record = await src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database));
+                Assert.Equal(100, record.Indexes.Count);
             }
         }
     }
