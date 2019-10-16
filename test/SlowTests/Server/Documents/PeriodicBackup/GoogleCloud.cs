@@ -84,17 +84,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     new MemoryStream(Encoding.UTF8.GetBytes("123"))
                 );
 
-                WaitForValue(() => IsFileNameInCloudObjects(client, fileName), true);
+                var fileExists = await WaitForValueAsync(() => IsFileNameInCloudObjects(client, fileName), true);
+                Assert.True(fileExists);
 
                 await client.DeleteObjectAsync(fileName);
                 
-                WaitForValue(() => IsFileNameInCloudObjects(client, fileName), false);
+                fileExists = await WaitForValueAsync(() => IsFileNameInCloudObjects(client, fileName), false);
+                Assert.False(fileExists);
             }
         }
 
-        private bool IsFileNameInCloudObjects(RavenGoogleCloudClient client, string fileName)
+        private async Task<bool> IsFileNameInCloudObjects(RavenGoogleCloudClient client, string fileName)
         {
-            var cloudObjects = client.ListObjectsAsync().GetAwaiter().GetResult();
+            var cloudObjects = await client.ListObjectsAsync();
             var containsFileName = cloudObjects?.Any(x => x.Name == fileName) ?? false;
             return containsFileName;
         }

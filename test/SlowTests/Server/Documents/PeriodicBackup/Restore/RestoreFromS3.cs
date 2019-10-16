@@ -20,6 +20,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromS3 : RavenTestBase
     {
+        private readonly string _cloudPathPrefix = $"{nameof(RestoreFromS3)}-{Guid.NewGuid()}";
+
         [Fact, Trait("Category", "Smuggler")]
         public void restore_s3_settings_tests()
         {
@@ -57,10 +59,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [S3Fact, Trait("Category", "Smuggler")]
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
-            var localS3Settings = CopyLocalS3Settings();
+            var defaultS3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
             {
@@ -74,7 +76,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
-                    S3Settings = localS3Settings,
+                    S3Settings = defaultS3Settings,
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
@@ -113,17 +115,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                var subfolderS3Settings = GetS3Settings(backupStatus.Status.FolderName);
 
-                using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
-                {
-                    DatabaseName = databaseName,
-                    Settings = localS3Settings
-                }, TimeSpan.FromSeconds(60)))
+                using (RestoreDatabaseFromCloud(
+                    store,
+                    new RestoreFromS3Configuration {DatabaseName = databaseName, Settings = subfolderS3Settings},
+                    TimeSpan.FromSeconds(60)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
-                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        var users = await session.LoadAsync<User>(new[] {"users/1", "users/2"});
                         Assert.True(users.Any(x => x.Value.Name == "oren"));
                         Assert.True(users.Any(x => x.Value.Name == "ayende"));
 
@@ -145,10 +146,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [S3Fact, Trait("Category", "Smuggler")]
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
-            var localS3Settings = CopyLocalS3Settings();
+            var defaultS3Settings = GetS3Settings();
+            
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -176,7 +178,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
-                    S3Settings = localS3Settings,
+                    S3Settings = defaultS3Settings,
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
@@ -207,13 +209,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 // restore the database with a different name
                 string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
-                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                
+                var subfolderS3Settings = GetS3Settings(backupStatus.Status.FolderName);
 
-                using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
-                {
-                    DatabaseName = restoredDatabaseName,
-                    Settings = localS3Settings
-                }))
+                using (RestoreDatabaseFromCloud(store,
+                    new RestoreFromS3Configuration 
+                    {
+                        DatabaseName = restoredDatabaseName,
+                        Settings = subfolderS3Settings
+                    },
+                    TimeSpan.FromSeconds(60)))
                 {
                     using (var session = store.OpenAsyncSession(restoredDatabaseName))
                     {
@@ -244,10 +249,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [S3Fact, Trait("Category", "Smuggler")]
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key()
         {
-            var localS3Settings = CopyLocalS3Settings();
+            var defaultS3Settings = GetS3Settings();
+            
             var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
 
             using (var store = GetDocumentStore(new Options
@@ -271,7 +277,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
-                    S3Settings = localS3Settings,
+                    S3Settings = defaultS3Settings,
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
@@ -307,11 +313,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
-                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                
+                var subfolderS3Settings = GetS3Settings(backupStatus.Status.FolderName);
 
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    Settings = localS3Settings,
+                    Settings = subfolderS3Settings,
                     DatabaseName = databaseName,
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
@@ -331,10 +338,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [S3Fact, Trait("Category", "Smuggler")]
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task incremental_and_full_check_last_file_for_backup()
         {
-            var localS3Settings = CopyLocalS3Settings();
+            var defaultS3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
             {
@@ -347,7 +354,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
-                    S3Settings = localS3Settings,
+                    S3Settings = defaultS3Settings,
                     IncrementalBackupFrequency = "0 */6 * * *",
                 };
 
@@ -376,9 +383,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 string lastFileToRestore;
                 var backupStatus = store.Maintenance.Send(operation);
-                using (var client = new RavenAwsS3Client(S3FactAttribute.S3Settings))
+                using (var client = new RavenAwsS3Client(AmazonS3FactAttribute.S3Settings))
                 {
-                    lastFileToRestore = (await client.ListObjectsAsync(backupStatus.Status.FolderName, string.Empty, false)).FileInfoDetails.Last().FullPath;
+                    var fullBackupPath = $"{defaultS3Settings.RemoteFolderName}/{backupStatus.Status.FolderName}";
+                    lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -395,12 +403,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 backupStatus = store.Maintenance.Send(operation);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
-                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+
+                var subfolderS3Settings = GetS3Settings(backupStatus.Status.FolderName);
 
                 using (RestoreDatabaseFromCloud(store,
                     new RestoreFromS3Configuration
                     {
-                        Settings = localS3Settings,
+                        Settings = subfolderS3Settings,
                         DatabaseName = databaseName,
                         LastFileNameToRestore = lastFileToRestore
                     }))
@@ -418,10 +427,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [S3Fact, Trait("Category", "Smuggler")]
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key()
         {
-            var localS3Settings = CopyLocalS3Settings();
+            var defaultS3Settings = GetS3Settings();
             var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
 
             using (var store = GetDocumentStore(new Options
@@ -445,7 +454,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
-                    S3Settings = localS3Settings,
+                    S3Settings = defaultS3Settings,
                     IncrementalBackupFrequency = "0 */6 * * *",
                     BackupEncryptionSettings = new BackupEncryptionSettings
                     {
@@ -482,11 +491,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
-                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                
+                var subfolderS3Settings = GetS3Settings(backupStatus.Status.FolderName);
 
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    Settings = localS3Settings,
+                    Settings = subfolderS3Settings,
                     DatabaseName = databaseName,
                     EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     BackupEncryptionSettings = new BackupEncryptionSettings
@@ -507,14 +517,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [S3Fact, Trait("Category", "Smuggler")]
+        [AmazonS3Fact, Trait("Category", "Smuggler")]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
 
-            var localS3Settings = CopyLocalS3Settings();
+            var defaultS3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore(new Options
             {
@@ -537,7 +547,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
-                    S3Settings = localS3Settings,
+                    S3Settings = defaultS3Settings,
                     IncrementalBackupFrequency = "0 */6 * * *"
                 };
 
@@ -554,11 +564,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var backupStatus = store.Maintenance.Send(operation);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
-                localS3Settings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+
+                var subfolderS3Settings = GetS3Settings(backupStatus.Status.FolderName);
 
                 using (RestoreDatabaseFromCloud(store, new RestoreFromS3Configuration
                 {
-                    Settings = localS3Settings,
+                    Settings = subfolderS3Settings,
                     DatabaseName = databaseName,
                     EncryptionKey = key,
                     BackupEncryptionSettings = new BackupEncryptionSettings
@@ -576,30 +587,44 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+        private S3Settings GetS3Settings(string subPath = null)
         {
-            var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-            var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
-            var value = WaitForValue(() =>
-            {
-                var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
-                return status;
-            }, OperationStatus.Completed);
+            var remoteFolderName = $"{AmazonS3FactAttribute.S3Settings.RemoteFolderName}/{_cloudPathPrefix}";
 
-            Assert.Equal(OperationStatus.Completed, value);
-        }
-
-        private static S3Settings CopyLocalS3Settings()
-        {
+            if (string.IsNullOrEmpty(subPath) == false)
+                remoteFolderName = $"{remoteFolderName}/{subPath}";
+            
             return new S3Settings
             {
-                BucketName = S3FactAttribute.S3Settings.BucketName,
-                RemoteFolderName = S3FactAttribute.S3Settings.RemoteFolderName,
-                AwsAccessKey = S3FactAttribute.S3Settings.AwsAccessKey,
-                AwsRegionName = S3FactAttribute.S3Settings.AwsRegionName,
-                AwsSecretKey = S3FactAttribute.S3Settings.AwsSecretKey,
-                AwsSessionToken = S3FactAttribute.S3Settings.AwsSessionToken,
+                BucketName = AmazonS3FactAttribute.S3Settings.BucketName,
+                RemoteFolderName = remoteFolderName,
+                AwsAccessKey = AmazonS3FactAttribute.S3Settings.AwsAccessKey,
+                AwsRegionName = AmazonS3FactAttribute.S3Settings.AwsRegionName,
+                AwsSecretKey = AmazonS3FactAttribute.S3Settings.AwsSecretKey,
+                AwsSessionToken = AmazonS3FactAttribute.S3Settings.AwsSessionToken,
             };
+        }
+
+        public override void Dispose()
+        {
+            var s3Settings = GetS3Settings();
+
+            try
+            {
+                using (var s3Client = new RavenAwsS3Client(s3Settings))
+                {
+                    var cloudObjects = s3Client.ListObjectsAsync(s3Settings.RemoteFolderName, string.Empty, false).GetAwaiter().GetResult();
+                    var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                
+                    s3Client.DeleteMultipleObjects(pathsToDelete);
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            base.Dispose();
         }
     }
 }

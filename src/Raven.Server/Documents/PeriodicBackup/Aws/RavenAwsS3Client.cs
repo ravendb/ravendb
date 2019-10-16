@@ -848,6 +848,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public void DeleteMultipleObjects(List<string> objects)
         {
+            if (objects.Count == 0)
+                return;
+            
             var url = $"{GetUrl()}/?delete";
             var now = SystemTime.UtcNow;
 
