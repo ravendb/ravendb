@@ -1252,7 +1252,7 @@ namespace Raven.Server.Documents
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
 
-                    LastDatabaseRecordChangeIndex = index;
+                    LastValueChangeIndex  = index;
                 }
                 finally
                 {
