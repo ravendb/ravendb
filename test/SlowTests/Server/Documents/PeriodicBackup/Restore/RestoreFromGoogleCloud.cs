@@ -13,17 +13,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Basic.Entities;
-using System.Security.Cryptography.X509Certificates;
-using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
-    class RestoreFromGoogleCloud : RavenTestBase
+    public class RestoreFromGoogleCloud : RavenTestBase
     {
         [Fact]
         public void restore_google_cloud_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
+            
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -38,12 +37,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
 
                 var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Google cloud bucket name cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("Google Cloud Bucket name cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.BucketName = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Google Credentials Json cannot be null or empty", e.InnerException.Message);
+                Assert.Contains("Google Credentials JSON cannot be null or empty", e.InnerException.Message);
 
                 restoreConfiguration.Settings.GoogleCredentialsJson = "test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
@@ -63,11 +62,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     session.CountersFor("users/1").Increment("likes", 100);
                     await session.SaveChangesAsync();
                 }
+                
+                var googleCloudSettings = GetGoogleCloudSettings();
 
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
-                    GoogleCloudSettings = GoogleCloudFact.GoogleCloudSettings,
+                    GoogleCloudSettings = googleCloudSettings,
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
@@ -106,11 +107,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                GoogleCloudFact.GoogleCloudSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                googleCloudSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration()
                 {
                     DatabaseName = databaseName,
-                    Settings = GoogleCloudFact.GoogleCloudSettings
+                    Settings = googleCloudSettings
                 };
                 var googleCloudOperation = new RestoreBackupOperation(restoreFromGoogleCloudConfiguration);
                 var restoreOperation = store.Maintenance.Server.Send(googleCloudOperation);
@@ -168,10 +169,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
+                var googleCloudSettings = GetGoogleCloudSettings();
+
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
-                    GoogleCloudSettings = GoogleCloudFact.GoogleCloudSettings,
+                    GoogleCloudSettings = googleCloudSettings,
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
@@ -203,16 +206,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
-                GoogleCloudFact.GoogleCloudSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
-                var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration()
+                googleCloudSettings.RemoteFolderName = $"{backupStatus.Status.FolderName}";
+                var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
                     DatabaseName = databaseName,
-                    Settings = GoogleCloudFact.GoogleCloudSettings
+                    Settings = googleCloudSettings
                 };
-                var googleCloudOperation = new RestoreBackupOperation(restoreFromGoogleCloudConfiguration);
-                var restoreOperation = store.Maintenance.Server.Send(googleCloudOperation);
 
-                restoreOperation.WaitForCompletion(TimeSpan.FromSeconds(30));
+                using (RestoreDatabaseFromCloud(store, restoreFromGoogleCloudConfiguration, TimeSpan.FromSeconds(300)))
                 {
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
@@ -241,6 +242,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     }
                 }
             }
+        }
+
+        private GoogleCloudSettings GetGoogleCloudSettings()
+        {
+            var testSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+            
+            return new GoogleCloudSettings
+            {
+                BucketName = testSettings.BucketName,
+                GoogleCredentialsJson = testSettings.GoogleCredentialsJson,
+                RemoteFolderName = testSettings.RemoteFolderName
+            };
         }
     }
 }
