@@ -240,7 +240,7 @@ namespace Raven.Server.Dashboard
                     
                         // Get new data 
                         var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
-                        var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv);
+                        var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv, includeTempBuffers: true);
                     
                         foreach (var systemPoint in systemMountPoints)
                         {
@@ -270,7 +270,7 @@ namespace Raven.Server.Dashboard
 
         private static void DiskUsageCheck(DatabaseInfoCache item, DocumentDatabase database, DrivesUsage drivesUsage, CancellationTokenSource cts)
         {
-            foreach (var mountPointUsage in database.GetMountPointsUsage())
+            foreach (var mountPointUsage in database.GetMountPointsUsage(includeTempBuffers: true))
             {
                 if (cts.IsCancellationRequested)
                     return;

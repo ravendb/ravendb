@@ -2813,7 +2813,7 @@ namespace Raven.Server.ServerWide
             return json;
         }
 
-        public static IEnumerable<Raven.Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment)
+        public static IEnumerable<Client.ServerWide.Operations.MountPointUsage> GetMountPointUsageDetailsFor(StorageEnvironmentWithType environment, bool includeTempBuffers)
         {
             var fullPath = environment?.Environment.Options.BasePath.FullPath;
             if (fullPath == null)
@@ -2844,11 +2844,11 @@ namespace Raven.Server.ServerWide
                 if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
                 {
                     usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
+                    usage.UsedSpaceByTempBuffers += includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0;
                 }
                 else
                 {
-                    yield return new Raven.Client.ServerWide.Operations.MountPointUsage
+                    yield return new Client.ServerWide.Operations.MountPointUsage
                     {
                         DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
                         {
@@ -2857,31 +2857,34 @@ namespace Raven.Server.ServerWide
                             TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
                             TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
                         },
-                        UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
+                        UsedSpaceByTempBuffers = includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0
                     };
                 }
             }
 
-            var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
-            if (tempBuffersDiskSpaceResult != null)
+            if (includeTempBuffers)
             {
-                if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
+                var tempBuffersDiskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
+                if (tempBuffersDiskSpaceResult != null)
                 {
-                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                }
-                else
-                {
-                    yield return new Raven.Client.ServerWide.Operations.MountPointUsage
+                    if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
                     {
-                        UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
-                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
+                    }
+                    else
+                    {
+                        yield return new Client.ServerWide.Operations.MountPointUsage
                         {
-                            DriveName = tempBuffersDiskSpaceResult.DriveName,
-                            VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
-                            TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
-                            TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                        }
-                    };
+                            UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes,
+                            DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
+                            {
+                                DriveName = tempBuffersDiskSpaceResult.DriveName,
+                                VolumeLabel = tempBuffersDiskSpaceResult.VolumeLabel,
+                                TotalFreeSpaceInBytes = tempBuffersDiskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
+                                TotalSizeInBytes = tempBuffersDiskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
+                            }
+                        };
+                    }
                 }
             }
 
