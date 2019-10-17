@@ -67,8 +67,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments/list", "POST", AuthorizationStatus.ValidUser)]
         public async Task GetAttachments()
         {
-            var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -77,10 +75,10 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("Type", out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
                     throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                if (request.TryGet("ReadAll", out bool readAll) == false)
-                    throw new ArgumentException("The 'ReadAll' field in the body request is mandatory");
+                if (request.TryGet("Attachments", out BlittableJsonReaderArray attachments) == false)
+                    throw new ArgumentException("The 'Attachments' field in the body request is mandatory");
 
-                var attachmentsStreams = new Dictionary<string, Stream>();
+                var attachmentsStreams = new Dictionary<KeyValuePair<string, string>, Stream>();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -88,41 +86,28 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartArray();
                     var first = true;
                     var index = 0;
-                    if (readAll == false)
+                    foreach (BlittableJsonReaderObject bjro in attachments)
                     {
-                        if (request.TryGet("Names", out BlittableJsonReaderArray names) == false)
-                            throw new ArgumentException("The 'Names' field in the body request is mandatory");
+                        if (bjro.TryGet("Key", out string id) == false)
+                            throw new ArgumentException("Could not parse Key");
+                        if (bjro.TryGet("Value", out string val) == false)
+                            throw new ArgumentException("Could not parse Value");
 
-                        foreach (LazyStringValue lsv in names)
-                        {
-                            if (first == false)
-                                writer.WriteComma();
-                            first = false;
+                        var kvp = new KeyValuePair<string, string>(id, val);
 
-                            var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, lsv, type, changeVector: null);
-                            attachment.Size = attachment.Stream.Length;
-                            attachmentsStreams.Add(lsv, attachment.Stream);
-                            WriteAttachmentWithoutStream(writer, attachment, documentId, index);
-                            index++;
-                        }
+                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, kvp.Key, kvp.Value, type, changeVector: null);
+                        if (attachment == null)
+                            continue;
+
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        attachment.Size = attachment.Stream.Length;
+                        attachmentsStreams.Add(kvp, attachment.Stream);
+                        WriteAttachmentWithoutStream(writer, attachment, kvp.Key, index);
+                        index++;
                     }
-                    else
-                    {
-                        using (Slice.From(context.Allocator, documentId.ToLowerInvariant(), out Slice lowerDocumentIdSlice))
-                        {
-                            foreach (var attachment in Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, lowerDocumentIdSlice, includeStreams: true))
-                            {
-                                if (first == false)
-                                    writer.WriteComma();
-                                first = false;
-
-                                attachmentsStreams.Add(attachment.Name, attachment.Stream);
-                                WriteAttachmentWithoutStream(writer, attachment, documentId, index);
-                                index++;
-                            }
-                        }
-                    }
-
 
                     writer.WriteEndArray();
                     writer.WriteEndObject();

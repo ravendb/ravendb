@@ -16,59 +16,39 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class GetAttachmentsOperation : IOperation<Dictionary<string, AttachmentResult>>
+    public class GetAttachmentsOperation : IOperation<IEnumerator<AttachmentEnumeratorResult>>
     {
-        private readonly string _documentId;
-        private readonly IEnumerable<string> _names;
         private readonly AttachmentType _type;
-        private readonly bool _readAll;
+        private readonly IEnumerable<KeyValuePair<string, string>> _attachments;
 
-        public GetAttachmentsOperation(string documentId, AttachmentType type)
+        public GetAttachmentsOperation(IEnumerable<KeyValuePair<string, string>> attachments, AttachmentType type)
         {
-            _documentId = documentId;
             _type = type;
-            _readAll = true;
+            _attachments = attachments;
         }
 
-        public GetAttachmentsOperation(string documentId, IEnumerable<string> names, AttachmentType type)
+        public RavenCommand<IEnumerator<AttachmentEnumeratorResult>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            _documentId = documentId;
-            _names = names;
-            _type = type;
+            return new GetAttachmentsCommand(context, _attachments, _type);
         }
 
-        public RavenCommand<Dictionary<string, AttachmentResult>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
-        {
-            return new GetAttachmentsCommand(context, _documentId, _names, _type, _readAll);
-        }
-
-        private class GetAttachmentsCommand : RavenCommand<Dictionary<string, AttachmentResult>>
+        private class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
         {
             private readonly JsonOperationContext _context;
-            private readonly string _documentId;
-            private readonly IEnumerable<string> _names;
             private readonly AttachmentType _type;
-            private readonly bool _readAll;
+            private readonly IEnumerable<KeyValuePair<string, string>> _attachments;
 
-            public GetAttachmentsCommand(JsonOperationContext context, string documentId, IEnumerable<string> names, AttachmentType type, bool readAll)
+            public GetAttachmentsCommand(JsonOperationContext context, IEnumerable<KeyValuePair<string, string>> attachments, AttachmentType type)
             {
-                if (string.IsNullOrWhiteSpace(documentId))
-                    throw new ArgumentNullException(nameof(documentId));
-
                 _context = context;
-                _documentId = documentId;
-                _readAll = readAll;
                 _type = type;
-
-                if (_readAll == false)
-                    _names = names ?? throw new ArgumentNullException(nameof(names));
-
+                _attachments = attachments;
                 ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments/list?id={Uri.EscapeDataString(_documentId)}";
+                url = $"{node.Url}/databases/{node.Database}/attachments/list";
 
                 var request = new HttpRequestMessage
                 {
@@ -82,14 +62,27 @@ namespace Raven.Client.Documents.Operations.Attachments
                             writer.WritePropertyName("Type");
                             writer.WriteString(_type.ToString());
                             writer.WriteComma();
-                            writer.WritePropertyName("ReadAll");
-                            writer.WriteBool(_readAll);
 
-                            if (_readAll == false)
+                            writer.WritePropertyName("Attachments");
+
+                            writer.WriteStartArray();
+                            var first = true;
+                            foreach (var kvp in _attachments)
                             {
+                                if (first == false)
+                                    writer.WriteComma();
+                                first = false;
+
+                                writer.WriteStartObject();
+                                writer.WritePropertyName("Key");
+                                writer.WriteString(kvp.Key);
                                 writer.WriteComma();
-                                writer.WriteArray("Names", _names);
+                                writer.WritePropertyName("Value");
+                                writer.WriteString(kvp.Value);
+                                writer.WriteEndObject();;
+
                             }
+                            writer.WriteEndArray();
 
                             writer.WriteEndObject();
                         }
@@ -101,15 +94,12 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                context.Reset();
-                context.Renew();
-
                 AttachmentsDetails attachmentsMetadata;
                 AttachmentsStreamInfo streamInfo;
                 var state = new JsonParserState();
-                Stream stream = response.Content.ReadAsStreamAsync().Result;
-                context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer);
+                Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
+                using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "attachments/receive"))
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "attachments/list", parser, state))
                 using (var peepingTomStream = new PeepingTomStream(stream, context))
@@ -125,21 +115,22 @@ namespace Raven.Client.Documents.Operations.Attachments
                     BlittableJsonReaderObject data = builder.CreateReader();
                     attachmentsMetadata = JsonDeserializationClient.AttachmentAdvancedDetails(data);
 
-                    buffer.Used = parser.BufferOffset;
-                    buffer.Valid = parser.BufferSize;
+                    var bufferSize = parser.BufferSize - parser.BufferOffset;
+                    var tmpBuffer = new byte[bufferSize];
+                    Array.Copy(buffer.Buffer.Array ?? throw new InvalidOperationException(), buffer.Buffer.Offset + parser.BufferOffset, tmpBuffer, 0, bufferSize);
 
                     streamInfo = new AttachmentsStreamInfo
                     {
                         AttachmentAdvancedDetails = attachmentsMetadata,
-                        Buffer = buffer
+                        Buffer = tmpBuffer
                     };
                 }
 
-                Result = attachmentsMetadata.AttachmentsMetadata.ToDictionary(attachment => attachment.Name, attachment => new AttachmentResult
+                Result = attachmentsMetadata.AttachmentsMetadata.Select(attachment => new AttachmentEnumeratorResult(new AttachmentsStream(stream, attachment.Name, attachment.Index, attachment.Size, streamInfo))
                 {
-                    Stream = new AttachmentsStream(stream, attachment.Name, attachment.Index, (int)attachment.Size, streamInfo),
                     Details = attachment
-                });
+                }).GetEnumerator();
+
 
                 return ResponseDisposeHandling.Manually;
             }

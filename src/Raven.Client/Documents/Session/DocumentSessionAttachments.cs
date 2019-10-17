@@ -42,33 +42,9 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.Send(operation, SessionInfo);
         }
 
-        public Dictionary<string, AttachmentResult> Get(string documentId, IEnumerable<string> names)
+        public IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<KeyValuePair<string, string>> attachments)
         {
-            var operation = new GetAttachmentsOperation(documentId, names, AttachmentType.Document);
-            return Session.Operations.Send(operation, SessionInfo);
-        }
-
-        public Dictionary<string, AttachmentResult> Get(object entity, IEnumerable<string> names)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSessionOrMissingId(entity);
-
-            var operation = new GetAttachmentsOperation(document.Id, names, AttachmentType.Document);
-            return Session.Operations.Send(operation, SessionInfo);
-        }
-
-        public Dictionary<string, AttachmentResult> GetAll(string documentId)
-        {
-            var operation = new GetAttachmentsOperation(documentId, AttachmentType.Document);
-            return Session.Operations.Send(operation, SessionInfo);
-        }
-
-        public Dictionary<string, AttachmentResult> GetAll(object entity)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSessionOrMissingId(entity);
-
-            var operation = new GetAttachmentsOperation(document.Id, AttachmentType.Document);
+            var operation = new GetAttachmentsOperation(attachments, AttachmentType.Document);
             return Session.Operations.Send(operation, SessionInfo);
         }
 

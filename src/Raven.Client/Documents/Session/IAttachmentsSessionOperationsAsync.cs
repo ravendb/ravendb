@@ -32,24 +32,9 @@ namespace Raven.Client.Documents.Session
         Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default);
 
         /// <summary>
-        /// Returns dictionary of attachments by the document id and list of attachment names.
+        /// Returns Enumerator of KeyValuePairs of attachment name and stream.
         /// </summary>
-        Task<Dictionary<string, AttachmentResult>> GetAsync(string documentId, IEnumerable<string> names, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns dictionary of attachments by the entity and list of attachment names.
-        /// </summary>
-        Task<Dictionary<string, AttachmentResult>> GetAsync(object entity, IEnumerable<string> names, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns dictionary of all attachments by document id.
-        /// </summary>
-        Task<Dictionary<string, AttachmentResult>> GetAllAsync(string documentId, CancellationToken token = default);
-
-        /// <summary>
-        /// Returns dictionary of all attachments by entity.
-        /// </summary>
-        Task<Dictionary<string, AttachmentResult>> GetAllAsync(object entity, CancellationToken token = default);
+        Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<KeyValuePair<string, string>> attachments, CancellationToken token = default);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.

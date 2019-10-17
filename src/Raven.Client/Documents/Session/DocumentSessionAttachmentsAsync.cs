@@ -44,33 +44,9 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
         }
 
-        public Task<Dictionary<string, AttachmentResult>> GetAsync(string documentId, IEnumerable<string> names, CancellationToken token = default)
+        public Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<KeyValuePair<string, string>> attachments, CancellationToken token = default)
         {
-            var operation = new GetAttachmentsOperation(documentId, names, AttachmentType.Document);
-            return Session.Operations.SendAsync(operation, SessionInfo, token);
-        }
-
-        public Task<Dictionary<string, AttachmentResult>> GetAsync(object entity, IEnumerable<string> names, CancellationToken token = default)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSessionOrMissingId(entity);
-
-            var operation = new GetAttachmentsOperation(document.Id, names, AttachmentType.Document);
-            return Session.Operations.SendAsync(operation, SessionInfo, token);
-        }
-
-        public Task<Dictionary<string, AttachmentResult>> GetAllAsync(string documentId, CancellationToken token = default)
-        {
-            var operation = new GetAttachmentsOperation(documentId, AttachmentType.Document);
-            return Session.Operations.SendAsync(operation, SessionInfo, token);
-        }
-
-        public Task<Dictionary<string, AttachmentResult>> GetAllAsync(object entity, CancellationToken token = default)
-        {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSessionOrMissingId(entity);
-
-            var operation = new GetAttachmentsOperation(document.Id, AttachmentType.Document);
+            var operation = new GetAttachmentsOperation(attachments, AttachmentType.Document);
             return Session.Operations.SendAsync(operation, SessionInfo, token);
         }
 
