@@ -30,24 +30,9 @@ namespace Raven.Client.Documents.Session
         AttachmentResult Get(object entity, string name);
 
         /// <summary>
-        /// Returns dictionary of attachments by the document id and list of attachment names.
+        /// Returns Enumerator of KeyValuePairs of attachment name and stream.
         /// </summary>
-        Dictionary<string, AttachmentResult> Get(string documentId, IEnumerable<string> names);
-
-        /// <summary>
-        /// Returns dictionary of attachments by the entity and list of attachment names.
-        /// </summary>
-        Dictionary<string, AttachmentResult> Get(object entity, IEnumerable<string> names);
-
-        /// <summary>
-        /// Returns dictionary of all attachments by the entity.
-        /// </summary>
-        Dictionary<string, AttachmentResult> GetAll(string documentId);
-
-        /// <summary>
-        /// Returns dictionary of all attachments by the document id.
-        /// </summary>
-        Dictionary<string, AttachmentResult> GetAll(object entity);
+        IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<KeyValuePair<string, string>> attachments);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
