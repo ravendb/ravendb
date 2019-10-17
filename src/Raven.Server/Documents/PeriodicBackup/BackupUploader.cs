@@ -233,16 +233,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 catch (Exception e)
                 {
                     var extracted = e.ExtractSingleInnerException();
+                    var error = $"Failed to upload the backup file to {targetName}.";
+                    Exception exception = null;
                     if (extracted is OperationCanceledException)
                     {
-                        // shutting down
-                        localUploadStatus.Exception = extracted.ToString();
-                        _exceptions.Add(extracted);
-                        throw extracted;
+                        // shutting down or HttpClient timeout
+                        exception = TaskCancelToken.Token.IsCancellationRequested ? extracted : new TimeoutException(error, e);
                     }
 
-                    localUploadStatus.Exception = e.ToString();
-                    _exceptions.Add(new InvalidOperationException($"Failed to upload the backup file to {targetName}.", e));
+                    localUploadStatus.Exception = (exception ?? e).ToString();
+                    _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
             }, null, $"Upload backup file of database '{_backupUploaderSettings.DatabaseName}' to {targetName} (task: '{_backupUploaderSettings.TaskName}')");
 
