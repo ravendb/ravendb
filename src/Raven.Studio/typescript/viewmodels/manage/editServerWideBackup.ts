@@ -11,6 +11,7 @@ import backupSettings = require("models/database/tasks/periodicBackup/backupSett
 import cronEditor = require("viewmodels/common/cronEditor");
 import saveServerWideBackupCommand = require("commands/resources/saveServerWideBackupCommand");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editServerWideBackup extends viewModelBase {
     
@@ -32,6 +33,9 @@ class editServerWideBackup extends viewModelBase {
     activate(args: any) {
         super.activate(args);
 
+        const database = activeDatabaseTracker.default.database();
+        const dbName = ko.observable<string>(database ? database.name : null);
+        
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
 
@@ -48,7 +52,7 @@ class editServerWideBackup extends viewModelBase {
                                 backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                             }
 
-                            this.configuration(new periodicBackupConfiguration(backupTask, this.serverConfiguration(), false, true)); 
+                            this.configuration(new periodicBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true)); 
                             deferred.resolve();
                         } else {
                             deferred.reject();
@@ -64,7 +68,7 @@ class editServerWideBackup extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
                 
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), false, true));
+                this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), false, true));
                 deferred.resolve();
             }
 
