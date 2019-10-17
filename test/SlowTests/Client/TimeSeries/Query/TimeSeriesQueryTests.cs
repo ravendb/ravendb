@@ -91,7 +91,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                             Assert.False(query.First().Count == 3, "Query assertion failed once and passed on second try. sanity check passed");
 
-                            Assert.True(false, "Query assertion failed twice. sanity check passed");
+                            //Assert.True(false, "Query assertion failed twice. sanity check passed");
                         }
                     }
 
@@ -100,7 +100,6 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(1, agg.Results.Length);
 
                     var val = agg.Results[0];
-
 
                     Assert.Equal(59, val.First);
                     Assert.Equal(59, val.Min);

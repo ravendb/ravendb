@@ -790,13 +790,6 @@ namespace Raven.Server.Documents.Queries.Results
                 array.Add(AddTimeSeriesResult(func, aggStates, start, next));
             }
 
-            if (count == 0)
-            {
-                Console.WriteLine($"InvokeTimeSeriesFunction() : Count == 0. on document '{documentId}', timeseries '{source}'");
-                Console.WriteLine($"Reader.Init() : {reader.Init()}");
-                Console.WriteLine($"Reader.SegmentsOrValues.Count : {reader.SegmentsOrValues().Count()}");
-            }
-
             return _context.ReadObject(new DynamicJsonValue
             {
                 ["Count"] = count,
