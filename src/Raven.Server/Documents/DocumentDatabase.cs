@@ -152,7 +152,7 @@ namespace Raven.Server.Documents
                         ? TimeSpan.FromHours(12)
                         : TimeSpan.FromDays(2)));
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
-                RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
+                RachisLogIndexNotifications = ServerStore.Cluster.RachisLogIndexNotifications;
                 CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e, stacktrace) =>
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath, stacktrace);
@@ -420,7 +420,6 @@ namespace Raven.Server.Documents
         {
             if (changeType == DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted)
             {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 return;
             }
 
@@ -1072,13 +1071,9 @@ namespace Raven.Server.Documents
                 }
 
                 NotifyFeaturesAboutValueChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-
             }
-            catch (Exception e)
+            catch
             {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
@@ -1109,7 +1104,6 @@ namespace Raven.Server.Documents
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
             {
@@ -1117,8 +1111,6 @@ namespace Raven.Server.Documents
 
                 if (_databaseShutdown.IsCancellationRequested && e is DatabaseDisabledException == false)
                     e = throwShutDown = CreateDatabaseShutdownException(e);
-
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Got exception during StateChanged({index}).", e);

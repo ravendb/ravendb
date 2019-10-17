@@ -75,8 +75,7 @@ namespace Raven.Server.Documents
 
                 if (dbTopology.RelevantFor(ServerStore.NodeTag))
                 {
-                    var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(Database.Name);
-                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+                    await ServerStore.Cluster.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 else
                 {

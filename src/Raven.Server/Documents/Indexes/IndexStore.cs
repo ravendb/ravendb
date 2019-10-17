@@ -100,7 +100,6 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Could not update sorters", e);
             }
@@ -121,7 +120,6 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not create auto index {name}", e);
                 }
@@ -262,8 +260,6 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception exception)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
-
                     var indexName = name;
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not update static index {name}", exception);
@@ -461,7 +457,6 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftLogIndex, e);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not delete index {index.Name}", e);
                 }

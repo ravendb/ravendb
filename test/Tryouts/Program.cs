@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
+using SlowTests.Server.Documents.ETL;
 using SlowTests.Voron;
 using StressTests.Cluster;
 
@@ -19,9 +20,9 @@ namespace Tryouts
                 Console.WriteLine($"Starting to run {i}");
                 try
                 {
-                    using (var test = new RavenDB_13940())
+                    using (var test = new ClusterIndexNotificationsTest())
                     {
-                        test.CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet();
+                        await test.RavenDB_14086_2();
                     }
                 }
                 catch (Exception e)

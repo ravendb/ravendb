@@ -214,7 +214,7 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
 
-        private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
+        public readonly RachisLogIndexNotifications RachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
@@ -444,7 +444,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 var executionTime = sw.Elapsed;
-                _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
+                RachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
                 {
                     Type = type,
                     ExecutionTime = executionTime,
@@ -985,7 +985,7 @@ namespace Raven.Server.ServerWide
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
-                    _rachisLogIndexNotifications.AddTask(index);
+                    RachisLogIndexNotifications.AddTask(index);
                     var count = actions.Count;
 
                     if (count == 0)
@@ -1015,8 +1015,8 @@ namespace Raven.Server.ServerWide
                                 }
                                 finally
                                 {
-                                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
+                                    RachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                                    RachisLogIndexNotifications.SetTaskCompleted(index, error);
                                 }
                             }
                         }, null);
@@ -1029,18 +1029,18 @@ namespace Raven.Server.ServerWide
         {
             try
             {
-                _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
-                _rachisLogIndexNotifications.SetTaskCompleted(index, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                RachisLogIndexNotifications.SetTaskCompleted(index, null);
             }
             catch (OperationCanceledException e)
             {
-                _rachisLogIndexNotifications.SetTaskCompleted(index, e);
+                RachisLogIndexNotifications.SetTaskCompleted(index, e);
             }
         }
 
         protected void NotifyLeaderAboutError(long index, Leader leader, Exception e)
         {
-            _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
+            RachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
             {
                 Type = "Error",
                 ExecutionTime = TimeSpan.Zero,
@@ -1101,7 +1101,7 @@ namespace Raven.Server.ServerWide
 
         public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
-            await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
+            await RachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
         }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -1710,7 +1710,7 @@ namespace Raven.Server.ServerWide
         private void ExecuteAsyncTask(long index, Action action)
         {
             // we do this under the write tx lock before we update the last applied index
-            _rachisLogIndexNotifications.AddTask(index);
+            RachisLogIndexNotifications.AddTask(index);
 
             TaskExecutor.Execute(_ =>
             {
@@ -1726,8 +1726,8 @@ namespace Raven.Server.ServerWide
                 }
                 finally
                 {
-                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                    RachisLogIndexNotifications.SetTaskCompleted(index, error);
                 }
             }, null);
         }
@@ -1913,7 +1913,7 @@ namespace Raven.Server.ServerWide
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             base.Initialize(parent, context);
-            _rachisLogIndexNotifications.Log = _parent.Log;
+            RachisLogIndexNotifications.Log = _parent.Log;
 
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
@@ -2211,7 +2211,7 @@ namespace Raven.Server.ServerWide
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
                 {
-                    _rachisLogIndexNotifications.AddTask(index);
+                    RachisLogIndexNotifications.AddTask(index);
                     NotifyAndSetCompleted(index);
                 }
             };
@@ -3069,7 +3069,7 @@ namespace Raven.Server.ServerWide
             serverStore.LicenseManager.ReloadLicense();
             await serverStore.LicenseManager.CalculateLicenseLimits();
 
-            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            RachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
 
         protected override RachisVersionValidation InitializeValidator()
