@@ -95,7 +95,7 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 };
 
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -134,8 +134,8 @@ namespace FastTests.Server.Documents.Revisions
                         MinimumRevisionsToKeep = 10
                     }
                 };
-
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -166,7 +166,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 configuration.Default.MinimumRevisionsToKeep = 5;
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
@@ -188,7 +188,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 configuration.Default.MinimumRevisionsToKeep = 0;
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
@@ -221,7 +221,7 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 };
 
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -262,7 +262,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 configuration.Default.MinimumRevisionsToKeep = 5;
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
@@ -280,7 +280,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 configuration.Default.MinimumRevisionsToKeep = 0;
                 configuration.Default.PurgeOnDelete = true;
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
@@ -310,7 +310,7 @@ namespace FastTests.Server.Documents.Revisions
                     }
                 };
 
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -328,7 +328,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 configuration.Default = null;
-                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+                await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
