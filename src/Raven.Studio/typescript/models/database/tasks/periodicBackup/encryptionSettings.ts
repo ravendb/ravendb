@@ -44,12 +44,13 @@ class encryptionSettings {
 
     validationGroup: KnockoutComputed<KnockoutValidationGroup>;
     validationGroupWithKey: KnockoutValidationGroup;
-    validationGroupWithoutKey: KnockoutValidationGroup;    
+    validationGroupWithoutKey: KnockoutValidationGroup;
     
-    constructor(encryptedDatabase: boolean,
-                backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>, 
-                dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings,
-                private isServerWideBackupTask : boolean = false) {       
+    constructor(private databaseName: KnockoutObservable<string>,
+        encryptedDatabase: boolean,
+        backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>,
+        dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings,
+        private isServerWideBackupTask: boolean = false) {
         
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
@@ -134,12 +135,8 @@ class encryptionSettings {
             this.encryptionSection.syncQrCode();
             this.keyConfirmation(false);
         });
-
-        const dbName = ko.pureComputed(() => {
-            const db = activeDatabaseTracker.default.database();
-            return db ? db.name : null;
-        });
-        this.encryptionSection = setupEncryptionKey.forBackup(this.key, this.keyConfirmation, dbName);
+        
+        this.encryptionSection = setupEncryptionKey.forBackup(this.key, this.keyConfirmation, this.databaseName);
         
         this.canProvideOwnKey = ko.pureComputed(() => {
             const type = this.backupType();
@@ -254,9 +251,12 @@ class encryptionSettings {
                 return this.encryptionSection.generateEncryptionKey();
             }
         });
+
+        const keyConfirmationNeeded = ko.pureComputed(() =>
+            this.canProvideOwnKey() &&
+            (!this.originalKey() || this.changeKeyRequest())
+        );
         
-        const keyConfirmationNeeded = ko.pureComputed(() => (this.canProvideOwnKey() && !this.originalKey()) ||
-                                                            (this.canProvideOwnKey() && !!this.originalKey() && this.changeKeyRequest()));
         this.key.extend({
            required: {
                onlyIf: () => keyConfirmationNeeded()
@@ -297,9 +297,10 @@ class encryptionSettings {
         // Use 'original key' for 'save' when: 
         // opened existing encrypted backup and didn't request to change key
         // or if 'key' does exist but asked to change 
-        // remember - 'key' has no value if wasn't generated from UI...
-        if ((!this.key() && !!this.originalKey()) ||
-            (this.key() && !!this.originalKey() && !this.changeKeyRequest())) {
+        // remember - 'key' has no value if wasn't generated from UI...        
+        if (this.originalKey() && 
+           (!this.key() || !this.changeKeyRequest())) {
+            
             this.key(this.originalKey()); // using original
             this.keyConfirmation(true);   // needed for validation 
         }

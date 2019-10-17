@@ -12,6 +12,7 @@ import backupSettings = require("models/database/tasks/periodicBackup/backupSett
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import cronEditor = require("viewmodels/common/cronEditor");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editPeriodicBackupTask extends viewModelBase {
 
@@ -33,6 +34,9 @@ class editPeriodicBackupTask extends viewModelBase {
     activate(args: any) { 
         super.activate(args);
 
+        const database = activeDatabaseTracker.default.database();
+        const dbName = ko.observable<string>(database ? database.name : null);
+        
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
 
@@ -47,7 +51,7 @@ class editPeriodicBackupTask extends viewModelBase {
                             configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                         }
                         
-                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                        this.configuration(new periodicBackupConfiguration(dbName, configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
                         deferred.resolve();
                     })
                     .fail(() => {
@@ -59,7 +63,7 @@ class editPeriodicBackupTask extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
 
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
                 deferred.resolve();
             }
 
