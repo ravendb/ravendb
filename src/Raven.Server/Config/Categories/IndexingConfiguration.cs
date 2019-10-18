@@ -184,6 +184,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.IndexMissingFieldsAsNull", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool IndexMissingFieldsAsNull { get; set; }
 
+        [Description("Indicates if empty index entries should be indexed by static indexes. Default: true")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.IndexEmptyEntries", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool IndexEmptyEntries { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
