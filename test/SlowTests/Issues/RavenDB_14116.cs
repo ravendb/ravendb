@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using System.Linq;
 using Xunit;
 
@@ -17,6 +18,8 @@ namespace SlowTests.Issues
                                    {
                                        c.Phone
                                    };
+
+                Configuration[RavenConfiguration.GetKey(x => x.Indexing.IndexEmptyEntries)] = "true";
             }
         }
 

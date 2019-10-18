@@ -72,6 +72,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly Dictionary<string, IndexField> _fields;
         private readonly bool _indexImplicitNull;
+        private readonly bool _indexEmptyEntries;
         protected readonly bool _reduceOutput;
 
         private byte[] _reduceValueBuffer;
@@ -85,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull, bool reduceOutput)
+        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull, bool indexEmptyEntries, bool reduceOutput)
         {
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
@@ -96,6 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 _allFields = new IndexField();
 
             _indexImplicitNull = indexImplicitNull;
+            _indexEmptyEntries = indexEmptyEntries;
             _reduceOutput = reduceOutput;
 
             if (reduceOutput)
@@ -110,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext);
             if (_fields.Count > 0)
             {
-                shouldSkip = false;
+                shouldSkip = _indexEmptyEntries == false && numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
             }
             else
             {
