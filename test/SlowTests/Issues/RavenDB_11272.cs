@@ -28,7 +28,7 @@ namespace SlowTests.Issues
                     results = session.Advanced.RawQuery<User>("from Users order by id()").Statistics(out stats).ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Users/ById()", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByNonExistingProperty", stats.IndexName);
                 }
             }
         }
