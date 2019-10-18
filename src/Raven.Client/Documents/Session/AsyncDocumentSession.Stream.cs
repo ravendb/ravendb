@@ -122,7 +122,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter);
             await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-            var result = streamOperation.SetResultAsync(command.Result);
+            var result = await streamOperation.SetResultAsync(command.Result).ConfigureAwait(false);
             return new YieldStream<T>(this, null, null, result, token);
         }
 
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this, streamQueryStats);
             var command = streamOperation.CreateRequest(indexQuery);
             await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-            var result = streamOperation.SetResultAsync(command.Result);
+            var result = await streamOperation.SetResultAsync(command.Result).ConfigureAwait(false);
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
             queryOperation.NoTracking = true;

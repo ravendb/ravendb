@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -74,105 +76,32 @@ namespace Raven.Client.Documents.Session.Operations
 
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
-            if(response == null)
-                throw new InvalidOperationException("The index does not exists, failed to stream results");
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isAsync: false, _statistics);
+            enumerator.Initialize();
 
-            var state = new JsonParserState();
-
-            using (response.Response)
-            using (response.Stream)
-            using (var parser = new UnmanagedJsonParser(_session.Context, state, "stream contents"))
-            using (_session.Context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
-            using (var peepingTomStream = new PeepingTomStream(response.Stream, _session.Context))
-            {
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.StartObject)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-
-
-                if (_isQueryStream)
-                    HandleStreamQueryStats(_session.Context, response, parser, state, buffer, _statistics);
-
-                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, peepingTomStream, parser, state, buffer);
-                if (string.Equals(property, "Results") == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-
-                foreach (var result in UnmanagedJsonParserHelper.ReadArrayToMemory(_session.Context, peepingTomStream, parser, state, buffer))
-                    yield return result;
-
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-            }
+            return enumerator;
         }
 
-        private static void HandleStreamQueryStats(JsonOperationContext context, StreamResult response, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer, StreamQueryStatistics streamQueryStatistics = null)
+        public async Task<IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
         {
-            using (var peepingTomStream = new PeepingTomStream(response.Stream, context))
-            {
-                var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (string.Equals(property, nameof(StreamQueryStatistics.ResultEtag)) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-                var resultEtag = UnmanagedJsonParserHelper.ReadLong(context, peepingTomStream, parser, state, buffer);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isAsync: true, _statistics);
+            await enumerator.InitializeAsync().ConfigureAwait(false);
 
-                property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (string.Equals(property, nameof(StreamQueryStatistics.IsStale)) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-
-                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-
-                if (state.CurrentTokenType != JsonParserToken.False && state.CurrentTokenType != JsonParserToken.True)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-                var isStale = state.CurrentTokenType != JsonParserToken.False;
-
-                property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (string.Equals(property, nameof(StreamQueryStatistics.IndexName)) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-                var indexName = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-
-                property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (string.Equals(property, nameof(StreamQueryStatistics.TotalResults)) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-                var totalResults = (int)UnmanagedJsonParserHelper.ReadLong(context, peepingTomStream, parser, state, buffer);
-
-                property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                if (string.Equals(property, nameof(StreamQueryStatistics.IndexTimestamp)) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-                var indexTimestamp = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-
-                if (streamQueryStatistics == null)
-                    return;
-
-                streamQueryStatistics.IndexName = indexName;
-                streamQueryStatistics.IsStale = isStale;
-                streamQueryStatistics.TotalResults = totalResults;
-                streamQueryStatistics.ResultEtag = resultEtag;
-
-                if (DateTime.TryParseExact(indexTimestamp, "o", CultureInfo.InvariantCulture,
-                    DateTimeStyles.RoundtripKind, out DateTime timeStamp) == false)
-                    UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
-                streamQueryStatistics.IndexTimestamp = timeStamp;
-            }
+            return enumerator;
         }
 
-        public IAsyncEnumerator<BlittableJsonReaderObject> SetResultAsync(StreamResult response)
+        private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
-            return new YieldStreamResults(_session, response, _isQueryStream, _statistics);
-        }
-
-        private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>
-        {
-            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult stream, bool isQueryStream, StreamQueryStatistics streamQueryStatistics)
+            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
             {
-                _response = stream;
+                if (response == null)
+                    throw new InvalidOperationException("The index does not exists, failed to stream results");
+
+                _response = response;
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
                 _session = session;
                 _isQueryStream = isQueryStream;
+                _isAsync = isAsync;
                 _streamQueryStatistics = streamQueryStatistics;
             }
 
@@ -184,6 +113,7 @@ namespace Raven.Client.Documents.Session.Operations
             private bool _initialized;
             private JsonOperationContext.ReturnBuffer _returnBuffer;
             private readonly bool _isQueryStream;
+            private readonly bool _isAsync;
             private readonly StreamQueryStatistics _streamQueryStatistics;
             private readonly PeepingTomStream _peepingTomStream;
             private int _docsCountOnCachedRenewSession;
@@ -198,24 +128,43 @@ namespace Raven.Client.Documents.Session.Operations
                 _peepingTomStream.Dispose();
             }
 
+            public bool MoveNext()
+            {
+                AssertInitialized();
+
+                CheckIfContextNeedsToBeRenewed();
+
+                if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                {
+                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                    if (_state.CurrentTokenType != JsonParserToken.EndObject)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                    return false;
+                }
+
+                using (var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state))
+                {
+                    if (_cachedItemsRenew == false)
+                        _cachedItemsRenew = builder.NeedResetPropertiesCache();
+
+                    UnmanagedJsonParserHelper.ReadObject(builder, _peepingTomStream, _parser, _buffer);
+
+                    Current = builder.CreateReader();
+                    return true;
+                }
+            }
+
             public async Task<bool> MoveNextAsync()
             {
-                if (_initialized == false)
-                    await InitializeAsync().ConfigureAwait(false);
+                AssertInitialized();
 
-                if (_docsCountOnCachedRenewSession <= 16 * 1024)
-                {
-                    if (_cachedItemsRenew)
-                    {
-                        _session.Context.CachedProperties = new CachedProperties(_session.Context);
-                        ++_docsCountOnCachedRenewSession;
-                    }
-                }
-                else
-                {
-                    _session.Context.Renew();
-                    _docsCountOnCachedRenewSession = 0;
-                }
+                CheckIfContextNeedsToBeRenewed();
 
                 if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
@@ -243,8 +192,41 @@ namespace Raven.Client.Documents.Session.Operations
                 }
             }
 
-            private async Task InitializeAsync()
+            public void Initialize()
             {
+                AssertNotAsync();
+
+                _initialized = true;
+
+                _state = new JsonParserState();
+                _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
+                _returnBuffer = _session.Context.GetManagedBuffer(out _buffer);
+
+                if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_state.CurrentTokenType != JsonParserToken.StartObject)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_isQueryStream)
+                    HandleStreamQueryStats(_session.Context, _response, _parser, _state, _buffer, _streamQueryStatistics);
+
+                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _peepingTomStream, _parser, _state, _buffer);
+
+                if (string.Equals(property, "Results") == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+            }
+
+            public async Task InitializeAsync()
+            {
+                AssertNotSync();
+
                 _initialized = true;
 
                 _state = new JsonParserState();
@@ -272,7 +254,102 @@ namespace Raven.Client.Documents.Session.Operations
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
             }
 
+            public void Reset()
+            {
+                throw new NotSupportedException("Enumerator does not support resetting");
+            }
+
             public BlittableJsonReaderObject Current { get; private set; }
+
+            object IEnumerator.Current => Current;
+
+            private static void HandleStreamQueryStats(JsonOperationContext context, StreamResult response, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.ManagedPinnedBuffer buffer, StreamQueryStatistics streamQueryStatistics = null)
+            {
+                using (var peepingTomStream = new PeepingTomStream(response.Stream, context))
+                {
+                    var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (string.Equals(property, nameof(StreamQueryStatistics.ResultEtag)) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+                    var resultEtag = UnmanagedJsonParserHelper.ReadLong(context, peepingTomStream, parser, state, buffer);
+
+                    property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (string.Equals(property, nameof(StreamQueryStatistics.IsStale)) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+
+                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+
+                    if (state.CurrentTokenType != JsonParserToken.False && state.CurrentTokenType != JsonParserToken.True)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+                    var isStale = state.CurrentTokenType != JsonParserToken.False;
+
+                    property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (string.Equals(property, nameof(StreamQueryStatistics.IndexName)) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+                    var indexName = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+
+                    property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (string.Equals(property, nameof(StreamQueryStatistics.TotalResults)) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+                    var totalResults = (int)UnmanagedJsonParserHelper.ReadLong(context, peepingTomStream, parser, state, buffer);
+
+                    property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                    if (string.Equals(property, nameof(StreamQueryStatistics.IndexTimestamp)) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+                    var indexTimestamp = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+
+                    if (streamQueryStatistics == null)
+                        return;
+
+                    streamQueryStatistics.IndexName = indexName;
+                    streamQueryStatistics.IsStale = isStale;
+                    streamQueryStatistics.TotalResults = totalResults;
+                    streamQueryStatistics.ResultEtag = resultEtag;
+
+                    if (DateTime.TryParseExact(indexTimestamp, "o", CultureInfo.InvariantCulture,
+                        DateTimeStyles.RoundtripKind, out DateTime timeStamp) == false)
+                        UnmanagedJsonParserHelper.ThrowInvalidJson(peepingTomStream);
+                    streamQueryStatistics.IndexTimestamp = timeStamp;
+                }
+            }
+
+            private void CheckIfContextNeedsToBeRenewed()
+            {
+                if (_docsCountOnCachedRenewSession <= 16 * 1024)
+                {
+                    if (_cachedItemsRenew)
+                    {
+                        _session.Context.CachedProperties = new CachedProperties(_session.Context);
+                        ++_docsCountOnCachedRenewSession;
+                    }
+                }
+                else
+                {
+                    _session.Context.Renew();
+                    _docsCountOnCachedRenewSession = 0;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void AssertInitialized()
+            {
+                if (_initialized == false)
+                    throw new InvalidOperationException("Enumerator is not initialized. Please initialize it first.");
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void AssertNotSync()
+            {
+                if (_isAsync == false)
+                    throw new InvalidOperationException("Cannot use asynchronous operations in synchronous enumerator");
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void AssertNotAsync()
+            {
+                if (_isAsync)
+                    throw new InvalidOperationException("Cannot use synchronous operations in asynchronous enumerator");
+            }
         }
     }
 }
