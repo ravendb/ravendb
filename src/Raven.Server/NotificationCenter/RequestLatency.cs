@@ -1,33 +1,72 @@
-﻿using Raven.Client.Documents.Conventions;
+﻿using System;
+using System.Threading;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
-    public class RequestLatency
+    public class RequestLatency : IDisposable
     {
         private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}/Query";
         private readonly object _addHintSyncObj = new object();
+        private readonly Logger _logger;
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         private readonly string _database;
+
+        private volatile bool _needsSync;
+        private PerformanceHint _performanceHint;
+        private RequestLatencyDetail _details;
+
+        private Timer _timer;
 
         public RequestLatency(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
             _database = database;
+            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
         public void AddHint(long duration, string action, string query)
         {
             lock (_addHintSyncObj)
             {
-                var requestLatencyPerformanceHint = GetOrCreatePerformanceLatencies(out var details);
-                details.Update(duration, action, query);
-                _notificationCenter.Add(requestLatencyPerformanceHint);
+                if (_performanceHint != null)
+                    _performanceHint = GetOrCreatePerformanceLatencies(out _details);
+
+                _details.Update(duration, action, query);
+                _needsSync = true;
+
+                if (_timer != null)
+                    return;
+
+                _timer = new Timer(UpdateRequestLatency, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            }
+        }
+
+        private void UpdateRequestLatency(object state)
+        {
+            try
+            {
+                if (_needsSync == false)
+                    return;
+
+                lock (_addHintSyncObj)
+                {
+                    _needsSync = false;
+
+                    _notificationCenter.Add(_performanceHint);
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error in a request latency timer", e);
             }
         }
 
@@ -65,6 +104,12 @@ namespace Raven.Server.NotificationCenter
                     details
                 );
             }
+        }
+
+        public void Dispose()
+        {
+            _timer?.Dispose();
+            _timer = null;
         }
     }
 }
