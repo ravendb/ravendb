@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext);
             if (_fields.Count > 0)
             {
-                shouldSkip = numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
+                shouldSkip = false;
             }
             else
             {
