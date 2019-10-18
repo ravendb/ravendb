@@ -105,7 +105,21 @@ namespace Raven.Client.Documents.Session
             {
                 DocumentConventions.Default.CreateSerializer().Serialize(writer, entity);
                 writer.FinalizeDocument();
-                return writer.CreateReader();
+
+                var reader = writer.CreateReader();
+                var type = entity.GetType();
+
+                var changes = TrySimplifyJson(reader, type);
+
+                if (changes)
+                {
+                    using (var old = reader)
+                    {
+                        return context.ReadObject(reader, "convert/entityToBlittable");
+                    }
+                }
+
+                return reader;
             }
         }
 
