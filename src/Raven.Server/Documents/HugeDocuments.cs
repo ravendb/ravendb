@@ -86,6 +86,7 @@ namespace Raven.Server.Documents
                 {
                     _needsSync = false;
 
+                    _performanceHint.RefreshCreatedAt();
                     _notificationCenter.Add(_performanceHint);
                 }
             }

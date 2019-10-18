@@ -19,7 +19,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public abstract string Id { get; }
 
-        public DateTime CreatedAt { get; }
+        public DateTime CreatedAt { get; private set; }
 
         public NotificationType Type { get; }
 
@@ -38,6 +38,11 @@ namespace Raven.Server.NotificationCenter.Notifications
         public bool IsPersistent { get; protected set; }
         
         public NotificationSeverity Severity { get; protected set; } = NotificationSeverity.None;
+
+        public void RefreshCreatedAt()
+        {
+            CreatedAt = SystemTime.UtcNow;
+        }
 
         public virtual DynamicJsonValue ToJson()
         {
