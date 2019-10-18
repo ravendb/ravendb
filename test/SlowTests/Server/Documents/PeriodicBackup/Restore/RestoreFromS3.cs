@@ -589,25 +589,34 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         private S3Settings GetS3Settings(string subPath = null)
         {
-            var remoteFolderName = $"{AmazonS3FactAttribute.S3Settings.RemoteFolderName}/{_cloudPathPrefix}";
+            var s3Settings = AmazonS3FactAttribute.S3Settings;
+
+            if (s3Settings == null)
+                return null;
+            
+            var remoteFolderName = $"{s3Settings.RemoteFolderName}/{_cloudPathPrefix}";
 
             if (string.IsNullOrEmpty(subPath) == false)
                 remoteFolderName = $"{remoteFolderName}/{subPath}";
             
             return new S3Settings
             {
-                BucketName = AmazonS3FactAttribute.S3Settings.BucketName,
+                BucketName = s3Settings.BucketName,
                 RemoteFolderName = remoteFolderName,
-                AwsAccessKey = AmazonS3FactAttribute.S3Settings.AwsAccessKey,
-                AwsRegionName = AmazonS3FactAttribute.S3Settings.AwsRegionName,
-                AwsSecretKey = AmazonS3FactAttribute.S3Settings.AwsSecretKey,
-                AwsSessionToken = AmazonS3FactAttribute.S3Settings.AwsSessionToken,
+                AwsAccessKey = s3Settings.AwsAccessKey,
+                AwsRegionName = s3Settings.AwsRegionName,
+                AwsSecretKey = s3Settings.AwsSecretKey,
+                AwsSessionToken = s3Settings.AwsSessionToken,
             };
         }
 
         public override void Dispose()
         {
+            base.Dispose();
+            
             var s3Settings = GetS3Settings();
+            if (s3Settings == null)
+                return;
 
             try
             {
@@ -623,8 +632,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             {
                 // ignored
             }
-
-            base.Dispose();
         }
     }
 }

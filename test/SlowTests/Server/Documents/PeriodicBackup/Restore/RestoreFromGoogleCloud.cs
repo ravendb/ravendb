@@ -251,6 +251,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             var testSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
 
+            if (testSettings == null)
+                return null;
+
             var remoteFolderName = string.IsNullOrEmpty(subPath)
                 ? _cloudPathPrefix
                 : $"{_cloudPathPrefix}/{subPath}";
@@ -265,7 +268,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         
         public override void Dispose()
         {
+            base.Dispose();
+            
             var settings = GetGoogleCloudSettings();
+            if (settings == null)
+                return;
 
             try
             {
@@ -290,8 +297,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             {
                 // ignored
             }
-
-            base.Dispose();
         }
     }
 }
