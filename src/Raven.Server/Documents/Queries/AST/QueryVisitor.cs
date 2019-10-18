@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -9,6 +10,8 @@ namespace Raven.Server.Documents.Queries.AST
 
         public void Visit(Query q)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
             if (q.DeclaredFunctions != null)
             {
                 VisitDeclaredFunctions(q.DeclaredFunctions);

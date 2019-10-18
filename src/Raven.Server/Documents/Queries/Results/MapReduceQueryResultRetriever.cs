@@ -1,4 +1,5 @@
-﻿using Lucene.Net.Store;
+﻿using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
@@ -68,17 +69,16 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
+        public override Document Get(Lucene.Net.Documents.Document input, ScoreDoc scoreDoc, IState state)
         {
             if (FieldsToFetch.IsProjection)
-                return GetProjection(input, score, null, state);
+                return GetProjection(input, scoreDoc, null, state);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
             {
                 var doc = DirectGet(input, null, DocumentFields.All, state);
 
-                if (doc != null)
-                    doc.IndexScore = score;
+                FinishDocumentSetup(doc, scoreDoc);
 
                 return doc;
             }

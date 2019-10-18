@@ -27,9 +27,9 @@ namespace SlowTests.Issues
                         .OrderByDescending(x => x.PricePerUnit);
 
                     var resultsZeroBoost = session.Advanced.DocumentQuery<Product>("Product/Search")
-                        .Search(x => x.Name, "coffee syrup")
+                        .Search(x => x.Name, "coffee syrup").Boost(0)
                         .OrElse()
-                        .WhereIn(x => x.Category, new[] { "categories/2-A", "categories/3-A" }).Boost(0)
+                        .WhereIn(x => x.Category, new[] { "categories/2-A", "categories/3-A" })
                         .Take(3)
                         .OrderByScore()
                         .OrderByDescending(x => x.PricePerUnit)

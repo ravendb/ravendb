@@ -128,6 +128,7 @@ namespace SlowTests.Server.Replication
                 {
                     [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
                     [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+                    [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1",
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
 
                 }
@@ -215,6 +216,7 @@ namespace SlowTests.Server.Replication
                 [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "300",
                 [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
                 [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1",
                 [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
                 [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
             });

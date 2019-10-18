@@ -38,7 +38,6 @@ class periodicBackupConfiguration {
 
     retentionPolicy = ko.observable<retentionPolicy>();
     encryptionSettings = ko.observable<encryptionSettings>();
-    isBackupEncrypted = ko.observable<boolean>();
     
     localSettings = ko.observable<localSettings>();
     s3Settings = ko.observable<s3Settings>();
@@ -59,7 +58,8 @@ class periodicBackupConfiguration {
 
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration | 
+    constructor(private databaseName: KnockoutObservable<string>,
+                dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration | 
                      Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration, 
                 serverLimits: periodicBackupServerLimitsResponse, 
                 encryptedDatabase: boolean,
@@ -91,8 +91,7 @@ class periodicBackupConfiguration {
         this.updateFolderPathOptions(folderPath);
 
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
-        this.encryptionSettings(new encryptionSettings(encryptedDatabase, this.backupType, dto.BackupEncryptionSettings, this.isServerWide()));
-        this.isBackupEncrypted(!!dto.BackupEncryptionSettings);
+        this.encryptionSettings(new encryptionSettings(this.databaseName, encryptedDatabase, this.backupType, dto.BackupEncryptionSettings, this.isServerWide()));
 
         this.initObservables();
         this.initValidation();
@@ -245,8 +244,8 @@ class periodicBackupConfiguration {
         };
     }
 
-    static empty(serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean, isServerWide: boolean): periodicBackupConfiguration {
-        return new periodicBackupConfiguration({
+    static empty(databaseName: KnockoutObservable<string>, serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean, isServerWide: boolean): periodicBackupConfiguration {
+        return new periodicBackupConfiguration(databaseName, {
             TaskId: 0,
             Disabled: false,
             Name: null,

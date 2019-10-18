@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.DocumentQuery<Student, Students_ByEmailDomain>()
-                                                .WhereIn("EmailDomain", list);
+                                                .WhereLucene("EmailDomain", string.Join(" OR ", list.Select(x=> "EmailDomain: " + x)));
 
                     Assert.Throws<InvalidOperationException>(() => query.Lazily().Value);
                 }

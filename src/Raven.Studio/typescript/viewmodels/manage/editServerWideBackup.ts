@@ -8,10 +8,10 @@ import getServerWideBackupsCommand = require("commands/resources/getServerWideBa
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
-import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import cronEditor = require("viewmodels/common/cronEditor");
 import saveServerWideBackupCommand = require("commands/resources/saveServerWideBackupCommand");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editServerWideBackup extends viewModelBase {
     
@@ -24,8 +24,6 @@ class editServerWideBackup extends viewModelBase {
 
     isAddingNewBackupTask = ko.observable<boolean>(true);    
     
-    encryptionSection: setupEncryptionKey;
-    
     constructor() {
         super();
 
@@ -35,6 +33,9 @@ class editServerWideBackup extends viewModelBase {
     activate(args: any) {
         super.activate(args);
 
+        const database = activeDatabaseTracker.default.database();
+        const dbName = ko.observable<string>(database ? database.name : null);
+        
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
 
@@ -51,7 +52,7 @@ class editServerWideBackup extends viewModelBase {
                                 backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                             }
 
-                            this.configuration(new periodicBackupConfiguration(backupTask, this.serverConfiguration(), false, true)); 
+                            this.configuration(new periodicBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true)); 
                             deferred.resolve();
                         } else {
                             deferred.reject();
@@ -67,26 +68,16 @@ class editServerWideBackup extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
                 
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), false, true));
+                this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), false, true));
                 deferred.resolve();
             }
 
             return deferred
                 .then(() => {
-                    const encryptionSettings = this.configuration().encryptionSettings();
-                    this.encryptionSection = setupEncryptionKey.forServerWideBackup(encryptionSettings.key, encryptionSettings.keyConfirmation); 
-                    
                     this.dirtyFlag = this.configuration().dirtyFlag;
 
                     this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
                     this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
-
-                    if (!encryptionSettings.key()) {
-                        return this.encryptionSection.generateEncryptionKey()
-                            .done(() => {
-                                encryptionSettings.dirtyFlag().reset();
-                            });
-                    }
                 });
         };
 
@@ -112,10 +103,6 @@ class editServerWideBackup extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-
-        this.encryptionSection.syncQrCode();
-
-        this.configuration().encryptionSettings().key.subscribe(() => this.encryptionSection.syncQrCode());
 
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
 
@@ -172,6 +159,8 @@ class editServerWideBackup extends viewModelBase {
     }
 
     saveServerWideBackup() {
+        this.configuration().encryptionSettings().setKeyUsedBeforeSave();
+        
         if (!this.validate()) {
             return;
         }
@@ -222,7 +211,7 @@ class editServerWideBackup extends viewModelBase {
         if (!this.isValid(this.configuration().validationGroup))
             valid = false;
 
-        if (!this.isValid(this.configuration().encryptionSettings().validationGroup))
+        if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
             valid = false;
 
         if (!this.isValid(this.configuration().localSettings().validationGroup))

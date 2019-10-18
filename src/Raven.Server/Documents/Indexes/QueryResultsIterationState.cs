@@ -1,18 +1,17 @@
-﻿using System.Collections.Generic;
-using Raven.Server.Documents.Queries.Explanation;
+﻿using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Enumerators;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class QueryResultsIterationState : PulsedEnumerationState<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)>
+    public class QueryResultsIterationState : PulsedEnumerationState<IndexReadOperation.QueryResult>
     {
         public QueryResultsIterationState(DocumentsOperationContext context, Size pulseLimit) : base(context, pulseLimit)
         {
         }
 
-        public override void OnMoveNext((Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation) current)
+        public override void OnMoveNext(IndexReadOperation.QueryResult current)
         {
             ReadCount++;
         }

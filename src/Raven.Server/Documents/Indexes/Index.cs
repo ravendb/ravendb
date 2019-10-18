@@ -108,6 +108,8 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly SemaphoreSlim _indexingInProgress = new SemaphoreSlim(1, 1);
 
+        private long _allocatedAfterPreviousCleanup = 0;
+
         /// <summary>
         /// Cancelled if the database is in shutdown process.
         /// </summary>
@@ -1404,7 +1406,9 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
+                var allocatedBeforeCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                if (allocatedBeforeCleanup == _allocatedAfterPreviousCleanup)
+                    return;
 
                 DocumentDatabase.DocumentsStorage.ContextPool.Clean();
                 _contextPool.Clean();
@@ -1414,13 +1418,12 @@ namespace Raven.Server.Documents.Indexes
 
                 _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-                var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
-
-                if (_logger.IsInfoEnabled && beforeFree != afterFree)
+                _allocatedAfterPreviousCleanup = NativeMemory.CurrentThreadStats.TotalAllocated;
+                if (_logger.IsInfoEnabled)
                 {
                     _logger.Info($"Reduced the memory usage of index '{Name}'. " +
-                                 $"Before: {new Size(beforeFree, SizeUnit.Bytes)}, " +
-                                 $"after: {new Size(afterFree, SizeUnit.Bytes)}");
+                                 $"Before: {new Size(allocatedBeforeCleanup, SizeUnit.Bytes)}, " +
+                                 $"after: {new Size(_allocatedAfterPreviousCleanup, SizeUnit.Bytes)}");
                 }
             }
             finally
@@ -2444,7 +2447,7 @@ namespace Raven.Server.Documents.Indexes
                                     query.Metadata.Includes,
                                     fieldsToFetch.IsProjection);
 
-                                if (query.Metadata.HasCounters)
+                                if (query.Metadata.CounterIncludes != null)
                                 {
                                     includeCountersCommand = new IncludeCountersCommand(
                                         DocumentDatabase,
@@ -2454,7 +2457,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 var retriever = GetQueryResultRetriever(query, queryScope, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
-                                IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> documents;
+                                IEnumerable<IndexReadOperation.QueryResult> documents;
 
                                 if (query.Metadata.HasMoreLikeThis)
                                 {
@@ -2498,7 +2501,7 @@ namespace Raven.Server.Documents.Indexes
                                     {
                                         var originalEnumerator = enumerator;
 
-                                        enumerator = new PulsedTransactionEnumerator<(Document Result, Dictionary<string,Dictionary<string,string[]>> Highlightings, ExplanationResult Explanation), QueryResultsIterationState>(documentsContext,
+                                        enumerator = new PulsedTransactionEnumerator<IndexReadOperation.QueryResult, QueryResultsIterationState>(documentsContext,
                                             state => originalEnumerator,
                                             new QueryResultsIterationState(documentsContext, DocumentDatabase.Configuration.Databases.PulseReadTransactionLimit));
                                     }
@@ -3083,13 +3086,13 @@ namespace Raven.Server.Documents.Indexes
         protected virtual unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext,
             TransactionOperationContext indexContext, QueryMetadata q, bool isStale)
         {
-            var length = MinimumSizeForCalculateIndexEtagLength();
+            var length = MinimumSizeForCalculateIndexEtagLength(q);
 
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
-            UseAllDocumentsEtag(documentsContext, q, length, indexEtagBytes);
+            UseAllDocumentsCounterAndCmpXchgEtags(documentsContext, q, length, indexEtagBytes);
 
             unchecked
             {
@@ -3097,9 +3100,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsEtag(DocumentsOperationContext documentsContext, QueryMetadata q, int length, byte* indexEtagBytes)
+        protected static unsafe void UseAllDocumentsCounterAndCmpXchgEtags(DocumentsOperationContext documentsContext, 
+            QueryMetadata q, int length, byte* indexEtagBytes)
         {
-            if (q?.HasIncludeOrLoad == true)
+            if (q == null)
+                return;
+            
+            if (q.HasIncludeOrLoad)
             {
                 Debug.Assert(length > sizeof(long) * 4);
 
@@ -3109,14 +3116,47 @@ namespace Raven.Server.Documents.Indexes
                 //buffer[2] - last processed doc etag
                 //buffer[3] - last process tombstone etag
             }
-        }
 
-        protected int MinimumSizeForCalculateIndexEtagLength()
+            if (q.CounterIncludes != null || q.HasCounterSelect)
+            {
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
+
+                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1)) ;
+
+                *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
+            }
+
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)
+            {
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last compare exchange index");
+
+                using (documentsContext.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+                using (transactionContext.OpenReadTransaction())
+                {
+                    *(long*)(indexEtagBytes + length - sizeof(long)) =
+                        documentsContext.DocumentDatabase.ServerStore.Cluster
+                            .GetLastCompareExchangeIndexForDatabase(transactionContext, documentsContext.DocumentDatabase.Name);
+                }
+
+            }
+        }   
+
+        protected int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
         {
             var length = sizeof(long) * 4 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
                          1 + // isStale
                          1; // index state
+
+            if (q == null)
+                return length;
+
+            if (q.CounterIncludes != null || q.HasCounterSelect)
+                length += sizeof(long); // last counter etag
+
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)           
+                length += sizeof(long); //last cmpxng etag
+            
             return length;
         }
 

@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.ETL
                     try
                     {
 
-                        process.Stop();
+                        process.Stop(reason: "Database record change");
                     }
                     catch (Exception e)
                     {

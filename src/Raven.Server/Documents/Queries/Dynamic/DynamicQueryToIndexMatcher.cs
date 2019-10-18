@@ -174,8 +174,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     if (field.Spatial != null)
                     {
-                        Debug.Assert(indexField.Spatial != null);
-
                         if (field.Spatial.Equals(indexField.Spatial) == false)
                         {
                             explanations?.Add(new Explanation(indexName, $"The following field is not a spatial field {indexField.Name}, while the query needs to perform spatial() on it"));

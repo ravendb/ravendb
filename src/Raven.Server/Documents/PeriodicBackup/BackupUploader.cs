@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -71,6 +72,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_exceptions.Count > 0)
             {
                 if (_exceptions.Count == 1)
+                    throw _exceptions.First();
+
+                if (_exceptions.All(x => x is OperationCanceledException))
                     throw _exceptions.First();
 
                 throw new AggregateException(_exceptions);
@@ -226,16 +230,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                     }
                 }
-                catch (OperationCanceledException e)
-                {
-                    // shutting down
-                    localUploadStatus.Exception = e.ToString();
-                    _exceptions.Add(e);
-                }
                 catch (Exception e)
                 {
-                    localUploadStatus.Exception = e.ToString();
-                    _exceptions.Add(new InvalidOperationException($"Failed to upload the backup file to {targetName}.", e));
+                    var extracted = e.ExtractSingleInnerException();
+                    var error = $"Failed to upload the backup file to {targetName}.";
+                    Exception exception = null;
+                    if (extracted is OperationCanceledException)
+                    {
+                        // shutting down or HttpClient timeout
+                        exception = TaskCancelToken.Token.IsCancellationRequested ? extracted : new TimeoutException(error, e);
+                    }
+
+                    localUploadStatus.Exception = (exception ?? e).ToString();
+                    _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
             }, null, $"Upload backup file of database '{_backupUploaderSettings.DatabaseName}' to {targetName} (task: '{_backupUploaderSettings.TaskName}')");
 

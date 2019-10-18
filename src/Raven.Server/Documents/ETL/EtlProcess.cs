@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Start();
 
-        public abstract void Stop();
+        public abstract void Stop(string reason);
 
         public abstract void Dispose();
 
@@ -313,6 +313,7 @@ namespace Raven.Server.Documents.ETL
                             stats.RecordChangeVector(item.ChangeVector);
 
                             batchSize++;
+                            
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -334,7 +335,7 @@ namespace Raven.Server.Documents.ETL
 
                             stats.RecordBatchCompleteReason(message);
 
-                            Stop();
+                            Stop(reason: message);
 
                             break;
                         }
@@ -344,8 +345,8 @@ namespace Raven.Server.Documents.ETL
 
                             stats.RecordTransformationError();
 
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
                         }
                     }
                 }
@@ -565,23 +566,23 @@ namespace Raven.Server.Documents.ETL
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to run ETL {Name}", e);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to run ETL {Name}", e);
                 }
             }, null, threadName);
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Starting {Tag} process: '{Name}'.");
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"Starting {Tag} process: '{Name}'.");
 
         }
 
-        public override void Stop()
+        public override void Stop(string reason)
         {
             if (_longRunningWork == null)
                 return;
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Stopping {Tag} process: '{Name}'.");
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"Stopping {Tag} process: '{Name}'. Reason: {reason}");
 
             _cts.Cancel();
 
@@ -685,8 +686,8 @@ namespace Raven.Server.Documents.ETL
                             {
                                 var message = $"Exception in ETL process '{Name}'";
 
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"{Tag} {message}", e);
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations($"{Tag} {message}", e);
                             }
                         }
 
@@ -888,7 +889,7 @@ namespace Raven.Server.Documents.ETL
 
         public override OngoingTaskConnectionStatus GetConnectionStatus()
         {
-            if (Configuration.Disabled)
+            if (Configuration.Disabled || _cts.IsCancellationRequested)
                 return OngoingTaskConnectionStatus.NotActive;
 
             if (FallbackTime != null)
@@ -1156,7 +1157,7 @@ namespace Raven.Server.Documents.ETL
 
             var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
 
-            exceptionAggregator.Execute(Stop);
+            exceptionAggregator.Execute(() => Stop("Dispose"));
 
             exceptionAggregator.Execute(() => _cts.Dispose());
             exceptionAggregator.Execute(() => _waitForChanges.Dispose());

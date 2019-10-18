@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Lextm.SharpSnmpLib;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -15,11 +16,7 @@ namespace Raven.Server.Monitoring.Snmp
         [RavenAction("/monitoring/snmp", "GET", AuthorizationStatus.Operator)]
         public Task Get()
         {
-            if (ServerStore.Configuration.Monitoring.Snmp.Enabled == false)
-                throw new InvalidOperationException($"SNMP Monitoring is not enabled. Please set the '{RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Enabled)}' configuration option to true.");
-
-            if (ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: false) == false)
-                throw new InvalidOperationException("Your license does not allow SNMP monitoring to be used.");
+            AssertSnmp();
 
             var oid = GetQueryStringValueAndAssertIfSingleAndNotEmpty("oid");
 
@@ -44,6 +41,41 @@ namespace Raven.Server.Monitoring.Snmp
             return Task.CompletedTask;
         }
 
+        [RavenAction("/monitoring/snmp/bulk", "GET", AuthorizationStatus.Operator)]
+        public Task GetBulk()
+        {
+            AssertSnmp();
+
+            var oids = GetStringValuesQueryString("oid");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                BulkInternal(oids.ToArray(), context);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/monitoring/snmp/bulk", "POST", AuthorizationStatus.Operator)]
+        public async Task PostBulk()
+        {
+            AssertSnmp();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "oids");
+                if (json.TryGet("OIDs", out BlittableJsonReaderArray array) == false)
+                    ThrowRequiredPropertyNameInRequest("OIDs");
+
+                var length = array?.Length ?? 0;
+                var oids = new string[length];
+                for (var i = 0; i < length; i++)
+                    oids[i] = array[i].ToString();
+
+                BulkInternal(oids, context);
+            }
+        }
+
         [RavenAction("/monitoring/snmp/oids", "GET", AuthorizationStatus.Operator)]
         public Task GetOids()
         {
@@ -66,6 +98,69 @@ namespace Raven.Server.Monitoring.Snmp
             }
 
             return Task.CompletedTask;
+        }
+
+        private void BulkInternal(string[] oids, JsonOperationContext context)
+        {
+            var results = new (string Oid, ISnmpData Data)[oids.Length];
+            for (var i = 0; i < oids.Length; i++)
+            {
+                var oid = oids[i];
+
+                try
+                {
+                    var data = Server.SnmpWatcher.GetData(oid);
+
+                    results[i] = (oid, data);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Could not get data for OID '{oid}'. Reason: {e.Message}", e);
+                }
+            }
+
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+
+                writer.WriteStartArray();
+
+                var first = true;
+                foreach (var result in results)
+                {
+                    if (first == false)
+                        writer.WriteComma();
+
+                    first = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("OID");
+                    writer.WriteString(result.Oid);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Value");
+                    if (result.Data != null)
+                        writer.WriteString(result.Data.ToString());
+                    else
+                        writer.WriteNull();
+
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+        }
+
+        private void AssertSnmp()
+        {
+            if (ServerStore.Configuration.Monitoring.Snmp.Enabled == false)
+                throw new InvalidOperationException($"SNMP Monitoring is not enabled. Please set the '{RavenConfiguration.GetKey(x => x.Monitoring.Snmp.Enabled)}' configuration option to true.");
+
+            if (ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: false) == false)
+                throw new InvalidOperationException("Your license does not allow SNMP monitoring to be used.");
         }
     }
 }

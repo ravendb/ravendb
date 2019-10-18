@@ -30,6 +30,10 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
+        public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
+
+        public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
+
         private readonly DocumentDatabase _database;
         private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
@@ -67,7 +71,19 @@ namespace Raven.Server.Documents.Queries.Results
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-        public abstract Document Get(Lucene.Net.Documents.Document input, float score, IState state);
+        protected void FinishDocumentSetup(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc)
+        {
+            if (doc == null || scoreDoc == null)
+                return;
+
+            doc.IndexScore = scoreDoc.Score;
+            if (_query?.Distances != null)
+            {
+                doc.Distance = _query.Distances.Get(scoreDoc.Doc);
+            }
+        }
+
+        public abstract Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state);
 
         public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
@@ -79,7 +95,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string lowerId, IState state)
+        protected Document GetProjection(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, string lowerId, IState state)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
@@ -91,8 +107,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     if (doc == null)
                         return null;
-
-                    return GetProjectionFromDocument(doc, input, score, FieldsToFetch, _context, state);
+                    return GetProjectionFromDocument(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
                 var documentLoaded = false;
@@ -150,7 +165,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 doc = d;
                             else
                                 ThrowInvalidQueryBodyResponse(fieldVal);
-                            doc.IndexScore = score;
+                            FinishDocumentSetup(doc, scoreDoc);
                             return doc;
                         }
 
@@ -172,30 +187,30 @@ namespace Raven.Server.Documents.Queries.Results
                     };
                 }
 
-                return ReturnProjection(result, doc, score, _context);
+                return ReturnProjection(result, doc, scoreDoc, _context);
             }
         }
 
-        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
                 if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false &&
-                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)  
+                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
                     continue;
-                
-                var immediateResult = AddProjectionToResult(doc, score, fieldsToFetch, result, key, fieldVal);
+
+                var immediateResult = AddProjectionToResult(doc, scoreDoc, fieldsToFetch, result, key, fieldVal);
 
                 if (immediateResult != null)
                     return immediateResult;
             }
 
-            return ReturnProjection(result, doc, score, context);
+            return ReturnProjection(result, doc, scoreDoc, context);
         }
 
-        protected static Document AddProjectionToResult(Document doc, float score, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
+        protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
             if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
             {
@@ -209,7 +224,6 @@ namespace Raven.Server.Documents.Queries.Results
                         Data = nested,
                         Etag = doc.Etag,
                         Flags = doc.Flags,
-                        IndexScore = score,
                         LastModified = doc.LastModified,
                         LowerId = doc.LowerId,
                         NonPersistentFlags = doc.NonPersistentFlags,
@@ -220,12 +234,11 @@ namespace Raven.Server.Documents.Queries.Results
                 else if (fieldVal is Document d)
                 {
                     newDoc = d;
-                    newDoc.IndexScore = score;
                 }
-
                 else
                     ThrowInvalidQueryBodyResponse(fieldVal);
 
+                FinishDocumentSetup(newDoc, scoreDoc);
                 return newDoc;
             }
 
@@ -258,7 +271,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
-        protected static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
+        protected Document ReturnProjection(DynamicJsonValue result, Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, JsonOperationContext context)
         {
             result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
@@ -279,7 +292,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             doc.Data = newData;
-            doc.IndexScore = score;
+            FinishDocumentSetup(doc, scoreDoc);
 
             return doc;
         }

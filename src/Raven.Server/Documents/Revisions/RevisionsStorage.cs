@@ -1175,7 +1175,10 @@ namespace Raven.Server.Documents.Revisions
                 {
                     // need to strip the HasRevisions flag from the document
                     var document = _documentsStorage.Get(context, id);
-                    _documentsStorage.Put(context, id, null, document.Data.Clone(context), nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
+
+                    if (document != null)
+                        _documentsStorage.Put(context, id, null, document.Data.Clone(context),
+                            nonPersistentFlags: NonPersistentDocumentFlags.ByEnforceRevisionConfiguration);
                 }
 
                 return prevRevisionsCount - currentRevisionsCount;

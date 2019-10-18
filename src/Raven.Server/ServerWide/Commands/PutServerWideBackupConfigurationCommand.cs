@@ -108,6 +108,12 @@ namespace Raven.Server.ServerWide.Commands
                     EncryptionMode = EncryptionMode.UseDatabaseKey
                 };
             }
+            else if (configuration.BackupType == BackupType.Snapshot)
+            {
+                // the database isn't encrypted and the backup is of type snapshot
+                // in this case we cannot have an encrypted snapshot
+                configuration.BackupEncryptionSettings = null;
+            }
         }
 
         public static void UpdateSettingsForLocal(LocalSettings localSettings, string databaseName)

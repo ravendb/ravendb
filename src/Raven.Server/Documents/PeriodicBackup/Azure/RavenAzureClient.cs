@@ -361,6 +361,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             return new Blob(data, headers);
         }
+
         public async Task<Blob> GetBlobAsync(string key)
         {
             var url = _serverUrlForContainer + "/" + key;

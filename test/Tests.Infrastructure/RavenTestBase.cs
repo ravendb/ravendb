@@ -797,7 +797,7 @@ namespace FastTests
             return EnsureDatabaseDeletion(config.DatabaseName, store);
         }
 
-        protected IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreFromS3Configuration config, TimeSpan? timeout = null)
+        protected IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreBackupConfigurationBase config, TimeSpan? timeout = null)
         {
             var restoreOperation = new RestoreBackupOperation(config);
 

@@ -117,7 +117,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasTimings { get; private set; }
 
-        public bool HasCounters { get; private set; }
+        public bool HasCounterSelect { get; internal set; }
+
+        public bool HasCmpXchgSelect { get; internal set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
 
@@ -181,13 +183,21 @@ namespace Raven.Server.Documents.Queries
             string methodName = null
             )
         {
-            var split = fieldName.Value.Split(".");
-            if (split.Length > 1 && NotInRootAliasPaths(split[0]))
-            {
-                ThrowUnknownAlias(split[0], parameters);
-            }
+            QueryFieldName indexFieldName;
 
-            var indexFieldName = GetIndexFieldName(fieldName, parameters);
+            if (spatial != null && IsDynamic)
+            {
+                indexFieldName = new QueryFieldName(fieldName.Value, fieldName.IsQuoted);
+            }
+            else
+            {
+                var split = fieldName.Value.Split(".");
+                if (split.Length > 1 && NotInRootAliasPaths(split[0]))
+                {
+                    ThrowUnknownAlias(split[0], parameters);
+                }
+                indexFieldName = GetIndexFieldName(fieldName, parameters);
+            }
 
             if (operatorType == null &&
                 // to support startsWith(id(), ...)
@@ -296,7 +306,7 @@ namespace Raven.Server.Documents.Queries
                     var order = Query.OrderBy[i];
                     if (order.Expression is MethodExpression me)
                     {
-                        OrderBy[i] = ExtractOrderByFromMethod(me, order.FieldType, order.Ascending, parameters);
+                        OrderBy[i] = ExtractOrderByFromMethod(me, fromAlias, order.FieldType, order.Ascending, parameters);
                     }
                     else if (order.Expression is FieldExpression fe)
                     {
@@ -466,7 +476,6 @@ namespace Raven.Server.Documents.Queries
                                 if (CounterIncludes == null)
                                 {
                                     CounterIncludes = new CounterIncludesField();
-                                    HasCounters = true;
                                 }
 
                                 AddToCounterIncludes(CounterIncludes, me, parameters);
@@ -539,7 +548,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 Query.SelectFunctionBody.Program = ValidateScript(parameters);
-                HasLoadOrIncludeInProjection(Query.SelectFunctionBody.Program);
+                CheckIfProjectionHasLoadIncludeCounterOrCmpXng(Query.SelectFunctionBody.Program);
             }
             catch (Exception e)
             {
@@ -769,7 +778,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException(sb.ToString(), QueryText, parameters);
         }
 
-        private OrderByField ExtractOrderByFromMethod(MethodExpression me, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters)
+        private OrderByField ExtractOrderByFromMethod(MethodExpression me, string fromAlias, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters)
         {
             if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
             {
@@ -848,13 +857,24 @@ namespace Raven.Server.Documents.Queries
 
             if (me.Name.Equals("spatial.distance", StringComparison.OrdinalIgnoreCase))
             {
-                if (me.Arguments.Count != 2)
-                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected two arguments, got " + me.Arguments.Count, QueryText,
+                if (me.Arguments.Count < 2 && me.Arguments.Count > 3)
+                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance(from, to, roundFactor)' call, expected 2-3 arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
 
-                var fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "spatial.distance", parameters);
+                QueryFieldName fieldName;
 
-                var lastArgument = me.Arguments[me.Arguments.Count - 1];
+                if (me.Arguments[0] is MethodExpression firstArgME)
+                {
+                    var visitor = new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText);
+                    visitor.HandleSpatial("spatial.distance", me.Arguments, withoutAlias: true, parameters);
+                    fieldName = new QueryFieldName(firstArgME.GetText(null), true);
+                }
+                else
+                {
+                    fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "spatial.distance", parameters);
+                }
+
+                var lastArgument = me.Arguments[1];
 
                 if (!(lastArgument is MethodExpression expression))
                     throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected expression, got " + lastArgument, QueryText,
@@ -879,11 +899,19 @@ namespace Raven.Server.Documents.Queries
                         break;
                 }
 
-                var arguments = new OrderByField.Argument[expression.Arguments.Count];
+                var additional = me.Arguments.Count == 3 ? 1 : 0;
+                var arguments = new OrderByField.Argument[expression.Arguments.Count + additional];
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
                     var argument = (ValueExpression)expression.Arguments[i];
                     arguments[i] = new OrderByField.Argument(argument.Token.Value, argument.Value);
+                }
+
+                if (additional != 0)
+                {
+                    // copy the roundFactor for spatial.distance
+                    var argument = (ValueExpression)me.Arguments[2];
+                    arguments[expression.Arguments.Count] = new OrderByField.Argument(argument.Token.Value, argument.Value);
                 }
 
                 return new OrderByField(
@@ -1044,7 +1072,8 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var tuple))
                     {
-                        HasLoadOrIncludeInProjection(tuple.JavaScript);
+
+                        CheckIfProjectionHasLoadIncludeCounterOrCmpXng(tuple.JavaScript);
 
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
@@ -1110,6 +1139,11 @@ namespace Raven.Server.Documents.Queries
                         return CreateFacet(me, alias, parameters);
                     }
 
+                    if (string.Equals("spatial.distance", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return SelectField.CreateMethodCall("spatial.distance", alias, ConvertSelectArguments(parameters, alias, me, methodName));
+                    }
+
                     if (string.Equals("suggest", methodName, StringComparison.OrdinalIgnoreCase))
                     {
                         if (IsGroupBy)
@@ -1139,22 +1173,13 @@ namespace Raven.Server.Documents.Queries
                         if (me.Arguments.Count == 0 || me.Arguments.Count > 2)
                             ThrowInvalidNumberOfArgumentsForCounter(methodName, parameters, me.Arguments.Count);
 
-                        var args = new SelectField[me.Arguments.Count];
-                        for (int i = 0; i < me.Arguments.Count; i++)
-                        {
-                            if (me.Arguments[i] is ValueExpression vt)
-                                args[i] = SelectField.CreateValue(vt.Token.Value, alias, vt.Value);
-                            else if (me.Arguments[i] is FieldExpression ft)
-                                args[i] = GetSelectValue(null, ft, parameters);
-                            else
-                                ThrowCounterInvalidArgument(methodName, me.Arguments[i], parameters);
-                        }
-
-                        var counterField = SelectField.CreateCounterField(alias, args);
+                        var counterField = SelectField.CreateCounterField(alias, ConvertSelectArguments(parameters, alias, me, methodName));
                         if (string.Equals("counterRaw", methodName, StringComparison.OrdinalIgnoreCase))
                         {
                             counterField.FunctionArgs = new SelectField[0];
                         }
+
+                        HasCounterSelect = true;
 
                         return counterField;
                     }
@@ -1211,13 +1236,29 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
-        private void HasLoadOrIncludeInProjection(Esprima.Ast.Program ast)
+        private SelectField[] ConvertSelectArguments(BlittableJsonReaderObject parameters, string alias, MethodExpression me, string methodName)
         {
-            if (HasIncludeOrLoad || ast == null)
+            var args = new SelectField[me.Arguments.Count];
+            for (int i = 0; i < me.Arguments.Count; i++)
+            {
+                if (me.Arguments[i] is ValueExpression vt)
+                    args[i] = SelectField.CreateValue(vt.Token.Value, alias, vt.Value);
+                else if (me.Arguments[i] is FieldExpression ft)
+                    args[i] = GetSelectValue(null, ft, parameters);
+                else
+                    ThrowCounterInvalidArgument(methodName, me.Arguments[i], parameters);
+            }
+
+            return args;
+        }
+
+        private void CheckIfProjectionHasLoadIncludeCounterOrCmpXng(Esprima.Ast.Program ast)
+        {
+            if (ast == null || (HasIncludeOrLoad && CounterIncludes != null && HasCmpXchg))
                 return;
 
-            var loadVisitor = new EsprimaHasLoadOrIncludeVisitor(this);
-            loadVisitor.Visit(ast);
+            var visitor = new HasLoadIncludeCounterOrCmpXcngVisitor(this);
+            visitor.Visit(ast);
         }
 
         private SuggestionField CreateSuggest(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
@@ -1227,7 +1268,7 @@ namespace Raven.Server.Documents.Queries
 
             var result = new SuggestionField();
 
-            var name = ExtractFieldNameFromArgument(expression.Arguments[0], "suggest", parameters, QueryText);
+            var name = ExtractFieldNameFromArgument(expression.Arguments[0], withoutAlias: false, "suggest", parameters, QueryText);
 
             if (expression.Arguments[1] is ValueExpression termExpression)
                 result.AddTerm(termExpression.Token.Value, termExpression.Value);
@@ -1259,7 +1300,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (name == null && i == 0 && (argument is FieldExpression || argument is ValueExpression))
                 {
-                    name = ExtractFieldNameFromArgument(argument, "facet", parameters, QueryText);
+                    name = ExtractFieldNameFromArgument(argument, withoutAlias: false, "facet", parameters, QueryText);
                     continue;
                 }
 
@@ -1281,7 +1322,7 @@ namespace Raven.Server.Documents.Queries
                             if (me.Arguments.Count != 1)
                                 ThrowInvalidArgumentToIdInFacet(parameters);
 
-                            result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], me.Name.Value, parameters, QueryText);
+                            result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], withoutAlias: false, me.Name.Value, parameters, QueryText);
                             break;
                         case MethodType.Average:
                             AddFacetAggregation(me, result, FacetAggregation.Average, parameters);
@@ -1329,7 +1370,7 @@ namespace Raven.Server.Documents.Queries
             if (me.Arguments.Count != 1)
                 ThrowInvalidNumberOfArgumentsOfFacetAggregation(aggregation, 1, me.Arguments.Count, parameters);
 
-            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name.Value, parameters, QueryText);
+            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], withoutAlias: false, me.Name.Value, parameters, QueryText);
 
             try
             {
@@ -1916,7 +1957,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Contains:
                     case MethodType.Spatial_Disjoint:
                     case MethodType.Spatial_Intersects:
-                        HandleSpatial(methodName.Value, arguments, parameters);
+                        HandleSpatial(methodName.Value, arguments, withoutAlias: false, parameters);
                         return;
                     case MethodType.MoreLikeThis:
                         HandleMoreLikeThis(methodName.Value, arguments, parameters);
@@ -2004,7 +2045,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a parameter name or value", QueryText, parameters);
             }
 
-            private void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+            public void HandleSpatial(string methodName, List<QueryExpression> arguments, bool withoutAlias, BlittableJsonReaderObject parameters)
             {
                 AutoSpatialOptions fieldOptions = null;
                 QueryFieldName fieldName;
@@ -2017,7 +2058,7 @@ namespace Raven.Server.Documents.Queries
                     if (argument is FieldExpression == false && argument is ValueExpression == false)
                         throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a field name when static index is queried", QueryText, parameters);
 
-                    fieldName = ExtractFieldNameFromArgument(argument, methodName, parameters, QueryText);
+                    fieldName = _metadata.ExtractFieldNameFromArgument(argument, withoutAlias, methodName, parameters, QueryText);
                 }
                 else
                 {
@@ -2031,7 +2072,7 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 1)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
 
-                            var wkt = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "wkt", parameters, QueryText).Value;
+                            var wkt = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], withoutAlias, "wkt", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Wkt, new List<string>
                             {
@@ -2042,8 +2083,8 @@ namespace Raven.Server.Documents.Queries
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
-                            var latitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[0], "point", parameters, QueryText).Value;
-                            var longitude = ExtractFieldNameFromArgument(spatialExpression.Arguments[1], "point", parameters, QueryText).Value;
+                            var latitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[0], withoutAlias, "point", parameters, QueryText).Value;
+                            var longitude = _metadata.ExtractFieldNameFromArgument(spatialExpression.Arguments[1], withoutAlias, "point", parameters, QueryText).Value;
 
                             fieldOptions = new AutoSpatialOptions(AutoSpatialOptions.AutoSpatialMethodType.Point, new List<string>
                             {
@@ -2085,6 +2126,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
                         break;
+                    case MethodType.Spatial_Point:
+                        QueryValidator.ValidatePoint(shapeExpression.Arguments, QueryText, parameters);
+                        break;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
@@ -2113,14 +2157,20 @@ namespace Raven.Server.Documents.Queries
 
             var argument = arguments[0];
 
-            return ExtractFieldNameFromArgument(argument, methodName, parameters, QueryText);
+            return ExtractFieldNameFromArgument(argument, withoutAlias: false, methodName, parameters, QueryText);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, string methodName, BlittableJsonReaderObject parameters, string queryText)
+        private QueryFieldName ExtractFieldNameFromArgument(QueryExpression argument, bool withoutAlias, string methodName, BlittableJsonReaderObject parameters, string queryText)
         {
             if (argument is FieldExpression field)
-                return new QueryFieldName(field.FieldValue, field.IsQuoted);
+            {
+                var name = field.FieldValue;
+                if (withoutAlias && ShouldStripAlias(field))
+                    name = field.FieldValueWithoutAlias;
+
+                return new QueryFieldName(name, field.IsQuoted);
+            }
 
             if (argument is ValueExpression value) // escaped string might go there
                 return new QueryFieldName(value.Token.Value, value.Value == ValueTokenType.String);
@@ -2175,7 +2225,9 @@ namespace Raven.Server.Documents.Queries
 
         private static readonly HashSet<string> JsBaseObjects = new HashSet<string>
         {
-            "Math", "Number", "Object", "Date", "Array"
+            "Math", "Number", "Object", "Date", "Array",
+            // out stuff
+            "console", "spatial"
         };
 
         private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
@@ -2240,6 +2292,13 @@ namespace Raven.Server.Documents.Queries
             return RootAliasPaths.Count > 0 &&
                    RootAliasPaths.TryGetValue(key, out _) == false;
         }
+
+        private bool ShouldStripAlias(FieldExpression expr)
+        {
+            if (RootAliasPaths.Count == 0)
+                return false;
+
+            return RootAliasPaths.TryGetValue(expr.Compound[0], out _);
+        }
     }
 }
-

@@ -342,7 +342,8 @@ namespace SlowTests.Authentication
             var routesToIgnore = new HashSet<string>
             {
                 "/monitoring/snmp/oids",
-                "/monitoring/snmp"
+                "/monitoring/snmp",
+                "/monitoring/snmp/bulk"
             };
 
             var routes = RouteScanner.Scan(attr =>
