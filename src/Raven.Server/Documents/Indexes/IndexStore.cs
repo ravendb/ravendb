@@ -1355,12 +1355,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var definitionToCheck = (AutoIndexDefinitionBase)indexToCheck.Definition;
 
-                    DynamicQueryMatchResult result;
-
-                    using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    {
-                        result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck, context);
-                    }
+                    var result = dynamicQueryToIndex.ConsiderUsageOfIndex(query, definitionToCheck);
 
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
