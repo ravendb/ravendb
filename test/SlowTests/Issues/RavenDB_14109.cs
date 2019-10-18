@@ -29,6 +29,12 @@ namespace SlowTests.Issues
                         .Stream(query, out var stats);
 
                     Assert.Equal(2, stats.TotalResults);
+
+                    var count = 0;
+                    while (enumerator.MoveNext())
+                        count++;
+
+                    Assert.Equal(stats.TotalResults, count);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -40,6 +46,12 @@ namespace SlowTests.Issues
                         .StreamAsync(query, out var stats);
 
                     Assert.Equal(2, stats.TotalResults);
+
+                    var count = 0;
+                    while (await enumerator.MoveNextAsync())
+                        count++;
+
+                    Assert.Equal(stats.TotalResults, count);
                 }
             }
         }

@@ -33,10 +33,9 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-            using (var result = streamOperation.SetResult(command.Result))
-            {
-                return YieldResults(query, result);
-            }
+            var result = streamOperation.SetResult(command.Result);
+
+            return YieldResults(query, result);
         }
 
         public IEnumerator<StreamResult<T>> Stream<T>(IRawDocumentQuery<T> query)
@@ -48,7 +47,7 @@ namespace Raven.Client.Documents.Session
         {
             return Stream((IDocumentQuery<T>)query, out streamQueryStats);
         }
-        
+
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats)
         {
             var stats = new StreamQueryStatistics();
@@ -56,25 +55,26 @@ namespace Raven.Client.Documents.Session
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-            using (var result = streamOperation.SetResult(command.Result))
-            {
-                streamQueryStats = stats;
+            var result = streamOperation.SetResult(command.Result);
+            streamQueryStats = stats;
 
-                return YieldResults(query, result);
-            }
+            return YieldResults(query, result);
         }
 
         private IEnumerator<StreamResult<T>> YieldResults<T>(IDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator)
         {
-            var fieldsToFetch = ((DocumentQuery<T>)query).FieldsToFetchToken;
-
-            while (enumerator.MoveNext())
+            using (enumerator)
             {
-                using (var json = enumerator.Current)
-                {
-                    query.InvokeAfterStreamExecuted(json);
+                var fieldsToFetch = ((DocumentQuery<T>)query).FieldsToFetchToken;
 
-                    yield return CreateStreamResult<T>(json, fieldsToFetch);
+                while (enumerator.MoveNext())
+                {
+                    using (var json = enumerator.Current)
+                    {
+                        query.InvokeAfterStreamExecuted(json);
+
+                        yield return CreateStreamResult<T>(json, fieldsToFetch);
+                    }
                 }
             }
         }
@@ -122,7 +122,7 @@ namespace Raven.Client.Documents.Session
         {
             var streamOperation = new StreamOperation(this);
 
-            var command = streamOperation.CreateRequest( startsWith, matches, start, pageSize, null, startAfter);
+            var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter);
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             using (var result = streamOperation.SetResult(command.Result))
             {
