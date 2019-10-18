@@ -52,6 +52,12 @@ namespace Raven.Server.Documents.Patch
                 [Constants.Documents.Metadata.LastModified] = boi.LastModified,
             };
 
+            if (boi.IndexScore != null)
+                metadata.Modifications[Constants.Documents.Metadata.IndexScore] = boi.IndexScore.Value;
+
+            if (boi.Distance != null)
+                metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
+
             metadata = Context.ReadObject(metadata, boi.DocumentId);
             return TranslateToJs(_scriptEngine, Context, metadata);
         }

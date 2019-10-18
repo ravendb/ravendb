@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -924,13 +925,13 @@ namespace Raven.Server.Documents.Replication
 
         private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
         {
-            var shutdownInfo = new ConnectionShutdownInfo
+            var shutdownInfo = _outgoingFailureInfo.GetOrAdd(node, new ConnectionShutdownInfo
             {
                 Node = node,
                 External = external,
                 MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
-            };
-            _outgoingFailureInfo.TryAdd(node, shutdownInfo);
+            });
+
             try
             {
                 var certificate = GetCertificateForReplication(node, out _);
@@ -951,7 +952,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication", certificate, cts.Token);
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
+                            certificate, cts.Token);
                     }
                 }
 
@@ -962,7 +964,18 @@ namespace Raven.Server.Documents.Replication
             {
                 // will try to fetch it again later
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+                {
+                    if (e is DatabaseIdleException)
+                    {
+                        // this is expected, so we don't mark it as error
+                        _log.Info($"The database is idle on the destination '{node.FromString()}', the connection will be retried later.");
+                    }
+                    else
+                    {
+                        _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
+                    }
+                }
+                    
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
                 {
                     OccurredAt = SystemTime.UtcNow,
@@ -998,6 +1011,7 @@ namespace Raven.Server.Documents.Replication
                     OutgoingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
 
                 }
+
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
 

@@ -10,9 +10,9 @@ import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
-import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import cronEditor = require("viewmodels/common/cronEditor");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editPeriodicBackupTask extends viewModelBase {
 
@@ -25,8 +25,6 @@ class editPeriodicBackupTask extends viewModelBase {
     possibleMentors = ko.observableArray<string>([]);
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
 
-    encryptionSection: setupEncryptionKey;
-
     constructor() {
         super();
         
@@ -36,6 +34,9 @@ class editPeriodicBackupTask extends viewModelBase {
     activate(args: any) { 
         super.activate(args);
 
+        const database = activeDatabaseTracker.default.database();
+        const dbName = ko.observable<string>(database ? database.name : null);
+        
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
 
@@ -50,7 +51,7 @@ class editPeriodicBackupTask extends viewModelBase {
                             configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                         }
                         
-                        this.configuration(new periodicBackupConfiguration(configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                        this.configuration(new periodicBackupConfiguration(dbName, configuration, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
                         deferred.resolve();
                     })
                     .fail(() => {
@@ -62,29 +63,16 @@ class editPeriodicBackupTask extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
 
-                this.configuration(periodicBackupConfiguration.empty(this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
                 deferred.resolve();
             }
 
             return deferred
                 .then(() => {
-                    const dbName = ko.pureComputed(() => {
-                        const db = this.activeDatabase();
-                        return db ? db.name : null;
-                    });
-                    const encryptionSettings = this.configuration().encryptionSettings();
-                    this.encryptionSection = setupEncryptionKey.forBackup(encryptionSettings.key, encryptionSettings.keyConfirmation, dbName);
                     this.dirtyFlag = this.configuration().dirtyFlag;
 
                     this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
                     this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
-                    
-                    if (!encryptionSettings.key()) {
-                        return this.encryptionSection.generateEncryptionKey()
-                            .done(() => {
-                                encryptionSettings.dirtyFlag().reset();
-                            });
-                    }
                 });
         };
 
@@ -116,10 +104,6 @@ class editPeriodicBackupTask extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
-
-        this.encryptionSection.syncQrCode(); 
-        
-        this.configuration().encryptionSettings().key.subscribe(() => this.encryptionSection.syncQrCode());
         
         $('.edit-backup [data-toggle="tooltip"]').tooltip();
         
@@ -171,6 +155,8 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     savePeriodicBackup() {
+        this.configuration().encryptionSettings().setKeyUsedBeforeSave();
+        
         if (!this.validate()) {
              return;
         }
@@ -221,7 +207,7 @@ class editPeriodicBackupTask extends viewModelBase {
         if (!this.isValid(this.configuration().validationGroup))
             valid = false;
         
-        if (!this.isValid(this.configuration().encryptionSettings().validationGroup))
+        if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
             valid = false;
 
         if (!this.isValid(this.configuration().localSettings().validationGroup))

@@ -1,24 +1,31 @@
 ﻿import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import jsonUtil = require("common/jsonUtil");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class encryptionSettings {
     
     private encryptedDatabase = ko.observable<boolean>();
     private backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>;
     
-    enabled = ko.observable<boolean>(false);
+    encryptionSection: setupEncryptionKey;
     
-    mode = ko.observable<Raven.Client.Documents.Operations.Backups.EncryptionMode>();
-    key = ko.observable<string>();
-    keyConfirmation = ko.observable<boolean>(false);
-
+    enabled = ko.observable<boolean>(false);
+    mode = ko.observable<Raven.Client.Documents.Operations.Backups.EncryptionMode>();    
+    originalKey = ko.observable<string>(); // current key of an existing encrypted backup
+    key = ko.observable<string>();         // the new key that is selected in UI
+    changeKeyRequest = ko.observable<boolean>(false);
+    keyConfirmation = ko.observable<boolean>(false);    
     allowUnencryptedBackupForEncryptedDatabase = ko.observable<boolean>(false);
 
     canProvideOwnKey: KnockoutComputed<boolean>;
     canUseDatabaseKey: KnockoutComputed<boolean>;
+    
     showKeySourceDropdown: KnockoutComputed<boolean>;
     enableKeySourceDropdown: KnockoutComputed<boolean>;
-    showProvidedKeySection: KnockoutComputed<boolean>;
+    keySourceDropdownTitle: KnockoutComputed<string>;
+
+    showOriginalKeySection: KnockoutComputed<boolean>;
+    showProvidedKeySection: KnockoutComputed<boolean>;  
     
     needExplicitConsent = ko.pureComputed(() => !this.enabled() && this.encryptedDatabase());
     
@@ -26,25 +33,31 @@ class encryptionSettings {
     
     encryptionModes = [
         {
-            label: "Encrypt using database encryption key",
+            label: "Encrypt using Database Encryption Key",
             value: "UseDatabaseKey"
         },
         {
-            label: "Provide your own encryption key",
+            label: "Provide your own Encryption Key",
             value: "UseProvidedKey"
         }
     ] as Array<valueAndLabelItem<Raven.Client.Documents.Operations.Backups.EncryptionMode, string>>;
 
-    validationGroup: KnockoutValidationGroup;
+    validationGroup: KnockoutComputed<KnockoutValidationGroup>;
+    validationGroupWithKey: KnockoutValidationGroup;
+    validationGroupWithoutKey: KnockoutValidationGroup;
     
-    constructor(encryptedDatabase: boolean,
-                backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>, 
-                dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings,
-                private isServerWideBackupTask : boolean = false) {       
+    constructor(private databaseName: KnockoutObservable<string>,
+        encryptedDatabase: boolean,
+        backupType: KnockoutObservable<Raven.Client.Documents.Operations.Backups.BackupType>,
+        dto: Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings,
+        private isServerWideBackupTask: boolean = false) {
         
         this.encryptedDatabase(encryptedDatabase);
         this.backupType = backupType;
-        this.key(dto ? dto.Key : undefined);
+       
+        // 'originalKey' will hold current key used by the backup (if exists)
+        // 'key' will hold a new key when generated from the UI
+        this.originalKey(dto && dto.EncryptionMode !== 'None' ? dto.Key : undefined);
 
         if (!dto) {
             if (encryptedDatabase) {
@@ -72,13 +85,24 @@ class encryptionSettings {
             this.enabled,
             this.mode,
             this.allowUnencryptedBackupForEncryptedDatabase,
-            this.key
+            this.changeKeyRequest
         ], false, jsonUtil.newLineNormalizingHashFunction);
         
-        _.bindAll(this, "useEncryptionType");
+        _.bindAll(this, "setEncryptionType");
     }
     
     private initObservables() {
+        this.validationGroup = ko.pureComputed(() => {
+            
+            if (this.enabled() && this.mode() === 'UseDatabaseKey') {
+                return this.validationGroupWithoutKey;
+            }
+            
+            return this.enabled() ? this.validationGroupWithKey : this.validationGroupWithoutKey;
+        });
+
+        setupEncryptionKey.setupKeyValidation(this.key);
+        
         this.backupType.subscribe(backupType => {
             const dbIsEncrypted = this.encryptedDatabase();
             if (dbIsEncrypted) {
@@ -86,13 +110,33 @@ class encryptionSettings {
                     this.mode("UseDatabaseKey");
                 }
             } else {
-                if (this.backupType() === "Backup") {
+                // db not encrypted
+                if (this.backupType() === "Backup" && this.enabled()) {
                     this.mode("UseProvidedKey");
+
+                    if (!this.originalKey()) {
+                        return this.encryptionSection.generateEncryptionKey();
+                    }
                 }
             }
         });
         
-        this.key.subscribe(() => this.keyConfirmation(false));
+        this.mode.subscribe(mode => {
+            if (this.encryptedDatabase() && mode === 'UseDatabaseKey') {
+                this.changeKeyRequest(false); // imho - better to clear this checkbox
+            }
+            
+            if (this.encryptedDatabase() && mode === 'UseProvidedKey' && !this.key()) {
+                return this.encryptionSection.generateEncryptionKey();
+            }
+        });
+        
+        this.key.subscribe(() => {
+            this.encryptionSection.syncQrCode();
+            this.keyConfirmation(false);
+        });
+        
+        this.encryptionSection = setupEncryptionKey.forBackup(this.key, this.keyConfirmation, this.databaseName);
         
         this.canProvideOwnKey = ko.pureComputed(() => {
             const type = this.backupType();
@@ -107,10 +151,19 @@ class encryptionSettings {
         });
         
         this.showKeySourceDropdown = ko.pureComputed(() => {
-            const encryptBackup = this.enabled();
+            const encryptBackup = this.enabled() && this.enabled.isValid();
             const canProvideKey = this.canProvideOwnKey();
             const canUseDbKey = this.canUseDatabaseKey();
             return encryptBackup && (canProvideKey || canUseDbKey);
+        });
+        
+        this.keySourceDropdownTitle = ko.pureComputed(() => {
+            if (this.encryptedDatabase()) {
+                return this.enableKeySourceDropdown() ?  'Select Encryption Key mode' : 
+                                                         'The Database Key will be used as the Encryption Key when selecting Snapshot type';
+            }
+            // db is not encrypted and the dropdown is disabled... 
+            return 'The database is not encrypted. Provide your own Encryption Key for the Backup task.';
         });
         
         this.enableKeySourceDropdown = ko.pureComputed(() => {
@@ -120,12 +173,27 @@ class encryptionSettings {
         });
         
         this.showProvidedKeySection = ko.pureComputed(() => {
-            const encryptBackup = this.enabled();
+            const encryptBackup = this.enabled() && this.enabled.isValid();
             const type = this.backupType();
             const mode = this.mode();
-            return encryptBackup && type === "Backup" && mode === "UseProvidedKey";
+            return encryptBackup && 
+                   type === "Backup" && 
+                   mode === "UseProvidedKey" &&
+                   (!this.originalKey() || (this.originalKey() && this.changeKeyRequest()));
         });
 
+        this.showOriginalKeySection = ko.pureComputed(() => {
+            const canShowOriginalKey = this.enabled() && this.enabled.isValid() && 
+                                       !!this.originalKey() && 
+                                       this.mode() !== 'UseDatabaseKey';
+            
+            if (this.isServerWideBackupTask) {
+                return canShowOriginalKey && this.backupType() !== "Snapshot";
+            }
+            
+            return canShowOriginalKey;
+        });
+        
         this.allowUnencryptedBackupForEncryptedDatabase.extend({
             validation: [{
                 validator: (v: boolean) => this.needExplicitConsent() ? v : true,
@@ -137,6 +205,11 @@ class encryptionSettings {
         this.enabled.extend({
             validation: [{
                 validator: function(enabled: boolean) {
+                    if (self.enabled() &&  !self.backupType()) {
+                        this.message = "Backup Type was not selected. Select Backup Type to continue.";
+                        return false;
+                    }
+                    
                     const dbIsEncrypted = self.encryptedDatabase();
                     if (dbIsEncrypted) {
                         if (!self.enabled()) {
@@ -158,22 +231,55 @@ class encryptionSettings {
                 }
             }]
         });
+        
+        this.enabled.subscribe(enabled => {
+            if (enabled && this.enabled.isValid()) {
+                this.mode("UseProvidedKey");
+                
+                if (!this.originalKey()) {
+                    return this.encryptionSection.generateEncryptionKey();
+                }
+            }
+            
+            if (!this.enabled()) {
+                this.changeKeyRequest(false);
+            }
+        });
 
-        const keyConfirmationNeeded = ko.pureComputed(() => this.canProvideOwnKey() && this.mode() === "UseProvidedKey");
+        this.changeKeyRequest.subscribe(changeKeyRequest => {
+            if (changeKeyRequest) {
+                return this.encryptionSection.generateEncryptionKey();
+            }
+        });
+
+        const keyConfirmationNeeded = ko.pureComputed(() =>
+            this.canProvideOwnKey() &&
+            (!this.originalKey() || this.changeKeyRequest())
+        );
         
         this.key.extend({
+           required: {
+               onlyIf: () => keyConfirmationNeeded()
+           } 
+        });
+        
+        this.keyConfirmation.extend({
             required: {
                 onlyIf: () => keyConfirmationNeeded()
             }
         });
         
-        setupEncryptionKey.setupKeyValidation(this.key);
         setupEncryptionKey.setupConfirmationValidation(this.keyConfirmation, keyConfirmationNeeded);
 
-        this.validationGroup = ko.validatedObservable({
+        this.validationGroupWithKey = ko.validatedObservable({
+            enabled: this.enabled,
             key: this.key,
-            mode: this.mode,
-            keyConfirmation: this.keyConfirmation,
+            keyConfirmation: this.keyConfirmation, 
+            allowUnencryptedBackupForEncryptedDatabase: this.allowUnencryptedBackupForEncryptedDatabase
+        });
+        
+        this.validationGroupWithoutKey = ko.validatedObservable({
+            enabled: this.enabled,
             allowUnencryptedBackupForEncryptedDatabase: this.allowUnencryptedBackupForEncryptedDatabase
         });
     }
@@ -183,10 +289,23 @@ class encryptionSettings {
         return matched ? matched.label : null;
     }
 
-    useEncryptionType(mode: Raven.Client.Documents.Operations.Backups.EncryptionMode) {
+    setEncryptionType(mode: Raven.Client.Documents.Operations.Backups.EncryptionMode) {
         this.mode(mode);
     }
 
+    setKeyUsedBeforeSave() {
+        // Use 'original key' for 'save' when: 
+        // opened existing encrypted backup and didn't request to change key
+        // or if 'key' does exist but asked to change 
+        // remember - 'key' has no value if wasn't generated from UI...        
+        if (this.originalKey() && 
+           (!this.key() || !this.changeKeyRequest())) {
+            
+            this.key(this.originalKey()); // using original
+            this.keyConfirmation(true);   // needed for validation 
+        }
+    }
+    
     toDto(): Raven.Client.Documents.Operations.Backups.BackupEncryptionSettings {
         return {
             EncryptionMode: this.enabled() ? this.mode() : "None",

@@ -1,7 +1,7 @@
 import generateSecretCommand = require("commands/database/secrets/generateSecretCommand");
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import copyToClipboard = require("common/copyToClipboard");
-import fileDownloader = require("common/fileDownloader")
+import fileDownloader = require("common/fileDownloader");
 
 abstract class setupEncryptionKey {
     
@@ -14,10 +14,13 @@ abstract class setupEncryptionKey {
     disableSavingKeyData: KnockoutComputed<boolean>;
     saveKeyValidationGroup: KnockoutValidationGroup;
     
-    protected constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
+    isKeyAvailableAgain = ko.observable<boolean>(false);
+    
+    protected constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>, isKeyAvailableAgain: boolean = false) {
         this.key = key;
         this.keyConfirmation = keyConfirmation;
         this.databaseName = databaseName;
+        this.isKeyAvailableAgain(isKeyAvailableAgain);
         
         this.saveKeyValidationGroup = ko.validatedObservable({
             name: this.databaseName,
@@ -40,9 +43,7 @@ abstract class setupEncryptionKey {
     generateEncryptionKey(): JQueryPromise<string> {
         return new generateSecretCommand()
             .execute()
-            .done(secret => {
-                this.key(secret);
-            });
+            .done(secret => this.key(secret));
     }
     
     abstract getContainer(): HTMLElement;
@@ -173,7 +174,7 @@ abstract class setupEncryptionKey {
     }
     
     static forBackup(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>, databaseName: KnockoutObservable<string>) {
-        return new backupSetupEncryptionKey(key, keyConfirmation, databaseName);
+        return new backupSetupEncryptionKey(key, keyConfirmation, databaseName, true);
     }
 
     static forServerWideBackup(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>) {
@@ -218,9 +219,8 @@ class backupSetupEncryptionKey extends setupEncryptionKey {
 }
 
 class serverWideBackupSetupEncryptionKey extends setupEncryptionKey {
-    
     constructor(key: KnockoutObservable<string>, keyConfirmation: KnockoutObservable<boolean>) {
-        super(key, keyConfirmation, ko.observable<string>("ServerWide"));
+        super(key, keyConfirmation, ko.observable<string>("ServerWide"), true);
         // The 3'rd param passed to super() is needed only for validation. Not actually used.
     }
     
@@ -237,6 +237,7 @@ class serverWideBackupSetupEncryptionKey extends setupEncryptionKey {
         return `Encryption Key for Server-Wide-Backup: ${encryptionKey}\r\n\r\nThis key is used to encrypt the server-wide-backup, it is required for restoring the data.\r\nMake sure you keep it in a private, safe place.`;
     }
 }
+
 class exportSetupEncryptionKey extends setupEncryptionKey {
     getContainer() {
         return document.getElementsByTagName("body")[0];

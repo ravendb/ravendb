@@ -239,12 +239,20 @@ namespace Raven.Server.Documents
 
         public StudioConfiguration StudioConfiguration { get; private set; }
 
-        private long _lastDatabaseRecordIndex;
+        private long _lastDatabaseRecordChangeIndex;
 
-        public long LastDatabaseRecordIndex
+        public long LastDatabaseRecordChangeIndex
         {
-            get => Volatile.Read(ref _lastDatabaseRecordIndex);
-            private set => _lastDatabaseRecordIndex = value; // we write this always under lock
+            get => Volatile.Read(ref _lastDatabaseRecordChangeIndex);
+            private set => _lastDatabaseRecordChangeIndex = value; // we write this always under lock
+        }
+
+        private long _lastValueChangeIndex;
+
+        public long LastValueChangeIndex
+        {
+            get => Volatile.Read(ref _lastValueChangeIndex);
+            private set => _lastValueChangeIndex = value; // we write this always under lock
         }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
@@ -605,7 +613,7 @@ namespace Raven.Server.Documents
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
             {
-                var databaseInfo = GenerateDatabaseInfo();
+                var databaseInfo = GenerateOfflineDatabaseInfo();
                 if (databaseInfo != null)
                     DatabaseInfoCache?.InsertDatabaseInfo(databaseInfo, Name);
             }
@@ -778,7 +786,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DynamicJsonValue GenerateDatabaseInfo()
+        public DynamicJsonValue GenerateOfflineDatabaseInfo()
         {
             var envs = GetAllStoragesEnvironment().ToList();
             if (envs.Count == 0 || envs.Any(x => x.Environment == null))
@@ -801,15 +809,15 @@ namespace Raven.Server.Documents
                 },
                 [nameof(DatabaseInfo.TempBuffersSize)] = new DynamicJsonValue
                 {
-                    [nameof(Size.HumaneSize)] = size.TempBuffers.HumaneSize,
-                    [nameof(Size.SizeInBytes)] = size.TempBuffers.SizeInBytes
+                    [nameof(Size.HumaneSize)] = "0 Bytes",
+                    [nameof(Size.SizeInBytes)] = 0
                 },
                 [nameof(DatabaseInfo.IndexingErrors)] = IndexStore.GetIndexes().Sum(index => index.GetErrorCount()),
                 [nameof(DatabaseInfo.Alerts)] = NotificationCenter.GetAlertCount(),
                 [nameof(DatabaseInfo.PerformanceHints)] = NotificationCenter.GetPerformanceHintCount(),
                 [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
                 [nameof(DatabaseInfo.BackupInfo)] = PeriodicBackupRunner?.GetBackupInfo(),
-                [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(GetMountPointsUsage().Select(x => x.ToJson())),
+                [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(GetMountPointsUsage(includeTempBuffers: false).Select(x => x.ToJson())),
                 [nameof(DatabaseInfo.DocumentsCount)] = DocumentsStorage.GetNumberOfDocuments(),
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
@@ -1124,7 +1132,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            if (CanSkip(record.DatabaseName, index))
+            if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                 return;
 
             var taken = false;
@@ -1133,7 +1141,7 @@ namespace Raven.Server.Documents
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    if (CanSkip(record.DatabaseName, index))
+                    if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                         return;
 
                     if (taken == false)
@@ -1145,7 +1153,7 @@ namespace Raven.Server.Documents
                         $"{Name} != {record.DatabaseName}");
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
+                        _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordChangeIndex}) for {record.DatabaseName}.");
 
                     try
                     {
@@ -1153,12 +1161,14 @@ namespace Raven.Server.Documents
 
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
-                        LastDatabaseRecordIndex = index;
                         IndexStore.HandleDatabaseRecordChange(record, index);
                         ReplicationLoader?.HandleDatabaseRecordChange(record);
                         EtlLoader?.HandleDatabaseRecordChange(record);
-                        OnDatabaseRecordChanged(record);
                         SubscriptionStorage?.HandleDatabaseRecordChange(record);
+
+                        OnDatabaseRecordChanged(record);
+
+                        LastDatabaseRecordChangeIndex = index;
 
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1195,13 +1205,26 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkip(string database, long index)
+        private bool CanSkipDatabaseRecordChange(string database, long index)
         {
-            if (LastDatabaseRecordIndex > index)
+            if (LastDatabaseRecordChangeIndex > index)
             {
                 // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {database} because it was already precessed.");
+                    _logger.Info($"Skipping record {index} (current {LastDatabaseRecordChangeIndex}) for {database} because it was already precessed.");
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CanSkipValueChange(string database, long index)
+        {
+            if (LastValueChangeIndex > index)
+            {
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
                 return true;
             }
 
@@ -1210,7 +1233,7 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
         {
-            if (CanSkip(record.DatabaseName, index))
+            if (CanSkipValueChange(record.DatabaseName, index))
                 return;
 
             var taken = false;
@@ -1219,16 +1242,17 @@ namespace Raven.Server.Documents
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
                 try
                 {
-                    if (CanSkip(record.DatabaseName, index))
+                    if (CanSkipValueChange(record.DatabaseName, index))
                         return;
 
                     if (taken == false)
                         continue;
                 
-                    LastDatabaseRecordIndex = index;
                     DatabaseShutdown.ThrowIfCancellationRequested();
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
+
+                    LastValueChangeIndex  = index;
                 }
                 finally
                 {
@@ -1369,7 +1393,7 @@ namespace Raven.Server.Documents
             return (new Size(dataInBytes), new Size(tempBuffersInBytes));
         }
 
-        public IEnumerable<MountPointUsage> GetMountPointsUsage()
+        public IEnumerable<MountPointUsage> GetMountPointsUsage(bool includeTempBuffers)
         {
             var storageEnvironments = GetAllStoragesEnvironment();
             if (storageEnvironments == null)
@@ -1377,7 +1401,7 @@ namespace Raven.Server.Documents
 
             foreach (var environment in storageEnvironments)
             {
-                foreach (var mountPoint in ServerStore.GetMountPointUsageDetailsFor(environment))
+                foreach (var mountPoint in ServerStore.GetMountPointUsageDetailsFor(environment, includeTempBuffers: includeTempBuffers))
                 {
                     yield return mountPoint;
                 }

@@ -6,17 +6,17 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class S3Fact : FactAttribute
+    public class AmazonS3FactAttribute : FactAttribute
     {
         private const string S3CredentialEnvironmentVariable = "S3_CREDENTIAL";
 
-        public static S3Settings S3Settings { get; private set; }
+        public static S3Settings S3Settings { get; }
 
         private static readonly string ParsingError;
 
-        static S3Fact()
-         {
-            var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable, EnvironmentVariableTarget.User);
+        static AmazonS3FactAttribute()
+        {
+            var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
 
             try
             {
@@ -28,7 +28,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        public S3Fact([CallerMemberName] string memberName = "")
+        public AmazonS3FactAttribute([CallerMemberName] string memberName = "")
         {
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
@@ -38,7 +38,7 @@ namespace Tests.Infrastructure
 
             if (S3Settings == null)
             {
-                Skip = $"Google cloud {memberName} tests missing BucketNameEnvironmentVariable.";
+                Skip = $"S3 {memberName} tests missing S3 settings.";
                 return;
             }
         }

@@ -2252,7 +2252,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, int take)
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, int take)
         {
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
@@ -2272,6 +2272,24 @@ namespace Raven.Server.ServerWide
                         yield return (key, index, value);
                     }
                 }
+            }
+        }
+
+        public long GetLastCompareExchangeIndexForDatabase(TransactionOperationContext context, string databaseName)
+        {
+            CompareExchangeCommandBase.GetDbPrefixAndLastSlices(context.Allocator, databaseName, out var prefix, out var last);
+
+            using (prefix.Scope)
+            using (last.Scope)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
+               
+                var tvh = table.SeekOneBackwardFrom(CompareExchangeSchema.Indexes[CompareExchangeIndex], prefix.Slice, last.Slice);
+
+                if (tvh == null)
+                    return 0;
+
+                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);             
             }
         }
 
@@ -3084,15 +3102,17 @@ namespace Raven.Server.ServerWide
 
         public async Task WaitForIndexNotification(long index, CancellationToken token)
         {
+            Task<bool> waitAsync;
             while (true)
             {
                 // first get the task, then wait on it
-                var waitAsync = _notifiedListeners.WaitAsync(token);
+                waitAsync = _notifiedListeners.WaitAsync(token);
 
                 if (index <= Interlocked.Read(ref LastModifiedIndex))
                     break;
 
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                    ThrowCanceledException(index, LastModifiedIndex, isExecution: false);
 
                 if (await waitAsync == false)
                 {
@@ -3101,8 +3121,13 @@ namespace Raven.Server.ServerWide
                         break;
                 }
             }
-        }
 
+            if (await WaitForTaskCompletion(index, new Lazy<Task>(waitAsync)))
+                return;
+
+            ThrowCanceledException(index, LastModifiedIndex, isExecution: true);
+        }
+        
         public async Task WaitForIndexNotification(long index, TimeSpan timeout)
         {
             while (true)
@@ -3123,6 +3148,14 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            if (await WaitForTaskCompletion(index, new Lazy<Task>(TimeoutManager.WaitFor(timeout))))
+                return;
+
+            ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+        }
+
+        private async Task<bool> WaitForTaskCompletion(long index, Lazy<Task> waitingTask)
+        {
             if (_tasksDictionary.TryGetValue(index, out var tcs) == false)
             {
                 // the task has already completed
@@ -3130,25 +3163,41 @@ namespace Raven.Server.ServerWide
                 foreach (var error in _errors)
                 {
                     if (error.Index == index)
-                        error.Exception.Throw();// rethrow
+                        error.Exception.Throw(); // rethrow
                 }
-                return;
+
+                return true;
             }
 
             var task = tcs.Task;
 
             if (task.IsCompleted)
-                return;
+                return true;
 
-            var result = await Task.WhenAny(task, TimeoutManager.WaitFor(timeout));
+            var result = await Task.WhenAny(task, waitingTask.Value);
 
             if (result.IsFaulted)
-                throw result.Exception;
+                await result; // will throw
 
             if (result == task)
-                return;
+                return true;
+            return false;
+        }
 
-            ThrowTimeoutException(timeout, index, LastModifiedIndex, isExecution: true);
+        private void ThrowCanceledException(long index, long lastModifiedIndex, bool isExecution = false)
+        {
+            var openingString = isExecution
+                ? $"Cancelled while waiting for task with index {index} to complete. "
+                : $"Cancelled while waiting to get an index notification for {index}. ";
+
+            var closingString = isExecution
+                ? string.Empty
+                : Environment.NewLine +
+                  PrintLastNotifications();
+
+            throw new OperationCanceledException(openingString +
+                                       $"Last commit index is: {lastModifiedIndex}. " +
+                                       $"Number of errors is: {_numberOfErrors}." + closingString);
         }
 
         private void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex, bool isExecution = false)

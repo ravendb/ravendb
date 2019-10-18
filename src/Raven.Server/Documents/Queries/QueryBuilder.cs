@@ -147,6 +147,8 @@ namespace Raven.Server.Documents.Queries
             QueryExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDef,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
             if (expression == null)
                 return new MatchAllDocsQuery();
 

@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 IncludeCountersCommand includeCountersCommand = null;
-                if (query.Metadata.HasCounters)
+                if (query.Metadata.CounterIncludes != null)
                 {
                     includeCountersCommand = new IncludeCountersCommand(
                         Database,
@@ -227,7 +227,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
-            var bufferSize = query.HasCounters ? 4 : 3;
+            var bufferSize = 3;
+            var hasCounters = query.HasCounterSelect || query.CounterIncludes != null;
+
+            if (hasCounters)
+                bufferSize++;
+            if (query.HasCmpXchgSelect)
+                bufferSize++;
+
             var collection = query.CollectionName;
             var buffer = stackalloc long[bufferSize];
 
@@ -241,9 +248,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(context.Transaction.InnerTransaction);
                 buffer[2] = numberOfDocuments;
 
-                if (query.HasCounters)
+                if (hasCounters)
                     buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
-
+                
                 resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
@@ -253,10 +260,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
                 buffer[2] = collectionStats.Count;
 
-                if (query.HasCounters)
+                if (hasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
+            }
+
+            if (query.HasCmpXchgSelect)
+            {
+                using (context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionContext))
+                using (transactionContext.OpenReadTransaction())
+                {
+                    buffer[bufferSize - 1] = Database.ServerStore.Cluster.GetLastCompareExchangeIndexForDatabase(transactionContext, Database.Name);
+                }
             }
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);

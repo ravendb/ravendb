@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide;
 

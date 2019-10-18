@@ -33,10 +33,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         public Document Get(Document doc)
         {
-            return GetProjectionFromDocument(doc, null, 0, FieldsToFetch, _context, null);
-        }      
+            return GetProjectionFromDocument(doc, null, ZeroScore, FieldsToFetch, _context, null);
+        }
 
-        public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
+        public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Queries.Results
                     key = fieldToFetch.ProjectedName ?? (fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value);
                     fieldVal = GetFunctionValue(fieldToFetch, null, args);
 
-                    var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
+                    var immediateResult = AddProjectionToResult(item, OneScore, FieldsToFetch, result, key, fieldVal);
                     if (immediateResult != null)
                         return immediateResult;
                 }
@@ -126,26 +126,26 @@ namespace Raven.Server.Documents.Queries.Results
                     switch (val)
                     {
                         case Document d:
-                        {
-                            if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
-                                continue;
-                            d.EnsureMetadata();
-                            var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
-                            if (immediateResult != null)
-                                return immediateResult;
-                            break;
-                        }
+                            {
+                                if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
+                                    continue;
+                                d.EnsureMetadata();
+                                var immediateResult = AddProjectionToResult(d, OneScore, FieldsToFetch, result, key, fieldVal);
+                                if (immediateResult != null)
+                                    return immediateResult;
+                                break;
+                            }
                         case BlittableJsonReaderObject bjro:
-                        {
-                            var doc = new Document { Data = bjro };
-                            if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
-                                continue;
-                            doc.EnsureMetadata();
-                            var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
-                            if (immediateResult != null)
-                                return immediateResult;
-                            break;
-                        }
+                            {
+                                var doc = new Document { Data = bjro };
+                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
+                                    continue;
+                                doc.EnsureMetadata();
+                                var immediateResult = AddProjectionToResult(doc, OneScore, FieldsToFetch, result, key, fieldVal);
+                                if (immediateResult != null)
+                                    return immediateResult;
+                                break;
+                            }
                         case MatchCollection matches:
                             var array = new DynamicJsonArray();
                             foreach (var m in matches)

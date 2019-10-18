@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             Field = field;
             Matches = matches;
             Matches.Sort(StringComparer.Ordinal);
-            RewriteMethod = SCORING_BOOLEAN_QUERY_REWRITE;
+            RewriteMethod = CONSTANT_SCORE_FILTER_REWRITE;
         }
 
         public override string ToString(string fld)

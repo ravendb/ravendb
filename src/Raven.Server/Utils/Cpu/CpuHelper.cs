@@ -76,7 +76,7 @@ namespace Raven.Server.Utils.Cpu
             try
             {
                 var timeTicks = SystemTime.UtcNow.Ticks;
-                var totalProcessorTime = GetTotalProcessorTimeInTicks(process);
+                var totalProcessorTime = process.TotalProcessorTime.Ticks;
                 return (TotalProcessorTimeTicks: totalProcessorTime, TimeTicks: timeTicks);
             }
             catch (NotSupportedException)
@@ -89,50 +89,6 @@ namespace Raven.Server.Utils.Cpu
                     Logger.Info($"Failure to get process times, error: {e.Message}", e);
 
                 return (0, 0);
-            }
-        }
-
-        private static bool _timesSyscallSupported = true;
-
-        private static long GetTotalProcessorTimeInTicks(Process process)
-        {
-            if (PlatformDetails.RunningOnLinux == false || _timesSyscallSupported == false)
-                return process.TotalProcessorTime.Ticks;
-
-            // Linux: TotalProcessorTime is calling to: proc/{processId}/stat and parsing the whole result
-            // while we only need the stime + utime
-
-            try
-            {
-                long stime;
-                long utime;
-
-                if (PlatformDetails.Is32Bits == false)
-                {
-                    var timeSample = new TimeSample();
-                    Syscall.times(ref timeSample);
-                    stime = timeSample.tms_stime;
-                    utime = timeSample.tms_utime;
-                }
-                else
-                {
-                    var timeSample = new TimeSample_32bit();
-                    Syscall.times(ref timeSample);
-                    stime = timeSample.tms_stime;
-                    utime = timeSample.tms_utime;
-                }
-
-                return utime + stime;
-            }
-            catch (Exception e)
-            {
-                // some linux distros don't support this call
-                _timesSyscallSupported = false;
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failure to get process times for linux, error: {e.Message}", e);
-
-                return process.TotalProcessorTime.Ticks;
             }
         }
     }

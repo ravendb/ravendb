@@ -43,6 +43,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     isBackupNowVisible: KnockoutComputed<boolean>;
     neverBackedUp = ko.observable<boolean>(false);
     fullBackupTypeName: KnockoutComputed<string>;
+    isBackupEncrypted = ko.observable<boolean>();
 
     backupDestinationsHumanized: KnockoutComputed<string>;
     lastFullBackupHumanized: KnockoutComputed<string>;
@@ -191,7 +192,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         this.lastIncrementalBackup(dto.LastIncrementalBackup);
         this.nextBackup(dto.NextBackup);
         this.onGoingBackup(dto.OnGoingBackup);
-        
+        this.isBackupEncrypted(dto.IsEncrypted);
+
         // Check backward compatibility
         this.retentionPolicyDisabled(dto.RetentionPolicy ? dto.RetentionPolicy.Disabled : true);
         this.retentionPolicyPeriod(dto.RetentionPolicy ? dto.RetentionPolicy.MinimumBackupAgeToKeep : "0.0:00:00");
