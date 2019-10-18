@@ -60,6 +60,7 @@ namespace Raven.Server.NotificationCenter
                 {
                     _needsSync = false;
 
+                    _performanceHint.RefreshCreatedAt();
                     _notificationCenter.Add(_performanceHint);
                 }
             }
