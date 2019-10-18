@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     //No sense creating an index for collection queries
                     if (indexQuery.Metadata.IsCollectionQuery)
                         continue;
-                    var indexCreationInfo = await _dynamicQueryRunner.CreateAutoIndexIfNeeded(indexQuery, true, null, _context, _database.DatabaseShutdown);
+                    var indexCreationInfo = await _dynamicQueryRunner.CreateAutoIndexIfNeeded(indexQuery, true, null, _database.DatabaseShutdown);
                     if (indexCreationInfo.HasCreatedAutoIndex) //wait for non-stale only IF we just created an auto-index
                     {
                         indexes.Add(indexCreationInfo.Index);
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 //this will ensure that query step has relevant index
                 //if needed, this will create auto-index                
                 var query = new IndexQueryServerSide(qqs.Query.ToString(), qqs.QueryParameters);
-                var index = await _dynamicQueryRunner.MatchIndex(query, true, null, _context, _database.DatabaseShutdown);
+                var index = await _dynamicQueryRunner.MatchIndex(query, true, null, _database.DatabaseShutdown);
                 if (indexNames.Add(index.Name) == false)
                     continue;
                 indexes.Add(index);
