@@ -718,6 +718,11 @@ namespace Raven.Server.Documents
 
                 exceptionAggregator.Execute(() =>
                 {
+                    HugeDocuments?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
                     NotificationCenter?.Dispose();
                 });
 
