@@ -129,11 +129,12 @@ namespace Raven.Database.Indexing
             var totalProcessedKeys = 0;
 
             var alreadySeen = new HashSet<IComparable>();
+            var executedTasksInfo = new ExecutedTasksInfo();
             transactionalStorage.Batch(actions =>
             {
                 while (context.RunIndexing && sp.Elapsed.TotalMinutes < 1)
                 {
-                    var processedKeys = ExecuteTask(indexIds, alreadySeen);
+                    var processedKeys = ExecuteTask(indexIds, executedTasksInfo);
                     if (processedKeys == 0)
                         break;
 
@@ -168,13 +169,25 @@ namespace Raven.Database.Indexing
             return count != 0;
         }
 
-        private int ExecuteTask(HashSet<int> indexIds, HashSet<IComparable> alreadySeen)
+        private class ExecutedTasksInfo
+        {
+            public ExecutedTasksInfo()
+            {
+                AlreadySeen = new HashSet<IComparable>();
+            }
+
+            public HashSet<IComparable> AlreadySeen { get; }
+
+            public bool SkipRemoveFromIndexTask { get; set; }
+        }
+
+        private int ExecuteTask(HashSet<int> indexIds, ExecutedTasksInfo executedTasksInfo)
         {
             var processedKeys = 0;
 
             transactionalStorage.Batch(actions =>
             {
-                var task = GetApplicableTask(actions, alreadySeen);
+                var task = GetApplicableTask(actions, executedTasksInfo);
                 if (task == null)
                 {
                     if (Log.IsDebugEnabled)
@@ -257,17 +270,24 @@ namespace Raven.Database.Indexing
             return processedKeys;
         }
 
-        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, HashSet<IComparable> alreadySeen)
+        private DatabaseTask GetApplicableTask(IStorageActionsAccessor actions, ExecutedTasksInfo executedTasksInfo)
         {
             var disabledIndexIds = context.IndexStorage.GetDisabledIndexIds();
 
-            var removeFromIndexTasks = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
-                disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
-            if (removeFromIndexTasks != null)
-                return removeFromIndexTasks;
+            if (executedTasksInfo.SkipRemoveFromIndexTask == false)
+            {
+                var removeFromIndexTask = actions.Tasks.GetMergedTask<RemoveFromIndexTask>(
+                    disabledIndexIds, context.IndexStorage.Indexes, executedTasksInfo.AlreadySeen);
+                if (removeFromIndexTask != null)
+                    return removeFromIndexTask;
+            }
+
+            // there no more RemoveFromIndexTask tasks
+            // we can skip searching for them in the next iteration
+            executedTasksInfo.SkipRemoveFromIndexTask = true;
 
             return actions.Tasks.GetMergedTask<TouchReferenceDocumentIfChangedTask>(
-                disabledIndexIds, context.IndexStorage.Indexes, alreadySeen);
+                disabledIndexIds, context.IndexStorage.Indexes, executedTasksInfo.AlreadySeen);
         }
 
         protected override void FlushAllIndexes()
