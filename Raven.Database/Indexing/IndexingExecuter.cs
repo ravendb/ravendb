@@ -132,7 +132,7 @@ namespace Raven.Database.Indexing
             var executedTasksInfo = new ExecutedTasksInfo();
             transactionalStorage.Batch(actions =>
             {
-                while (context.RunIndexing && sp.Elapsed.TotalMinutes < 1)
+                while (context.RunIndexing && sp.Elapsed.TotalSeconds < 10)
                 {
                     var processedKeys = ExecuteTask(indexIds, executedTasksInfo);
                     if (processedKeys == 0)
