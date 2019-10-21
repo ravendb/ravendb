@@ -75,7 +75,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void UpdateHugeDocuments(object state)
+        internal void UpdateHugeDocuments(object state)
         {
             try
             {
