@@ -553,9 +553,10 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        void IQueryBase<T, IAsyncGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
+            return this;
         }
 
         IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
@@ -678,30 +679,35 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        void IQueryBase<T, IAsyncDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
+            return this;
         }
 
 
-        void IQueryBase<T, IAsyncRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IAsyncGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IAsyncDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IAsyncRawDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
+            return this;
         }
 
         /// <inheritdoc />
@@ -729,6 +735,13 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CloseSubclause()
         {
             CloseSubclause();
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.NegateNext()
+        {
+            NegateNext();
             return this;
         }
 
