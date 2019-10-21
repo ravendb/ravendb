@@ -313,6 +313,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (assignedCores <= 0)
                 throw new ArgumentException("Assigned cores must be greater than 0!");
 
+            nodeUrl = nodeUrl.Trim();
             nodeUrl = UrlHelper.TryGetLeftPart(nodeUrl);
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
 
@@ -320,6 +321,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
             }
+
+            if (tag != null)
+                tag = tag.Trim();
 
             NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
