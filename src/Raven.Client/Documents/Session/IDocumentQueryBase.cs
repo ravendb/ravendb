@@ -25,13 +25,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Callback to get the results of the query
         /// </summary>
-        void AfterQueryExecuted(Action<QueryResult> action);
+        TSelf AfterQueryExecuted(Action<QueryResult> action);
 
 
         /// <summary>
         ///     Callback to get the results of the stream
         /// </summary>
-        void AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
+        TSelf AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
 
         /// <summary>
         ///     Allows you to modify the index query before it is sent to the server
@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Negate the next operation
         /// </summary>
-        void NegateNext();
+        TSelf NegateNext();
 
         /// <summary>
         ///     Simplified method for opening a new clause within the query

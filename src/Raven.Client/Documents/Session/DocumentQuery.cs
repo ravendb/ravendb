@@ -155,14 +155,16 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        void IQueryBase<T, IDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
+            return this;
         }
 
         IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
@@ -171,24 +173,28 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        void IQueryBase<T, IRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
+            return this;
         }
 
-        void IQueryBase<T, IRawDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
+            return this;
         }
 
         /// <inheritdoc />
@@ -202,6 +208,12 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.CloseSubclause()
         {
             CloseSubclause();
+            return this;
+        }
+
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.NegateNext()
+        {
+            NegateNext();
             return this;
         }
 
