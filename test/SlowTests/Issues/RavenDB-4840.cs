@@ -31,6 +31,8 @@ namespace SlowTests.Issues
                 database.HugeDocuments.AddIfDocIsHuge("orders/3-A", 30 * 1024 * 1024);
                 database.HugeDocuments.AddIfDocIsHuge("orders/4-A", 40 * 1024 * 1024);
 
+                database.HugeDocuments.UpdateHugeDocuments(null);
+
                 Assert.True(database.ConfigurationStorage.NotificationsStorage.GetPerformanceHintCount() > 0);
 
                 // now read directly from storage and verify 

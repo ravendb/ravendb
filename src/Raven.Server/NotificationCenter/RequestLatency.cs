@@ -49,7 +49,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private void UpdateRequestLatency(object state)
+        internal void UpdateRequestLatency(object state)
         {
             try
             {
