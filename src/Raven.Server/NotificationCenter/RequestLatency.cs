@@ -36,7 +36,7 @@ namespace Raven.Server.NotificationCenter
         {
             lock (_addHintSyncObj)
             {
-                if (_performanceHint != null)
+                if (_performanceHint == null)
                     _performanceHint = GetOrCreatePerformanceLatencies(out _details);
 
                 _details.Update(duration, action, query);
