@@ -13,7 +13,6 @@ using Xunit;
 namespace SlowTests.MailingList
 {
     public class LazyAggregationEmbedded : RavenTestBase
-
     {
         [Fact]
         public void Test()

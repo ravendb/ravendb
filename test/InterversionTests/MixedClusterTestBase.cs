@@ -19,11 +19,15 @@ using Raven.Server.Config;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace InterversionTests
 {
     public abstract class MixedClusterTestBase : InterversionTestBase
     {
+        protected MixedClusterTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
 
         protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {

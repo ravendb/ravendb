@@ -13,11 +13,16 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils.Enumerators;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public abstract class RavenDB_13972 : RavenTestBase
     {
+        protected RavenDB_13972(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         protected static async Task CanExportWithPulsatingReadTransaction_ActualTest(int numberOfUsers, int numberOfCountersPerUser, int numberOfRevisionsPerDocument,
             int numberOfOrders, int deleteUserFactor, DocumentStore storeToExport, string file, DocumentStore storeToImport, string fileAfterDeletions,
             DocumentStore storeToAfterDeletions)
