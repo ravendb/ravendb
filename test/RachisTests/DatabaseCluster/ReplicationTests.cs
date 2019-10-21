@@ -668,7 +668,7 @@ namespace RachisTests.DatabaseCluster
                         var cv = DocumentsStorage.GetDatabaseChangeVector(context);
 
                         return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
-            }
+                    }
                 }, expected: true, timeout: 60000));
             }
 
@@ -772,7 +772,24 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                Assert.Throws<AuthorizationException>(() => WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
+                var value = WaitForValue(() =>
+                {
+                    try
+                    {
+                        using (var session = store2.OpenSession())
+                        {
+                            var user = session.Load<User>("users/1");
+                        }
+
+                        return false;
+                    }
+                    catch (AuthorizationException)
+                    {
+                        return true;
+                    }
+                }, true);
+
+                Assert.True(value);
             }
         }
 

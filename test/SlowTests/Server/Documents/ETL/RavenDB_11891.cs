@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -78,7 +78,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -95,7 +95,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.ETL
                 }
             }
         }
-        
+
         [Theory]
         [InlineData(new string[0], true)]
         [InlineData(new[] { "Users", "Employees" }, false)]
@@ -134,16 +134,16 @@ function deleteDocumentsBehavior(docId, collection) {
                     {
                         Name = "Joe"
                     }, "users/1");
-                    
+
                     session.Store(new Employee()
                     {
                         FirstName = "Doe"
                     }, "employees/1");
-                    
+
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -152,7 +152,7 @@ function deleteDocumentsBehavior(docId, collection) {
                 }
 
                 etlDone.Reset();
-                
+
                 using (var session = src.OpenSession())
                 {
                     session.Delete("users/1");
@@ -163,7 +163,7 @@ function deleteDocumentsBehavior(docId, collection) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -179,7 +179,7 @@ function deleteDocumentsBehavior(docId, collection) {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new []{"Employees"}, script:
+                AddEtl(src, dest, collections: new[] { "Employees" }, script:
                     @"
 function deleteDocumentsOfEmployeesBehavior(docId) {    
     var deletionCheck = load('DeletionLocalOnly/' + docId);
@@ -203,7 +203,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -221,7 +221,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.False(etlDone.Wait(TimeSpan.FromSeconds(3)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -284,7 +284,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -302,7 +302,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
