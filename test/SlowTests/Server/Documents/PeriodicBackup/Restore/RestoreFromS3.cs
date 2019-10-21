@@ -254,12 +254,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             var defaultS3Settings = GetS3Settings();
             
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -431,12 +431,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         public async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key()
         {
             var defaultS3Settings = GetS3Settings();
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -522,14 +522,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             var defaultS3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()

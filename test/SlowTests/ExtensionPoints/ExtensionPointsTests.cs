@@ -266,7 +266,7 @@ exit 129";
             {
                 var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));
                 var keyArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, keyPath });
-                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, certPath });
+                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { scriptPath, certPath.ServerCertificatePath });
 
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExec)] = "bash";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
@@ -282,7 +282,7 @@ exit 129";
             {
                 var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
                 var keyArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, keyPath });
-                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, certPath });
+                var certArgs = CommandLineArgumentEscaper.EscapeAndConcatenate(new List<string> { "-NoProfile", scriptPath, certPath.ServerCertificatePath });
 
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExec)] = "powershell";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
@@ -327,7 +327,7 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = new X509Certificate2(certPath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                serverCertificate = new X509Certificate2(certPath.ServerCertificatePath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
             }
             catch (CryptographicException e)
             {

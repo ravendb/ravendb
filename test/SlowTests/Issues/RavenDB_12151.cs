@@ -119,12 +119,12 @@ namespace SlowTests.Issues
         [Fact]
         public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
-            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
+            string dbName = SetupEncryptedDatabase(out var certificates, out var _);
 
             using (var store = GetDocumentStore(new Options()
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 Path = NewDataPath(),
                 ModifyDatabaseRecord = r =>
@@ -241,14 +241,14 @@ namespace SlowTests.Issues
             public SimpleIndex()
             {
                 Map = orders => from order in orders
-                    from item in order.Lines
-                    select new
-                    {
-                        order.Company,
-                        order.Employee,
-                        item.Product,
-                        item.ProductName
-                    };
+                                from item in order.Lines
+                                select new
+                                {
+                                    order.Company,
+                                    order.Employee,
+                                    item.Product,
+                                    item.ProductName
+                                };
             }
         }
 
@@ -272,28 +272,28 @@ namespace SlowTests.Issues
             public SimpleIndex32()
             {
                 Map = orders => from order in orders
-                    from item in order.Lines
-                    select new
-                    {
-                        Company = order.Company,
-                        Employee = order.Employee,
-                        Product = item.Product,
-                        ProductName = item.ProductName,
-                        Count = 1,
-                        Total = ((item.Quantity * item.PricePerUnit) * (1 - item.Discount))
-                    };
+                                from item in order.Lines
+                                select new
+                                {
+                                    Company = order.Company,
+                                    Employee = order.Employee,
+                                    Product = item.Product,
+                                    ProductName = item.ProductName,
+                                    Count = 1,
+                                    Total = ((item.Quantity * item.PricePerUnit) * (1 - item.Discount))
+                                };
 
                 Reduce = results => from result in results
-                    group result by new { result.Company, result.Employee, result.Product, result.ProductName } into g
-                    select new
-                    {
-                        Company = g.Key.Company,
-                        Employee = g.Key.Employee,
-                        Product = g.Key.Product,
-                        ProductName = g.Key.ProductName,
-                        Count = g.Sum(x => x.Count),
-                        Total = g.Sum(x => x.Total)
-                    };
+                                    group result by new { result.Company, result.Employee, result.Product, result.ProductName } into g
+                                    select new
+                                    {
+                                        Company = g.Key.Company,
+                                        Employee = g.Key.Employee,
+                                        Product = g.Key.Product,
+                                        ProductName = g.Key.ProductName,
+                                        Count = g.Sum(x => x.Count),
+                                        Total = g.Sum(x => x.Total)
+                                    };
             }
         }
     }

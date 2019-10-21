@@ -23,9 +23,9 @@ namespace FastTests.Client
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                var certificates = SetupServerAuthentication();
+                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite
                 });
@@ -43,9 +43,9 @@ namespace FastTests.Client
                     for (int i = 0; i < 1000; i++)
                     {
                         await bulkInsert.StoreAsync(new FooBar()
-                            {
-                                Name = "foobar/" + i
-                            }, "FooBars/" + i);
+                        {
+                            Name = "foobar/" + i
+                        }, "FooBars/" + i);
                     }
                 }
 
@@ -91,7 +91,7 @@ namespace FastTests.Client
 
                 store.GetRequestExecutor(store.Database).ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-                var getDocumentCommand = new GetDocumentsCommand(new[] {"FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A"}, includes: null, metadataOnly: false);
+                var getDocumentCommand = new GetDocumentsCommand(new[] { "FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A" }, includes: null, metadataOnly: false);
 
                 store.GetRequestExecutor(store.Database).Execute(getDocumentCommand, context);
 

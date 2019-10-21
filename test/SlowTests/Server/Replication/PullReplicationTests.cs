@@ -348,8 +348,11 @@ namespace SlowTests.Server.Replication
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
-            var hubCertPath = SetupServerAuthentication(hubSettings, createNew: true);
-            var sinkCertPath = SetupServerAuthentication(sinkSettings, createNew: true);
+            var hubCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var hubCerts = SetupServerAuthentication(hubSettings, certificates: hubCertificates);
+
+            var sinkCertificates = GenerateAndSaveSelfSignedCertificate(createNew: true);
+            var sinkCerts = SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
 
             var hubDB = GetDatabaseName();
             var sinkDB = GetDatabaseName();
@@ -358,25 +361,22 @@ namespace SlowTests.Server.Replication
             var hubServer = GetNewServer(new ServerCreationOptions{CustomSettings = hubSettings});
             var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings});
 
-            var hubAdminCert = new X509Certificate2(hubCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
-            var sinkAdminCert = new X509Certificate2(sinkCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
-
             var dummy = GenerateAndSaveSelfSignedCertificate(true);
-            var pullReplicationCertificate = new X509Certificate2(dummy, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
+            var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
-            await PutCertificateInHub(pullReplicationName, hubServer, hubAdminCert, hubDB, pullReplicationCertificate);
+            await PutCertificateInHub(pullReplicationName, hubServer, hubCerts.ServerCertificate.Value, hubDB, pullReplicationCertificate);
 
             using (var hubStore = GetDocumentStore(new Options
             {
-                ClientCertificate = hubAdminCert,
+                ClientCertificate = hubCerts.ServerCertificate.Value,
                 Server = hubServer,
                 CreateDatabase = false,
                 ModifyDatabaseName = _ => hubDB
             }))
             using (var sinkStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkAdminCert,
+                ClientCertificate = sinkCerts.ServerCertificate.Value,
                 Server = sinkServer,
                 ModifyDatabaseName = _ => sinkDB
             }))

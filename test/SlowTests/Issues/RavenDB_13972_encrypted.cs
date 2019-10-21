@@ -19,12 +19,12 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             var fileAfterDeletions = GetTempFileName();
 
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var storeToExport = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -53,12 +53,12 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public void CanStreamDocumentsWithPulsatingReadTransaction(int numberOfUsers, int numberOfOrders, int deleteUserFactor)
         {
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -76,12 +76,12 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -99,12 +99,12 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
