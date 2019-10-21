@@ -441,14 +441,11 @@ namespace Tests.Infrastructure
             int numberOfNodes,
             bool shouldRunInMemory = true,
             int? leaderIndex = null,
-            bool createNewCert = false,
-            string serverCertPath = null,
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false)
         {
-            return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, createNewCert, serverCertPath, customSettings, customSettingsList,
-                watcherCluster);
+            return await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList,                watcherCluster);
         }
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftCluster(
@@ -456,8 +453,6 @@ namespace Tests.Infrastructure
             bool shouldRunInMemory = true,
             int? leaderIndex = null,
             bool useSsl = false,
-            bool createNewCert = false,
-            string serverCertPath = null,
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false)
@@ -495,8 +490,7 @@ namespace Tests.Infrastructure
                 if (useSsl)
                 {
                     serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                    var shouldCreateNewCert = createNewCert && i == 0;
-                    SetupServerAuthentication(customSettings, serverUrl, createNew: shouldCreateNewCert, serverCertPath: serverCertPath);
+                    SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
@@ -552,9 +546,9 @@ namespace Tests.Infrastructure
             return (clustersServers, leader);
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, string serverCertPath = null, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null)
         {
-            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, serverCertPath: serverCertPath, customSettings: customSettings, customSettingsList: customSettingsList)).Leader;
+            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList)).Leader;
         }
 
         protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0)

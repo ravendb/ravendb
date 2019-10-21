@@ -15,10 +15,10 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task ChangesWithAuthentication()
         {
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });

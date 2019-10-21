@@ -15,12 +15,12 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_8451: RavenTestBase
+    public class RavenDB_8451 : RavenTestBase
     {
         [Fact64Bit]
         public async Task CanRecoverEncryptedDatabase()
         {
-            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var masterKey);
+            string dbName = SetupEncryptedDatabase(out var certificates, out var masterKey);
 
             var dbPath = NewDataPath(prefix: Guid.NewGuid().ToString());
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -29,8 +29,8 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options()
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = dbPath
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
 
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
             }
-           
+
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {
                 LoggingMode = Sparrow.Logging.LogMode.None,
@@ -52,12 +52,12 @@ namespace SlowTests.Issues
             {
                 recovery.Execute(TextWriter.Null, CancellationToken.None);
             }
-            
+
 
             using (var store = GetDocumentStore(new Options()
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
             }))
             {
                 var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
