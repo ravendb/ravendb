@@ -9,6 +9,7 @@ using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
+using Xunit.Abstractions;
 using Constants = Voron.Global.Constants;
 
 namespace FastTests.Voron
@@ -23,13 +24,13 @@ namespace FastTests.Voron
 
         protected ByteStringContext Allocator { get; } = new ByteStringContext(SharedMultipleUseFlag.None);
 
-        protected StorageTest(StorageEnvironmentOptions options)
+        protected StorageTest(StorageEnvironmentOptions options, ITestOutputHelper output) : base(output)
         {
             Options = options;
             _storageEnvironment = new Lazy<StorageEnvironment>(() => new StorageEnvironment(Options), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
-        protected StorageTest()
+        protected StorageTest(ITestOutputHelper output) : base(output)
         {
             IOExtensions.DeleteDirectory(DataDir);
             Options = StorageEnvironmentOptions.CreateMemoryOnly();

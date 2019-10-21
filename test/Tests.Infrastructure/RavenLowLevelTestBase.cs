@@ -17,6 +17,8 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
+
 // ReSharper disable ExplicitCallerInfoArgument
 
 namespace FastTests
@@ -24,6 +26,10 @@ namespace FastTests
     public abstract class RavenLowLevelTestBase : TestBase
     {
         private readonly List<string> _databases = new List<string>();
+
+        protected RavenLowLevelTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
 
         protected static void WaitForIndexMap(Index index, long etag)
         {

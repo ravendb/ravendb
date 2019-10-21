@@ -25,12 +25,17 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace FastTests.Server.Replication
 {
     public class ReplicationTestBase : ClusterTestBase
     {
+        public ReplicationTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         protected void EnsureReplicating(DocumentStore src, DocumentStore dst)
         {
             var id = "marker/" + Guid.NewGuid();

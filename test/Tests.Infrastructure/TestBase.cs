@@ -29,6 +29,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests
 {
@@ -107,6 +108,10 @@ namespace FastTests
 
             Console.WriteLine("Max number of concurrent tests is: " + maxNumberOfConcurrentTests);
             ConcurrentTestsSemaphore = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
+        }
+
+        protected TestBase(ITestOutputHelper output) : base(output)
+        {
         }
 
         protected string GetDatabaseName([CallerMemberName] string caller = null)
@@ -603,7 +608,7 @@ namespace FastTests
 
         protected abstract void Dispose(ExceptionAggregator exceptionAggregator);
 
-        public virtual void Dispose()
+        public override void Dispose()
         {
             GC.SuppressFinalize(this);
 

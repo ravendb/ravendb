@@ -24,6 +24,7 @@ using Sparrow.Json;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
@@ -34,6 +35,10 @@ namespace Tests.Infrastructure
         {
             using (var currentProcess = Process.GetCurrentProcess())
                 Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {currentProcess.Id}.");
+        }
+
+        protected ClusterTestBase(ITestOutputHelper output) : base(output)
+        {
         }
 
         private int _electionTimeoutInMs = 300;

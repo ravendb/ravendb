@@ -6,6 +6,7 @@ using System.Text;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
@@ -23,6 +24,10 @@ namespace FastTests.Voron.Tables
                 Slice.From(ctx, "Etags", ByteStringType.Immutable, out EtagsSlice);
                 Slice.From(ctx, "Etag&Collection", ByteStringType.Immutable, out EtagAndCollectionSlice);
             }
+        }
+
+        public TableStorageTest(ITestOutputHelper output) : base(output)
+        {
         }
 
         protected override void Configure(StorageEnvironmentOptions options)

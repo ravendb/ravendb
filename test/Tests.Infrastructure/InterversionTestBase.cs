@@ -18,11 +18,16 @@ using Raven.Server.Config;
 using Raven.Server.Utils;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Tests.Infrastructure
 {
     public abstract class InterversionTestBase : ClusterTestBase
     {
+        protected InterversionTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         public class ProcessNode
         {
             public string Version;

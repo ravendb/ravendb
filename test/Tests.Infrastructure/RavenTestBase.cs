@@ -39,12 +39,17 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public class RavenTestBase : TestBase
+    public abstract class RavenTestBase : TestBase
     {
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
+
+        protected RavenTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
