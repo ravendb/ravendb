@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -15,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             BufferPosition = 0;
         }
 
-        public AttachmentsDetails AttachmentAdvancedDetails;
+        public List<AttachmentStreamDetails> AttachmentStreamDetails;
 
         public byte[] Buffer;
         public int BufferPosition;
@@ -64,10 +65,10 @@ namespace Raven.Client.Documents.Operations.Attachments
             if (offset + count > buffer.Length)
                 throw new ArgumentException($"The sum of {nameof(offset)} and {nameof(count)} is larger than the {nameof(buffer)} length.");
 
-            if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
+            if (_info.AttachmentStreamDetails[_index].Read == _size)
             {
                 Debug.Assert(_info.CurrentIndex > _index,
-                    $"_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size && _info.CurrentIndex > _index.  {GetDebugInfo(count)}");
+                    $"_info.AttachmentStreamDetails[_index].Read == _size && _info.CurrentIndex > _index.  {GetDebugInfo(count)}");
                 return 0;
             }
 
@@ -80,12 +81,12 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             if (startPosition > _info.CurrentPosition)
             {
-                Debug.Assert(_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == 0, "Cannot read part of attachment.");
+                Debug.Assert(_info.AttachmentStreamDetails[_index].Read == 0, "Cannot read part of attachment.");
                 var toSkip = GetPositionFrom(_info.CurrentIndex);
-                if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_info.CurrentIndex].Read > 0)
+                if (_info.AttachmentStreamDetails[_info.CurrentIndex].Read > 0)
                 {
                     // merged attachment
-                    toSkip -= _info.AttachmentAdvancedDetails.AttachmentsMetadata[_info.CurrentIndex].Read;
+                    toSkip -= _info.AttachmentStreamDetails[_info.CurrentIndex].Read;
                 }
 
                 _info.CurrentPosition = startPosition;
@@ -106,7 +107,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             if (startPosition == _info.CurrentPosition)
             {
-                if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Size)
+                if (_info.AttachmentStreamDetails[_index].Read == _info.AttachmentStreamDetails[_index].Size)
                 {
                     // consumed stream
                     return 0;
@@ -116,11 +117,11 @@ namespace Raven.Client.Documents.Operations.Attachments
                 if (read == 0)
                     throw new EndOfStreamException($"You have reached the end of the stream. {GetDebugInfo(count)}");
 
-                _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += read;
-                if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
+                _info.AttachmentStreamDetails[_index].Read += read;
+                if (_info.AttachmentStreamDetails[_index].Read == _size)
                 {
                     Debug.Assert(_info.CurrentIndex == _index,
-                        $"_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size && _info.CurrentIndex == _index. {GetDebugInfo(count)}");
+                        $"_info.AttachmentStreamDetails[_index].Read == _size && _info.CurrentIndex == _index. {GetDebugInfo(count)}");
                     _info.CurrentIndex++;
                 }
 
@@ -154,7 +155,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     Array.Copy(_info.Buffer, _info.BufferPosition, buffer, offset, bufferRead);
 
                     _info.CurrentPosition += bufferRead;
-                    _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += bufferRead;
+                    _info.AttachmentStreamDetails[_index].Read += bufferRead;
 
                     // continue write to buffer from the base stream
                     _merged = true;
@@ -167,9 +168,9 @@ namespace Raven.Client.Documents.Operations.Attachments
 
                 _info.CurrentPosition += count;
                 _info.BufferPosition += count;
-                _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read += count;
+                _info.AttachmentStreamDetails[_index].Read += count;
 
-                if (_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == _size)
+                if (_info.AttachmentStreamDetails[_index].Read == _size)
                     _info.CurrentIndex = _index + 1;
 
                 return count;
@@ -177,7 +178,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             if (startPosition > _info.CurrentPosition)
             {
-                Debug.Assert(_info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read == 0, "Cannot read part of attachment.");
+                Debug.Assert(_info.AttachmentStreamDetails[_index].Read == 0, "Cannot read part of attachment.");
                 if (startPosition >= _info.Buffer.Length)
                 {
                     var mergedStartPosition = GetMergedPositionAndIndex(out var mergedIndex);
@@ -185,7 +186,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     _info.CurrentPosition += bufferRead;
                     _info.CurrentIndex = mergedIndex;
 
-                    _info.AttachmentAdvancedDetails.AttachmentsMetadata[mergedIndex].Read = _info.Buffer.Length - mergedStartPosition;
+                    _info.AttachmentStreamDetails[mergedIndex].Read = _info.Buffer.Length - mergedStartPosition;
                     _info.BufferConsumed = true;
                 }
                 else
@@ -206,20 +207,20 @@ namespace Raven.Client.Documents.Operations.Attachments
             var start = 0L;
             for (int i = from; i < _index; i++)
             {
-                start += _info.AttachmentAdvancedDetails.AttachmentsMetadata[i].Size;
+                start += _info.AttachmentStreamDetails[i].Size;
             }
 
-            return start + _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Read;
+            return start + _info.AttachmentStreamDetails[_index].Read;
         }
 
         private int GetMergedPositionAndIndex(out int mergedIndex)
         {
             var start = _info.BufferPosition;
             var from = _info.CurrentIndex;
-            while (start + _info.AttachmentAdvancedDetails.AttachmentsMetadata[from].Size <= _info.Buffer.Length)
+            while (start + _info.AttachmentStreamDetails[from].Size <= _info.Buffer.Length)
             {
                 // _info.Buffer.Length is int, safe to cast to int here
-                start += (int)_info.AttachmentAdvancedDetails.AttachmentsMetadata[from].Size;
+                start += (int)_info.AttachmentStreamDetails[from].Size;
                 from++;
             }
 
@@ -230,11 +231,12 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         private string GetDebugInfo(int count)
         {
-            var s = $"\nCurrentPosition is {_info.CurrentPosition} / {_info.AttachmentAdvancedDetails.AttachmentsMetadata.Sum(x => x.Size)}, CurrentIndex: {_info.CurrentIndex}, bufferConsumed: {_info.BufferConsumed}, count: {count}. Requested attachment name: {_name}, startPosition: {GetPositionFrom()} index: {_index}, merged: {_merged}.";
+            var s = $"\nCurrentPosition is {_info.CurrentPosition} / {_info.AttachmentStreamDetails.Sum(x => x.Size)}, CurrentIndex: {_info.CurrentIndex}, bufferConsumed: {_info.BufferConsumed}, count: {count}. Requested attachment name: {_name}, startPosition: {GetPositionFrom()} index: {_index}, merged: {_merged}.";
             s += "\nAttachments:";
-            foreach (var attachment in _info.AttachmentAdvancedDetails.AttachmentsMetadata)
+            for (var index = 0; index < _info.AttachmentStreamDetails.Count; index++)
             {
-                s += $"\n Name: {attachment.Name}, Index: {attachment.Index}, Read/Size: {new Sparrow.Size(attachment.Read, SizeUnit.Bytes)} / {new Sparrow.Size(attachment.Size, SizeUnit.Bytes)}";
+                var attachment = _info.AttachmentStreamDetails[index];
+                s += $"\n Index: {index}, Read/Size: {new Size(attachment.Read, SizeUnit.Bytes)} / {new Size(attachment.Size, SizeUnit.Bytes)}";
             }
 
             return s;
@@ -251,7 +253,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             get
             {
                 CheckDisposed();
-                return _info.AttachmentAdvancedDetails.AttachmentsMetadata[_index].Size;
+                return _info.AttachmentStreamDetails[_index].Size;
             }
         }
 

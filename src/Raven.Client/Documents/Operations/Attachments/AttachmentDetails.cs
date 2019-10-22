@@ -1,16 +1,9 @@
-﻿using System.Collections.Generic;
-
-namespace Raven.Client.Documents.Operations.Attachments
+﻿namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class AttachmentsDetails
+    internal class AttachmentStreamDetails
     {
-        public List<AttachmentAdvancedDetails> AttachmentsMetadata;
-    }
-
-    public class AttachmentAdvancedDetails : AttachmentDetails
-    {
-        public int Index;
-        public int Read = default;
+        public int Read;
+        public long Size;
     }
 
     public class AttachmentDetails : AttachmentName
@@ -25,5 +18,17 @@ namespace Raven.Client.Documents.Operations.Attachments
         public string Hash;
         public string ContentType;
         public long Size;
+    }
+
+    public class AttachmentRequest
+    {
+        public AttachmentRequest(string documentId, string name)
+        {
+            DocumentId = documentId;
+            Name = name;
+        }
+
+        public string Name { get; }
+        public string DocumentId { get; }
     }
 }

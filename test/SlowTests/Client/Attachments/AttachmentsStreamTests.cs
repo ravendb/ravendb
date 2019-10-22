@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -42,7 +43,7 @@ namespace SlowTests.Client.Attachments
                     using (var session = store.OpenSession())
                     {
                         var user = session.Load<User>(id);
-                        var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                        var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                         var memoryStream = new MemoryStream();
 
@@ -87,7 +88,7 @@ namespace SlowTests.Client.Attachments
                     using (var session = store.OpenAsyncSession())
                     {
                         var user = await session.LoadAsync<User>(id);
-                        var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                        var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                         var attachmentsEnumerator = await session.Advanced.Attachments.GetAsync(attachmentsNames);
                         var memoryStream = new MemoryStream();
 
@@ -141,7 +142,7 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>(id);
-                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
@@ -204,7 +205,7 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = session.Load<User>(id);
 
-                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     Random rndRnd = new Random();
 
@@ -279,7 +280,7 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = session.Load<User>(id);
 
-                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
@@ -337,7 +338,7 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>(id);
-                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                     var attachmentsEnumerator = await session.Advanced.Attachments.GetAsync(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
@@ -345,7 +346,7 @@ namespace SlowTests.Client.Attachments
                         var attachmentResult = attachmentsEnumerator.Current;
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.CopyTo(memoryStream);
+                        await attachmentResult.CopyToAsync(memoryStream);
 
                         memoryStream.Position = 0;
 
@@ -399,7 +400,7 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>(id);
-                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new KeyValuePair<string, string>(id, x.Name));
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     int i = 0;
                     while (attachmentsEnumerator.MoveNext())
@@ -450,21 +451,21 @@ namespace SlowTests.Client.Attachments
 
                     using (var session = store.OpenSession())
                     {
-                        var attachmentsEnumerator = session.Advanced.Attachments.Get(new KeyValuePair<string, string>[] { });
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(new AttachmentRequest[] { });
 
                         Assert.False(attachmentsEnumerator.MoveNext());
                     }
 
                     using (var session = store.OpenSession())
                     {
-                        var attachmentsEnumerator = session.Advanced.Attachments.Get(new[] { new KeyValuePair<string, string>("users/1", "1") });
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(new[] { new AttachmentRequest("users/1", "1") });
 
                         Assert.False(attachmentsEnumerator.MoveNext());
                     }
 
                     using (var session = store.OpenSession())
                     {
-                        var attachmentsEnumerator = session.Advanced.Attachments.Get(new[] { new KeyValuePair<string, string>("users/2", "1") });
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(new[] { new AttachmentRequest("users/2", "1") });
 
                         Assert.False(attachmentsEnumerator.MoveNext());
                     }
@@ -473,9 +474,9 @@ namespace SlowTests.Client.Attachments
                     {
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(new[]
                         {
-                            new KeyValuePair<string, string>("users/1", "1"),
-                            new KeyValuePair<string, string>("users/1", $"{attachmentName}"),
-                            new KeyValuePair<string, string>("users/2", "1")
+                            new AttachmentRequest("users/1", "1"),
+                            new AttachmentRequest("users/1", $"{attachmentName}"),
+                            new AttachmentRequest("users/2", "1")
                         });
                         attachmentsEnumerator.MoveNext();
                         Assert.NotNull(attachmentsEnumerator.Current);

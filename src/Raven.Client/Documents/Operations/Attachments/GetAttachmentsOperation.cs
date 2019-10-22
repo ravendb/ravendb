@@ -19,9 +19,9 @@ namespace Raven.Client.Documents.Operations.Attachments
     public class GetAttachmentsOperation : IOperation<IEnumerator<AttachmentEnumeratorResult>>
     {
         private readonly AttachmentType _type;
-        private readonly IEnumerable<KeyValuePair<string, string>> _attachments;
+        private readonly IEnumerable<AttachmentRequest> _attachments;
 
-        public GetAttachmentsOperation(IEnumerable<KeyValuePair<string, string>> attachments, AttachmentType type)
+        public GetAttachmentsOperation(IEnumerable<AttachmentRequest> attachments, AttachmentType type)
         {
             _type = type;
             _attachments = attachments;
@@ -32,23 +32,24 @@ namespace Raven.Client.Documents.Operations.Attachments
             return new GetAttachmentsCommand(context, _attachments, _type);
         }
 
-        private class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
+        internal class GetAttachmentsCommand : RavenCommand<IEnumerator<AttachmentEnumeratorResult>>
         {
             private readonly JsonOperationContext _context;
             private readonly AttachmentType _type;
-            private readonly IEnumerable<KeyValuePair<string, string>> _attachments;
+            internal IEnumerable<AttachmentRequest> Attachments { get; }
+            internal List<AttachmentDetails> AttachmentsMetadata { get; } = new List<AttachmentDetails>();
 
-            public GetAttachmentsCommand(JsonOperationContext context, IEnumerable<KeyValuePair<string, string>> attachments, AttachmentType type)
+            public GetAttachmentsCommand(JsonOperationContext context, IEnumerable<AttachmentRequest> attachments, AttachmentType type)
             {
                 _context = context;
                 _type = type;
-                _attachments = attachments;
+                Attachments = attachments;
                 ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments/list";
+                url = $"{node.Url}/databases/{node.Database}/attachments/bulk";
 
                 var request = new HttpRequestMessage
                 {
@@ -59,26 +60,26 @@ namespace Raven.Client.Documents.Operations.Attachments
                         {
                             writer.WriteStartObject();
 
-                            writer.WritePropertyName("Type");
+                            writer.WritePropertyName(nameof(AttachmentType));
                             writer.WriteString(_type.ToString());
                             writer.WriteComma();
 
-                            writer.WritePropertyName("Attachments");
+                            writer.WritePropertyName(nameof(Attachments));
 
                             writer.WriteStartArray();
                             var first = true;
-                            foreach (var kvp in _attachments)
+                            foreach (var attachment in Attachments)
                             {
                                 if (first == false)
                                     writer.WriteComma();
                                 first = false;
 
                                 writer.WriteStartObject();
-                                writer.WritePropertyName("Key");
-                                writer.WriteString(kvp.Key);
+                                writer.WritePropertyName(nameof(AttachmentRequest.DocumentId));
+                                writer.WriteString(attachment.DocumentId);
                                 writer.WriteComma();
-                                writer.WritePropertyName("Value");
-                                writer.WriteString(kvp.Value);
+                                writer.WritePropertyName(nameof(AttachmentRequest.Name));
+                                writer.WriteString(attachment.Name);
                                 writer.WriteEndObject();;
 
                             }
@@ -94,8 +95,8 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                AttachmentsDetails attachmentsMetadata;
                 AttachmentsStreamInfo streamInfo;
+                var streamDetails = new List<AttachmentStreamDetails>();
                 var state = new JsonParserState();
                 Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
@@ -111,26 +112,35 @@ namespace Raven.Client.Documents.Operations.Attachments
                         throw new Exception($"Expected token {nameof(JsonParserToken.StartObject)}, but got {nameof(state.CurrentTokenType)}.");
 
                     await UnmanagedJsonParserHelper.ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
-
-                    BlittableJsonReaderObject data = builder.CreateReader();
-                    attachmentsMetadata = JsonDeserializationClient.AttachmentAdvancedDetails(data);
+                    using (var data = builder.CreateReader())
+                    {
+                        if (data.TryGetMember(nameof(AttachmentsMetadata), out object obj) && obj is BlittableJsonReaderArray bjra)
+                        {
+                            foreach (BlittableJsonReaderObject e in bjra)
+                            {
+                                var cur = JsonDeserializationClient.AttachmentDetails(e);
+                                AttachmentsMetadata.Add(cur);
+                                streamDetails.Add(new AttachmentStreamDetails
+                                {
+                                    Read = 0,
+                                    Size = cur.Size
+                                });
+                            }
+                        }
+                    }
 
                     var bufferSize = parser.BufferSize - parser.BufferOffset;
                     var tmpBuffer = new byte[bufferSize];
                     Array.Copy(buffer.Buffer.Array ?? throw new InvalidOperationException(), buffer.Buffer.Offset + parser.BufferOffset, tmpBuffer, 0, bufferSize);
 
-                    streamInfo = new AttachmentsStreamInfo
-                    {
-                        AttachmentAdvancedDetails = attachmentsMetadata,
-                        Buffer = tmpBuffer
-                    };
+                    streamInfo = new AttachmentsStreamInfo { AttachmentStreamDetails = streamDetails, Buffer = tmpBuffer };
                 }
 
-                Result = attachmentsMetadata.AttachmentsMetadata.Select(attachment => new AttachmentEnumeratorResult(new AttachmentsStream(stream, attachment.Name, attachment.Index, attachment.Size, streamInfo))
-                {
-                    Details = attachment
-                }).GetEnumerator();
-
+                Result = AttachmentsMetadata.Select(
+                    (attachment, index) => new AttachmentEnumeratorResult(new AttachmentsStream(stream, attachment.Name, index, attachment.Size, streamInfo))
+                    {
+                        Details = attachment
+                    }).GetEnumerator();
 
                 return ResponseDisposeHandling.Manually;
             }

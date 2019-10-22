@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns Enumerator of KeyValuePairs of attachment name and stream.
         /// </summary>
-        IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<KeyValuePair<string, string>> attachments);
+        IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<AttachmentRequest> attachments);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.

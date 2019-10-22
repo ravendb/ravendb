@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
         }
 
-        public Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<KeyValuePair<string, string>> attachments, CancellationToken token = default)
+        public Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<AttachmentRequest> attachments, CancellationToken token = default)
         {
             var operation = new GetAttachmentsOperation(attachments, AttachmentType.Document);
             return Session.Operations.SendAsync(operation, SessionInfo, token);
