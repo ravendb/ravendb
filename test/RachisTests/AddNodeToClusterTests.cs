@@ -49,6 +49,22 @@ namespace RachisTests
         }
 
         [Fact]
+        public async Task ReAddWatcherNode()
+        {
+            var cluster = await CreateRaftCluster(2, watcherCluster: true);
+            var leader = cluster.Leader;
+            var watcher = cluster.Nodes.Single(x => x != leader);
+
+            await leader.ServerStore.RemoveFromClusterAsync(watcher.ServerStore.NodeTag);
+
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(watcher.WebUrl, watcher.ServerStore.NodeTag), ctx);
+            }
+        }
+
+        [Fact]
         public async Task PutDatabaseOnHealthyNodes()
         {
             var leader = await CreateRaftClusterAndGetLeader(5, leaderIndex: 0);
