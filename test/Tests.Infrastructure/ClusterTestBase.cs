@@ -58,17 +58,6 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task CreateAndWaitForClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
-        {
-            if (Servers.Count == 0)
-                throw new InvalidOperationException("You cannot create a database on an empty cluster...");
-
-            var databaseResult = CreateClusterDatabase(databaseName, store, replicationFactor);
-
-            Assert.True(databaseResult.RaftCommandIndex > 0); //sanity check                
-            await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
-        }
-
         protected static DatabasePutResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
         {
             return store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), replicationFactor));
@@ -372,69 +361,6 @@ namespace Tests.Infrastructure
         {
             await DisposeServerAndWaitForFinishOfDisposalAsync(serverToDispose);
             Servers.Remove(serverToDispose);
-        }
-
-        protected List<DocumentStore> GetStoresFromTopology(IReadOnlyList<ServerNode> topologyNodes)
-        {
-            var stores = new List<DocumentStore>();
-            var tokenToUrl = Servers.ToDictionary(x => x.ServerStore.NodeTag, x => x.WebUrl);
-            foreach (var node in topologyNodes)
-            {
-                string url;
-                if (!tokenToUrl.TryGetValue(node.ClusterTag, out url)) //precaution
-                    continue;
-
-                var store = new DocumentStore
-                {
-                    Database = node.Database,
-                    Urls = new[] { url },
-                    Conventions =
-                    {
-                        DisableTopologyUpdates = true
-                    }
-                };
-
-                //_toDispose.Add(store);
-
-                store.Initialize();
-                stores.Add(store);
-            }
-            return stores;
-        }
-
-        protected async Task<RavenServer> SetupRaftClusterOnExistingServers(params RavenServer[] servers)
-        {
-            RavenServer leader = null;
-            var numberOfNodes = servers.Length;
-            var serversToPorts = new Dictionary<RavenServer, string>();
-            var leaderIndex = _random.Next(0, numberOfNodes);
-            for (var i = 0; i < numberOfNodes; i++)
-            {
-                var server = servers[i];
-                serversToPorts.Add(server, server.WebUrl);
-                if (i == leaderIndex)
-                {
-                    server.ServerStore.EnsureNotPassive();
-                    leader = server;
-                    break;
-                }
-            }
-
-            for (var i = 0; i < numberOfNodes; i++)
-            {
-                if (i == leaderIndex)
-                {
-                    continue;
-                }
-                var follower = Servers[i];
-                // ReSharper disable once PossibleNullReferenceException
-                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
-                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
-            }
-            // ReSharper disable once PossibleNullReferenceException
-            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs),
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.LastStateChangeReason());
-            return leader;
         }
 
         protected async Task<(List<RavenServer> Nodes, RavenServer Leader)> CreateRaftClusterWithSsl(
