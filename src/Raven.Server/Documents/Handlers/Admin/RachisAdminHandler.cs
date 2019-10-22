@@ -314,6 +314,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 throw new ArgumentException("Assigned cores must be greater than 0!");
 
             nodeUrl = nodeUrl.Trim();
+            if (Uri.IsWellFormedUriString(nodeUrl, UriKind.Absolute) == false)
+                throw new InvalidOperationException($"Given node URL '{nodeUrl}' is not in a correct format.");
+
             nodeUrl = UrlHelper.TryGetLeftPart(nodeUrl);
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
 
@@ -337,10 +340,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     throw new InvalidOperationException(result.Error);
                 }
-                
+
                 // test connection from remote to destination
                 result = await ServerStore.TestConnectionFromRemote(requestExecutor, ctx, nodeUrl);
-                if(result.Success == false)
+                if (result.Success == false)
                     throw new InvalidOperationException(result.Error);
 
                 var infoCmd = new GetNodeInfoCommand();
@@ -488,7 +491,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                             }
                         }
-                        
+
                     }
 
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
