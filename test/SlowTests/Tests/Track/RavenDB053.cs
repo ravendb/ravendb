@@ -83,7 +83,7 @@ namespace SlowTests.Tests.Track
                 {
                     // Store two children
                     session.Store(new Child { Id = "B1", Name = "Thor Arne" });
-                    session.Store(new Child { Id = "B2", Name = "St�le" });
+                    session.Store(new Child { Id = "B2", Name = "Ståle" });
 
                     // Store four Transports
                     session.Store(new Transport { Id = "A1", ChildId = "B1" });
@@ -116,11 +116,11 @@ namespace SlowTests.Tests.Track
                     // skyssavtaler for B2
                     Assert.Equal("A3", transports[2].TransportId);
                     Assert.Equal("B2", transports[2].ChildId);
-                    Assert.Equal("St�le", transports[2].Name);
+                    Assert.Equal("Ståle", transports[2].Name);
 
                     Assert.Equal("A4", transports[3].TransportId);
                     Assert.Equal("B2", transports[3].ChildId);
-                    Assert.Equal("St�le", transports[3].Name);
+                    Assert.Equal("Ståle", transports[3].Name);
                 }
             }
         }

@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
                     Prices = new List<Price>()
                     {
                         new Price() {price = "10$"},
-                        new Price() {price = "8�"}
+                        new Price() {price = "8£"}
                     },
                     Subjects = new List<Subject>()
                     {

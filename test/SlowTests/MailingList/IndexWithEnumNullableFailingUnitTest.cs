@@ -296,7 +296,7 @@ namespace SlowTests.MailingList
             [System.ComponentModel.Description("Mongolian - Mongolia")]
             MongolianMongolia,
 
-            [System.ComponentModel.Description("NorwegianBokm�l) - Norway")]
+            [System.ComponentModel.Description("NorwegianBokmål) - Norway")]
             NorwegianBokmalNorway,
 
             [System.ComponentModel.Description("Norwegian (Nynorsk) - Norway")]
