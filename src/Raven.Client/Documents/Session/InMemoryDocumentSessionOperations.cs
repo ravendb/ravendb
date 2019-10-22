@@ -1884,7 +1884,6 @@ more responsive application.
                 if ((documentInfo.Entity == null) && (documentInfo.Document == null))
                     return false;
 
-                // todo check if we have counter includes or timeseries includes
                 if (includes == null)
                     continue;
 

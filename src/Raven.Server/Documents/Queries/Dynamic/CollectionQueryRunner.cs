@@ -198,8 +198,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                                 includeDocumentsCommand.Gather(document);
 
                             includeCountersCommand?.Fill(document);
+
+                            includeTimeSeriesCommand?.Fill(document);
                         }
-                        includeTimeSeriesCommand?.Fill(document);
 
                     }
                 }
