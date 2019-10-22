@@ -1,10 +1,15 @@
 ﻿using System;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class MultipleTrees : StorageTest
     {
+        public MultipleTrees(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateNewTree()
         {

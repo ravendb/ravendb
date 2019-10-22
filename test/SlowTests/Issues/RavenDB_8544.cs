@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8544 : RavenTestBase
     {
+        public RavenDB_8544(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Tombstone_cleaner_must_not_prevent_from_unloading_idle_database()
         {

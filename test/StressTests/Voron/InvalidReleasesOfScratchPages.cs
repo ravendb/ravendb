@@ -6,11 +6,16 @@ using FastTests;
 using FastTests.Voron;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Voron
 {
     public class InvalidReleasesOfScratchPages : StorageTest
     {
+        public InvalidReleasesOfScratchPages(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         protected override void Configure(StorageEnvironmentOptions options)
         {

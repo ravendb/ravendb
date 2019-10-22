@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class IndexWithSubProperty : RavenTestBase
     {
+        public IndexWithSubProperty(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IndexWithSubPropertyReturnAs_Property_SubProperty()
         {

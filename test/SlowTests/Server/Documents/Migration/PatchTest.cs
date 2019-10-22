@@ -6,11 +6,16 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public class PatchTest : SqlAwareTestBase
     {
+        public PatchTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NightlyBuildTheory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]

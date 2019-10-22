@@ -5,11 +5,16 @@ using System.Reflection;
 using FastTests.Voron;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Voron
 {
     public class PageSplitterStressTests : StorageTest
     {
+        public PageSplitterStressTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
         {

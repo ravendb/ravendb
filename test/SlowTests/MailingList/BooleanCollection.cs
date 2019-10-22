@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class BooleanCollection : RavenTestBase
     {
+        public BooleanCollection(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Message
         {
             public class Recipient

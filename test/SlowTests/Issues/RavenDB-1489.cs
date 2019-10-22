@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_1489 : RavenTestBase
     {
+        public RavenDB_1489(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Querying_index_with_condtional_count_should_work()
         {

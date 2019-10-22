@@ -2,11 +2,16 @@
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class TrackEntity : RavenTestBase
     {
+        public TrackEntity(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Deleting_Entity_That_Is_Not_Tracked_Should_Throw()
         {

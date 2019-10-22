@@ -3,11 +3,16 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public class OracleSchemaTest : SqlAwareTestBase
     {
+        public OracleSchemaTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [RequiresOracleSqlFact]
         public void CanFetchSchema()
         {

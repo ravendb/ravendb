@@ -1,15 +1,20 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AsyncSpatial : RavenTestBase
     {
+        public AsyncSpatial(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task SpatialIndexTest()
         {

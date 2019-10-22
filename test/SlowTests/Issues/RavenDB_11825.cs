@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11825 : RavenTestBase
     {
+        public RavenDB_11825(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TopologyCacheLocationIsSetToAppContextBaseDirectoryByDefault()
         {

@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -7,11 +7,16 @@ using Xunit;
 using Address = SlowTests.Core.Utils.Entities.Address;
 using Post = SlowTests.Core.Utils.Entities.Post;
 using User = SlowTests.Core.Utils.Entities.User;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.Querying
 {
     public class MoreLikeThis : RavenTestBase
     {
+        public MoreLikeThis(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseBasicMoreLikeThis()
         {

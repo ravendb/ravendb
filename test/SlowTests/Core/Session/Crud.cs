@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CoreTestServer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,6 +7,7 @@
 using System;
 using System.Dynamic;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Exceptions.Documents.Session;
@@ -19,6 +20,10 @@ namespace SlowTests.Core.Session
 {
     public class Crud : RavenTestBase
     {
+        public Crud(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanSaveAndLoad()
         {

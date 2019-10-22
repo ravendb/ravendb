@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
     public class IndexMerging : RavenTestBase
     {
+        public IndexMerging(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public string Id { get; set; }

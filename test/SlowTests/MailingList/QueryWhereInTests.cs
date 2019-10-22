@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class QueryWhereInTests : RavenTestBase
     {
+        public QueryWhereInTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Document
         {
             public string Id { get; set; }

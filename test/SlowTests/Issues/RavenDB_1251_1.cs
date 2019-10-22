@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_1251_1 : RavenTestBase
     {
+        public RavenDB_1251_1(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Foo
         {
             public TimeSpan Bar { get; set; }

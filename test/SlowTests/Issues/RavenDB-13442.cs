@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13442 : RavenTestBase
     {
+        public RavenDB_13442(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_project_with_two_loads_when_2nd_load_argument_defined_in_let_between_the_loads()
         {

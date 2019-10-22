@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3639.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_3639 : EtlTestBase
     {
+        public RavenDB_3639(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Docs_are_transformed_according_to_provided_collection_specific_scripts()
         {

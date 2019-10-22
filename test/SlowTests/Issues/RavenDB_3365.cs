@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3365.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,11 +13,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3365 : RavenTestBase
     {
+        public RavenDB_3365(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "RavenDB-4185")]
         public void index_pretty_printer_ignores_whitespaces()
         {

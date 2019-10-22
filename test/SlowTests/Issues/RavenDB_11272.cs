@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11272 : RavenTestBase
     {
+        public RavenDB_11272(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Create_empty_index_and_sort_by_id()
         {

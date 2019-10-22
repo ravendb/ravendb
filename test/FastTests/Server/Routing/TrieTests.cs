@@ -7,11 +7,16 @@
 using System.Linq;
 using Raven.Server.Routing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Routing
 {
     public class TrieTests : NoDisposalNeeded
     {
+        public TrieTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryTrie()
         {

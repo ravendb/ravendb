@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="OldIndexRunWhileNewIndexesAreRunning.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class OldIndexRunWhileNewIndexesAreRunning : RavenTestBase
     {
+        public OldIndexRunWhileNewIndexesAreRunning(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OneBigSave()
         {

@@ -1,10 +1,15 @@
 ﻿using System.IO;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class ItemCount : StorageTest
     {
+        public ItemCount(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ItemCountIsConsistentWithAdditionsAndRemovals()
         {

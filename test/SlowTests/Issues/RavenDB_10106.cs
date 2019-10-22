@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10106 : RavenTestBase
     {
+        public RavenDB_10106(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Index1 : AbstractIndexCreationTask<Company>
         {
             public Index1()

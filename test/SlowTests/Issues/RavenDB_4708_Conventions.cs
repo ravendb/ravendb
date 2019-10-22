@@ -15,11 +15,16 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4708_Conventions : NoDisposalNeeded
     {
+        public RavenDB_4708_Conventions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Sync_document_query_can_not_have_async_methods()
         {

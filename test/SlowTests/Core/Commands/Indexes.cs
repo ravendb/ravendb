@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client;
@@ -24,6 +25,10 @@ namespace SlowTests.Core.Commands
 {
     public class Indexes : RavenTestBase
     {
+        public Indexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanPutUpdateAndDeleteMapIndex()
         {

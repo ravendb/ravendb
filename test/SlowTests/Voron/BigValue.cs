@@ -3,11 +3,16 @@ using System.IO;
 using FastTests.Voron;
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class BigValues : StorageTest
     {
+        public BigValues(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

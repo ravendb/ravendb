@@ -5,11 +5,16 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class LoadIntoStream : RavenTestBase
     {
+        public LoadIntoStream(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanLoadByIdsIntoStream()
         {

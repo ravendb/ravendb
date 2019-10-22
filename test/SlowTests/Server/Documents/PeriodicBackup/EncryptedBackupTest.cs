@@ -16,11 +16,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class EncryptedBackupTest : RavenTestBase
     {
+        public EncryptedBackupTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {

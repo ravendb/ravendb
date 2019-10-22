@@ -1,10 +1,15 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class KeyLength : RavenTestBase
     {
+        public KeyLength(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

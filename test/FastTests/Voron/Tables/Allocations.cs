@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
     public class Allocations : TableStorageTest
     {
+        public Allocations(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public void IndexPagesWillBeNearby_64()
         {

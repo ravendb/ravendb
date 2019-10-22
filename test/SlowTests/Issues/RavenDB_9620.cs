@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9620:RavenTestBase
     {
+        public RavenDB_9620(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CreateServerWithIllegalAppdrivePath()
         {

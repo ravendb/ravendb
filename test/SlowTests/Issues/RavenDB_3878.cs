@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2233.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3878 : RavenTestBase
     {
+        public RavenDB_3878(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanHandle304InMultiGet()
         {

@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3302 : RavenTestBase
     {
+        public RavenDB_3302(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIndexAndQuery()
         {

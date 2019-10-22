@@ -6,11 +6,16 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public unsafe class Bugs : TableStorageTest
     {
+        public Bugs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public const int ItemsPerTransaction = 100;
         public const int Transactions = 10;
         public const string Template = "000000000000000000000000000000000000000000000000000";

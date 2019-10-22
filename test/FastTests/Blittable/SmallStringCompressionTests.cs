@@ -7,11 +7,16 @@
 using System.Text;
 using Sparrow.Compression;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public unsafe class SmallStringCompressionTests : NoDisposalNeeded
     {
+        public SmallStringCompressionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("this is a sample string")]
         [InlineData("here is a funny story I have heard")]

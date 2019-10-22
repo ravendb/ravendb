@@ -1,10 +1,15 @@
 ﻿using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public unsafe class MemoryTests : NoDisposalNeeded
     {
+        public MemoryTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LongRoundedSize()
         {

@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class IndexingEachFieldInEachDocumentSeparately : RavenTestBase
     {
+        public IndexingEachFieldInEachDocumentSeparately(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "Missing feature : RavenDB-6152 ")]
         public void ForIndexing()
         {

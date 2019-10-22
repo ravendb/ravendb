@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10583 : RavenTestBase
     {
+        public RavenDB_10583(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Article
         {
             public ArticleEnum Value { get; set; }

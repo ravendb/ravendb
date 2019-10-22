@@ -12,11 +12,16 @@ using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
 using Voron.Recovery;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8451 : RavenTestBase
     {
+        public RavenDB_8451(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public async Task CanRecoverEncryptedDatabase()
         {

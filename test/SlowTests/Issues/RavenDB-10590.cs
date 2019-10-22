@@ -5,11 +5,16 @@ using Raven.Client.Documents.Linq;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB10590 : RavenTestBase
     {
+        public RavenDB10590(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task TestIdQueryTest()
         {

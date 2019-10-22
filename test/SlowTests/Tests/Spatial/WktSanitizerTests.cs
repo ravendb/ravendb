@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Spatial;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class WktSanitizerTests : RavenTestBase
     {
+        public WktSanitizerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Rectangle()
         {

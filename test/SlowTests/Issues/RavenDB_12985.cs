@@ -7,11 +7,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12985 : RavenTestBase
     {
+        public RavenDB_12985(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUsePagingWhilePatchingOrDeleting()
         {

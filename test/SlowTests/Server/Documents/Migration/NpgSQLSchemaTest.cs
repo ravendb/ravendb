@@ -3,11 +3,16 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public class NpgSQLSchemaTest : SqlAwareTestBase
     {
+        public NpgSQLSchemaTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [RequiresNpgSqlFact]
         public void CanFetchSchema()
         {

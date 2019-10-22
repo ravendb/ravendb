@@ -10,11 +10,16 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SchemaUpgrade.Server
 {
     public class From18Test : RavenTestBase
     {
+        public From18Test(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RavenDB_13724()
         {

@@ -1,14 +1,19 @@
-using FastTests;
+﻿using FastTests;
 using Newtonsoft.Json;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class Fetching : RavenTestBase
     {
+        public Fetching(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanFetchMultiplePropertiesFromCollection()
         {

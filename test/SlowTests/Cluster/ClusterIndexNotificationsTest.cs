@@ -13,12 +13,17 @@ using SlowTests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
     // tests for RavenDB-13304
     public class ClusterIndexNotificationsTest : ClusterTestBase
     {
+        public ClusterIndexNotificationsTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldWaitForIndexOfClusterSideEffects()
         {

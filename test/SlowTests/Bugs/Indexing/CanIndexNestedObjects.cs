@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class CanIndexNestedObjects : RavenTestBase
     {
+        public CanIndexNestedObjects(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class NestedObject
         {
             public string Name { get; set; }

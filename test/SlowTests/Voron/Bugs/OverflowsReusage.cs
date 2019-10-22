@@ -1,11 +1,16 @@
 ﻿using System;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class OverflowsReusage : FastTests.Voron.StorageTest
     {
+        public OverflowsReusage(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

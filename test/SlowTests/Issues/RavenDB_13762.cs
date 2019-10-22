@@ -11,11 +11,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13762 : RavenTestBase
     {
+        public RavenDB_13762(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(15);
 
         [Fact]

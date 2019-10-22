@@ -10,11 +10,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server
 {
     public class ServerStore : RavenTestBase
     {
+        public ServerStore(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Server_store_basic_read_write_should_work()
         {

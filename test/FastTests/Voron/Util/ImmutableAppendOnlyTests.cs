@@ -1,12 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Voron.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Util
 {
     public class ImmutableAppendOnlyTests : NoDisposalNeeded
     {
+        public ImmutableAppendOnlyTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAddAndRemove()
         {

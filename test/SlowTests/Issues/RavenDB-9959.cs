@@ -4,11 +4,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9959 : RavenTestBase
     {
+        public RavenDB_9959(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_use_dollar_args_in_queries()
         {

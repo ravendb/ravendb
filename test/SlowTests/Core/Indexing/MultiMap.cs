@@ -1,4 +1,5 @@
-using System.Linq;
+﻿using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 
@@ -14,6 +15,10 @@ namespace SlowTests.Core.Indexing
 {
     public class MultiMap : RavenTestBase
     {
+        public MultiMap(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateAndSearchMultiMapIndex()
         {

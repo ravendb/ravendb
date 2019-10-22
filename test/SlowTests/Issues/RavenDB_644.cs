@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_644.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -18,6 +19,10 @@ namespace SlowTests.Issues
     /// </remarks>
     public class RavenDB_644 : RavenTestBase
     {
+        public RavenDB_644(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public int Year { get; set; }

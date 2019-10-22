@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class RavenDB_9626 : NoDisposalNeeded
     {
+        public RavenDB_9626(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Error_if_script_does_not_contain_any_loadTo_method_and_uses_legacy_replicateTo()
         {

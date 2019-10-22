@@ -2,11 +2,16 @@
 using FastTests;
 using Xunit;
 using FastTests.Server.Basic.Entities;
+using Xunit.Abstractions;
 
 namespace SlowTests.Graph
 {
     public class SortGraphQueries: RavenTestBase
     {
+        public SortGraphQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SortOnDecimalFieldShouldWork()
         {

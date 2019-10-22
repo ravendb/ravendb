@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Basic.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,11 +10,16 @@ using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
     public class Basic : RavenTestBase
     {
+        public Basic(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateDatabaseUsingExtensionMethod()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -18,11 +18,16 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
     public class AuthenticationEncryptionTests : RavenTestBase
     {
+        public AuthenticationEncryptionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseEncryption()
         {

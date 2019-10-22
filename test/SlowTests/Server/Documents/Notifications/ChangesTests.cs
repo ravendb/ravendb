@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,11 +10,16 @@ using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Notifications
 {
     public class ChangesTests : RavenTestBase
     {
+        public ChangesTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetNotificationAboutDocumentPut()
         {

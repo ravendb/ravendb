@@ -21,11 +21,16 @@ using Raven.Server.Config.Settings;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
     public partial class AuthenticationLetsEncryptTests : ClusterTestBase
     {
+        public AuthenticationLetsEncryptTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {

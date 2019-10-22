@@ -10,11 +10,16 @@ using Xunit;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class TreeStateTests : StorageTest
     {
+        public TreeStateTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
         }

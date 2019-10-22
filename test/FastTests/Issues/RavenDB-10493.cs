@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10493: RavenTestBase
     {        
+        public RavenDB_10493(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Article
         {
             public DateTime? DateTime;

@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_122 : RavenTestBase
     {
+        public RDBC_122(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IndexShouldCompile()
         {

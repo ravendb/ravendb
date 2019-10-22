@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
 using Post = SlowTests.Core.Utils.Entities.Post;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.Commands
 {
     public class Patching : RavenTestBase
     {
+        public Patching(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDoScriptedPatching()
         {

@@ -6,11 +6,16 @@ using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13195 : StorageTest
     {
+        public RavenDB_13195(ITestOutputHelper output) : base(output)
+        {
+        }
+
         static RavenDB_13195()
         {
             using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))

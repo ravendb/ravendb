@@ -2,11 +2,16 @@
 using FastTests.Voron;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_13130 : StorageTest
     {
+        public RavenDB_13130(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_throw_on_attempt_to_free_page_which_was_not_allocated_by_NewPageAllocator()
         {

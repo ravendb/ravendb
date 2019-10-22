@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Auto
 {
     public class RavenDB_8761 : RavenTestBase
     {
+        public RavenDB_8761(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_group_by_array_values()
         {

@@ -5,11 +5,16 @@ using System.Linq;
 using FastTests.Voron.FixedSize;
 using Xunit;
 using Voron.Impl.FreeSpace;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class FreeSpaceTest : StorageTest
     {
+        public FreeSpaceTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillBeReused()
         {

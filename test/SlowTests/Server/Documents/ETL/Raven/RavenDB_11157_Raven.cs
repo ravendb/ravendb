@@ -9,11 +9,16 @@ using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_11157_Raven : EtlTestBase
     {
+        public RavenDB_11157_Raven(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("Users", null)]
         [InlineData(null, null)]

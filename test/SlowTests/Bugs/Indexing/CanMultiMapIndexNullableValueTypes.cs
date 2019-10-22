@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class CanMultiMapIndexNullableValueTypes : RavenTestBase
     {
+        public CanMultiMapIndexNullableValueTypes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Company
         {
             public decimal? Turnover { get; set; }

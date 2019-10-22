@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Rob : RavenTestBase
     {
+        public Rob(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void CanUseIndex()

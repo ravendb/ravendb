@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Voron.Data;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13291 : RavenTestBase
     {
+        public RavenDB_13291(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanMigrateTablesWithCounterWord()
         {

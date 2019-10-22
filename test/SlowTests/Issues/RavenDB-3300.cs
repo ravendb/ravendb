@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3300 : RavenTestBase
     {
+        public RavenDB_3300(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Car
         {
             public String Model { get; set; }

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ProjectingDates.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class ProjectingDates : RavenTestBase
     {
+        public ProjectingDates(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSaveCachedVery()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ProjectingIdFromNestedClass.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ProjectingIdFromNestedClass : RavenTestBase
     {
+        public ProjectingIdFromNestedClass(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Document
         {
             public string Id

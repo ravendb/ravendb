@@ -8,11 +8,16 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13868 : RavenTestBase
     {
+        public RavenDB_13868(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
         [Fact]
         public async Task CollectionInSubscriptionsShouldbeCaseInsensitive()

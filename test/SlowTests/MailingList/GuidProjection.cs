@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class GuidProjection : RavenTestBase
     {
+        public GuidProjection(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestView
         {
             public Guid TestField { get; set; }

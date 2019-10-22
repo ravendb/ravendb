@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class FacetsMultipleAggregation : RavenTestBase
     {
+        public FacetsMultipleAggregation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAggregateByMinAndMaxOnSameField()
         {

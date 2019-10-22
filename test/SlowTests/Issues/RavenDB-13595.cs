@@ -2,11 +2,16 @@
 using FastTests.Server.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13595 : ReplicationTestBase
     {
+        public RavenDB_13595(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldCloneTheConflictedHiLoDocumentOnReplication()
         {

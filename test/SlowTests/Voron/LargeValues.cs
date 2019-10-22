@@ -6,11 +6,16 @@ using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class LargeValues : StorageTest
     {
+        public LargeValues(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public void ShouldProperlyRecover()
         {

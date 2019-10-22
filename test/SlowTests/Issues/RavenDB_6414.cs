@@ -11,11 +11,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6414 : RavenTestBase
     {
+        public RavenDB_6414(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Should_unload_db_and_send_notification_on_catastrophic_failure()
         {

@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8773 : RavenTestBase
     {
+        public RavenDB_8773(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDealWithDocumentsAndAttachmentsHavingHashCharacter()
         {

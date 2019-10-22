@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10719 : RavenTestBase
     {
+        public RavenDB_10719(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GivenADocument_WhenAnEmptyListIsPassedToCheckIfIdsExist_QueryShouldReturnZeroResults()
         {

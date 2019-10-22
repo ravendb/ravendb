@@ -27,11 +27,16 @@ using Sparrow.Server;
 using Xunit.Sdk;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Documents.Commands;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class SubscriptionsFailover : ClusterTestBase
     {
+        public SubscriptionsFailover(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         private class SubscriptionProggress
         {

@@ -1,11 +1,16 @@
 ﻿using System.IO;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class InvalidReleasesOfScratchPages : FastTests.Voron.StorageTest
     {
+        public InvalidReleasesOfScratchPages(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ReadTransactionCanReadJustCommittedValue()
         {

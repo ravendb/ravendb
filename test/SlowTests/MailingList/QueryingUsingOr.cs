@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="QueryingUsingOr.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class QueryingUsingOr : RavenTestBase
     {
+        public QueryingUsingOr(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Id { get; private set; }

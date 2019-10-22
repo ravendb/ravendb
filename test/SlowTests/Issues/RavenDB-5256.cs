@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-5256.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5256 : RavenTestBase
     {
+        public RavenDB_5256(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory(Skip = "RavenDB-5918, RavenDB-6283")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]

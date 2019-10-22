@@ -1,4 +1,4 @@
-using FastTests;
+﻿using FastTests;
 using System.Linq;
 using Lucene.Net.Analysis;
 using Raven.Client;
@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanGetScores : RavenTestBase
     {
+        public CanGetScores(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
         [Fact]

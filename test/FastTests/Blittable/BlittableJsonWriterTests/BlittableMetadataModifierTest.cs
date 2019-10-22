@@ -3,11 +3,16 @@ using Raven.Server.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public unsafe class BlittableMetadataModifierTest : NoDisposalNeeded
     {
+        public BlittableMetadataModifierTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BlittableMetadataModifier_WhileIdContainsNoEscapeCharacters_ResultInLazyStringWithoutEscapeInformation()
         {

@@ -3,11 +3,16 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9181 : RavenTestBase
     {
+        public RavenDB_9181(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_project_object_to_a_single_field()
         {

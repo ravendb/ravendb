@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Pfeffer : RavenTestBase
     {
+        public Pfeffer(ITestOutputHelper output) : base(output)
+        {
+        }
+
         bool TryConvertValueForQueryDelegate(string fieldName, object value, bool forRange, out object obj)
         {
             obj = JObject.FromObject(value, new JsonSerializer

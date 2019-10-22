@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_128 : RavenTestBase
     {
+        public RDBC_128(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Invoice
         {
             public string Symbol { get; set; }

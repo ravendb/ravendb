@@ -5,11 +5,16 @@ using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11552 : RavenTestBase
     {
+        public RavenDB_11552(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchWillUpdateTrackedDocumentAfterSaveChanges()
         {

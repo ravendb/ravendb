@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_1962 : RavenTestBase
     {
+        public RavenDB_1962(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int Cntr = 5;
 
         [Fact]

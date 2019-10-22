@@ -1,10 +1,15 @@
 ﻿using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
     public class FixedSizeBugs : StorageTest
     {
+        public FixedSizeBugs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAddDuplicate()
         {

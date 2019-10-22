@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Xunit.Abstractions;
 
 using Lucene.Net.Analysis;
 using Raven.Client;
@@ -25,6 +26,10 @@ namespace FastTests.Server.Documents.Indexing
 {
     public class BasicAnalyzers : NoDisposalNeeded
     {
+        public BasicAnalyzers(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CheckAnalyzers()
         {

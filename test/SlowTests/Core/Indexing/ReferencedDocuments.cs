@@ -1,4 +1,4 @@
-//----------------------------------------------------------------------
+﻿//----------------------------------------------------------------------
 //  <copyright file="ReferencedDocuments.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client;
@@ -25,6 +26,10 @@ namespace SlowTests.Core.Indexing
 {
     public class ReferencedDocuments : RavenTestBase
     {
+        public ReferencedDocuments(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseLoadDocumentToIndexReferencedDocs()
         {

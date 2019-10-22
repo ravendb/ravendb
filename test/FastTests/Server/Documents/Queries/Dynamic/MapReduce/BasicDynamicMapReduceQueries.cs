@@ -11,12 +11,17 @@ using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class BasicDynamicMapReduceQueries : RavenTestBase
     {
+        public BasicDynamicMapReduceQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Group_by_string_calculate_count()
         {

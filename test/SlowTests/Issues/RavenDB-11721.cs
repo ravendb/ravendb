@@ -5,11 +5,16 @@ using Xunit;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11721 : RavenTestBase
     {
+        public RavenDB_11721(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSwitchFromDocumentQueryToStronglyTypedProjection()
         {

@@ -15,11 +15,16 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class RavenDB_12012 : RavenTestBase
     {
+        public RavenDB_12012(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public async Task CreateFullAndIncrementalBackupWithIndexInTheMiddle()

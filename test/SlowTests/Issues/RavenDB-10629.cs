@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10629 : RavenTestBase
     {
+        public RavenDB_10629(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LinqToRQL_CanHandleMemberExpressionWithNullExpression()
         {

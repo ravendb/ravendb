@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB8655 : RavenTestBase
     {
+        public RavenDB8655(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected List<dynamic> ExecuteQuery(string q)
         {
             using (var store = GetDocumentStore())

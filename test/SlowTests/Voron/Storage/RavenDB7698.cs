@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Quotas.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,11 +6,16 @@
 
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class RavenDB_7698 : FastTests.Voron.StorageTest
     {
+        public RavenDB_7698(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

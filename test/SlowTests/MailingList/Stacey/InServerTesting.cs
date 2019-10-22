@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 using Enumerable = System.Linq.Enumerable;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Stacey
 {
     public class InServerTesting : RavenTestBase
     {
+        public InServerTesting(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Image
         {
             public string Id { get; set; }

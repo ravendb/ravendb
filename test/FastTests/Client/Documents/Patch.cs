@@ -1,9 +1,14 @@
 ﻿using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Documents
 {
     public class Patch: RavenTestBase
     {
+        public Patch(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchOnEnumShouldWork()
         {

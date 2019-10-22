@@ -2,11 +2,16 @@
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12187 : RavenTestBase
     {
+        public RavenDB_12187(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Query_with_cycle_and_where_should_work()
         {

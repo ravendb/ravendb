@@ -4,11 +4,16 @@ using Newtonsoft.Json.Linq;
 using Orders;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12638 : RavenTestBase
     {
+        public RavenDB_12638(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Two_non_adjacent_recursive_queries_should_work()
         {

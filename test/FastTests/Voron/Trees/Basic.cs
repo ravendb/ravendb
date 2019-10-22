@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Xunit;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class Basic : StorageTest
     {
+        public Basic(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAddVeryLargeValue()
         {

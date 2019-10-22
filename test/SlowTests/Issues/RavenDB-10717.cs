@@ -2,11 +2,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10717 : RavenTestBase
     {
+        public RavenDB_10717(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public DateTime Birthday { get; set; }

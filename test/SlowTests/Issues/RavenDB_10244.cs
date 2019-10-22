@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10244 : RavenTestBase
     {
+        public RavenDB_10244(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void MustNotParseStringAsDateTime()
         {

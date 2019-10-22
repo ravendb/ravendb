@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class WhereUsingUnicodeTheTextEnteredShouldNotBeNormalized : RavenTestBase
     {
+        public WhereUsingUnicodeTheTextEnteredShouldNotBeNormalized(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Theory]
         /*

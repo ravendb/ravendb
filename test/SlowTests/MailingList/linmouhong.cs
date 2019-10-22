@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="linmouhong.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,11 +6,16 @@
 
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class linmouhong : RavenTestBase
     {
+        public linmouhong(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
 #pragma warning disable 649

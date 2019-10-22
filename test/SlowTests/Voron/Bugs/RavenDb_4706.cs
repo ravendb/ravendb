@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class RavenDb_4706 : RavenTestBase
     {
+        public RavenDb_4706(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task SupportRandomOrder()
         {

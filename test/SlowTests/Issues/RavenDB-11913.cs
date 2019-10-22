@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11913 : RavenTestBase
     {
+        public RavenDB_11913(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact, Trait("Category", "Smuggler")]
         public async Task can_restore_legacy_backup()
         {

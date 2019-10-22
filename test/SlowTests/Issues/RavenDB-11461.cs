@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11461 : RavenTestBase
     {
+        public RavenDB_11461(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Team
         {
             public bool IsGreen;

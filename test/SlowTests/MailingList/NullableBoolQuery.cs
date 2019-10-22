@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class NullableBoolQuery : RavenTestBase
     {
+        public NullableBoolQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public bool? Active { get; set; }

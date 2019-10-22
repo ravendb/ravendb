@@ -3,11 +3,16 @@ using System.IO;
 using FastTests.Voron.FixedSize;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Streams
 {
     public class CanUseStream : FastTests.Voron.StorageTest
     {
+        public CanUseStream(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(null, 129)]
         [InlineData(null, 2095)]

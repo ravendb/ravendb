@@ -1,5 +1,6 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents.Commands.Batches;
@@ -13,6 +14,10 @@ namespace SlowTests.Core.Commands
 {
     public class Batches : RavenTestBase
     {
+        public Batches(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanDoBatchOperations()
         {

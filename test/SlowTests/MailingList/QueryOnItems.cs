@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="QueryOnItems.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,11 +12,16 @@ using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class QueryOnItems : RavenTestBase
     {
+        public QueryOnItems(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class ProviderIdentifier
         {
             public string Provider { get; set; }

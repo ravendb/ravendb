@@ -5,11 +5,16 @@ using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12333 : RavenTestBase
     {
+        public RavenDB_12333(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDisableStrictMode()
         {

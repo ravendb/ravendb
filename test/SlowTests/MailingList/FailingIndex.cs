@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="FailingIndex.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class FailingAuthIndex : RavenTestBase
     {
+        public FailingAuthIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Team
         {
 #pragma warning disable 649

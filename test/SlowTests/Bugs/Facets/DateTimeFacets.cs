@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Facets
 {
     public class DateTimeFacets : FacetTestBase
     {
+        public DateTimeFacets(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ManualCheck()
         {

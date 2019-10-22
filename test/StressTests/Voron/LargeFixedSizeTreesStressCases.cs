@@ -2,11 +2,16 @@
 using SlowTests.Utils;
 using SlowTests.Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Voron
 {
     public class LargeFixedSizeTreesStressCases : NoDisposalNeeded
     {
+        public LargeFixedSizeTreesStressCases(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineDataWithRandomSeed(94000)]
         [InlineDataWithRandomSeed(300000)]

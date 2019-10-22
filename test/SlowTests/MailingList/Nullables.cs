@@ -1,9 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -18,6 +19,10 @@ namespace SlowTests.MailingList
     /// </summary>
     public class NullableExample : RavenTestBase
     {
+        public NullableExample(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Doc
         {
             public string DocId { get; set; }

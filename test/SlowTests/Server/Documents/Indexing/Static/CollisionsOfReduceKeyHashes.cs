@@ -18,11 +18,16 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Static
 {
     public class CollisionsOfReduceKeyHashes : RavenLowLevelTestBase
     {
+        public CollisionsOfReduceKeyHashes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]

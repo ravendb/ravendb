@@ -5,11 +5,16 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11705 : RavenTestBase
     {
+        public RavenDB_11705(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanHandleRevisionOperationBeingRolledBack()
         {

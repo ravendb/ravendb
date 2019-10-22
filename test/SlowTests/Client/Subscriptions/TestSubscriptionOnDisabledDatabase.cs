@@ -9,11 +9,16 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class TestSubscriptionOnDisabledDatabase:RavenTestBase
     {
+        public TestSubscriptionOnDisabledDatabase(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(20);
 
         [Fact]

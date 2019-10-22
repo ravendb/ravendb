@@ -6,11 +6,16 @@ using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class SubscriptionsPaths : RavenTestBase
     {
+        public SubscriptionsPaths(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Node
         {
             public string Name { get; set; }

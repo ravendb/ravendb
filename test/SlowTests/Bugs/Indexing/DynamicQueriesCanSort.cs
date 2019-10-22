@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class DynamicQueriesCanSort : RavenTestBase
     {
+        public DynamicQueriesCanSort(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSortOnDynamicIndexOnFieldWhichWeDontQuery()
         {

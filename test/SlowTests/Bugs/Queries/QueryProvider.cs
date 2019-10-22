@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class QueryProvider : RavenTestBase
     {
+        public QueryProvider(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateQuery()
         {

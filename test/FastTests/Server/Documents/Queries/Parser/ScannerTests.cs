@@ -2,11 +2,16 @@
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 using Raven.Server.Documents.Queries.Parser;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
     public class ScannerTests : NoDisposalNeeded
     {
+        public ScannerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(null)]
         [InlineData("")]

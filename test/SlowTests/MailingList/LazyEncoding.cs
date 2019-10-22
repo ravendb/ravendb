@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="LazyEncoding.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class LazyEncoding : RavenTestBase
     {
+        public LazyEncoding(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name { get; set; }

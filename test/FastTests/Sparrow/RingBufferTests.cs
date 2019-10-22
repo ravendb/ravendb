@@ -6,11 +6,16 @@ using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class RingBufferTests : NoDisposalNeeded
     {
+        public RingBufferTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RingBuffer_SingleItemPush()
         {

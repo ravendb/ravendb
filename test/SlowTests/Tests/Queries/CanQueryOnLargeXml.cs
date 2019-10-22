@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 
@@ -9,6 +10,10 @@ namespace SlowTests.Tests.Queries
 {
     public class CanQueryOnLargeXml : RavenTestBase
     {
+        public CanQueryOnLargeXml(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
 #pragma warning disable 649

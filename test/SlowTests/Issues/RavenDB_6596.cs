@@ -9,11 +9,16 @@ using FastTests.Client;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6596 : NoDisposalNeeded
     {
+        public RavenDB_6596(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly List<MethodInfo> _syncTests = new List<MethodInfo>();
 
         private static readonly List<MethodInfo> _asyncTests = new List<MethodInfo>();

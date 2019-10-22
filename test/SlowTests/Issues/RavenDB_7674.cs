@@ -4,11 +4,16 @@ using Raven.Tests.Core.Utils.Entities;
 using System;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7674 : RavenTestBase
     {
+        public RavenDB_7674(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Group_by_entire_document_LastModified_formatting_issue()
         {

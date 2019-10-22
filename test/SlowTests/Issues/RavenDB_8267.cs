@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8267 : RavenTestBase
     {
+        public RavenDB_8267(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class MyEntity
         {
             public string Username { get; set; }

@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11649_ProvideContextForNestedFieldsChanges : RavenTestBase
     {
+        public RavenDB_11649_ProvideContextForNestedFieldsChanges(ITestOutputHelper output) : base(output)
+        {
+        }
+
         class OuterClass
         {
             public InnerClass[][] InnerClassMatrix { get; set; }

@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class FacetsOnDateTimeOffset : NoDisposalNeeded
     {
+        public FacetsOnDateTimeOffset(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class ClassWithDateTimeOffset
         {
             public DateTime Date { get; set; }

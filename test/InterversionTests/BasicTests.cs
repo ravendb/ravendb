@@ -3,11 +3,16 @@ using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace InterversionTests
 {
     public class BasicTests : InterversionTestBase
     {
+        public BasicTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Test()
         {

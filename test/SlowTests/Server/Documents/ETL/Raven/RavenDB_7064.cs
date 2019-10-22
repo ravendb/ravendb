@@ -5,11 +5,16 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_7064 : EtlTestBase
     {
+        public RavenDB_7064(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_handle_attachments()
         {

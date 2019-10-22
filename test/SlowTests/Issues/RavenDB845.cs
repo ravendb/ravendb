@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB845 : RavenTestBase
     {
+        public RavenDB845(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Id { get; set; }

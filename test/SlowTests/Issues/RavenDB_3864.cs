@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -7,11 +7,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3864 : RavenTestBase
     {
+        public RavenDB_3864(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void can_use_conventions_with_create_indexes_container()
         {

@@ -2,11 +2,16 @@
 using Voron.Impl.Paging;
 using Xunit;
 using Assert = Xunit.Assert;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.LeafsCompression
 {
     public class RavenDB_5384_DecompressionBuffersPoolTests : StorageTest
     {
+        public RavenDB_5384_DecompressionBuffersPoolTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int _64KB = 64 * 1024;
 
         protected override void Configure(StorageEnvironmentOptions options)

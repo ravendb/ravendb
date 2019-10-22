@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents
 {
     public class ModifyExistingDocument : RavenTestBase
     {
+        public ModifyExistingDocument(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldThrowIfChangeCollection()
         {

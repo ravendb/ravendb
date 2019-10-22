@@ -2,11 +2,16 @@
 using Voron;
 using Voron.Util.Conversion;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
     public unsafe class SecondayIndex : TableStorageTest
     {
+        public SecondayIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void CanInsertThenReadBySecondary()

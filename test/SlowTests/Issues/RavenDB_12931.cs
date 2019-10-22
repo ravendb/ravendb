@@ -1,10 +1,15 @@
 ﻿using FastTests.Voron.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12931 : TableStorageTest
     {
+        public RavenDB_12931(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDeleteTable()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Aggregation.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,11 +14,16 @@ using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class Aggregation : RavenTestBase
     {
+        public Aggregation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Orders_All : AbstractIndexCreationTask<Order>
         {
             public Orders_All()

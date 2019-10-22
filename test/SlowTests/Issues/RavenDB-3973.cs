@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -8,11 +8,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb3973 : RavenTestBase
     {
+        public RavenDb3973(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void VerifyNegateQueryOptimization()
         {

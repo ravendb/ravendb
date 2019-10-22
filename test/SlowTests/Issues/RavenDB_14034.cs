@@ -7,11 +7,16 @@ using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using User = Raven.Tests.Core.Utils.Entities.User;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14034 : RavenTestBase
     {
+        public RavenDB_14034(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CmpxchgInWhereShouldAffectQueryEtag_DynamicIndexQuery()
         {

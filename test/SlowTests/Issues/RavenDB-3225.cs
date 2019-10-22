@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class TestingQuery : RavenTestBase
     {
+        public TestingQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestDataObject
         {
             public string A { get; set; }

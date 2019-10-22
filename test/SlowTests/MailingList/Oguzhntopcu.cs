@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Oguzhntopcu.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Oguzhntopcu : RavenTestBase
     {
+        public Oguzhntopcu(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Result
         {
             public string Id { get; set; }

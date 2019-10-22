@@ -3,11 +3,16 @@ using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Viktor : RavenTestBase
     {
+        public Viktor(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQuery()
         {

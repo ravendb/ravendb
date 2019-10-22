@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Indexing
 {
     public class StaticIndexesFromClient : RavenTestBase
     {
+        public StaticIndexesFromClient(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_Put()
         {

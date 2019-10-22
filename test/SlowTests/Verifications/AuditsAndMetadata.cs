@@ -1,11 +1,16 @@
 ﻿using System;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class AuditsAndMetadata : RavenTestBase
     {
+        public AuditsAndMetadata(ITestOutputHelper output) : base(output)
+        {
+        }
+
         /// <summary>
         /// The only thing i could not recreate here is the fact that the revisions is active.
         /// So im not sure if the @last-modified meta-field will ever be filled in this case

@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RavenDB_10506 : RavenTestBase
     {
+        public RavenDB_10506(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Projections_with_multiple_Loads_using_complex_id_reference()
         {

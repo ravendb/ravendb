@@ -7,11 +7,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_8866 : EtlTestBase
     {
+        public RavenDB_8866(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanResetEtl()
         {

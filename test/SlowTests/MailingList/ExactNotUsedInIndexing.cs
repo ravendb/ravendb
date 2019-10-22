@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ExactNotUsedInIndexing : RavenTestBase
     {
+        public ExactNotUsedInIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public sealed class Document
         {
             public string Id

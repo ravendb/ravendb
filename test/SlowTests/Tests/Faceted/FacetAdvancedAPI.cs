@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class FacetAdvancedAPI : NoDisposalNeeded
     {
+        public FacetAdvancedAPI(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Test
         {
             public String Id { get; set; }

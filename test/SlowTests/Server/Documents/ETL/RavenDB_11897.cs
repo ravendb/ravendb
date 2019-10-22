@@ -4,11 +4,16 @@ using System.IO;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_11897 : EtlTestBase
     {
+        public RavenDB_11897(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(@"
     

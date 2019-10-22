@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Graph
 {
     public class GraphPermissionTests : RavenTestBase
     {
+        public GraphPermissionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class User
         {
             public string Name;

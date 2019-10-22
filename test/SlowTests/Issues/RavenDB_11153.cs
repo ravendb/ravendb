@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11153 : RavenTestBase
     {
+        public RavenDB_11153(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Should_mark_idle_index_as_normal()
         {

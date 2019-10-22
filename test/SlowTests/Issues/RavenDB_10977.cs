@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10977 : RavenTestBase
     {
+        public RavenDB_10977(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OnSessionCreatedEventWorks()
         {

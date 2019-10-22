@@ -1,11 +1,16 @@
 ﻿using Voron;
 using Voron.Impl;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class RavenDB_6748 : FastTests.Voron.StorageTest
     {
+        public RavenDB_6748(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

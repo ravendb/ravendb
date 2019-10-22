@@ -22,11 +22,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.NotificationCenter
 {
     public class NotificationCenterTests : RavenLowLevelTestBase
     {
+        public NotificationCenterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_get_notification()
         {

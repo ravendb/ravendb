@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="AutoCreateIndexes.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,11 +8,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AutoCreateIndexes : RavenTestBase
     {
+        public AutoCreateIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAutomaticallyCreateIndexes()
         {

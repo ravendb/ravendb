@@ -7,6 +7,7 @@
 using System;
 using System.Text;
 using Xunit;
+using Xunit.Abstractions;
 
 using Voron.Data.Tables;
 
@@ -14,6 +15,10 @@ namespace FastTests.Voron.Tables
 {
     public unsafe class TableValueTests : NoDisposalNeeded
     {
+        public TableValueTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanBuild()
         {

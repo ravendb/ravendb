@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Store : RavenTestBase
     {
+        public Store(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Store_Document()
         {

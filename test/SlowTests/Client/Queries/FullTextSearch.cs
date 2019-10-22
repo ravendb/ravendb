@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Queries
 {
     public class FullTextSearchOnTags : RavenTestBase
     {
+        public FullTextSearchOnTags(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Image
         {
             public string Id { get; set; }

@@ -5,11 +5,16 @@ using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
 using Raven.Server.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
     public class LimitedStreamTests : NoDisposalNeeded
     {
+        public LimitedStreamTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineDataWithRandomSeed]
         public void Should_properly_read_ranges(int seed)

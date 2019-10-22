@@ -6,11 +6,16 @@ using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Documents
 {
     public class BasicDocuments : RavenTestBase
     {
+        public BasicDocuments(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanStoreAnonymousObject()
         {

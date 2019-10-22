@@ -5,11 +5,16 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13163 : RavenTestBase
     {
+        public RavenDB_13163(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldThrowOnDocumentIdTooBig()
         {

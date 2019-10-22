@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ravendb_failing_query_with_static_indexes_and_common_base_class : RavenTestBase
     {
+        public ravendb_failing_query_with_static_indexes_and_common_base_class(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void it_fails_but_should_not()
         {

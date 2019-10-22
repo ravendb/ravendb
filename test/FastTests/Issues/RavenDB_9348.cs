@@ -1,10 +1,15 @@
 ﻿using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_9348 : NoDisposalNeeded
     {
+        public RavenDB_9348(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IfConfigurationKeyIsStringArrayThenItShouldSupportValuesWithSemicolonPropely()
         {

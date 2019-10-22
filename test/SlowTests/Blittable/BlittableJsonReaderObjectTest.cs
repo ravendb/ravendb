@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Blittable
 {
     public class BlittableJsonReaderObjectTest : RavenTestBase
     {
+        public BlittableJsonReaderObjectTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Clone_WhenContainItemsOfStrings_ShouldBeEqualToOrigin()
         {

@@ -12,11 +12,16 @@ using Voron.Data;
 using Voron.Impl.Paging;
 using Xunit;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class EncryptionTests : StorageTest
     {
+        public EncryptionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void WriteAndReadPageUsingCryptoPager()
         {

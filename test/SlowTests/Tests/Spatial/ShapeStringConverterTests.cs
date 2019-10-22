@@ -1,15 +1,20 @@
-using System.Globalization;
+﻿using System.Globalization;
 using FastTests;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class ShapeStringConverterTests : NoDisposalNeeded
     {
+        public ShapeStringConverterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [CriticalCultures]
         public void ParseBox(CultureInfo cultureInfo)

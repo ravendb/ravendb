@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9680 : RavenTestBase
     {
+        public RavenDB_9680(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Should_delete_index_entries_on_document_deletion_after_database_restart()
         {

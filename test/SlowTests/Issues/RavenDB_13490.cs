@@ -8,11 +8,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13490 : RavenTestBase
     {
+        public RavenDB_13490(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class MapReduce_WithOutput : AbstractIndexCreationTask<Company, MapReduce_WithOutput.Result>
         {
             public class Result

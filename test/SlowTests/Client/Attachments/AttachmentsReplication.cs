@@ -21,11 +21,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsReplication : ReplicationTestBase
     {
+        public AttachmentsReplication(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public static Guid dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
         public static Guid dbId2 = new Guid("99999999-48c4-421e-9466-000000000000");
 

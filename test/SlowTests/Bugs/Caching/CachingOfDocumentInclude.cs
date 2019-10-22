@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="CachingOfDocumentInclude.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -11,11 +11,16 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Caching
 {
     public class CachingOfDocumentInclude : RavenTestBase
     {
+        public CachingOfDocumentInclude(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

@@ -1,11 +1,16 @@
 ﻿using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public unsafe class ByteStringTests : NoDisposalNeeded
     {
+        public ByteStringTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Lifecycle()
         {

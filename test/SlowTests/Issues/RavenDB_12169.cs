@@ -5,11 +5,16 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12169 : RavenTestBase
     {
+        public RavenDB_12169(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseBatchPatchCommand()
         {

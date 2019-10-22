@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
@@ -9,6 +10,10 @@ namespace SlowTests.Tests.Queries
 {
     public class Includes : RavenTestBase
     {
+        public Includes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_use_includes_within_multi_load()
         {

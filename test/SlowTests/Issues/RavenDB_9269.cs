@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9269 : RavenTestBase
     {
+        public RavenDB_9269(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotThrowNRE()
         {

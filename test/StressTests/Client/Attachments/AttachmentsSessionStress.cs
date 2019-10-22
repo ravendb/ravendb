@@ -3,11 +3,16 @@ using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
     public class AttachmentsSessionStress : NoDisposalNeeded
     {
+        public AttachmentsSessionStress(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(1000)]
         [InlineData(10_000)]

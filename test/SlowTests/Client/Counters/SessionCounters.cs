@@ -9,11 +9,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {
     public class SessionCounters : RavenTestBase
     {
+        public SessionCounters(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SessionIncrementCounter()
         {

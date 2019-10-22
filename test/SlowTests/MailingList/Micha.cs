@@ -1,15 +1,20 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Micha : RavenTestBase
     {
+        public Micha(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Entity
         {
             public string Label { get; set; }

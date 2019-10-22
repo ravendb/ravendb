@@ -1,13 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class indexes_error_CS1977_Cannot_use_a_lambda_expression_from_reduce : RavenTestBase
     {
+        public indexes_error_CS1977_Cannot_use_a_lambda_expression_from_reduce(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Account
         {
             public string Id { get; set; }

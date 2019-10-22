@@ -7,11 +7,16 @@ using Sparrow;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.LeafsCompression
 {
     public class RavenDB_12700_Voron : StorageTest
     {
+        public RavenDB_12700_Voron(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void Must_split_compressed_page_if_cannot_compress_back_after_decompression()
         {

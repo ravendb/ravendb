@@ -1,13 +1,18 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Bugs
 {
     public class ManyDocumentBeingIndexed : RavenTestBase
     {
+        public ManyDocumentBeingIndexed(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestDocument
         {
             public string Id { get; set; }

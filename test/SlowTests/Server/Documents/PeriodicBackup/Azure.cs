@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class Azure : NoDisposalNeeded
     {
+        public Azure(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 

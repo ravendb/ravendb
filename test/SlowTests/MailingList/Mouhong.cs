@@ -1,14 +1,19 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Mouhong : RavenTestBase
     {
+        public Mouhong(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSortDescending()
         {

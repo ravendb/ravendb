@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Andrej : RavenTestBase
     {
+        public Andrej(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task TestBoostedSearchCountTest()
         {

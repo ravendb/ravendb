@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4041 : RavenTestBase
     {
+        public RavenDB_4041(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void streaming_returns_metadata()
         {

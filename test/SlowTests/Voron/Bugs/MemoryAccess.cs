@@ -2,11 +2,16 @@
 using System.Threading;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class MemoryAccess : FastTests.Voron.StorageTest
     {
+        public MemoryAccess(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);

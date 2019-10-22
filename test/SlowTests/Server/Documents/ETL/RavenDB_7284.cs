@@ -3,11 +3,16 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_7284 : EtlTestBase
     {
+        public RavenDB_7284(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EtlTaskDeletionShouldDeleteItsState()
         {

@@ -2,11 +2,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8891 : RavenTestBase
     {
+        public RavenDB_8891(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_query_multidimentional_array()
         {

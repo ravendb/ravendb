@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Holt : RavenTestBase
     {
+        public Holt(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(100.0, 100.0, 0)]
         [InlineData(100.0, 101, -1)]

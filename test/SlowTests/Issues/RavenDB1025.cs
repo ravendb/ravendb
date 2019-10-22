@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB1025.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB1025 : RavenTestBase
     {
+        public RavenDB1025(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class MyClass
         {
             public int Index { get; set; }

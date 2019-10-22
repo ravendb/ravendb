@@ -13,11 +13,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb4583 : RavenTestBase
     {
+        public RavenDb4583(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static async Task CreateUsersAsync(IAsyncDocumentSession session)
         {
             var user1 = new User { Name = "Jane" };

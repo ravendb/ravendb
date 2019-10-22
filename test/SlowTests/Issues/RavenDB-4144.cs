@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-4144.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4144 : RavenTestBase
     {
+        public RavenDB_4144(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void can_save_javascript_array_values()
         {

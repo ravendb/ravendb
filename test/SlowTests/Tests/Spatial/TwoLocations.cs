@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="TwoLocations.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class TwoLocations : RavenTestBase
     {
+        public TwoLocations(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Event
         {
             public string Name;

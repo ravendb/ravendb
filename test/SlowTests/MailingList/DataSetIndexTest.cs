@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DataSetIndexTest : RavenTestBase
     {
+        public DataSetIndexTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int MaxNumberOfItemsInDataSet = 50;
 
         [Fact]

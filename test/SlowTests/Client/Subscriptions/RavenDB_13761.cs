@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_13761 : RavenTestBase
     {
+        public RavenDB_13761(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
 
         [Fact]

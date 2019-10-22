@@ -5,11 +5,16 @@ using Raven.Client.Extensions;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8346 : RavenTestBase
     {
+        public RavenDB_8346(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IdShouldBeIncludedWithBothProjections()
         {

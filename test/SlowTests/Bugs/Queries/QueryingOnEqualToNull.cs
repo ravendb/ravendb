@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="QueryingOnEqualToNull.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,11 +8,16 @@ using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class QueryingOnEqualToNull : RavenTestBase
     {
+        public QueryingOnEqualToNull(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryingOnEqNull()
         {

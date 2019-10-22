@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsBigFiles : RavenTestBase
     {
+        public AttachmentsBigFiles(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]

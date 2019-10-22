@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class DictionaryOfEnum : RavenTestBase
     {
+        public DictionaryOfEnum(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private enum MyEnum
         {
             Value1,

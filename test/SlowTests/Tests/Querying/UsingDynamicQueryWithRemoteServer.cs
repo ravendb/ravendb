@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="UsingDynamicQueryWithRemoteServer.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
@@ -18,6 +19,10 @@ namespace SlowTests.Tests.Querying
 {
     public class UsingDynamicQueryWithRemoteServer : RavenTestBase
     {
+        public UsingDynamicQueryWithRemoteServer(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQuery()
         {

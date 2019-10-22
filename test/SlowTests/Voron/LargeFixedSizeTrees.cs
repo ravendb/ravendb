@@ -11,11 +11,16 @@ using SlowTests.Utils;
 using Voron;
 using Voron.Util.Conversion;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class LargeFixedSizeTrees : StorageTest
     {
+        public LargeFixedSizeTrees(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(8)]
         [InlineData(16)]

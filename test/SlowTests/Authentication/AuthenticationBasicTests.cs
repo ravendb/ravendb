@@ -23,11 +23,16 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
     public class AuthenticationBasicTests : RavenTestBase
     {
+        public AuthenticationBasicTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
         {
             var serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);

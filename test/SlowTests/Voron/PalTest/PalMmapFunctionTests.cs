@@ -4,11 +4,16 @@ using System.Runtime.InteropServices;
 using FastTests;
 using Sparrow.Server.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.PalTest
 {
     public class PalMapTests : RavenTestBase
     {
+        public PalMapTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void MapFile_WhenCalled_ShouldSuccess()
         {

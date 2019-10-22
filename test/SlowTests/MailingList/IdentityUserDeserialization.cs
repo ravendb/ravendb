@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="IdentityUserDeserialization.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class IdentityUserDeserialization : RavenTestBase
     {
+        public IdentityUserDeserialization(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Deserialize_IdentityUser()
         {

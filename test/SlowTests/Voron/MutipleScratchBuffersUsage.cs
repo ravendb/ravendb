@@ -8,11 +8,16 @@ using FastTests.Voron;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class MutipleScratchBuffersUsage : StorageTest
     {
+        public MutipleScratchBuffersUsage(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxScratchBufferSize = 1024 * 1024 * 12; // 2048 pages

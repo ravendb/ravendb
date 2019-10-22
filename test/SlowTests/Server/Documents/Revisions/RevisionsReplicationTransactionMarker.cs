@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Revisions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -9,11 +9,16 @@ using FastTests.Server.Replication;
 using Xunit;
 using System.Threading;
 using FastTests.Utils;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Revisions
 {
     public class RevisionsReplicationTransactionMarker : ReplicationTestBase
     {
+        public RevisionsReplicationTransactionMarker(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task RealSupportForTransactionMarkerAcrossMultiUpdates()
         {

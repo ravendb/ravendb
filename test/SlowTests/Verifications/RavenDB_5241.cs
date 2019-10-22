@@ -1,10 +1,15 @@
 ﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class RavenDB_5241 : RavenTestBase
     {
+        public RavenDB_5241(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void loading_documents_with_transformer_duplicate_ids()
         {

@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10955 : ReplicationTestBase
     {
+        public RavenDB_10955(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ConflictResolutionShouldPreserveDocumentIdCasing()
         {

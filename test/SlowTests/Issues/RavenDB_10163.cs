@@ -1,11 +1,16 @@
 ﻿using Raven.Client;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10163 : FacetTestBase
     {
+        public RavenDB_10163(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SupportForFacetOnAllResults()
         {

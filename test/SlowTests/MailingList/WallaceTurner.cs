@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class WallaceTurner : RavenTestBase
     {
+        public WallaceTurner(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class DataResult
         {
             public DataResult()

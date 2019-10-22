@@ -10,11 +10,16 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class EmergencyOperations : ClusterTestBase
     {
+        public EmergencyOperations(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected()
         {

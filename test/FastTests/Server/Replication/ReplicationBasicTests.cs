@@ -2,11 +2,16 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Replication;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Replication
 {
     public class ReplicationBasicTests : ReplicationTestBase
     {
+        public ReplicationBasicTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
         private class User

@@ -6,11 +6,16 @@ using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
 using Voron.Data.RawData;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.RawData
 {
     public unsafe class SmallDataSection : StorageTest
     {
+        public SmallDataSection(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanReadAndWriteFromSection()
         {

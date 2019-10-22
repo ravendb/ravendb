@@ -29,11 +29,16 @@ using Sparrow.Json;
 using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
     public class AuthenticationClusterTests : ReplicationTestBase
     {
+        public AuthenticationClusterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanReplaceClusterCert()
         {

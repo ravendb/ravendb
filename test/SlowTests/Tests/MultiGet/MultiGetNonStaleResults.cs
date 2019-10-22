@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
@@ -9,6 +10,10 @@ namespace SlowTests.Tests.MultiGet
 {
     public class MultiGetNonStaleResults : RavenTestBase
     {
+        public MultiGetNonStaleResults(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

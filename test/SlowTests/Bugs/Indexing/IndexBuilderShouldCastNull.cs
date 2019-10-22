@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class IndexBuilderShouldCastNull : RavenTestBase
     {
+        public IndexBuilderShouldCastNull(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldCastNullToThePropertyType()
         {

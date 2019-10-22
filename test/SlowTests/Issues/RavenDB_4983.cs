@@ -10,11 +10,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4983 : RavenTestBase
     {
+        public RavenDB_4983(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact(Skip = "RavenDB-6283")]
         public void ShouldLoadUserWithIncludesFromSessionTwiceInShardingDocumentStore()

@@ -11,11 +11,16 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
     public class MaxSecondsForTaskToWaitForDatabaseToLoad : RavenTestBase
     {
+        public MaxSecondsForTaskToWaitForDatabaseToLoad(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_not_throw_when_there_no_timeout()
         {

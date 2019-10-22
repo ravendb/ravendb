@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11777 : RavenTestBase
     {
+        public RavenDB_11777(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Image
         {
             public string Id { get; set; }

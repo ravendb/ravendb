@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class SpatialTest : RavenTestBase
     {
+        public SpatialTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class MyDocumentItem
         {
             public DateTime Date { get; set; }

@@ -7,11 +7,16 @@
 using System;
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
     public class SimpleFixedSizeTrees : StorageTest
     {
+        public SimpleFixedSizeTrees(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TimeSeries()
         {

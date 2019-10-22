@@ -5,11 +5,16 @@ using System.Reflection;
 using System.Text;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7322 : NoDisposalNeeded
     {
+        public RavenDB_7322(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         // In linux we might encounter Microsoft's VisualStudio assembly types, so we skip this test in linux, and rely on the windows tests result as good for linux too

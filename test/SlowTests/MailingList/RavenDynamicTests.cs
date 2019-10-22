@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDynamicTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,6 +12,7 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -31,6 +32,10 @@ namespace SlowTests.MailingList
 
         public class WhenUsingIdCopy : RavenTestBase
         {
+        public WhenUsingIdCopy(ITestOutputHelper output) : base(output)
+        {
+        }
+
             private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
             private void CreateData(IDocumentStore store)

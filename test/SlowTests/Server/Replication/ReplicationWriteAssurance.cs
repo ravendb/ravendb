@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationWriteAssurance : ClusterTestBase 
     {
+        public ReplicationWriteAssurance(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ServerSideWriteAssurance()
         {

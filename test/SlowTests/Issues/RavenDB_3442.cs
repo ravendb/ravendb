@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3442.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3442 : RavenTestBase
     {
+        public RavenDB_3442(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WhereEqualsShouldSendSortHintsAndDynamicIndexesShouldSetAppropriateSortOptionsThen1()
         {

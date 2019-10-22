@@ -9,11 +9,16 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Journal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class RavenDB_13940 : StorageTest
     {
+        public RavenDB_13940(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private bool _onIntegrityErrorOfAlreadySyncedDataHandlerWasCalled;
 
         protected override void Configure(StorageEnvironmentOptions options)

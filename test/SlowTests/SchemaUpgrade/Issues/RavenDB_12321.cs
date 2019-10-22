@@ -5,11 +5,16 @@ using Raven.Client.Exceptions;
 using Raven.Server.Config.Settings;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SchemaUpgrade.Issues
 {
     public class RavenDB_12321 : RavenTestBase
     {
+        public RavenDB_12321(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("999")]
         [InlineData("9")]

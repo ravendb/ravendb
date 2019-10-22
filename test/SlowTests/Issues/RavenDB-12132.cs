@@ -4,11 +4,16 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12132 : ReplicationTestBase
     {
+        public RavenDB_12132(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanPutObjectWithId()
         {

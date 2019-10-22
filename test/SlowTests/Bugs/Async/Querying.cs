@@ -1,11 +1,16 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Async
 {
     public class Querying : RavenTestBase
     {
+        public Querying(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_query_using_async_session()
         {

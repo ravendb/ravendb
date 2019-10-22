@@ -10,11 +10,16 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class Subscriptions : SubscriptionTestBase
     {
+        public Subscriptions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CreateSubscription()
         {

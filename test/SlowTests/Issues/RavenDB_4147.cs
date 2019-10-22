@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_4147.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4147 : RavenTestBase
     {
+        public RavenDB_4147(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Dates
         {
             public string Date1 { get; set; }

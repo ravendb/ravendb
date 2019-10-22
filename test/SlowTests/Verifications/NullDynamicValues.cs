@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class NullDynamicValues : RavenTestBase
     {
+        public NullDynamicValues(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public string Id { get; set; }

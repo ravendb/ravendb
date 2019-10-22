@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class QueryAsync : RavenTestBase
     {
+        public QueryAsync(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task QueryAsync_Simple()
         {

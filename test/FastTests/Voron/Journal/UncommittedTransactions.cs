@@ -7,11 +7,16 @@
 using Xunit;
 using Voron;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Journal
 {
     public class UncommittedTransactions : StorageTest
     {
+        public UncommittedTransactions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         // all tests here relay on the fact than one log file can contains max 10 pages
         protected override void Configure(StorageEnvironmentOptions options)
         {

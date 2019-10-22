@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_5610 : RavenLowLevelTestBase
     {
+        public RavenDB_5610(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task UpdateType()
         {

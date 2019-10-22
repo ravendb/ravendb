@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class IndexMetadata : RavenTestBase
     {
+        public IndexMetadata(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Users_DeleteStatus : AbstractMultiMapIndexCreationTask
         {
             public Users_DeleteStatus()

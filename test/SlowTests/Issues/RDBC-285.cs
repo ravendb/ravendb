@@ -3,11 +3,16 @@ using FastTests;
 using Orders;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_285 : RavenTestBase
     {
+        public RDBC_285(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryWithBoostEqZero()
         {

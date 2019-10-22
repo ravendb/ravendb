@@ -2,11 +2,16 @@
 using Orders;
 using Raven.Client.Documents.Commands;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8063 : RavenTestBase
     {
+        public RavenDB_8063(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IncludeShouldNotReturnDuplicates()
         {

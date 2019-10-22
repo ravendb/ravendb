@@ -10,11 +10,16 @@ using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Graph
 {
     public class BasicGraphQueries : RavenTestBase
     {
+        public BasicGraphQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class StalenessParameters
         {
             public bool WaitForIndexing { get; set; }

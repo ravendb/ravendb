@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ListCount : RavenTestBase
     {
+        public ListCount(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Location
         {
             public string Id { get; set; }

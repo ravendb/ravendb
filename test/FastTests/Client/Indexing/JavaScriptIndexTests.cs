@@ -6,11 +6,16 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Indexing
 {
     public class JavaScriptIndexTests : RavenTestBase
     {
+        public JavaScriptIndexTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseJavaScriptIndex()
         {

@@ -11,11 +11,16 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4840 : RavenTestBase
     {
+        public RavenDB_4840(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Huge_document_hints_are_stored_and_can_be_read()
         {

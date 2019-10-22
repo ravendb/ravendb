@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11988 : RavenTestBase
     {
+        public RavenDB_11988(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task QueryWithInvocationExpressionInsideWhereShouldThrow()
         {

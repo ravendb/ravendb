@@ -1,11 +1,16 @@
 ﻿using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class ExistsAsync : RavenTestBase
     {
+        public ExistsAsync(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CheckIfDocumentExists()
         {

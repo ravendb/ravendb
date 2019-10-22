@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4393 : RavenTestBase
     {
+        public RavenDB_4393(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class FailedMessage
         {
             public string Id { get; set; }

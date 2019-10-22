@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb8763 : RavenTestBase
     {
+        public RavenDb8763(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAsyncStreamQueryWithMapReduceResult()
         {

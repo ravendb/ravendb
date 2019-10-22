@@ -1,9 +1,14 @@
 ﻿using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Blittable
 {
     public class Serialization : RavenTestBase
     {
+        public Serialization(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Store_And_Load_Boolean_And_Nullable_Boolean()
         {

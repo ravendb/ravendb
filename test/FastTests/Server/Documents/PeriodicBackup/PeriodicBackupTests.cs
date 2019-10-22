@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="PeriodicBackupTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTests : RavenTestBase
     {
+        public PeriodicBackupTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanSetupPeriodicBackupWithVeryLargePeriods()
         {

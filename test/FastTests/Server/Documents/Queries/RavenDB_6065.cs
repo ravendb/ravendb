@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries
 {
     public class DocumentQueryWithDefaultOperator : RavenTestBase
     {
+        public DocumentQueryWithDefaultOperator(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public string Name { get; set; }

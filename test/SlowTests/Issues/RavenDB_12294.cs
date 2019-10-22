@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12294 : RavenTestBase
     {
+        public RavenDB_12294(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class MyDoc
         {
             public int[] DocArrayProp { get; set; }

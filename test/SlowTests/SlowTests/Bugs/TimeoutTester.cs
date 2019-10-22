@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Bugs
 {
     public class TimeoutTester : RavenTestBase
     {
+        public TimeoutTester(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class AnswerVote
         {
             public string QuestionId { get; set; }

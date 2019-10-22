@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="LuceneScoreTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class LuceneScoreTests : RavenTestBase
     {
+        public LuceneScoreTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Book
         {
             public string Id { get; set; }

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="JustFacetSearch.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,11 +13,16 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class JustFacetSearch : RavenTestBase
     {
+        public JustFacetSearch(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Article
         {
             public string Id { get; set; }

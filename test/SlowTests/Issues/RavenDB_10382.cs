@@ -5,11 +5,16 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10382 : StorageTest
     {
+        public RavenDB_10382(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public void ShouldWork64()
         {

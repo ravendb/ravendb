@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="DicWithDateTimeKeys.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System;
 using System.Collections.Generic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DicWithDateTimeKeys : RavenTestBase
     {
+        public DicWithDateTimeKeys(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class A
         {
             public IDictionary<DateTimeOffset, string> Items { get; set; }

@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CachingOfLongQueries.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 
@@ -14,6 +15,10 @@ namespace SlowTests.Tests.Querying
 {
     public class CachingOfLongQueries : RavenTestBase
     {
+        public CachingOfLongQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldWork()
         {

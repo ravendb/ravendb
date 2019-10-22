@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2134.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,11 +13,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_2134 : RavenTestBase
     {
+        public RavenDB_2134(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldWork()
         {

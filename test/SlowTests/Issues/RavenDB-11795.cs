@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11795 : RavenTestBase
     {
+        public RavenDB_11795(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult()
         {

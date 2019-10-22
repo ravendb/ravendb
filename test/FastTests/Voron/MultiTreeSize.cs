@@ -5,11 +5,16 @@
 // -----------------------------------------------------------------------
 
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
 	public class MultiTreeSize : StorageTest
 	{
+        public MultiTreeSize(ITestOutputHelper output) : base(output)
+        {
+        }
+
 		[Fact]
 		public void Single_AddMulti_WillUseOnePage()
 		{

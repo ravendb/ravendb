@@ -20,11 +20,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
     public class ClusterDatabaseMaintenance : ClusterTestBase
     {
+        public ClusterDatabaseMaintenance(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name { get; set; }

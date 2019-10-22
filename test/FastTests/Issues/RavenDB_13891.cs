@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_13891 : RavenTestBase
     {
+        public RavenDB_13891(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task PatchedDocumentShouldBeReplaced()
         {

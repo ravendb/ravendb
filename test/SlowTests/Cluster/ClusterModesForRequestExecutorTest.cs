@@ -13,12 +13,17 @@ using Raven.Server;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
     //tests for RavenDB-7533
     public class ClusterModesForRequestExecutorTest : ClusterTestBase
     {
+        public ClusterModesForRequestExecutorTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

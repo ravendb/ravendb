@@ -3,11 +3,16 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12601 : ReplicationTestBase
     {
+        public RavenDB_12601(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Change_vector_of_cluster_tx_updated_correctly()
         {

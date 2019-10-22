@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class Nick : RavenTestBase
     {
+        public Nick(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class MySpatialDocument
         {
             public string Id { get; set; }

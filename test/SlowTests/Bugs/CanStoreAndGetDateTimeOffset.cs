@@ -1,11 +1,16 @@
-using System;
+﻿using System;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanStoreAndGetDateTimeOffset : RavenTestBase
     {
+        public CanStoreAndGetDateTimeOffset(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         private void StoreAndGetDateTimeOffsetTest()
         {

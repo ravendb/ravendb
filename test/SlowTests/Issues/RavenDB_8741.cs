@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Xunit;
 using Raven.Client.Documents;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8741 : RavenTestBase
     {
+        public RavenDB_8741(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_group_by_array_and_collection()
         {

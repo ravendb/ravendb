@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13412 : RavenTestBase
     {
+        public RavenDB_13412(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanProjectIdFromJsLoadedDocumentInMapReduceQuery()
         {

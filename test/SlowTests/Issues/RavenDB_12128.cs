@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12128 : RavenTestBase
     {
+        public RavenDB_12128(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanQueryWithStartsWithAndCount()
         {

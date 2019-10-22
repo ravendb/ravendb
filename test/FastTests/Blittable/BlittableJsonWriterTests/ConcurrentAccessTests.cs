@@ -6,11 +6,16 @@ using System.Threading.Tasks;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public class ConcurrentAccessTests : BlittableJsonTestBase
     {
+        public ConcurrentAccessTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ConcurrentReadsTest()
         {

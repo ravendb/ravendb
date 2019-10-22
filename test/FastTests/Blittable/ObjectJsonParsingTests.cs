@@ -5,11 +5,16 @@ using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public class ObjectJsonParsingTests : NoDisposalNeeded
     {
+        public ObjectJsonParsingTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Zzz()
         {

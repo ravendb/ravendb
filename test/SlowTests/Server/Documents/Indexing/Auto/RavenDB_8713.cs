@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Auto
 {
     public class RavenDB_8713 : RavenTestBase
     {
+        public RavenDB_8713(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryOnCaseSensitiveFields()
         {

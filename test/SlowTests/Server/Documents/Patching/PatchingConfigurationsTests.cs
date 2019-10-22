@@ -9,11 +9,16 @@ using Raven.Server.Documents.Patch;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Patching
 {
     public class PatchingConfigurationsTests : RavenTestBase
     {
+        public PatchingConfigurationsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanReduceCacheSizeButKeepMostUsedScripts()
         {

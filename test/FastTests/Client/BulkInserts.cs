@@ -9,11 +9,16 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class BulkInserts : RavenTestBase
     {
+        public BulkInserts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(false)]
         public async Task Simple_Bulk_Insert(bool useSsl)

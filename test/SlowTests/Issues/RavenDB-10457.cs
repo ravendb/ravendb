@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10457 : RavenTestBase
     {
+        public RavenDB_10457(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDoMapOnObject()
         {

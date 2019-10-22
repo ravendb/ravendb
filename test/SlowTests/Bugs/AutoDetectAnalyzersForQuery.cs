@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDetectAnalyzersForQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -9,11 +9,16 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AutoDetectAnalyzersForQuery : RavenTestBase
     {
+        public AutoDetectAnalyzersForQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillDetectAnalyzerAutomatically()
         {

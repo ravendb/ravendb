@@ -2,12 +2,17 @@
 using System.Linq;
 using FastTests.Server.Basic.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class GroupByMultipleFields : RavenTestBase
     {
+        public GroupByMultipleFields(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Group_by_multiple_fields()
         {

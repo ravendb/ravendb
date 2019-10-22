@@ -27,11 +27,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class AddNodeToClusterTests : ReplicationTestBase
     {
+        public AddNodeToClusterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task FailOnAddingNonPassiveNode()
         {

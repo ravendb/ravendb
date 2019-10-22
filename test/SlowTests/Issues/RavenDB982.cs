@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB982 : RavenTestBase
     {
+        public RavenDB982(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillNotForceValuesToBeString()
         {

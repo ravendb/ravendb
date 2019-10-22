@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class QueryCommaTest : RavenTestBase
     {
+        public QueryCommaTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Employee
         {
             public string Id { get; set; }

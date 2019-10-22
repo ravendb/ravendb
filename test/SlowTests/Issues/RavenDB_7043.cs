@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7043 : RavenTestBase
     {
+        public RavenDB_7043(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_mark_index_as_errored_and_throw_on_querying_it_even_its_small()
         {

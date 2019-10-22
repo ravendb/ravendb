@@ -6,11 +6,16 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10982 : RavenTestBase
     {
+        public RavenDB_10982(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_remove_result_from_index_on_reduce_error()
         {

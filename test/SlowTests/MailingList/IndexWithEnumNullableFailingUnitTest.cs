@@ -1,12 +1,17 @@
-using System.Linq;
+ï»¿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class IndexWithEnumNullableFailingUnitTest : RavenTestBase
     {
+        public IndexWithEnumNullableFailingUnitTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class CultureDataIndex : AbstractIndexCreationTask<CultureData>
         {
             public CultureDataIndex()
@@ -291,7 +296,7 @@ namespace SlowTests.MailingList
             [System.ComponentModel.Description("Mongolian - Mongolia")]
             MongolianMongolia,
 
-            [System.ComponentModel.Description("NorwegianBokmål) - Norway")]
+            [System.ComponentModel.Description("NorwegianBokmï¿½l) - Norway")]
             NorwegianBokmalNorway,
 
             [System.ComponentModel.Description("Norwegian (Nynorsk) - Norway")]

@@ -9,11 +9,16 @@ using System.Collections.Generic;
 using System.IO;
 using Voron.Impl.Scratch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class FreeScratchPages : FastTests.Voron.StorageTest
     {
+        public FreeScratchPages(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void UncommittedTransactionShouldFreeScratchPagesThatWillBeReusedByNextTransaction()
         {

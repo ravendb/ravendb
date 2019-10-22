@@ -1,14 +1,19 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb_4706 : RavenTestBase
     {
+        public RavenDb_4706(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task SupportRandomOrder()
         {

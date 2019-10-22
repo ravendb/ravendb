@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Searching.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
@@ -25,6 +26,10 @@ namespace SlowTests.Core.Querying
 {
     public class Searching : RavenTestBase
     {
+        public Searching(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSearchByMultipleTerms()
         {

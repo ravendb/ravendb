@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_319 : RavenTestBase
     {
+        public RDBC_319(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanStreamQueryResults()
         {

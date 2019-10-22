@@ -1,10 +1,15 @@
-using System.IO;
+﻿using System.IO;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class CanDefrag : StorageTest
     {
+        public CanDefrag(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDeleteAtRoot()
         {

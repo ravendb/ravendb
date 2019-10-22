@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Nick : RavenTestBase
     {
+        public Nick(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Flags]
         private enum MyEnum
         {

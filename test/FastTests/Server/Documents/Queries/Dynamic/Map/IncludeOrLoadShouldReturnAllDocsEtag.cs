@@ -1,10 +1,15 @@
 ﻿using Raven.Server.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     public class IncludeOrLoadShouldReturnAllDocsEtag : NoDisposalNeeded
     {
+        public IncludeOrLoadShouldReturnAllDocsEtag(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FunctionWithLoad()
         {

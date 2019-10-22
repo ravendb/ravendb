@@ -24,11 +24,16 @@ using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Auto
 {
     public class BasicAutoMapIndexing : RavenLowLevelTestBase
     {
+        public BasicAutoMapIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CheckDispose()
         {

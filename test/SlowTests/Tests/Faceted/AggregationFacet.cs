@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="AggregationFacet.cs" company="Hibernating Rhinos LTD"> 
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class AggregationFacet : RavenTestBase
     {
+        public AggregationFacet(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Car
         {
             public string Make { get; set; }

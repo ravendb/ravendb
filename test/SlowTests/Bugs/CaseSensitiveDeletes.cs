@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CaseSensitiveDeletes : RavenTestBase
     {
+        public CaseSensitiveDeletes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Document
         {
             public string Id { get; set; }

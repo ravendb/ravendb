@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -10,6 +10,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
@@ -66,6 +67,10 @@ namespace SlowTests.Tests.Spatial
 
         public class CanGetFacetsOnVehicleSpatialSearch : RavenTestBase
         {
+        public CanGetFacetsOnVehicleSpatialSearch(ITestOutputHelper output) : base(output)
+        {
+        }
+
             private List<Vehicle> Vehicles { get; set; }
 
             private IDocumentStore _store;

@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class CanLoadDocumentArray : RavenTestBase
     {
+        public CanLoadDocumentArray(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Student
         {
             public string Id { get; set; }

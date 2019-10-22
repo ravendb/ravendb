@@ -2,11 +2,16 @@
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
     public class Retention : RavenTestBase
     {
+        public Retention(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NightlyBuildTheory]
         [InlineData(20, 5, false)]
         [InlineData(20, 20, false)]

@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic
 {
     public class RavenDB_8806 : RavenTestBase
     {
+        public RavenDB_8806(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_stream_dynamic_query()
         {

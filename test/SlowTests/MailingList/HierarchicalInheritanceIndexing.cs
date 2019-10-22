@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -6,11 +6,16 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class HierarchicalInheritanceIndexing : RavenTestBase
     {
+        public HierarchicalInheritanceIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateIndex()
         {

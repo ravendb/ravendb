@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7078 : RavenTestBase
     {
+        public RavenDB_7078(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Invalid_map_function_due_to_raven_linq_optimizer_not_supporting_select_into()
         {

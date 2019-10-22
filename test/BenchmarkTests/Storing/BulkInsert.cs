@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace BenchmarkTests.Storing
 {
     public class BulkInsert : BenchmarkTestBase
     {
+        public BulkInsert(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Small_Size_500k()
         {

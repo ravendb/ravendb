@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Threading;
 using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4563 : RavenTestBase
     {
+        public RavenDB_4563(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void bulk_insert_throws_when_server_is_down()

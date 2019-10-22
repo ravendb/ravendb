@@ -4,11 +4,16 @@ using FastTests;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10958 : RavenTestBase
     {
+        public RavenDB_10958(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_write_large_string()
         {

@@ -5,11 +5,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10666 : RavenTestBase
     {
+        public RavenDB_10666(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DocumentSessionAttachments_ShouldRespectSessionDatabase()
         {

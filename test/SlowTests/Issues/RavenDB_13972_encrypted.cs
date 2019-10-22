@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Utils.Enumerators;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13972_encrypted : RavenDB_13972
     {
+        public RavenDB_13972_encrypted(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
         [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]

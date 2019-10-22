@@ -8,11 +8,16 @@ using Sparrow.Json;
 using Xunit;
 using static SlowTests.Issues.RavenDB_11985.Building;
 using static SlowTests.Issues.RavenDB_11985.UsersIndexWithStoredArray;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {    
     public class RavenDB_11985:RavenTestBase
     {
+        public RavenDB_11985(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Building
         {
             public class Tennant

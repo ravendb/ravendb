@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
     public class RavenDB_11687 : RavenTestBase
     {
+        public RavenDB_11687(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIndexDictionaryDirectly()
         {

@@ -21,11 +21,16 @@ using Xunit;
 using Constants = Raven.Client.Constants;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationConflictsTests : ReplicationTestBase
     {
+        public ReplicationConflictsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

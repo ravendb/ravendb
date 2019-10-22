@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class OrderById : RavenTestBase
     {
+        public OrderById(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task OrderByIdTest()
         {

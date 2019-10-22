@@ -8,11 +8,16 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationOfConflicts : ReplicationTestBase
     {
+        public ReplicationOfConflicts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReplicateAConflictThenResolveIt()
         {

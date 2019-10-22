@@ -3,12 +3,17 @@ using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Constants = Raven.Client.Constants;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
 
     public class RavenDB_9055 : RavenTestBase
     {
+        public RavenDB_9055(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AggressivelyCacheWorksWhenTopologyUpdatesIsDisable()
         {

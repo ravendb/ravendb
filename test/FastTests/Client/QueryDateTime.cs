@@ -3,11 +3,16 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class QueryDateTime : RavenTestBase
     {
+        public QueryDateTime(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DynamicQueryingDateTimeShouldWork()
         {

@@ -5,11 +5,16 @@
 // -----------------------------------------------------------------------
 
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class Increments : FastTests.Voron.StorageTest
     {
+        public Increments(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SimpleIncrementShouldWork()
         {

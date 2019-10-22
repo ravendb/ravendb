@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="LazyFacets.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class LazyFacets : RavenTestBase
     {
+        public LazyFacets(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Default_operator_not_honoured_remote_store_ToFacetsLazy()
         {

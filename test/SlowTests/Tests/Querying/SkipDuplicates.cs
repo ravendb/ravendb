@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {
     public class SkipDuplicates : RavenTestBase
     {
+        public SkipDuplicates(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillSkipDuplicates()
         {

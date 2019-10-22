@@ -4,11 +4,16 @@ using Orders;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13252 : RavenTestBase
     {
+        public RavenDB_13252(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseSpacesInCounterAndCompareExchangeNames()
         {

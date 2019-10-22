@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2672.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,11 +13,16 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2672 : RavenTestBase
     {
+        public RavenDB_2672(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FacetSearchShouldThrowIfIndexDoesNotExist()
         {

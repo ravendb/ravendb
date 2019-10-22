@@ -3,11 +3,16 @@ using System.Text;
 using Raven.Server.ServerWide.Context;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Optimizations
 {
     public class EarlyLockRelease : RavenLowLevelTestBase
     {
+        public EarlyLockRelease(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldWork()
         {

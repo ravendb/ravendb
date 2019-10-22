@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-3931.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3931 : NoDisposalNeeded
     {
+        public RavenDB_3931(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public IEnumerable<string> Foo

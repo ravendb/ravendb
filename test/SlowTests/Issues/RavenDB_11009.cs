@@ -3,11 +3,16 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11009 : RavenTestBase
     {
+        public RavenDB_11009(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldDoCaseSensitiveAutoIndexLookup()
         {

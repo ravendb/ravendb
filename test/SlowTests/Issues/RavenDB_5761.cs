@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -10,6 +11,10 @@ namespace SlowTests.Issues
 {
     public class RavenDB_5761 : RavenTestBase
     {
+        public RavenDB_5761(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Index1 : AbstractIndexCreationTask<User>
         {
             public Index1()

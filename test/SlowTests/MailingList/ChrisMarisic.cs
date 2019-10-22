@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ChrisMarisic : RavenTestBase
     {
+        public ChrisMarisic(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly Leasee[] CarLeasees = new[]
         {
             new Leasee {Id = "leasees/1", Name = "Bob"}, new Leasee {Id = "leasees/2", Name = "Steve"},

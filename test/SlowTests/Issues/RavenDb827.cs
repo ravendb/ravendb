@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb827 : RavenTestBase
     {
+        public RavenDb827(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TranTest
         {
             public string Id { get; set; }

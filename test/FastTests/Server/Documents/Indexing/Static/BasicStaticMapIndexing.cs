@@ -17,11 +17,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
     public class BasicStaticMapIndexing : RavenLowLevelTestBase
     {
+        public BasicStaticMapIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task The_easiest_static_index()
         {

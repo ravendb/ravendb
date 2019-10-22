@@ -2,11 +2,16 @@
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public class MsSQLSchemaTest : SqlAwareTestBase
     {
+        public MsSQLSchemaTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanFetchSchema()
         {

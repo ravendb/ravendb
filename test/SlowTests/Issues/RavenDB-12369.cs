@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Linq;
 using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12369 : RavenTestBase
     {
+        public RavenDB_12369(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseOrderByNumberInProjection()
         {

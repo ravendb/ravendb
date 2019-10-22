@@ -2,11 +2,16 @@
 using FastTests;
 using Orders;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8462 : RavenTestBase
     {
+        public RavenDB_8462(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_be_handled_by_the_same_index()
         {

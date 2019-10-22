@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB955 : RavenTestBase
     {
+        public RavenDB955(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryWithNullComparison()
         {

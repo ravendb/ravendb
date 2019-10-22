@@ -13,11 +13,16 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class Retention : RavenTestBase
     {
+        public Retention(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly SemaphoreSlim Locker = new SemaphoreSlim(1, 1);
 
         [Theory]

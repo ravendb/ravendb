@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10475 : RavenTestBase
     {
+        public RavenDB_10475(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryNegativeNumbers()
         {

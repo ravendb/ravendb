@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13016 : RavenTestBase
     {
+        public RavenDB_13016(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_project_on_sub_collection_with_Id_property()
         {

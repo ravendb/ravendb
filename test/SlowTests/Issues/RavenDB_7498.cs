@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Http;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7498 : RavenTestBase
     {
+        public RavenDB_7498(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public DocumentStore InitAggressiveCachingWithNotTrackingMode()
         {
             var store = GetDocumentStore(new Options()

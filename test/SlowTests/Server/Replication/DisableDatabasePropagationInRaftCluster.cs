@@ -8,11 +8,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class DisableDatabasePropagationInRaftCluster : ClusterTestBase
     {
+        public DisableDatabasePropagationInRaftCluster(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name;

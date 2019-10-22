@@ -4,11 +4,16 @@ using System.Linq;
 using Voron;
 using Voron.Data;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
     public class MultiValueTree : StorageTest
     {
+        public MultiValueTree(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Single_MultiAdd_And_Read_DataStored()
         {

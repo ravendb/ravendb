@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11402 : RavenTestBase
     {
+        public RavenDB_11402(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanWaitForIndex()
         {

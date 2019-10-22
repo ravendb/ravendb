@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -8,11 +8,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.MailingList
 {
     public class Jalchr3 : RavenTestBase
     {
+        public Jalchr3(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Streaming_documents_will_respect_the_sorting_order()
         {

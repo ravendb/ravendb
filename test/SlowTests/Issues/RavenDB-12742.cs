@@ -2,11 +2,16 @@
 using FastTests.Voron;
 using Voron.Data.BTrees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12742 : StorageTest
     {
+        public RavenDB_12742(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanOverwriteBigValueInSameTx()
         {

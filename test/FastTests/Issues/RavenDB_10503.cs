@@ -6,11 +6,16 @@ using System.Reflection;
 using System.Text;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10503 : NoDisposalNeeded
     {
+        public RavenDB_10503(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly HashSet<string> MethodsToSkip = new HashSet<string>
         {
             nameof(Enumerable.ToList),          // materializer

@@ -5,11 +5,16 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Fixed;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7281 : StorageTest
     {
+        public RavenDB_7281(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(13, 2)]
         [InlineData(5111, 2)]

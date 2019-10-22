@@ -6,11 +6,16 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     public class CreationOfAutoMapIndexDefinition : NoDisposalNeeded
     {
+        public CreationOfAutoMapIndexDefinition(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private DynamicQueryMapping _sut;
 
         [Fact]

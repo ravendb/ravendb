@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8805 : RavenTestBase
     {
+        public RavenDB_8805(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotThrow()
         {

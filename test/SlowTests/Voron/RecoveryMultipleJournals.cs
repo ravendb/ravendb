@@ -7,11 +7,16 @@ using Voron;
 using Voron.Exceptions;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class RecoveryMultipleJournals : StorageTest
     {
+        public RecoveryMultipleJournals(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;

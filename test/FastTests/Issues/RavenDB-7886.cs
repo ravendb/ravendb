@@ -2,11 +2,16 @@
 using System.IO;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7886 : NoDisposalNeeded
     {
+        public RavenDB_7886(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GivenNonExistingFileAsCustomConfigPathConfigurationLoadingShouldThrow()
         {
