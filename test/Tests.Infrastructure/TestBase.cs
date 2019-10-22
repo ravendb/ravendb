@@ -134,7 +134,7 @@ namespace FastTests
         {
             var selfSignedCertificatePaths = _selfSignedCertificates;
             if (selfSignedCertificatePaths != null && createNew == false)
-                return ReturnCertificatePaths(selfSignedCertificatePaths);
+                return ReturnCertificatesHolder(selfSignedCertificatePaths);
 
             lock (typeof(TestBase))
             {
@@ -142,15 +142,15 @@ namespace FastTests
                 if (selfSignedCertificatePaths == null || createNew)
                     _selfSignedCertificates = selfSignedCertificatePaths = Generate();
 
-                return ReturnCertificatePaths(selfSignedCertificatePaths);
+                return ReturnCertificatesHolder(selfSignedCertificatePaths);
             }
 
-            TestCertificatesHolder ReturnCertificatePaths(TestCertificatesHolder certificates)
+            TestCertificatesHolder ReturnCertificatesHolder(TestCertificatesHolder certificates)
             {
                 return new TestCertificatesHolder(certificates, GetTempFileName);
             }
 
-            static TestCertificatesHolder Generate()
+            TestCertificatesHolder Generate()
             {
                 var log = new StringBuilder();
                 byte[] certBytes;
@@ -202,7 +202,7 @@ namespace FastTests
                 return new TestCertificatesHolder(serverCertificatePath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
             }
 
-            static string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
+            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
                 CertificateUtils.CreateSelfSignedClientCertificate(
                     $"{Environment.MachineName}_CC_{index}",
