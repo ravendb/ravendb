@@ -2542,8 +2542,10 @@ namespace Raven.Server.Documents.Indexes
                                                 includeDocumentsCommand.Gather(document.Result);
 
                                             includeCountersCommand?.Fill(document.Result);
+
+                                            includeTimeSeriesCommand?.Fill(document.Result);
                                         }
-                                        includeTimeSeriesCommand?.Fill(document.Result);
+
 
                                     }
                                 }
@@ -2560,6 +2562,9 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (includeCountersCommand != null)
                                     resultToFill.AddCounterIncludes(includeCountersCommand);
+
+                                if (includeTimeSeriesCommand != null)
+                                    resultToFill.AddTimeSeriesIncludes(includeTimeSeriesCommand);
 
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                                 resultToFill.SkippedResults = skippedResults.Value;
