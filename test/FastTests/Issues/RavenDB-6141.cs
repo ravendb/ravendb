@@ -5,6 +5,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
@@ -15,7 +16,7 @@ namespace FastTests.Issues
         private readonly string _emptySettingsDir;
         private readonly string _emptySettingFile;
 
-        public RavenDB_6141()
+        public RavenDB_6141(ITestOutputHelper output) : base(output)
         {
             _emptySettingsDir = NewDataPath(prefix: nameof(RavenDB_6141));
             _emptySettingFile = Path.Combine(_emptySettingsDir, "settings.json");

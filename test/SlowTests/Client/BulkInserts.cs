@@ -9,7 +9,7 @@ namespace SlowTests.Client
         [Fact]
         public async Task Simple_Bulk_Insert_With_Ssl()
         {
-            using (var x = new FastTests.Client.BulkInserts())
+            using (var x = new FastTests.Client.BulkInserts(Output))
             {
                 await x.Simple_Bulk_Insert(useSsl: true);
             }

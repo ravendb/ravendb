@@ -18,7 +18,7 @@ namespace StressTests.Core.Expiration
         [InlineData(10000)]
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)
         {
-            using (var expiration = new ExpirationTests())
+            using (var expiration = new ExpirationTests(Output))
             {
                 await expiration.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(count);
             }

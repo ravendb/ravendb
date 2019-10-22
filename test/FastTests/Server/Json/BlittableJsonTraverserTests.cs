@@ -4,6 +4,7 @@ using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Json
 {
@@ -13,7 +14,7 @@ namespace FastTests.Server.Json
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
         private readonly BlittableJsonTraverser _sut = BlittableJsonTraverser.Default;
 
-        public BlittableJsonTraverserTests()
+        public BlittableJsonTraverserTests(ITestOutputHelper output) : base(output)
         {
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }

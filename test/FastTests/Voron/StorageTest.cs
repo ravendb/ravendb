@@ -93,7 +93,7 @@ namespace FastTests.Voron
             return new MemoryStream(Encoding.UTF8.GetBytes(val));
         }
 
-        public virtual void Dispose()
+        public override void Dispose()
         {
             var aggregator = new ExceptionAggregator("Could not dispose Storage test.");
 

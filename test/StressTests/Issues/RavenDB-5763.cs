@@ -12,7 +12,7 @@ namespace StressTests.Issues
         {
             Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, i =>
             {
-                using (var store = new ReplicationTombstoneTests())
+                using (var store = new ReplicationTombstoneTests(Output))
                 {
                     store.Two_tombstones_should_replicate_in_master_master().Wait();
                 }

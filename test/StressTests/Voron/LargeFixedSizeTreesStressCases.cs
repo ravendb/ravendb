@@ -12,7 +12,7 @@ namespace StressTests.Voron
         [InlineDataWithRandomSeed(300000)]
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
         {
-            using (var test = new LargeFixedSizeTrees())
+            using (var test = new LargeFixedSizeTrees(Output))
             {
                 test.CanDeleteRange_TryToFindABranchNextToLeaf(count, seed);
             }
@@ -23,7 +23,7 @@ namespace StressTests.Voron
         [InlineDataWithRandomSeed(2000000)]
         public void CanDeleteRange_RandomRanges(int count, int seed)
         {
-            using (var test = new LargeFixedSizeTrees())
+            using (var test = new LargeFixedSizeTrees(Output))
             {
                 test.CanDeleteRange_RandomRanges(count, seed);
             }
@@ -33,7 +33,7 @@ namespace StressTests.Voron
         [InlineDataWithRandomSeed(300000)]
         public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {
-            using (var test = new LargeFixedSizeTrees())
+            using (var test = new LargeFixedSizeTrees(Output))
             {
                 test.CanDeleteRange_RandomRanges_WithGaps(count, seed);
             }

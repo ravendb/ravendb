@@ -12,7 +12,7 @@ namespace StressTests.Voron.Bugs
         public void FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(int initialNumberOfDocs,
             int numberOfModifications, int seed)
         {
-            using (var test = new DataInconsistencyRepro())
+            using (var test = new DataInconsistencyRepro(Output))
             {
                 test.FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(initialNumberOfDocs, numberOfModifications, seed);
             }

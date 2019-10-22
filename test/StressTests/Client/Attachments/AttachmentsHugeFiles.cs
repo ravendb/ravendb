@@ -19,7 +19,7 @@ namespace StressTests.Client.Attachments
         {
             try
             {
-                using (var stress = new AttachmentsBigFiles())
+                using (var stress = new AttachmentsBigFiles(Output))
                 {
                     await stress.BatchRequestWithLongMultiPartSections(size, hash, encrypted);
                 }
@@ -39,7 +39,7 @@ namespace StressTests.Client.Attachments
         {
             try
             {
-                using (var stress = new AttachmentsBigFiles())
+                using (var stress = new AttachmentsBigFiles(Output))
                 {
                     await stress.SupportHugeAttachment(size, hash, encrypted);
                 }

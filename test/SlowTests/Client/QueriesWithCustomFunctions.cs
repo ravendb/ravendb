@@ -3503,6 +3503,10 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
 
         public class ProjectionParameters : RavenTestBase
         {
+            public ProjectionParameters(ITestOutputHelper output) : base(output)
+            {
+            }
+            
             public class Document
             {
                 public string Id { get; set; }

@@ -14,7 +14,7 @@ namespace StressTests.Voron.Trees
         public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated(int maxPageNumber,
             int numberOfFreedPages, int seed)
         {
-            using (var test = new FreeSpaceTest())
+            using (var test = new FreeSpaceTest(Output))
             {
                 test.FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated(maxPageNumber, numberOfFreedPages, seed);
             }
