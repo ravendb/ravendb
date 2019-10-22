@@ -63,7 +63,7 @@ namespace SlowTests.MailingList
                                         .Select(g => new { g.Key.City, CityOrder = g.Key.City, g.Key.CountryCode, g.Key.StateCode });
 
                 //Bug Collation - following resolves in empty results
-                //Without it, {� � �} are analyzed wrongly and are placed at the end of the alphabet
+                //Without it, {ä ö ü} are analyzed wrongly and are placed at the end of the alphabet
                 Analyzers.Add(x => x.CityOrder, typeof(DeCollationAnalyzer).AssemblyQualifiedName);
             }
         }
@@ -77,13 +77,13 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zauggenried", ZipCode = "a" });
-                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Z�berwangen", ZipCode = "b" });
-                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Z�nauva", ZipCode = "c" });
-                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Z�ziwil", ZipCode = "d" });
+                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Züberwangen", ZipCode = "b" });
+                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zénauva", ZipCode = "c" });
+                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zäziwil", ZipCode = "d" });
                     session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zwingen", ZipCode = "e" });
                     session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zwillikon", ZipCode = "f" });
                     session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zimmerwald", ZipCode = "g" });
-                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Z�rich 1 Sihlpost", ZipCode = "h" });
+                    session.Store(new ZipCityStateCountry { CountryCode = "CH", StateCode = "BE", City = "Zürich 1 Sihlpost", ZipCode = "h" });
                     session.SaveChanges();
                 }
 

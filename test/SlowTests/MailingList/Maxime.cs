@@ -22,10 +22,10 @@ namespace SlowTests.MailingList
             {
                 new PlacesByTermsAndLocation().Execute(store);
 
-                var place1 = new Place("Universit� du Qu�bec � Montr�al")
+                var place1 = new Place("Université du Québec à Montréal")
                 {
                     Id = "places/1",
-                    Description = "L'Universit� du Qu�bec � Montr�al (UQAM) est une universit� francophone, publique et urbaine de Montr�al, dans la province du Qu�bec au Canada.",
+                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -33,7 +33,7 @@ namespace SlowTests.MailingList
                 var place2 = new Place("UQAM")
                 {
                     Id = "places/2",
-                    Description = "L'Universit� du Qu�bec � Montr�al (UQAM) est une universit� francophone, publique et urbaine de Montr�al, dans la province du Qu�bec au Canada.",
+                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -59,7 +59,7 @@ namespace SlowTests.MailingList
 
                 Assert.Equal("places/2", places[0].Id);
                 // places/1: perfect match + boost
-                terms = "Universit� Qu�bec Montr�al";
+                terms = "Université Québec Montréal";
                 places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
@@ -84,10 +84,10 @@ namespace SlowTests.MailingList
             {
                 new PlacesByTermsAndLocation().Execute(store);
 
-                var place1 = new Place("Universit� du Qu�bec � Montr�al")
+                var place1 = new Place("Université du Québec à Montréal")
                 {
                     Id = "places/1",
-                    Description = "L'Universit� du Qu�bec � Montr�al (UQAM) est une universit� francophone, publique et urbaine de Montr�al, dans la province du Qu�bec au Canada.",
+                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -95,7 +95,7 @@ namespace SlowTests.MailingList
                 var place2 = new Place("UQAM")
                 {
                     Id = "places/2",
-                    Description = "L'Universit� du Qu�bec � Montr�al (UQAM) est une universit� francophone, publique et urbaine de Montr�al, dans la province du Qu�bec au Canada.",
+                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -106,7 +106,7 @@ namespace SlowTests.MailingList
                 session.SaveChanges();
 
                 // places/1: perfect match + boost
-                const string terms = "Universit� Qu�bec Montr�al";
+                const string terms = "Université Québec Montréal";
                 QueryStatistics stats;
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
