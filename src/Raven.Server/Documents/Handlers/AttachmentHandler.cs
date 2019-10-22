@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
             return GetAttachment(false);
         }
 
-        [RavenAction("/databases/*/attachments/list", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser)]
         public async Task GetAttachments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -72,30 +72,27 @@ namespace Raven.Server.Documents.Handlers
             {
                 var request = context.Read(RequestBodyStream(), "GetAttachments");
 
-                if (request.TryGet("Type", out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
-                    throw new ArgumentException("The 'Type' field in the body request is mandatory");
+                if (request.TryGet(nameof(AttachmentType), out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
+                    throw new ArgumentException($"The '{nameof(AttachmentType)}' field in the body request is mandatory");
 
-                if (request.TryGet("Attachments", out BlittableJsonReaderArray attachments) == false)
-                    throw new ArgumentException("The 'Attachments' field in the body request is mandatory");
+                if (request.TryGet(nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments), out BlittableJsonReaderArray attachments) == false)
+                    throw new ArgumentException($"The '{nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments)}' field in the body request is mandatory");
 
-                var attachmentsStreams = new Dictionary<KeyValuePair<string, string>, Stream>();
+                var attachmentsStreams = new List<Stream>();
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("AttachmentsMetadata");
+                    writer.WritePropertyName(nameof(GetAttachmentsOperation.GetAttachmentsCommand.AttachmentsMetadata));
                     writer.WriteStartArray();
                     var first = true;
-                    var index = 0;
                     foreach (BlittableJsonReaderObject bjro in attachments)
                     {
-                        if (bjro.TryGet("Key", out string id) == false)
-                            throw new ArgumentException("Could not parse Key");
-                        if (bjro.TryGet("Value", out string val) == false)
-                            throw new ArgumentException("Could not parse Value");
+                        if (bjro.TryGet(nameof(AttachmentRequest.DocumentId), out string id) == false)
+                            throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.DocumentId)}");
+                        if (bjro.TryGet(nameof(AttachmentRequest.Name), out string name) == false)
+                            throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.Name)}");
 
-                        var kvp = new KeyValuePair<string, string>(id, val);
-
-                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, kvp.Key, kvp.Value, type, changeVector: null);
+                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id, name, type, changeVector: null);
                         if (attachment == null)
                             continue;
 
@@ -104,9 +101,8 @@ namespace Raven.Server.Documents.Handlers
                         first = false;
 
                         attachment.Size = attachment.Stream.Length;
-                        attachmentsStreams.Add(kvp, attachment.Stream);
-                        WriteAttachmentWithoutStream(writer, attachment, kvp.Key, index);
-                        index++;
+                        attachmentsStreams.Add(attachment.Stream);
+                        WriteAttachmentDetails(writer, attachment, id);
                     }
 
                     writer.WriteEndArray();
@@ -114,12 +110,12 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+                using (var responseStream = ResponseBodyStream())
                 {
-                    foreach (var kvp in attachmentsStreams)
+                    foreach (var stream in attachmentsStreams)
                     {
-                        using (var tmpStream = kvp.Value)
+                        using (var tmpStream = stream)
                         {
-                            var responseStream = ResponseBodyStream();
                             var count = tmpStream.Read(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Length);
                             while (count > 0)
                             {
@@ -132,29 +128,26 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void WriteAttachmentWithoutStream(BlittableJsonTextWriter writer, Attachment attachment, string documentId, int index)
+        private static void WriteAttachmentDetails(BlittableJsonTextWriter writer, Attachment attachment, string documentId)
         {
             writer.WriteStartObject();
-            writer.WritePropertyName("Name");
+            writer.WritePropertyName(nameof(AttachmentDetails.Name));
             writer.WriteString(attachment.Name);
             writer.WriteComma();
-            writer.WritePropertyName("Hash");
+            writer.WritePropertyName(nameof(AttachmentDetails.Hash));
             writer.WriteString(attachment.Base64Hash.ToString());
             writer.WriteComma();
-            writer.WritePropertyName("ContentType");
+            writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
             writer.WriteString(attachment.ContentType);
             writer.WriteComma();
-            writer.WritePropertyName("Size");
+            writer.WritePropertyName(nameof(AttachmentDetails.Size));
             writer.WriteInteger(attachment.Size);
             writer.WriteComma();
-            writer.WritePropertyName("ChangeVector");
+            writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
             writer.WriteString(attachment.ChangeVector);
             writer.WriteComma();
-            writer.WritePropertyName("DocumentId");
+            writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
             writer.WriteString(documentId);
-            writer.WriteComma();
-            writer.WritePropertyName("Index");
-            writer.WriteInteger(index);
             writer.WriteEndObject();
         }
 

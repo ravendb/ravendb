@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
             return Session.Operations.Send(operation, SessionInfo);
         }
 
-        public IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<KeyValuePair<string, string>> attachments)
+        public IEnumerator<AttachmentEnumeratorResult> Get(IEnumerable<AttachmentRequest> attachments)
         {
             var operation = new GetAttachmentsOperation(attachments, AttachmentType.Document);
             return Session.Operations.Send(operation, SessionInfo);

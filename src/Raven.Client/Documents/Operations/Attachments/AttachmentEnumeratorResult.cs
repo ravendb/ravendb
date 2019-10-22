@@ -20,9 +20,9 @@ namespace Raven.Client.Documents.Operations.Attachments
             _internalStream.CopyTo(stream);
         }
 
-        public async Task CopyToAsync(Stream stream)
+        public Task CopyToAsync(Stream stream)
         {
-            await _internalStream.CopyToAsync(stream).ConfigureAwait(false);
+            return _internalStream.CopyToAsync(stream);
         }
 
         public void Dispose()

@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns Enumerator of KeyValuePairs of attachment name and stream.
         /// </summary>
-        Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<KeyValuePair<string, string>> attachments, CancellationToken token = default);
+        Task<IEnumerator<AttachmentEnumeratorResult>> GetAsync(IEnumerable<AttachmentRequest> attachments, CancellationToken token = default);
 
         /// <summary>
         /// Returns the revision attachment by the document id and attachment name.
