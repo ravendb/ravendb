@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
-            UseAllDocumentsCounterAndCmpXchgEtags(documentsContext, query, length, indexEtagBytes);
+            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(documentsContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 

@@ -247,6 +247,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (hasCounters)
                 bufferSize++;
+            if (query.HasTimeSeries)
+                bufferSize++;
             if (query.HasCmpXchgSelect)
                 bufferSize++;
 
@@ -265,7 +267,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (hasCounters)
                     buffer[3] = DocumentsStorage.ReadLastCountersEtag(context.Transaction.InnerTransaction);
-                
+
+                if (query.HasTimeSeries)
+                    buffer[hasCounters ? 4 : 3] = DocumentsStorage.ReadLastTimeSeriesEtag(context.Transaction.InnerTransaction);
+
                 resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
@@ -277,6 +282,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (hasCounters)
                     buffer[3] = Database.DocumentsStorage.CountersStorage.GetLastCounterEtag(context, collection);
+
+                if (query.HasTimeSeries)
+                    buffer[hasCounters ? 4 : 3] = Database.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context, collection);
 
                 resultToFill.TotalResults = (int)collectionStats.Count;
             }

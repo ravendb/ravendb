@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -1607,10 +1609,374 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
+        [Fact]
+        public void TimeSeriesIncludesShouldAffectQueryEtag_CollectionQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Oren"
+                    }, "users/ayende");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Include(i => i.IncludeTimeSeries("Heartrate", baseline.AddHours(-1), baseline.AddHours(1)));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor(result[0])
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(67d, vals[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(30), vals[180].Timestamp);
+                }
+
+                // remove some values from the time series
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Remove("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(40));
+
+                    session.SaveChanges();
+                }
+
+                // re-run the query
+                // the result should not be served from cache
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Include(i => i.IncludeTimeSeries("Heartrate", baseline.AddHours(-1), baseline.AddHours(1)));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor(result[0])
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(60, vals.Count);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void TimeSeriesIncludesShouldAffectQueryEtag_IndexQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Oren",
+                        WorksAt = "HR"
+                    }, "users/ayende");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.WorksAt == "HR")
+                        .Include(i => i.IncludeTimeSeries("Heartrate", baseline.AddHours(-1), baseline.AddHours(1)));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor(result[0])
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(67d, vals[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(30), vals[180].Timestamp);
+                }
+
+                // remove some values from the time series
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Remove("Heartrate", baseline.AddMinutes(10), baseline.AddMinutes(40));
+
+                    session.SaveChanges();
+                }
+
+                // re-run the query
+                // the result should not be served from cache
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.WorksAt == "HR")
+                        .Include(i => i.IncludeTimeSeries("Heartrate", baseline.AddHours(-1), baseline.AddHours(1)));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor(result[0])
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(60, vals.Count);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanFilterByCmpXchgAndIncludeTimeSeriesAndCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Oren",
+                        WorksAt = "companies/1"
+                    }, "users/1");
+
+                    session.Store(new User
+                    {
+                        Name = "Rahien",
+                        WorksAt = "companies/2"
+                    }, "users/2");
+
+                    session.Store(new Company
+                    {
+                        Name = "HR"
+                    }, "companies/1");
+
+                    session.Store(new Company
+                    {
+                        Name = "HP"
+                    }, "companies/2");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/1");
+                    var tsf2 = session.TimeSeriesFor("users/2");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+
+                        if (i % 2 == 0)
+                            continue;
+
+                        tsf2.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/apple", new[] { 67d });
+                    }
+
+                    session.CountersFor("users/1").Increment("likes", 5);
+                    session.CountersFor("users/2").Increment("likes", 10);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("names/ayende", "Oren");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Name == RavenQuery.CmpXchg<string>("names/ayende"))
+                        .Include(i => i
+                            .IncludeDocuments(u => u.WorksAt)
+                            .IncludeCounter("likes")
+                            .IncludeTimeSeries("Heartrate", baseline.AddHours(-1), baseline.AddHours(1)));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+                    var company = session.Load<Company>(result[0].WorksAt);
+                    
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var counter = session.CountersFor(result[0].Id).Get("likes");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(5, counter);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor(result[0])
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(67d, vals[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(30), vals[180].Timestamp);
+                }
+
+                // update the compare exchange value
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var cmpxchg = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("names/ayende");
+
+                    session.Advanced.ClusterTransaction.UpdateCompareExchangeValue(
+                        new CompareExchangeValue<string>(
+                            "names/ayende",
+                            cmpxchg.Index,
+                            "Rahien"));
+
+                    session.SaveChanges();
+                }
+
+                // re run the query
+                // the query result should not be served from cache 
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Name == RavenQuery.CmpXchg<string>("names/ayende"))
+                        .Include(i => i
+                            .IncludeDocuments(u => u.WorksAt)
+                            .IncludeCounter("likes")
+                            .IncludeTimeSeries("Heartrate", baseline.AddHours(-1), baseline.AddHours(1)));
+
+                    var result = query.ToList();
+
+                    Assert.Equal("Rahien", result[0].Name);
+
+                    // should not go to server
+                    var company = session.Load<Company>(result[0].WorksAt);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal("HP", company.Name);
+
+                    // should not go to server
+                    var counter = session.CountersFor(result[0].Id).Get("likes");
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(10, counter);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor(result[0])
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(90, vals.Count);
+                    Assert.Equal(baseline.AddSeconds(10), vals[0].Timestamp);
+                    Assert.Equal("watches/apple", vals[0].Tag);
+                    Assert.Equal(67d, vals[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(30).AddSeconds(-10), vals[89].Timestamp);
+
+                }
+
+            }
+        }
+
         private class User
         {
             public string Name { get; set; }
+
             public string WorksAt { get; set; }
+
+            public string Id { get; set;  }
 
         }
     }
