@@ -1,16 +1,18 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System;
 using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public abstract class NoDisposalNeeded : XunitLoggingBase
+    public abstract class NoDisposalNeeded : IDisposable
     {
-        static NoDisposalNeeded()
+        protected readonly ITestOutputHelper Output;
+        
+        protected NoDisposalNeeded(ITestOutputHelper output)
         {
-            XunitLogging.EnableExceptionCapture();
+            Output = output;
         }
 
-        protected NoDisposalNeeded(ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(output, sourceFile)
+        public void Dispose()
         {
         }
     }

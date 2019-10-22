@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
-    public class BulkInserts : RavenTestBase
+    public class BulkInserts : NoDisposalNeeded
     {
         public BulkInserts(ITestOutputHelper output) : base(output)
         {

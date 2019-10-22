@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.Notifications;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,15 +12,6 @@ namespace SlowTests.Issues
     {
         public RavenDB_6285(ITestOutputHelper output) : base(output)
         {
-        }
-
-        [Fact]
-        public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
-        {
-            using (var x = new ChangesTests(Output))
-            {
-                await x.CanGetAllNotificationAboutDocument_ALotOfDocuments();
-            }
         }
 
         [Fact]
