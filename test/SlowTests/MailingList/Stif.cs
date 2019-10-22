@@ -24,7 +24,7 @@ namespace SlowTests.MailingList
         }
 
         [DataContract]
-        private class Context
+        private class StifContext
         {
             [DataMember]
             public string Key { get; set; }

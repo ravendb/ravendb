@@ -11,7 +11,7 @@ namespace SlowTests.Server.Documents.Indexing
         [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task Auto_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
         {
-            using (var test = new CollisionsOfReduceKeyHashes())
+            using (var test = new CollisionsOfReduceKeyHashes(Output))
             {
                 await test.Auto_index_should_produce_multiple_outputs(numberOfUsers, locations);
             }
@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.Indexing
         [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task Static_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
         {
-            using (var test = new CollisionsOfReduceKeyHashes())
+            using (var test = new CollisionsOfReduceKeyHashes(Output))
             {
                 await test.Static_index_should_produce_multiple_outputs(numberOfUsers, locations);
             }

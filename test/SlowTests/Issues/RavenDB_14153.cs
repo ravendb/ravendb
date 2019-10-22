@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14153 : RavenTestBase
     {
+        public RavenDB_14153(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         private class Team
         {
             public List<string> Captains { get; set; }

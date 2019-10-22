@@ -23,7 +23,7 @@ namespace StressTests.Server.Replication
             {
                 Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, _ =>
                 {
-                    using (var test = new ExternalReplicationTests())
+                    using (var test = new ExternalReplicationTests(Output))
                     {
                         test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait();
                     }

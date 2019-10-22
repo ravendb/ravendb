@@ -6,6 +6,7 @@ using SlowTests.Cluster;
 using SlowTests.Issues;
 using SlowTests.Voron;
 using StressTests.Cluster;
+using Xunit.Sdk;
 
 namespace Tryouts
 {
@@ -19,7 +20,7 @@ namespace Tryouts
                 Console.WriteLine($"Starting to run {i}");
                 try
                 {
-                    using (var test = new RavenDB_13940())
+                    using (var test = new RavenDB_13940(new TestOutputHelper()))
                     {
                         test.CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet();
                     }

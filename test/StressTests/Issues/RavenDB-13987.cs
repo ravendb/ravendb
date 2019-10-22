@@ -14,6 +14,7 @@ using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
@@ -23,7 +24,7 @@ namespace StressTests.Issues
         private string _databaseName;
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(60 * 5);
 
-        public RavenDB_13987()
+        public RavenDB_13987(ITestOutputHelper output) : base(output)
         {
             DoNotReuseServer();
         }

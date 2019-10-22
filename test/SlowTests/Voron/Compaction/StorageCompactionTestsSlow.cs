@@ -11,12 +11,13 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Compaction;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Compaction
 {
     public class StorageCompactionTestsSlow : StorageTest
     {
-        public StorageCompactionTestsSlow()
+        public StorageCompactionTestsSlow(ITestOutputHelper output) : base(output)
         {
             IOExtensions.DeleteDirectory(DataDir);
 

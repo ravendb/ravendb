@@ -143,6 +143,10 @@ namespace SlowTests.MailingList
 
         public class When_using_Id : RavenTestBase
         {
+            public When_using_Id(ITestOutputHelper output) : base(output)
+            {
+            }
+            
             private static void CreateData(IDocumentStore store)
             {
                 new Person_Id_Index().Execute(store);

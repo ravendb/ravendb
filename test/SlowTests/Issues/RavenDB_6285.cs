@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
-            using (var x = new ChangesTests())
+            using (var x = new ChangesTests(Output))
             {
                 await x.CanGetAllNotificationAboutDocument_ALotOfDocuments();
             }

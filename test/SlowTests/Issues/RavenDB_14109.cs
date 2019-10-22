@@ -2,11 +2,16 @@
 using FastTests;
 using Orders;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14109 : RavenTestBase
     {
+        public RavenDB_14109(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         [Fact]
         public async Task QueryStatsShouldBeFilledBeforeCallingMoveNext()
         {

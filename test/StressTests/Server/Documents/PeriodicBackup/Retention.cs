@@ -26,7 +26,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(70, 13, true)]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
-            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention())
+            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
             {
                 await test.can_delete_backups_by_date(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
             }
@@ -51,7 +51,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(70, 13, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
-            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention())
+            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
             {
                 await test.can_delete_backups_by_date_s3(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
             }

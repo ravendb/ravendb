@@ -54,6 +54,10 @@ namespace SlowTests.Client.Subscriptions
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
+        public SubscriptionOperationsSignaling(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken()
         {

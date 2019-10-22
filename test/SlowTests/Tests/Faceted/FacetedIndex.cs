@@ -12,6 +12,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
@@ -25,7 +26,7 @@ namespace SlowTests.Tests.Faceted
 
         private const int NumCameras = 1000;
 
-        public FacetedIndex()
+        public FacetedIndex(ITestOutputHelper output) : base(output)
         {
             _data = GetCameras(NumCameras);
 

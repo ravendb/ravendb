@@ -11,7 +11,7 @@ namespace StressTests.Utils
         [InlineDataWithRandomSeed(128*1024 + 17, 64)]
         public void Can_seek_and_read_from_chunked_mmap_file(int totalSize, int chunkSize, int seed)
         {
-            using (var chunkedMmapStreamTests = new ChunkedMmapStreamTests())
+            using (var chunkedMmapStreamTests = new ChunkedMmapStreamTests(Output))
             {
                 chunkedMmapStreamTests.Can_seek_and_read_from_chunked_mmap_file(totalSize, chunkSize, seed);
             }

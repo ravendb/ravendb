@@ -17,12 +17,13 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class ServerWideBackup : RavenTestBase
     {
-        public ServerWideBackup()
+        public ServerWideBackup(ITestOutputHelper output) : base(output)
         {
             DoNotReuseServer();
         }
