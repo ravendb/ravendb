@@ -21,22 +21,6 @@ namespace StressTests.Server.Replication
         {
         }
 
-        [Fact64Bit]
-        public void ExternalReplicationShouldWorkWithSmallTimeoutStress()
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, _ =>
-                {
-                    using (var test = new ExternalReplicationTests(Output))
-                    {
-                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait();
-                    }
-                });
-            }
-        }
-
-
         [Fact]
         public async Task TwoWayExternalReplicationShouldNotLoadIdleDatabase()
         {
