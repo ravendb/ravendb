@@ -9,11 +9,16 @@ using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8044 : ClusterTestBase
     {
+        public RavenDB_8044(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly string _database = "Client_cant_handle_topology_changes_that_it_wasnt_notified_about" + Guid.NewGuid();
 
         [Fact]

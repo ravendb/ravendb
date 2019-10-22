@@ -17,11 +17,16 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class RavenDB_11139 : RavenTestBase
     {
+        public RavenDB_11139(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CreateFullAndIncrementalBackupWithCompareExchange()
         {

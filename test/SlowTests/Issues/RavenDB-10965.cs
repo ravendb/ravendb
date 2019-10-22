@@ -2,11 +2,16 @@
 using System.Net.Sockets;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10965 : RavenTestBase
     {
+        public RavenDB_10965(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public Exception E;

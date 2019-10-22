@@ -4,11 +4,16 @@ using System.Threading;
 using FastTests.Voron;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_7097 : StorageTest
     {
+        public RavenDB_7097(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

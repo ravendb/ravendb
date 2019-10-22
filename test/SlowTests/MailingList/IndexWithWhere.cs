@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class IndexWithWhere : RavenTestBase
     {
+        public IndexWithWhere(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Document
         {
             public string Title { get; set; }

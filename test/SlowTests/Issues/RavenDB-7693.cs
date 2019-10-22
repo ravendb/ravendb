@@ -2,12 +2,17 @@
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
 
     public class RavenDB_7693 : RavenTestBase
     {
+        public RavenDB_7693(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static string _projectTaskId;
 
         [Fact]

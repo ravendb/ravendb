@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class LiveProjectionOnTasks : RavenTestBase
     {
+        public LiveProjectionOnTasks(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TaskLiveProjection()
         {

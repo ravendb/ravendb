@@ -11,11 +11,16 @@ using FastTests;
 using Sparrow.Logging;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SparrowTests
 {
     public class LoggingSourceTests : RavenTestBase
     {
+        public LoggingSourceTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(true)]
         [InlineData(false)]

@@ -7,12 +7,17 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
 
     public class BlittableFormatTests : NoDisposalNeeded
     {
+        public BlittableFormatTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [MemberData(nameof(Samples))]
         public void CheckRoundtrip(string name)

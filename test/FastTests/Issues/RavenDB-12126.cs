@@ -1,11 +1,16 @@
 ﻿using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12126 : NoDisposalNeeded
     {
+        public RavenDB_12126(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanParseQueryWithStringQuotesInComment()
         {

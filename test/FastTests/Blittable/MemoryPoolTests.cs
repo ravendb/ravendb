@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public unsafe class MemoryPoolTests : NoDisposalNeeded
     {
+        public MemoryPoolTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SerialAllocationAndRelease()
         {

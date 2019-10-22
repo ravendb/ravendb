@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB9949 : RavenTestBase
     {
+        public RavenDB9949(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public enum EventType
         {
             Printed,

@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12235 : RavenTestBase
     {
+        public RavenDB_12235(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldBeAbleToMoveBetweenDocumentQueryToIRavenQueryable()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2205.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Globalization;
 using FastTests;
 using Raven.Client.Json.Converters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2205 : NoDisposalNeeded
     {
+        public RavenDB_2205(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DateToolsRoundShouldKeepTheSameDateTimeKind()
         {

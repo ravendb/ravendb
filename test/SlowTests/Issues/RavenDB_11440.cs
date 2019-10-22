@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.ServerWide.Operations.Logs;
 using Sparrow.Logging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11440 : RavenTestBase
     {
+        public RavenDB_11440(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetLogsConfigurationAndChangeMode()
         {

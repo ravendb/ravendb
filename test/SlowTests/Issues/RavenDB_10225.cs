@@ -5,11 +5,16 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10225 : RavenTestBase
     {
+        public RavenDB_10225(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldCreateLowDiskSpaceAlert()
         {

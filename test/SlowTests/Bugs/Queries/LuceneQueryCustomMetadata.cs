@@ -1,11 +1,16 @@
-using System.Dynamic;
+﻿using System.Dynamic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class LuceneQueryCustomMetadata : RavenTestBase
     {
+        public LuceneQueryCustomMetadata(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string PropertyName = "MyCustomProperty";
 
         [Fact]

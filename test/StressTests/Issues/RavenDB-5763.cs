@@ -2,11 +2,16 @@
 using FastTests;
 using SlowTests.Server.Replication;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
     public class RavenDB_5763 : NoDisposalNeeded
     {
+        public RavenDB_5763(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_not_throw_timeout_and_out_of_memory()
         {

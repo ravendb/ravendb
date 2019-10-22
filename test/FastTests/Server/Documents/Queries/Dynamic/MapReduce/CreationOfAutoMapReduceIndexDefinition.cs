@@ -7,11 +7,16 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Parser;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class CreationOfAutoMapReduceIndexDefinition : NoDisposalNeeded
     {
+        public CreationOfAutoMapReduceIndexDefinition(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private DynamicQueryMapping _sut;
 
         [Fact]

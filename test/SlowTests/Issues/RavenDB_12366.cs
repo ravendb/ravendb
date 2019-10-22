@@ -8,11 +8,16 @@ using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12366 : RavenTestBase
     {
+        public RavenDB_12366(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task MetadataTest()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="SetIndexPriority.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class SetIndexPriority : RavenTestBase
     {
+        public SetIndexPriority(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class FakeIndex : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()

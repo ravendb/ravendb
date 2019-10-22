@@ -6,11 +6,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10992 : RavenTestBase
     {
+        public RavenDB_10992(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public enum DocumentStatus
         {
             Default = 0,

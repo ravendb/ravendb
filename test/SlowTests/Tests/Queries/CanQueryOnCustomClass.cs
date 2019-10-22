@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CanQueryOnCustomClass.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Newtonsoft.Json;
@@ -15,6 +16,10 @@ namespace SlowTests.Tests.Queries
 {
     public class CanQueryOnCustomClass : RavenTestBase
     {
+        public CanQueryOnCustomClass(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "RavenDB-6263")]
         public void UsingConverter()
         {

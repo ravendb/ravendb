@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="SpatialSorting.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class SpatialSorting : RavenTestBase
     {
+        public SpatialSorting(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const double FilteredLat = 44.419575, FilteredLng = 34.042618;
         private const double SortedLat = 44.417398, SortedLng = 34.042575;
         private const double FilteredRadius = 100;

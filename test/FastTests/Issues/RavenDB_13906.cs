@@ -1,10 +1,15 @@
 ﻿using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_13906 : RavenTestBase
     {
+        public RavenDB_13906(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OnAfterSaveChangesOnPatchShouldWork()
         {

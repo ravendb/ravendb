@@ -5,11 +5,16 @@ using Newtonsoft.Json;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class CanParseToObjectFromBlittable : NoDisposalNeeded
     {
+        public CanParseToObjectFromBlittable(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
 #pragma warning disable 649

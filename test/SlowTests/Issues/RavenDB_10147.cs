@@ -6,11 +6,16 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10147 : RavenTestBase
     {
+        public RavenDB_10147(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Entity
         {
             public string Id { get; set; }

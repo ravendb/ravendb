@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Iulian
 {
     public class CanReadEntityWithUrlId : RavenTestBase
     {
+        public CanReadEntityWithUrlId(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Event
         {
             public string Id { get; set; }

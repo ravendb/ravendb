@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="RevisionsTests.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -25,11 +25,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Revisions
 {
     public class RevisionsTests : RavenTestBase
     {
+        public RevisionsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetRevisionsByChangeVectors()
         {

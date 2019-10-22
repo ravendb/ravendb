@@ -6,11 +6,16 @@
 
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class Iterating : FastTests.Voron.StorageTest
     {
+        public Iterating(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IterationShouldNotFindAnyRecordsAndShouldNotThrowWhenNumberOfEntriesOnPageIs1AndKeyDoesNotMatch()
         {

@@ -6,11 +6,16 @@
 
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class FreeSpaceAndOverflowPages : FastTests.Voron.StorageTest
     {
+        public FreeSpaceAndOverflowPages(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="LinqIndexesFromClient.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -21,11 +21,16 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class LinqIndexesFromClient : RavenTestBase
     {
+        public LinqIndexesFromClient(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Convert_select_many_will_keep_doc_id()
         {

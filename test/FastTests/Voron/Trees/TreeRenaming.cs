@@ -7,11 +7,16 @@
 using System;
 using Xunit;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class TreeRenaming : StorageTest
     {
+        public TreeRenaming(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanRenameTree()
         {

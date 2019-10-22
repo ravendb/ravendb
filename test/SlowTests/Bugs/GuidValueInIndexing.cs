@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class GuidValueInIndexing : RavenTestBase
     {
+        public GuidValueInIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanBeUsed()
         {

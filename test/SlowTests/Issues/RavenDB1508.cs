@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using FastTests;
@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Sdk;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB1508 : RavenTestBase
     {
+        public RavenDB1508(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Name { get; set; }

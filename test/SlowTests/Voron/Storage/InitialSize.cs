@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="InitialSize.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.IO;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class InitialSize : FastTests.Voron.StorageTest
     {
+        public InitialSize(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public int GetExpectedInitialSize()
         {
             return 64 * 1024;

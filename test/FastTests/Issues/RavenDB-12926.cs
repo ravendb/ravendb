@@ -3,11 +3,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12926 : RavenTestBase
     {
+        public RavenDB_12926(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AsyncManualResetEventWaitAsyncWithCancellationShouldWork()
         {

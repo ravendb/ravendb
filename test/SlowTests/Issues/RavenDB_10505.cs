@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10505 : RavenTestBase
     {
+        public RavenDB_10505(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ChangingCollectionNameByPutAndDeleteShouldNotDeleteTheOriginalTheTombstone()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -7,11 +7,16 @@ using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanPassTypesProperlyToAggregation : RavenTestBase
     {
+        public CanPassTypesProperlyToAggregation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Coin
         {
             public int Denomination { get; set; }

@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Index;
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Spatial4n.Core.Context.Nts;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class SimonBartlett : RavenTestBase
     {
+        public SimonBartlett(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PureLucene()
         {

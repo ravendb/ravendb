@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -7,11 +7,16 @@ using FastTests;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3501 : RavenTestBase
     {
+        public RavenDB_3501(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly int InitialMaxClauseCount = BooleanQuery.MaxClauseCount;
 
         private const int MaxClauseCountInTest = 2048;

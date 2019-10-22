@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6305 : RavenTestBase
     {
+        public RavenDB_6305(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryValueObject()
         {

@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RavenDB252 : RavenTestBase
     {
+        public RavenDB252(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EntityNameIsNowCaseInsensitive()
         {

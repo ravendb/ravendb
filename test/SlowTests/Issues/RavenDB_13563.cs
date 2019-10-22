@@ -7,11 +7,16 @@ using Raven.Server.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13563 : RavenTestBase
     {
+        public RavenDB_13563(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldGenerateSimpleLuceneBooleanQueriesWithoutManyBrackets()
         {

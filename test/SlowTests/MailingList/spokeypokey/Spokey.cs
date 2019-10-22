@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.spokeypokey
 {
     public class Spokey : RavenTestBase
     {
+        public Spokey(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Employee
         {
             public string FirstName { get; set; }

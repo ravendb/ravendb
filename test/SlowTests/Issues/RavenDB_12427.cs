@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12427 : RavenTestBase
     {
+        public RavenDB_12427(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_use_Enumerable_Zip_in_indexing_function()
         {

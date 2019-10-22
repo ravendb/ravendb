@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_1280 : RavenTestBase
     {
+        public RavenDB_1280(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
         {

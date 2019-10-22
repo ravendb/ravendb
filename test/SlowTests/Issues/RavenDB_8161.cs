@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8161 : RavenTestBase
     {
+        public RavenDB_8161(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index()
         {

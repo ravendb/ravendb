@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
     public class LiveIndexingPerformanceCollectorTests : RavenTestBase
     {
+        public LiveIndexingPerformanceCollectorTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name { get; set; }

@@ -11,6 +11,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -19,6 +20,10 @@ namespace SlowTests.Issues
     /// </summary>
     public class RavenDB_4708 : RavenTestBase
     {
+        public RavenDB_4708(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void CanUseFirstSyncNonSharded()

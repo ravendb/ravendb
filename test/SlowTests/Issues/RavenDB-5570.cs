@@ -2,11 +2,16 @@
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5570 : RavenLowLevelTestBase
     {
+        public RavenDB_5570(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Doing_PUT_without_commit_should_not_cause_NRE_on_subsequent_PUTs()
         {

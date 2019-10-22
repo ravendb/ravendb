@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="SqlEtlTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -30,11 +30,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.SQL
 {
     public class SqlEtlTests : EtlTestBase
     {
+        public SqlEtlTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly List<string> _dbNames = new List<string>();
 
         protected const string defaultScript = @"

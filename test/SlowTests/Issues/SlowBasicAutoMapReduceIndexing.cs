@@ -2,11 +2,16 @@
 using FastTests;
 using FastTests.Server.Documents.Indexing.Auto;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class SlowBasicAutoMapReduceIndexing : NoDisposalNeeded
     {
+        public SlowBasicAutoMapReduceIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(50000, new[] {"Canada", "France"})] // reduce key tree with depth 3
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)

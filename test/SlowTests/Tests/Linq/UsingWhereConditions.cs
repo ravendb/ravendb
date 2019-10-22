@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="UsingWhereConditions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 /*
  * Different test using where clause
@@ -20,6 +21,10 @@ namespace SlowTests.Tests.Linq
 {
     public class UsingWhereConditions : RavenTestBase
     {
+        public UsingWhereConditions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Use_Where()
         {

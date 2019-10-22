@@ -2,11 +2,16 @@
 using FastTests;
 using SlowTests.Server.Documents.Indexing.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
     public class CollisionsOfReduceKeyHashes_StressTests : NoDisposalNeeded
     {
+        public CollisionsOfReduceKeyHashes_StressTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
         public async Task Auto_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)

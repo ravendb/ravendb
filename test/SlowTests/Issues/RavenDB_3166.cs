@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3166 : RavenTestBase
     {
+        public RavenDB_3166(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class EventsWithDates
         {
             public Dictionary<DateTime, string> Events { get; set; }

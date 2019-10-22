@@ -1,10 +1,15 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
     public class MultiGetOperations : RavenTestBase
     {
+        public MultiGetOperations(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void UnlessAccessedLazyLoadsAreNoOp()
         {

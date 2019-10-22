@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Failing_lucene_query_where_in_tests : RavenTestBase
     {
+        public Failing_lucene_query_where_in_tests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Contract
         {
             public string Cno { get; set; }

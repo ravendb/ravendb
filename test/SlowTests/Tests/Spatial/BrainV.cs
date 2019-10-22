@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class BrainV : RavenTestBase
     {
+        public BrainV(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPerformSpatialSearchWithNulls()
         {

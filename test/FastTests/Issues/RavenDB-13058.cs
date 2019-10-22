@@ -4,11 +4,16 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_13058 : RavenTestBase
     {
+        public RavenDB_13058(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
 #pragma warning disable 649

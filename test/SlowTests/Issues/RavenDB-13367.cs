@@ -6,11 +6,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13367 : RavenTestBase
     {
+        public RavenDB_13367(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Entity
         {
             [JsonProperty(PropertyName = "Id")]

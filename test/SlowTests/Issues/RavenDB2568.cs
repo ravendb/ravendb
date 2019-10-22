@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB2568.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,11 +6,16 @@
 
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB2568 : RavenTestBase
     {
+        public RavenDB2568(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SimpleSkipAfter()
         {

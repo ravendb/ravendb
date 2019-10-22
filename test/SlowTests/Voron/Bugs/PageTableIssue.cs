@@ -3,11 +3,16 @@ using System.IO;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class PageTableIssue : FastTests.Voron.StorageTest
     {
+        public PageTableIssue(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);

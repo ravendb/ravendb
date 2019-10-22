@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11381 : RavenTestBase
     {
+        public RavenDB_11381(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
 #pragma warning disable 649

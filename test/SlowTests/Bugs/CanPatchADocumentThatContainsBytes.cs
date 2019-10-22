@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CanPatchADocumentThatContainsBytes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,11 +14,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanPatchADocumentThatContainsBytes : RavenTestBase
     {
+        public CanPatchADocumentThatContainsBytes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DocumentWithBytes()
         {

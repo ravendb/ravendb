@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RangeQueriesOverSum : RavenTestBase
     {
+        public RangeQueriesOverSum(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [DataContract]
         private class Item
         {

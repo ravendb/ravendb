@@ -2,11 +2,16 @@
 using Voron;
 using Voron.Debugging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class PagesFilteredOutByJournalApplicator : FastTests.Voron.StorageTest
     {
+        public PagesFilteredOutByJournalApplicator(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);

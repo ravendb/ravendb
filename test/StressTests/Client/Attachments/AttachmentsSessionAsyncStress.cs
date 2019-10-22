@@ -3,11 +3,16 @@ using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
     public class AttachmentsSessionAsyncStress : NoDisposalNeeded
     {
+        public AttachmentsSessionAsyncStress(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NightlyBuildTheory64Bit]
         [InlineData(100_000)]
         [InlineData(1_000_000)]

@@ -1,10 +1,15 @@
 ﻿using FastTests.Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_9916 : StorageTest
     {
+        public RavenDB_9916(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void Should_not_corrupt_state_deleting_from_nested_page_right_side()
         {

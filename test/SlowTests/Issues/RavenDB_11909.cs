@@ -10,11 +10,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11909 : RavenTestBase
     {
+        public RavenDB_11909(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CreateDatabaseOperationShouldThrowOnPassedTaskConfigurations()
         {

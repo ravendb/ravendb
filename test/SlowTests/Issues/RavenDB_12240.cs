@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12240 : RavenTestBase
     {
+        public RavenDB_12240(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseMapReduceWithDocumentsContainingCultureSpecificCharactersInId()
         {

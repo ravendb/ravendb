@@ -6,11 +6,16 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_12079 : EtlTestBase
     {
+        public RavenDB_12079(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Processing_in_low_memory_mode()
         {

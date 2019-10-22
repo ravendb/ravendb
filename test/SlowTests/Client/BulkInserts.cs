@@ -1,11 +1,16 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class BulkInserts : RavenTestBase
     {
+        public BulkInserts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Simple_Bulk_Insert_With_Ssl()
         {

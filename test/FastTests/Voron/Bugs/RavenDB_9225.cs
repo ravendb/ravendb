@@ -2,11 +2,16 @@
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Bugs
 {
     public class RavenDB_9225 : StorageTest
     {
+        public RavenDB_9225(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void VariableSizeTree_DeletingFromMiddle()
         {

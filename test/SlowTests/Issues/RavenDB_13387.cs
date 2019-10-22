@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13387 : RavenLowLevelTestBase
     {
+        public RavenDB_13387(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_leave_low_memory_mode()
         {

@@ -12,11 +12,16 @@ using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
+using Xunit.Abstractions;
 
 namespace StressTests
 {
     public class Databases : RavenTestBase
     {
+        public Databases(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NightlyBuildFact64Bit]
         public void CanHandleMultipleDatabasesOnWrite()
         {

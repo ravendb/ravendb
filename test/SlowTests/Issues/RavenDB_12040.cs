@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12040 : RavenTestBase
     {
+        public RavenDB_12040(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Should_limit_number_of_stored_slow_io_hints()
         {

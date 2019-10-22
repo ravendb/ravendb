@@ -18,11 +18,16 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {
     public class CountersReplication : ReplicationTestBase
     {
+        public CountersReplication(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ConflictsInMetadata()
         {

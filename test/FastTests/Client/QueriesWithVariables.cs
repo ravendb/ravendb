@@ -2,11 +2,16 @@
 using System.Linq;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class QueriesWithVariables : RavenTestBase
     {
+        public QueriesWithVariables(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Query_With_Simple_Constants()
         {

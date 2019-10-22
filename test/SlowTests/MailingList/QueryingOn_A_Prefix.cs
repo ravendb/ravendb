@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="QueryingOn_A_Prefix.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class QueryingOn_A_Prefix : RavenTestBase
     {
+        public QueryingOn_A_Prefix(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SampleData
         {
             public string Name { get; set; }

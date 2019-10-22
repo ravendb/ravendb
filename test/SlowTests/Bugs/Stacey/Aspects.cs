@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Stacey
 {
     public class Aspects : RavenTestBase
     {
+        public Aspects(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly Options _options = new Options
         {
             ModifyDocumentStore = documentStore =>

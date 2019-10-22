@@ -14,11 +14,16 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Backups
 {
     public class Incremental : FastTests.Voron.StorageTest
     {
+        public Incremental(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly IncrementalBackupTestUtils _incrementalBackupTestUtils = new IncrementalBackupTestUtils();
         protected override void Configure(StorageEnvironmentOptions options)
         {

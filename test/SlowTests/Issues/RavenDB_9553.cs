@@ -8,11 +8,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9553 : RavenTestBase
     {
+        public RavenDB_9553(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanCompactWhenGlobalTempPathIsDefined()
         {

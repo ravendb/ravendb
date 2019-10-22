@@ -4,11 +4,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Load :  RavenTestBase
     {
+        public Load(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Load_Document_By_id()
         {

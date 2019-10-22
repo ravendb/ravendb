@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanUseReduceResultInOutput : RavenTestBase
     {
+        public CanUseReduceResultInOutput(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class CalendarWeek
         {
             public Owner Owner { get; set; }

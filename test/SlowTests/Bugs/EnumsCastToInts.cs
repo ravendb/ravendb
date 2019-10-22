@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class EnumsCastToInts : RavenTestBase
     {
+        public EnumsCastToInts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public enum SampleClassKind
         {
             All = 0,

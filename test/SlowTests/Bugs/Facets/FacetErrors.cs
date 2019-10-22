@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Facets
 {
     public class FacetErrors : FacetTestBase
     {
+        public FacetErrors(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PrestonThinksFacetsShouldNotHideOtherErrors()
         {

@@ -6,11 +6,16 @@
 
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4241 : RavenTestBase
     {
+        public RavenDB_4241(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void passing_duplicate_document_ids_to_Advanced_Lazily_Load_should_not_result_in_documents_failing_to_load()
         {

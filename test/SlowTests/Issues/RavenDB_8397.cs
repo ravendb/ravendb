@@ -4,11 +4,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8397 : RavenTestBase
     {
+        public RavenDB_8397(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PathAndDeleteByQueryWithFilteringById()
         {

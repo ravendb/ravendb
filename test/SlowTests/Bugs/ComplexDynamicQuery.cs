@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class ComplexDynamicQuery : RavenTestBase
     {
+        public ComplexDynamicQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void UsingNestedCollections()
         {

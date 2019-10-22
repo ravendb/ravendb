@@ -5,12 +5,17 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13866 : RavenTestBase
     {
+        public RavenDB_13866(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task MapAndReduceIndexingOutputMustNotShareTheSamePropertyAccessorCache()
         {

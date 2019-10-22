@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="CreatingIndexes.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
     public class CreatingIndexes : RavenTestBase
     {
+        public CreatingIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void Multitenancy_Test()

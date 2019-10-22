@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class BatchPatching : RavenTestBase
     {
+        public BatchPatching(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSuccessfullyPatchInBatches()
         {

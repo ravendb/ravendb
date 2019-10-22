@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Queries
 {
     public class InQuery : RavenTestBase
     {
+        public InQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryingUsingInShouldYieldDistinctResults()
         {

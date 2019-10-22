@@ -5,12 +5,17 @@ using FastTests.Server.Basic.Entities;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Queries;
+using Xunit.Abstractions;
 
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13680 : RavenTestBase
     {
+        public RavenDB_13680(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void CanSelectLoadsInsideLetClause()

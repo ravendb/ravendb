@@ -2,11 +2,16 @@
 using Voron.Impl.Journal;
 using Voron.Impl.Scratch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
     public class LazyTransactionsRespectPageBoundaries : StorageTest
     {
+        public LazyTransactionsRespectPageBoundaries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

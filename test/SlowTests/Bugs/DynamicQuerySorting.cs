@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DynamicQuerySorting : RavenTestBase
     {
+        public DynamicQuerySorting(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class GameServer
         {
             public string Id { get; set; }

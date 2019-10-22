@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="DocumentsStreaming.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 using User = SlowTests.Core.Utils.Entities.User;
 
@@ -13,6 +14,10 @@ namespace SlowTests.Core.Streaming
 {
     public class DocumentStreaming : RavenTestBase
     {
+        public DocumentStreaming(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanStreamDocumentsStartingWith()
         {

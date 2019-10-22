@@ -13,11 +13,16 @@ using Raven.Server.Config;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_282 : ClusterTestBase
     {
+        public RDBC_282(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ChangesApiShouldReconnectToServerWhenServerReturn()
         {

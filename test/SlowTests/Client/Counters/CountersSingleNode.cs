@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {
     public class CountersSingleNode : RavenTestBase
     {
+        public CountersSingleNode(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IncrementCounter()
         {

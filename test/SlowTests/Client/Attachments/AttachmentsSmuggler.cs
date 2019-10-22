@@ -14,11 +14,16 @@ using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsSmuggler : RavenTestBase
     {
+        public AttachmentsSmuggler(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ExportAndDeleteAttachmentThanCreateAnotherOneAndImport()
         {

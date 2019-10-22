@@ -4,11 +4,16 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9609 : RavenTestBase
     {
+        public RavenDB_9609(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_put_projected_fields_into_select()
         {

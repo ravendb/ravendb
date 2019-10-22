@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3484 : RavenTestBase
     {
+        public RavenDB_3484(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _waitForDocTimeout = TimeSpan.FromMinutes(4);
 
         [Fact]

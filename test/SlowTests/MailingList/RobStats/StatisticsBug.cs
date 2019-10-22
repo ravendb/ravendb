@@ -1,4 +1,4 @@
-// //-----------------------------------------------------------------------
+﻿// //-----------------------------------------------------------------------
 // // <copyright company="Hibernating Rhinos LTD">
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.RobStats
 {
     public class StatisticsBug : RavenTestBase
     {
+        public StatisticsBug(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Entity
         {
             public string Id { get; set; }

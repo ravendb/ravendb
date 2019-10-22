@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-4446.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,6 +10,7 @@ using System.Linq;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
@@ -19,6 +20,10 @@ namespace FastTests.Issues
      * */
     public class RavenDB_6250 : NoDisposalNeeded
     {
+        public RavenDB_6250(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void All_operations_has_details_providers()
         {

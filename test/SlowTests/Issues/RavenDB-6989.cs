@@ -1,14 +1,19 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6989 : RavenLowLevelTestBase
     {
+        public RavenDB_6989(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void multi_map_index_with_load_document_to_same_collection()
         {

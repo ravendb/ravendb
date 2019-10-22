@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11437 : RavenTestBase
     {
+        public RavenDB_11437(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_index_complex_id_field()
         {

@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13682 : RavenTestBase
     {
+        public RavenDB_13682(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public double Lat, Lng;

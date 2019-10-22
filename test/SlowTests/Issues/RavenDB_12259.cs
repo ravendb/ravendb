@@ -6,11 +6,16 @@ using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12259 : RavenTestBase
     {
+        public RavenDB_12259(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ProjectionsShouldHaveProperMetadataSetInSubscriptions()
         {

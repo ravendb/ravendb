@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8328 : RavenTestBase
     {
+        public RavenDB_8328(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SpatialOnAutoIndex()
         {

@@ -6,11 +6,16 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_13220 : EtlTestBase
     {
+        public RavenDB_13220(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Etl_from_encrypted_to_non_encrypted_db_will_work()
         {

@@ -5,11 +5,16 @@ using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12206 : RavenTestBase
     {
+        public RavenDB_12206(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Edge_array_with_filter_should_work()
         {

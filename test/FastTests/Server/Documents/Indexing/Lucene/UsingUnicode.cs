@@ -1,11 +1,16 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
     public class UsingUnicode : RavenTestBase
     {
+        public UsingUnicode(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("לְשֵׁם יִחוּד קֻדְשָׁא בְּרִיךְ הוּא וּשְׁכִינְתֵּהּ")]
         [InlineData("Оптиматика")]

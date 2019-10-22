@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12790 : RavenTestBase
     {
+        public RavenDB_12790(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LazyQueryAgainstMissingIndex()
         {

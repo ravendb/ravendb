@@ -4,11 +4,16 @@ using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_11643_Voron : StorageTest
     {
+        public RavenDB_11643_Voron(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public void PageRefValidationOnBranchPagesShouldNotThrow()
         {

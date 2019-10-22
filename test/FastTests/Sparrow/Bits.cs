@@ -1,10 +1,15 @@
 ﻿using Sparrow.Binary;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class BitsTests : NoDisposalNeeded
     {
+        public BitsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Bits_MostSignificativeBit()
         {

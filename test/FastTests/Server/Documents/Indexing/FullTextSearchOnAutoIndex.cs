@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing
 {
     public class FullTextSearchOnAutoIndex : RavenTestBase
     {
+        public FullTextSearchOnAutoIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseFullTextSearchInAutoIndex()
         {

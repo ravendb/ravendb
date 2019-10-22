@@ -1,10 +1,15 @@
 ﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class ThousandsSeparatorRavenDb8416 : RavenTestBase
     {
+        public ThousandsSeparatorRavenDb8416(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseThousandSeparatorInQueries()
         {

@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class ForceRevisionCreation : RavenTestBase
     {
+        public ForceRevisionCreation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ForceRevisionCreationForSingleUnTrackedEntityByID()
         {

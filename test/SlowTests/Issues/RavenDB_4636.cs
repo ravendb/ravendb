@@ -3,11 +3,16 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4636 : RavenTestBase
     {
+        public RavenDB_4636(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanInjectConfigurationFromServer()
         {

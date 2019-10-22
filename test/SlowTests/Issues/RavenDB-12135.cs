@@ -4,11 +4,16 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12135 : RavenTestBase
     {
+        public RavenDB_12135(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Throw_proper_error_for_alias_duplicates_in_graph_query()
         {

@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class ComplexUsage : RavenTestBase
     {
+        public ComplexUsage(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotOutputNull()
         {

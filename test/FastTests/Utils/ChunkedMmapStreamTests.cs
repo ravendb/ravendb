@@ -6,11 +6,16 @@ using Raven.Client.Extensions.Streams;
 using Raven.Server.Utils;
 using Xunit;
 using Voron.Util;
+using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
     public class ChunkedMmapStreamTests : NoDisposalNeeded
     {
+        public ChunkedMmapStreamTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineDataWithRandomSeed(13, 3)]
         [InlineDataWithRandomSeed(94, 7)]

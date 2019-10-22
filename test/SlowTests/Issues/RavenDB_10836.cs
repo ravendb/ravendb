@@ -5,11 +5,16 @@ using Sparrow;
 using Sparrow.Utils;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10836 : StorageTest
     {
+        public RavenDB_10836(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void TempCryptoStream_CanWorkWithFilesGreaterThan2GB()
         {

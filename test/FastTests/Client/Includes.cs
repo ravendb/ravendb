@@ -5,11 +5,16 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Includes : RavenTestBase
     {
+        public Includes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Load_With_Include()
         {

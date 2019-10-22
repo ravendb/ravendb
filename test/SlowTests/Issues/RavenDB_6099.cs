@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6099 : RavenTestBase
     {
+        public RavenDB_6099(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Users_ByAge : AbstractIndexCreationTask<User>
         {
             public Users_ByAge()

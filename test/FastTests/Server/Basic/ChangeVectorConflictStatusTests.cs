@@ -4,11 +4,16 @@ using System.Linq;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
     public class ChangeVectorConflictStatusTests : NoDisposalNeeded
     {
+        public ChangeVectorConflictStatusTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Two_empty_ChangeVectors()
         {

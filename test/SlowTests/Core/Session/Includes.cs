@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Xunit.Abstractions;
 
 using Xunit;
 
@@ -15,6 +16,10 @@ namespace SlowTests.Core.Session
 {
     public class Includes : RavenTestBase
     {
+        public Includes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BasicInclude()
         {

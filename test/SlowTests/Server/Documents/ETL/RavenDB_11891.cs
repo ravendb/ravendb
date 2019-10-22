@@ -2,11 +2,16 @@
 using System.IO;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_11891 : EtlTestBase
     {
+        public RavenDB_11891(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_filter_out_deletions_using_generic_delete_behavior()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest : RavenTestBase
     {
+        public DoesPreserveDocumentIdCaseWhenPatchingFullCollectionTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class FooBar
         {
             public string Name { get; set; }

@@ -12,11 +12,16 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7940 : RavenTestBase
     {
+        public RavenDB_7940(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public string Id { get; set; }

@@ -1,14 +1,19 @@
-using System.Linq;
+ï»¿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Maxime : RavenTestBase
     {
+        public Maxime(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WithingRadiusOf_Should_Not_Break_Relevance()
         {
@@ -17,10 +22,10 @@ namespace SlowTests.MailingList
             {
                 new PlacesByTermsAndLocation().Execute(store);
 
-                var place1 = new Place("Université du Québec à Montréal")
+                var place1 = new Place("Universitï¿½ du Quï¿½bec ï¿½ Montrï¿½al")
                 {
                     Id = "places/1",
-                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
+                    Description = "L'Universitï¿½ du Quï¿½bec ï¿½ Montrï¿½al (UQAM) est une universitï¿½ francophone, publique et urbaine de Montrï¿½al, dans la province du Quï¿½bec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -28,7 +33,7 @@ namespace SlowTests.MailingList
                 var place2 = new Place("UQAM")
                 {
                     Id = "places/2",
-                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
+                    Description = "L'Universitï¿½ du Quï¿½bec ï¿½ Montrï¿½al (UQAM) est une universitï¿½ francophone, publique et urbaine de Montrï¿½al, dans la province du Quï¿½bec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -54,7 +59,7 @@ namespace SlowTests.MailingList
 
                 Assert.Equal("places/2", places[0].Id);
                 // places/1: perfect match + boost
-                terms = "Université Québec Montréal";
+                terms = "Universitï¿½ Quï¿½bec Montrï¿½al";
                 places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
@@ -79,10 +84,10 @@ namespace SlowTests.MailingList
             {
                 new PlacesByTermsAndLocation().Execute(store);
 
-                var place1 = new Place("Université du Québec à Montréal")
+                var place1 = new Place("Universitï¿½ du Quï¿½bec ï¿½ Montrï¿½al")
                 {
                     Id = "places/1",
-                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
+                    Description = "L'Universitï¿½ du Quï¿½bec ï¿½ Montrï¿½al (UQAM) est une universitï¿½ francophone, publique et urbaine de Montrï¿½al, dans la province du Quï¿½bec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -90,7 +95,7 @@ namespace SlowTests.MailingList
                 var place2 = new Place("UQAM")
                 {
                     Id = "places/2",
-                    Description = "L'Université du Québec à Montréal (UQAM) est une université francophone, publique et urbaine de Montréal, dans la province du Québec au Canada.",
+                    Description = "L'Universitï¿½ du Quï¿½bec ï¿½ Montrï¿½al (UQAM) est une universitï¿½ francophone, publique et urbaine de Montrï¿½al, dans la province du Quï¿½bec au Canada.",
                     Latitude = 45.50955,
                     Longitude = -73.569131
                 };
@@ -101,7 +106,7 @@ namespace SlowTests.MailingList
                 session.SaveChanges();
 
                 // places/1: perfect match + boost
-                const string terms = "Université Québec Montréal";
+                const string terms = "Universitï¿½ Quï¿½bec Montrï¿½al";
                 QueryStatistics stats;
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()

@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AnyBugTest : RavenTestBase
     {
+        public AnyBugTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class AnyBug
         {
             public string Id { get; set; }

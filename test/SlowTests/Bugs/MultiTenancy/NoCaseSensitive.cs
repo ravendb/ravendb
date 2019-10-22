@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiTenancy
 {
     public class NoCaseSensitive : RavenTestBase
     {
+        public NoCaseSensitive(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAccessDbUsingDifferentNames()
         {

@@ -5,11 +5,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12194 : RavenTestBase
     {
+        public RavenDB_12194(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_load_with_JsonConverter()
         {

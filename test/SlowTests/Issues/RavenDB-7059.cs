@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,11 +13,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7059 : ClusterTestBase
     {
+        public RavenDB_7059(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly string _fileName = Path.Combine(RavenTestHelper.NewDataPath(nameof(RavenDB_7059), 0, forceCreateDir: true), $"{Guid.NewGuid()}.ravendump");
 
         private class User

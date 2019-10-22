@@ -1,11 +1,16 @@
 ﻿using System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_11515_Raven : EtlTestBase
     {
+        public RavenDB_11515_Raven(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_filter_out_deletions_of_documents()
         {

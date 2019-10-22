@@ -5,11 +5,16 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8240 : RavenTestBase
     {
+        public RavenDB_8240(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_group_by_constant_in_static_index()
         {

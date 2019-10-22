@@ -2,11 +2,16 @@
 using System.Text;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public class BlittableParsing : NoDisposalNeeded
     {
+        public BlittableParsing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanParseProperly()
         {

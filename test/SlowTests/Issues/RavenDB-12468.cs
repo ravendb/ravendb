@@ -3,11 +3,16 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using SlowTests.Graph;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12468 : RavenTestBase
     {
+        public RavenDB_12468(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         private class User
         {

@@ -7,11 +7,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12902 : RavenTestBase
     {
+        public RavenDB_12902(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task AfterAggregationQueryExecutedShouldBeExecutedOnlyOnce()
         {

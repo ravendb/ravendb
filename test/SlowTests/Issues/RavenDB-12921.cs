@@ -7,11 +7,16 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12921 : ClusterTestBase
     {
+        public RavenDB_12921(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(3)]
         [InlineData(5)]

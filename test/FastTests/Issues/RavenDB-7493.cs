@@ -7,11 +7,16 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7493 : NoDisposalNeeded
     {
+        public RavenDB_7493(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Ensure_deserialization_routines_are_properly_created()
         {

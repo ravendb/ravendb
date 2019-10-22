@@ -9,11 +9,16 @@ using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9096 : RavenTestBase
     {
+        public RavenDB_9096(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LongMinShouldBeParsedCorrectly()
         {

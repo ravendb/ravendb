@@ -6,11 +6,16 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class QueriesWithReservedWords : RavenTestBase
     {
+        public QueriesWithReservedWords(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL()
         {

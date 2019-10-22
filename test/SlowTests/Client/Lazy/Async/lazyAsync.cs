@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Lazy.Async
 {
     public class LazyAsync : RavenTestBase
     {
+        public LazyAsync(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanLazilyLoadEntity()
         {

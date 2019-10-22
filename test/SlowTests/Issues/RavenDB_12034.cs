@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Raven.Client;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12034 : RavenTestBase
     {
+        public RavenDB_12034(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Stored_object_should_not_get_collection_metadata()
         {

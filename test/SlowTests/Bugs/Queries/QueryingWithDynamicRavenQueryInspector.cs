@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class QueryingWithDynamicRavenQueryInspector : RavenTestBase
     {
+        public QueryingWithDynamicRavenQueryInspector(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanInitializeDynamicRavenQueryInspector()
         {

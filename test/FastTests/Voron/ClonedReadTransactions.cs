@@ -6,11 +6,16 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Paging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
     public class ClonedReadTransactions : StorageTest
     {
+        public ClonedReadTransactions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void CanCloneAndReadOldDataFromReadTx()
         {

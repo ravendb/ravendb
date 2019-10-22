@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Sorting.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // ----------------------------------------------------------------------
 
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 
@@ -16,6 +17,10 @@ namespace SlowTests.Core.Querying
 {
     public class Sorting : RavenTestBase
     {
+        public Sorting(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BasicSorting()
         {

@@ -1,11 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10659 : RavenTestBase
     {
+        public RavenDB_10659(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Element
         {
             public string Name { get; set; }

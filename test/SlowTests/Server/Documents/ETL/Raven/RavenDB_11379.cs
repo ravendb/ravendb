@@ -2,11 +2,16 @@
 using System.IO;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_11379 : EtlTestBase
     {
+        public RavenDB_11379(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(null, false, "photo", "photo")]
         [InlineData(null, true, "photo", "photo")]

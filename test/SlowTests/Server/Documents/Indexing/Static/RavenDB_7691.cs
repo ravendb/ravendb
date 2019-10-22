@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Static
 {
     public class RavenDB_7691 : RavenTestBase
     {
+        public RavenDB_7691(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string QueryWithScalarToRawStringForAllValues = @"declare function MyProjection(x){
 return {
     IntMinVal : scalarToRawString(x, u=> u.IntMinVal),

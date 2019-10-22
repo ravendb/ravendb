@@ -2,11 +2,16 @@
 using Voron;
 using Xunit;
 using Constants = Voron.Global.Constants;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
     public class RavenDB_6073 : StorageTest
     {
+        public RavenDB_6073(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Branch_page_collapsing_during_tree_rebalancing()
         {

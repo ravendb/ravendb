@@ -3,11 +3,16 @@ using System.IO;
 using FastTests.Voron;
 using Voron.Impl.Journal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class RavenDB_11871 : StorageTest
     {
+        public RavenDB_11871(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillNotRetainJournalsAfterSync()
         {

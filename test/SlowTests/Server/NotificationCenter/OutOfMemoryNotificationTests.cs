@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,11 +10,16 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.NotificationCenter
 {
     public class OutOfMemoryNotificationTests : RavenLowLevelTestBase
     {
+        public OutOfMemoryNotificationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Add_WhenCalled_ShouldNotPreventFromGarbageCollectorToCollectTheEnvironmentObject()
         {

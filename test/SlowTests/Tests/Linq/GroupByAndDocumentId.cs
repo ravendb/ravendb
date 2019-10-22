@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="GroupByAndDocumentId.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class GroupByAndDocumentId : RavenTestBase
     {
+        public GroupByAndDocumentId(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Client
         {
             public string Id { get; set; }

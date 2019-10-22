@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class CustomAnalyzerStartsWithFailure : RavenTestBase
     {
+        public CustomAnalyzerStartsWithFailure(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public void Fill(IDocumentStore store)
         {
             store.ExecuteIndex(new CustomerByName());

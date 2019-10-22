@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5968 : RavenTestBase
     {
+        public RavenDB_5968(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EtagNullShouldOverrideDocument()
         {

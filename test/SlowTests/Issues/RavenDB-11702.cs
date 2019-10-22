@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11702 : RavenTestBase
     {
+        public RavenDB_11702(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CmpgXcngShouldUseClientConventions()
         {

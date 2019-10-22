@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiMap
 {
     public class SimpleMultiMap : RavenTestBase
     {
+        public SimpleMultiMap(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateMultiMapIndex()
         {

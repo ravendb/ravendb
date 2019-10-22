@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationBasicTestsSlow : ReplicationTestBase
     {
+        public ReplicationBasicTestsSlow(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
         [Theory]

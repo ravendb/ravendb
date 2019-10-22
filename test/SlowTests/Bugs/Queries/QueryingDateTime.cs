@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using FastTests;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class QueryingDateTime : RavenTestBase
     {
+        public QueryingDateTime(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryingNonUtcTime()
         {

@@ -3,11 +3,16 @@ using System.Linq;
 using System.Collections.Generic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10497 : RavenTestBase
     {
+        public RavenDB_10497(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Document
         {
             public string Id { get; set; }

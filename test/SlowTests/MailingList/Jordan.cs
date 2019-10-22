@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Jordan : RavenTestBase
     {
+        public Jordan(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class DocumentReference
         {
             public string Id { get; set; }

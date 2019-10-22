@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class TransactionIndexByMrn : RavenTestBase
     {
+        public TransactionIndexByMrn(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Transaction
         {
             public string MRN { get; set; }

@@ -2,11 +2,16 @@
 using FastTests.Voron;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_12506 : StorageTest
     {
+        public RavenDB_12506(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Error_on_db_creation_must_not_cause_failure_on_next_db_load()
         {

@@ -4,11 +4,16 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Queries
 {
     public class SimpleQueries : RavenTestBase
     {
+        public SimpleQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected DocumentStore GetLoadedStore()
         {
             var store = GetDocumentStore();

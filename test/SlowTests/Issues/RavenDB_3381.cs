@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class SearchHighlightings : RavenTestBase
     {
+        public SearchHighlightings(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class BlogPost
         {
             public string Id { get; set; }

@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_542 : RavenTestBase
     {
+        public RavenDB_542(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void MapWithMinValueComparison()
         {

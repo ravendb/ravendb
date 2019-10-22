@@ -1,10 +1,11 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Track
 {
@@ -14,6 +15,10 @@ namespace SlowTests.Tests.Track
     /// </summary>
     public class AsyncProjectionShouldWork : RavenTestBase
     {
+        public AsyncProjectionShouldWork(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestObj
         {
             public string Id { get; set; }

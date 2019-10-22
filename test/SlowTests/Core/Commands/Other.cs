@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CoreTestServer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -15,6 +16,10 @@ namespace SlowTests.Core.Commands
 {
     public class Other : RavenTestBase
     {
+        public Other(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetBuildNumber()
         {

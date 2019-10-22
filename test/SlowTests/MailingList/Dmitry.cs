@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -6,11 +6,16 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Dmitry : RavenTestBase
     {
+        public Dmitry(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DeepEqualsWorksWithTimeSpan()
         {

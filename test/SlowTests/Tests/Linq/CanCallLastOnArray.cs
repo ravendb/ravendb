@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class CanCallLastOnArray : RavenTestBase
     {
+        public CanCallLastOnArray(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Student
         {
             public string Email { get; set; }

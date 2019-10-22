@@ -5,11 +5,16 @@ using Raven.Client.Documents.Queries;
 using Xunit;
 using Raven.Client;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11032:RavenTestBase
     {
+        public RavenDB_11032(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task PatchByIndexShouldSupportDeclaredFunctions()
         {

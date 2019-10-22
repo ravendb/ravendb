@@ -5,11 +5,16 @@ using Raven.Client.Documents.Conventions;
 using Raven.Embedded;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace EmbeddedTests
 {
     public class BasicTests : RavenTestBase
     {
+        public BasicTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TestEmbedded()
         {

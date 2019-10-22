@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Xunit.Abstractions;
 
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -15,6 +16,10 @@ namespace FastTests.Blittable
 {
     public class BlittableValidationTest : NoDisposalNeeded
     {
+        public BlittableValidationTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private BlittableJsonReaderObject InitSimpleBlittable(JsonOperationContext context, out int size)
         {
             var obj = JObject.FromObject(new Employee

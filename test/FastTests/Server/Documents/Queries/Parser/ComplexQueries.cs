@@ -3,11 +3,16 @@ using Raven.Server.Documents.Queries.Parser;
 using System.IO;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
     public class ComplexQueries : NoDisposalNeeded
     {
+        public ComplexQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(@"FROM Users (IsActive =false)", "{\"From\":\"Users\"}")]
         [InlineData(@"FROM Users (IsActive = true)

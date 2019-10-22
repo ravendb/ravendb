@@ -15,11 +15,16 @@ using Xunit;
 using FastTests.Server.Basic.Entities;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromS3 : RavenTestBase
     {
+        public RestoreFromS3(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly string _cloudPathPrefix = $"{nameof(RestoreFromS3)}-{Guid.NewGuid()}";
 
         [Fact, Trait("Category", "Smuggler")]

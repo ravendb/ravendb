@@ -1,11 +1,16 @@
 ﻿using System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_9403 : EtlTestBase
     {
+        public RavenDB_9403(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Identifier_of_loaded_doc_should_not_be_created_using_cluster_identities()
         {

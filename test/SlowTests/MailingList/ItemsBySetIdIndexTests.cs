@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ItemsBySetIdIndexTests : RavenTestBase
     {
+        public ItemsBySetIdIndexTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQuery()
         {

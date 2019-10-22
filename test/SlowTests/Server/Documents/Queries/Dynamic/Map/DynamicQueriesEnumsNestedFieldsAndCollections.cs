@@ -5,11 +5,16 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 {
     public class DynamicQueriesEnumsNestedFieldsAndCollections : RavenTestBase
     {
+        public DynamicQueriesEnumsNestedFieldsAndCollections(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Query_on_enum()
         {

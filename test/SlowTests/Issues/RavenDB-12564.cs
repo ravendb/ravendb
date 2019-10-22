@@ -4,11 +4,16 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12564 : RavenTestBase
     {
+        public RavenDB_12564(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_implicitly_define_aliases_on_nodes_with_just_collections()
         {

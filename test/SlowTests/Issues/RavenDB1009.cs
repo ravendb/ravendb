@@ -1,10 +1,15 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB1009 : RavenTestBase
     {
+        public RavenDB1009(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public byte[] Hash { get; set; }

@@ -6,11 +6,16 @@
 
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
     public class LargeFixedSizeTreeBugs : StorageTest
     {
+        public LargeFixedSizeTreeBugs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);

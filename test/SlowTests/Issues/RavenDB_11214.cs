@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11214 : RavenTestBase
     {
+        public RavenDB_11214(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BetterExceptionWhenDynamicSpatialFieldIsUsedOnStaticIndexQuery()
         {

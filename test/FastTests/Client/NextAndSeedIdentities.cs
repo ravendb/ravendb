@@ -1,11 +1,16 @@
 ﻿using Raven.Client.Documents.Operations.Identities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class NextAndSeedIdentities : RavenTestBase
     {
+        public NextAndSeedIdentities(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void NextIdentityFor()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="FromUser.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.DistinctFacets
 {
     public class FromUser : RavenTestBase
     {
+        public FromUser(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldFacetsWork()
         {

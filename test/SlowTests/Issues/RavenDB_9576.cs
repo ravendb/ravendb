@@ -1,12 +1,17 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9576 : RavenTestBase
     {
+        public RavenDB_9576(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task IdentitiesShouldNotOverwriteExistingDocuments()
         {

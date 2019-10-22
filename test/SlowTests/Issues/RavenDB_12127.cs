@@ -5,11 +5,16 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12127 : RavenTestBase
     {
+        public RavenDB_12127(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Dog
         {
 #pragma warning disable 414

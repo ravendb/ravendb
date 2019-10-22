@@ -11,11 +11,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.MoreLikeThis
 {
     public class MoreLikeThisTests : RavenTestBase
     {
+        public MoreLikeThisTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         private static string GetLorem(int numWords)
         {

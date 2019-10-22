@@ -2,11 +2,16 @@
 using FastTests.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
     public class RavenDB5743 : RavenTestBase
     {
+        public RavenDB5743(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task WillFilterMetadataPropertiesStartingWithAt()
         {

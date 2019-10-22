@@ -10,11 +10,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
     public class NodeRedistribution: ClusterTestBase
     {
+        public NodeRedistribution(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanRedistributeDatabaseWhenNodeGoesDown()
         {

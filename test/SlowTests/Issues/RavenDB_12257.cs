@@ -8,11 +8,16 @@ using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12257 : RavenTestBase
     {
+        public RavenDB_12257(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseSubscriptionIncludesViaStronglyTypedApi()
         {

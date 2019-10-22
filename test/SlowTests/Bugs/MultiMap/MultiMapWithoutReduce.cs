@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiMap
 {
     public class MultiMapWithoutReduce : RavenTestBase
     {
+        public MultiMapWithoutReduce(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryFromMultipleSources()
         {

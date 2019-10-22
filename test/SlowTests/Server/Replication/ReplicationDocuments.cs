@@ -16,11 +16,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.Server.Documents.Replication;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class DocumentReplication : ReplicationTestBase
     {
+        public DocumentReplication(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanReplicateDocument()
         {

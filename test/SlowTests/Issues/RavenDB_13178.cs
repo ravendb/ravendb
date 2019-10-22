@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13178 : RavenTestBase
     {
+        public RavenDB_13178(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CompilationOfJavaScriptIndexShouldNotTakeIntoAccountTheMaxStepsForScript()
         {

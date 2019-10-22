@@ -6,11 +6,16 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBCL_772 : RavenTestBase
     {
+        public RDBCL_772(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldStoreLastAuthorizedNonClusterAdminRequestTime()
         {

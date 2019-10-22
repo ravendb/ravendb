@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Blittable.BlittableJsonWriterTests
 {
     public class VariousPropertyAmountsTests : NoDisposalNeeded
     {
+        public VariousPropertyAmountsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public string GetJsonString(int size)
         {
             var sb = new StringBuilder();

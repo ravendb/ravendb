@@ -1,11 +1,16 @@
-using System.IO;
+﻿using System.IO;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class EmptyTree : FastTests.Voron.StorageTest
     {
+        public EmptyTree(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldBeEmpty()
         {

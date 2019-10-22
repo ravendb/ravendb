@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_3082 : RavenTestBase
     {
+        public RavenDB_3082(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         public class PersonWithZipcode
         {

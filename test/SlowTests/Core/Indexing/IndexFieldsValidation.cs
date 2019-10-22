@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.Indexing
 {
     public class IndexFieldsValidation : RavenTestBase
     {
+        public IndexFieldsValidation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class InvalidMultiMapIndex : AbstractMultiMapIndexCreationTask
         {
             public InvalidMultiMapIndex()

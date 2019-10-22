@@ -11,11 +11,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7912 : ReplicationTestBase
     {
+        public RavenDB_7912(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task InstallSnapshotShouldHandleDeletionInProgress()
         {

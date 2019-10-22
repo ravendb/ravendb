@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8623 : RavenTestBase
     {
+        public RavenDB_8623(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OrderByOnGroupingShouldWork()
         {

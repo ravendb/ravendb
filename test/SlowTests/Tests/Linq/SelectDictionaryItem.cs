@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="SelectDictionaryItem.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class SelectDictionaryItem : RavenTestBase
     {
+        public SelectDictionaryItem(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SupportProjectionOnDictionaryField()
         {

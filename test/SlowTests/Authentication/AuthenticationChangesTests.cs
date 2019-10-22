@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
     public class AuthenticationChangesTests : RavenTestBase
     {
+        public AuthenticationChangesTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ChangesWithAuthentication()
         {

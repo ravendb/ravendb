@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.ScriptedPatching
 {
     public class ScriptedPatchTests : RavenTestBase
     {
+        public ScriptedPatchTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchingWithParametersShouldWork()
         {

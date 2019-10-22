@@ -10,11 +10,16 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
     public class RavenDB_13861 : RavenTestBase
     {
+        public RavenDB_13861(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact32Bit]
         public async Task BatchMemorySizeLimitationShouldBeExactIn32Bit()
         {

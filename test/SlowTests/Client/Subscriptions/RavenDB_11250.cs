@@ -4,11 +4,16 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_11250:RavenTestBase
     {
+        public RavenDB_11250(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact] 
         public async Task SubscriptionShouldNotAllowStartWorkingIfItsStoreIsNotInitialized()
         {

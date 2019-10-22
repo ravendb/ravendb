@@ -10,11 +10,16 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10744 : RavenLowLevelTestBase
     {
+        public RavenDB_10744(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Shold_stop_unloading_database_after_consecutive_corruptions_in_given_time()
         {

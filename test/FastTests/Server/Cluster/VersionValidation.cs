@@ -5,11 +5,16 @@ using System.Reflection;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Cluster
 {
     public class VersionValidation : RavenTestBase
     {
+        public VersionValidation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AllClusterCommandsHasVersion()
         {

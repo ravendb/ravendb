@@ -7,11 +7,16 @@ using Raven.Client;
 using Raven.Client.Documents.Smuggler;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8367 : RavenTestBase
     {
+        public RavenDB_8367(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task RavenExpirationDateShouldBeTranslatedToExpiresBySmuggler()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -6,11 +6,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Willem : RavenTestBase
     {
+        public Willem(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ThisIsMyTest()
         {

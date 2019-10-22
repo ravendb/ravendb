@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="LastModifiedRemote.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Metadata
 {
     public class LastModifiedRemote : RavenTestBase
     {
+        public LastModifiedRemote(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAccessLastModifiedAsMetadata()
         {

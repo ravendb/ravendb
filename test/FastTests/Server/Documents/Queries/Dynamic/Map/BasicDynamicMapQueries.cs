@@ -8,12 +8,17 @@ using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Client.Documents.Linq;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class BasicDynamicMapQueries : RavenTestBase
     {
+        public BasicDynamicMapQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task String_where_clause()
         {

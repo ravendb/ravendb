@@ -2,11 +2,16 @@
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Graph
 {
     public class Parsing : RavenTestBase
     {
+        public Parsing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("with { from Users} as u match (u)", @"WITH {
     FROM Users

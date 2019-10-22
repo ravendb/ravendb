@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Enzmann : RavenTestBase
     {
+        public Enzmann(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Include()
         {

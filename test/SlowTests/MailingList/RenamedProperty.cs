@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RenamedProperty : RavenTestBase
     {
+        public RenamedProperty(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OrderByWithAttributeShouldStillWork()
         {

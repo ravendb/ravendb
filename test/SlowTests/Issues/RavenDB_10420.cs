@@ -10,11 +10,16 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10420 : RavenTestBase
     {
+        public RavenDB_10420(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldWork()
         {

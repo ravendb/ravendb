@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CanHaveEscapedSecialCharactersInDefinition.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class SecialCharactersInDefinition : RavenTestBase
     {
+        public SecialCharactersInDefinition(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string FooIndexName = "SomeFooIndexWithSpecialCharacters";
 
         [Fact]

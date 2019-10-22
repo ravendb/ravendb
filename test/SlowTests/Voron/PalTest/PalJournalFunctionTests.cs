@@ -7,11 +7,16 @@ using FastTests;
 using Sparrow.Server.Platform;
 using Voron.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.PalTest
 {
     public class PalJournalTests : RavenTestBase
     {
+        public PalJournalTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void rvn_get_error_string_WhenCalled_ShouldCreateFile()
         {

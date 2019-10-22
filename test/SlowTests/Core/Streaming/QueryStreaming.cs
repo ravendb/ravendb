@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="QueryResultsStreaming.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,11 +15,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.Streaming
 {
     public class QueryStreaming : RavenTestBase
     {
+        public QueryStreaming(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanStreamQueryResults()
         {

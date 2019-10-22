@@ -3,11 +3,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class markp : RavenTestBase
     {
+        public markp(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name;

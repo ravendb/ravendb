@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class linmouhong3 : RavenTestBase
     {
+        public linmouhong3(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class ShortUrlMap
         {
             public string LongUrl { get; set; }

@@ -5,11 +5,16 @@ using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Graph
 {
     public class VerticesFromIndexes : RavenTestBase
     {
+        public VerticesFromIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_query_with_vertices_source_from_map_reduce_index()
         {

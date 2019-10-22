@@ -1,11 +1,16 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Stacey2 : RavenTestBase
     {
+        public Stacey2(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Root
         {
             public string Id { get; set; }

@@ -5,11 +5,16 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Graph
 {
     public class BasicGraphQueries : RavenTestBase
     {
+        public BasicGraphQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class StalenessParameters
         {
             public bool WaitForIndexing { get; set; }

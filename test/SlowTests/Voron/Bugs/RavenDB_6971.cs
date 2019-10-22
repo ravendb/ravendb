@@ -6,11 +6,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class RavenDB_6971 : RavenTestBase
     {
+        public RavenDB_6971(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart()
         {

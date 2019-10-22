@@ -8,11 +8,16 @@ using System.IO;
 using Voron;
 using Voron.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class Quotas : FastTests.Voron.StorageTest
     {
+        public Quotas(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxStorageSize = 1024 * 1024 * 1; // 1MB

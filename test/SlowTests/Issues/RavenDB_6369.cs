@@ -11,11 +11,16 @@ using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6369 : RavenTestBase
     {
+        public RavenDB_6369(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldTimeout()
         {

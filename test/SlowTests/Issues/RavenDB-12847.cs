@@ -5,11 +5,16 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12847 : RavenTestBase
     {
+        public RavenDB_12847(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_user_normalize_in_index()
         {

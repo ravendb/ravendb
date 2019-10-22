@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12867 : RavenTestBase
     {
+        public RavenDB_12867(ITestOutputHelper output) : base(output)
+        {
+        }
+
         class JsonDeserialization : JsonDeserializationBase
         {
             public static readonly Func<BlittableJsonReaderObject, Container> Container = GenerateJsonDeserializationRoutine<Container>();

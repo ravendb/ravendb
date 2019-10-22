@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.MultiGet
 {
     public class MultiGetBugs : RavenTestBase
     {
+        public MultiGetBugs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

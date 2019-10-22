@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {
     public class SearchOperator : RavenTestBase
     {
+        public SearchOperator(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Something
         {
             public string Id { get; set; }

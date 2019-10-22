@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CustomizingIndexQuery.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CustomizingIndexQuery : RavenTestBase
     {
+        public CustomizingIndexQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSkipTransformResults()
         {

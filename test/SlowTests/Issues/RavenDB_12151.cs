@@ -11,11 +11,16 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12151 : RavenTestBase
     {
+        public RavenDB_12151(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public void IndexingWhenTransactionSizeLimitExceeded()
         {

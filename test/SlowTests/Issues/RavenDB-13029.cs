@@ -5,11 +5,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13029 : RavenLowLevelTestBase
     {
+        public RavenDB_13029(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReadTransactionShouldNotSeeCollectionsThatWereGeneratedAfterItsCreation()
         {

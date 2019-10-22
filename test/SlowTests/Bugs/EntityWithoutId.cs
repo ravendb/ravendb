@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="EntityWithoutId.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,11 +6,16 @@
 
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class EntityWithoutId : RavenTestBase
     {
+        public EntityWithoutId(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanBeSaved()
         {

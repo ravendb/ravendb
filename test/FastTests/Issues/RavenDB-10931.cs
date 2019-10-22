@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10931 : RavenTestBase
     {
+        public RavenDB_10931(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Foo
         {
             public string Bar { get; set; }

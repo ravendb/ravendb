@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class BuildStarted : RavenTestBase
     {
+        public BuildStarted(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestModel
         {
             public string Id { get; set; }

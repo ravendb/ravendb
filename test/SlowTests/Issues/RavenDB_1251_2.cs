@@ -7,11 +7,16 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_1251_2 : RavenTestBase
     {
+        public RavenDB_1251_2(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Foo
         {
             public Duration Bar { get; set; }

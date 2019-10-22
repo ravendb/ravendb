@@ -19,11 +19,16 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
     public class ReplicationTests : ReplicationTestBase
     {
+        public ReplicationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task WaitForCommandToApply()
         {

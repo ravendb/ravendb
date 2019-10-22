@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DynamicObjectTests : RavenTestBase
     {
+        public DynamicObjectTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         /// <summary>
         /// this test works but really slow
         /// and if you turn on "Break on all Errors", you'll see

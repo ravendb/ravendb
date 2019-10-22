@@ -14,11 +14,16 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class StorageReportGenerationTests : FastTests.Voron.StorageTest
     {
+        public StorageReportGenerationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AllocatedSpaceOfDataFileEqualsToSumOfSpaceInUseAndFreeSpace()
         {

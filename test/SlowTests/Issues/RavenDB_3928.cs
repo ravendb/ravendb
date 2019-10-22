@@ -7,11 +7,16 @@
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3928 : RavenTestBase
     {
+        public RavenDB_3928(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public int? Age1 { get; set; }

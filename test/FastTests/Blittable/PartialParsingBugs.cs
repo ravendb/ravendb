@@ -1,11 +1,16 @@
 ﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public class PartialParsingBugs : NoDisposalNeeded
     {
+        public PartialParsingBugs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("{\"Neg1\":-9223372036854775808,\"Neg\":-6}")]
         [InlineData("{\"Val\": Infinity}")]

@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_3193 : RavenTestBase
     {
+        public RavenDB_3193(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldRespectCollectionCriteria()
         {

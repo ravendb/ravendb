@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.IO;
 using FastTests;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class MultiTransactions : NoDisposalNeeded
     {
+        public MultiTransactions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldWork()
         {

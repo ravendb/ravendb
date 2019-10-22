@@ -14,11 +14,16 @@ using SlowTests.Utils;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class DataInconsistencyRepro : StorageTest
     {
+        public DataInconsistencyRepro(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineDataWithRandomSeed(5000, 10000)]
         [InlineDataWithRandomSeed(1000, 5000)]

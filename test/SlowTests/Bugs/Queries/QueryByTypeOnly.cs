@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class QueryByTypeOnly : RavenTestBase
     {
+        public QueryByTypeOnly(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryOnlyByType()
         {

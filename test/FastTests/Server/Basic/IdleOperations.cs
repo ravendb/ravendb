@@ -3,11 +3,16 @@ using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
     public class IdleOperations : RavenTestBase
     {
+        public IdleOperations(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Product
         {
             public string ProductName { get; set; }

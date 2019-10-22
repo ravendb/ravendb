@@ -16,11 +16,16 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
     public class EtlFailover : ReplicationTestBase
     {
+        public EtlFailover(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReplicateFromSingleSource()
         {

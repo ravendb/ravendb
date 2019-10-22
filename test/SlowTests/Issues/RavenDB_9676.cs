@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9676 : RavenTestBase
     {
+        public RavenDB_9676(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanOrderByDistanceOnDynamicSpatialField()
         {

@@ -4,11 +4,16 @@ using System.Text;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
     public unsafe class TimeParsing : NoDisposalNeeded
     {
+        public TimeParsing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("2016-10-05T21:07:32.2082285Z")]
         [InlineData("2016-10-05T21:07:32.2082285")]

@@ -9,11 +9,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10656 : ReplicationTestBase, ITombstoneAware
     {
+        public RavenDB_10656(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task RevisionsWillBeReplicatedEvenIfTheyAreNotConfiguredOnTheDestinationNode()
         {

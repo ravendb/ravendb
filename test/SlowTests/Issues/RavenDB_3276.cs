@@ -1,12 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3276 : RavenTestBase
     {
+        public RavenDB_3276(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Dictionary_with_empty_string_as_key_should_fail_storing_in_db()
         {

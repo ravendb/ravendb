@@ -23,11 +23,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTestsSlow : ClusterTestBase
     {
+        public PeriodicBackupTestsSlow(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory()
         {

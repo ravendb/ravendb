@@ -7,11 +7,16 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_12151_Voron_2 : StorageTest
     {
+        public RavenDB_12151_Voron_2(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TestScratchSpaceMonitor _scratchSpaceMonitor = new TestScratchSpaceMonitor();
 
         protected override void Configure(StorageEnvironmentOptions options)

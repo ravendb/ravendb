@@ -1,11 +1,16 @@
 ﻿using System;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10212 : RavenTestBase
     {
+        public RavenDB_10212(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSetRequestTimeoutInConventions()
         {

@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
     public class IndexCompilationTests : NoDisposalNeeded
     {
+        public IndexCompilationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Sum_of_elements()
         {

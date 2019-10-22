@@ -11,11 +11,16 @@ using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public class FunctionalityTests : BlittableJsonTestBase
     {
+        public FunctionalityTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Generating_DictionaryDeserializationRoutine_should_work()
         {

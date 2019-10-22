@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3401 : RavenTestBase
     {
+        public RavenDB_3401(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void projections_with_property_rename()
         {

@@ -4,11 +4,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13979 : RavenTestBase
     {
+        public RavenDB_13979(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldTranslateIdPropertyToIdFunctionInQueryWithWhereExactOverload()
         {

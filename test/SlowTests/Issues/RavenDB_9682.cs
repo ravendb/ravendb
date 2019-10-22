@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9682 : RavenTestBase
     {
+        public RavenDB_9682(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IdInInQueriesShouldNotBeCaseSensitive()
         {

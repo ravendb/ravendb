@@ -5,11 +5,16 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class MultiMapIndexQueryTests : RavenTestBase
     {
+        public MultiMapIndexQueryTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanQuery()
         {

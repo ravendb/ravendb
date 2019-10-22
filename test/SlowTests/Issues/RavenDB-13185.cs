@@ -14,11 +14,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Patch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13185 : ReplicationTestBase
     {
+        public RavenDB_13185(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanHandleCorsHeaders()
         {

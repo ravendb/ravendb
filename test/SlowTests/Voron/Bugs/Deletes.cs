@@ -1,11 +1,16 @@
 ﻿using System;
 using System.IO;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class Deletes : FastTests.Voron.StorageTest
     {
+        public Deletes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RebalancerIssue()
         {

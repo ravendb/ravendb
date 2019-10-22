@@ -11,11 +11,16 @@ using Sparrow.Json.Parsing;
 using Xunit;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Backups
 {
     public class BackupToOneZipFile : RavenLowLevelTestBase
     {
+        public BackupToOneZipFile(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "Should add database record to backup and restore")]
         public async Task FullBackupToOneZipFile()
         {

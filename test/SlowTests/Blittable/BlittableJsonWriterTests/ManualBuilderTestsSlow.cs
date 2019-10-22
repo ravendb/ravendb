@@ -3,11 +3,16 @@ using FastTests;
 using Sparrow.Json;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Blittable.BlittableJsonWriterTests
 {
     public class ManualBuilderTestsSlow : NoDisposalNeeded
     {
+        public ManualBuilderTestsSlow(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Theory]
         [InlineData(byte.MaxValue)]

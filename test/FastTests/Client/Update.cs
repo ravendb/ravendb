@@ -1,10 +1,15 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Update : RavenTestBase
     {
+        public Update(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Update_Document()
         {

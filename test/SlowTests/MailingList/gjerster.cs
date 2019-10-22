@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class gjerster : RavenTestBase
     {
+        public gjerster(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("singa*")]
         [InlineData("pte")]

@@ -8,11 +8,16 @@ using System.IO;
 using SlowTests.Utils;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class IndexPointToNonLeafPageTests : FastTests.Voron.StorageTest
     {
+        public IndexPointToNonLeafPageTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

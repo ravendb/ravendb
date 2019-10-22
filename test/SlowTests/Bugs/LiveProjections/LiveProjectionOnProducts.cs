@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.LiveProjections
 {
     public class LiveProjectionOnProducts : RavenTestBase
     {
+        public LiveProjectionOnProducts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ComplexLiveProjection()
         {

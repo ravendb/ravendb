@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10166:RavenTestBase
     {
+        public RavenDB_10166(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task RandomResultsShouldBeRecievedInDifferentOrderEachTime()
         {

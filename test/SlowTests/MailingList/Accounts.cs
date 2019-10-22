@@ -1,12 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Accounts : RavenTestBase
     {
+        public Accounts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TestLoadAccountByTypeContains()
         {

@@ -5,11 +5,16 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic
 {
     public class RavenDB_8325 : RavenTestBase
     {
+        public RavenDB_8325(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public long Value { get; set; }

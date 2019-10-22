@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class OnGoingTask : RavenTestBase
     {
+        public OnGoingTask(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GetBackupTaskInfo()
         {

@@ -42,11 +42,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server
 {
     public class RecordingTransactionOperationsMergerTests : ClusterTestBase
     {
+        public RecordingTransactionOperationsMergerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AllDerivedCommandsOfMergedTransactionCommand_MustBeRecordable_ExceptForExceptions()
         {

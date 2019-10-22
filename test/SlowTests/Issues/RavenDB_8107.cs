@@ -4,11 +4,16 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8107 : RavenTestBase
     {
+        public RavenDB_8107(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_patch_by_dynamic_collection_query()
         {

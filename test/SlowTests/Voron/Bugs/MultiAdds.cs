@@ -4,11 +4,16 @@ using System.Text;
 using FastTests;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class MultiAdds : NoDisposalNeeded
     {
+        public MultiAdds(ITestOutputHelper output) : base(output)
+        {
+        }
+
         readonly Random _random = new Random(1234);
 
         private string RandomString(int size)

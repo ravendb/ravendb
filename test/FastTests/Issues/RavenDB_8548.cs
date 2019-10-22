@@ -2,11 +2,16 @@
 using Raven.Server.Config;
 using Sparrow.Logging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_8548 : NoDisposalNeeded
     {
+        public RavenDB_8548(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldWork()
         {

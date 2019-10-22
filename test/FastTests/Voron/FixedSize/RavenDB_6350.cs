@@ -3,11 +3,16 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
     public class RavenDB_6350 : StorageTest
     {
+        public RavenDB_6350(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Invalid_usage_of_DirectAdds()
         {

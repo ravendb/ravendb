@@ -2,11 +2,16 @@
 using FastTests;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10537:RavenTestBase
     {
+        public RavenDB_10537(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TestDecimalNumbers()
         {

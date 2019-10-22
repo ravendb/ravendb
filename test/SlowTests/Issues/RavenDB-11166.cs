@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11166 : RavenTestBase
     {
+        public RavenDB_11166(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Dog
         {
 #pragma warning disable 414

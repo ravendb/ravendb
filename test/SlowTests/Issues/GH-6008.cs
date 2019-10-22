@@ -1,10 +1,15 @@
 ﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class GH_6008 : RavenTestBase
     {
+        public GH_6008(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
 

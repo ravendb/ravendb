@@ -14,11 +14,16 @@ using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11089 : FacetTestBase
     {
+        public RavenDB_11089(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string NameOfFoo;

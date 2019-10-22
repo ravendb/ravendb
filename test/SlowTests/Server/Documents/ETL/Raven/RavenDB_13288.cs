@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_13288 : ReplicationTestBase
     {
+        public RavenDB_13288(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldSendCounterChangeMadeInCluster()
         {

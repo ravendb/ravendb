@@ -1,11 +1,16 @@
-using FastTests.Voron;
+﻿using FastTests.Voron;
 using Sparrow.Platform.Posix;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class FileSystemUtilsTest : RavenTestBase
     {
+        public FileSystemUtilsTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [LinuxFact]
         public void WriteAndReadPageUsingCryptoPager_WhenCall_AllResultShouldBeNotNull()
         {

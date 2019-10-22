@@ -8,11 +8,16 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12573 : RavenTestBase
     {
+        public RavenDB_12573(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanGetDistinctResultWithSkipAndProjection()
         {

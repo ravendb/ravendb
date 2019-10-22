@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class TroyMapReduce : RavenTestBase
     {
+        public TroyMapReduce(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private Guid _appKey;
         private Guid _privateKey;
 

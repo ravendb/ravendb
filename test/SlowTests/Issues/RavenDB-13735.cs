@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Refresh;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13735 : RavenTestBase
     {
+        public RavenDB_13735(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private async Task SetupRefresh(DocumentStore store)
         {
             var config = new RefreshConfiguration

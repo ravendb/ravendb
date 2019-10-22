@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Bugs.Vlko
 {
     public class RelationIdIndex : RavenTestBase
     {
+        public RelationIdIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanBeUsedForTransformResultsWithDocumentId()
         {

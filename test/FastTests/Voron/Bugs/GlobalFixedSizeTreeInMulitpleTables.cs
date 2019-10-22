@@ -3,11 +3,16 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Bugs
 {
     public class GlobalFixedSizeTreeInMulitpleTables : StorageTest
     {
+        public GlobalFixedSizeTreeInMulitpleTables(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanBeSafelyModifiedOnEither()
         {

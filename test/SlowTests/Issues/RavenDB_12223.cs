@@ -4,11 +4,16 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12223 : RavenTestBase
     {
+        public RavenDB_12223(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Search_Whitespace : AbstractIndexCreationTask<Company>
         {
             public Search_Whitespace()

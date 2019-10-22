@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class CreateIndexesWithCasting : RavenTestBase
     {
+        public CreateIndexesWithCasting(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillPreserverTheCasts()
         {

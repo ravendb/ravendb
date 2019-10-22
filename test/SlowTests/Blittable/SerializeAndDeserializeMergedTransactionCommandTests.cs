@@ -19,11 +19,16 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Blittable
 {
     public class SerializeAndDeserializeMergedTransactionCommandTests : RavenLowLevelTestBase
     {
+        public SerializeAndDeserializeMergedTransactionCommandTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SerializeAndDeserialize_PutResolvedConflictsCommand()
         {

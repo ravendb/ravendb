@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Mare : RavenTestBase
     {
+        public Mare(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUnderstandEqualsMethod()
         {

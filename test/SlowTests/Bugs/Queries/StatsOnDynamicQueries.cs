@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class StatsOnDynamicQueries : RavenTestBase
     {
+        public StatsOnDynamicQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillGiveStats()
         {

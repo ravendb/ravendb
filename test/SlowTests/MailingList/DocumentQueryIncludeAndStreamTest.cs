@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DocumentQueryIncludeAndStreamTest : RavenTestBase
     {
+        public DocumentQueryIncludeAndStreamTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class ProcessStep
         {
             public string Id { get; set; }

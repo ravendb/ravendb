@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="DistinctAndFacets.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.DistinctFacets
 {
     public class DistinctAndFacets : RavenTestBase
     {
+        public DistinctAndFacets(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Book
         {
             public string Author;

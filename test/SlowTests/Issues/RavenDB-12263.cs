@@ -4,6 +4,7 @@ using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 // ReSharper disable InconsistentNaming
 
@@ -11,6 +12,10 @@ namespace SlowTests.Issues
 {
     public class RavenDB_12263 : RavenTestBase
     {
+        public RavenDB_12263(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private void CreateData(IDocumentStore store)
         {
           

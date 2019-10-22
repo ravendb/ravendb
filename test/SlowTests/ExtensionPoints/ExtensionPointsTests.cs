@@ -19,11 +19,16 @@ using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.ExtensionPoints
 {
     public class ExtensionPointsTests : RavenTestBase
     {
+        public ExtensionPointsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string SystemDbName = "System";
 
         [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]

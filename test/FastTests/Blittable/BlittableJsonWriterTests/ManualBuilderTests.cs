@@ -7,11 +7,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public class ManualBuilderTests : NoDisposalNeeded
     {
+        public ManualBuilderTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BasicObject()
         {

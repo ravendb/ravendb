@@ -20,11 +20,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.Client.Documents.Operations.Identities;
+using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
     public class ClusterOperationTests : ClusterTestBase
     {
+        public ClusterOperationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReorderDatabaseNodes()
         {
