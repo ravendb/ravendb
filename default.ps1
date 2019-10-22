@@ -13,9 +13,8 @@ properties {
     $release_dir = "$base_dir\Release"
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
-    $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
     $nowarn = "1591,1573,1701,1702,1705,618,xUnit2013"
-    
+    $global:msbuild = ""
     $dotnet = "dotnet"
     $dotnetLib = "netstandard1.3"
     $dotnetApp = "netcoreapp1.0"
@@ -60,6 +59,11 @@ task NuGetRestore {
 task Init -depends Verify40, Clean, NuGetRestore {
     Write-Host "Start Init"
     
+    $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe"
+    if (!(Test-Path -Path $global:msbuild)) {
+        $global:msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
+    }
+    
     $informationalVersion = Get-InformationalVersion $version $global:buildlabel $global:uploadCategory 
     
     Write-Host "##teamcity[setParameter name='env.informationalVersion' value='$informationalVersion']"
@@ -91,7 +95,7 @@ task Compile -depends Init, CompileHtml5 {
     
     Write-Host "Compiling with '$global:configuration' configuration and '$constants' constants" -ForegroundColor Yellow
     
-    &"$msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /maxcpucount /verbosity:minimal
+    &"$global:msbuild" "$sln_file" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /maxcpucount /verbosity:minimal
 
     Write-Host "msbuild exit code: $LastExitCode"
 
@@ -117,7 +121,7 @@ task CompileHtml5 {
     
     Set-Location $base_dir
     
-    &"$msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /maxcpucount /verbosity:minimal
+    &"$global:msbuild" "Raven.Studio.Html5\Raven.Studio.Html5.csproj" /p:Configuration=$global:configuration "/p:NoWarn=`"$nowarn`"" /maxcpucount /verbosity:minimal
     
     Set-Location $build_dir\Html5
     exec { & $tools_dir\zip.exe -9 -A -r $build_dir\Raven.Studio.Html5.zip *.* }
