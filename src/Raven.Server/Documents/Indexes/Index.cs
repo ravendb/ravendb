@@ -3108,7 +3108,7 @@ namespace Raven.Server.Documents.Indexes
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
 
-            UseAllDocumentsCounterAndCmpXchgEtags(documentsContext, q, length, indexEtagBytes);
+            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(documentsContext, q, length, indexEtagBytes);
 
             unchecked
             {
@@ -3116,7 +3116,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsCounterAndCmpXchgEtags(DocumentsOperationContext documentsContext, 
+        protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(DocumentsOperationContext documentsContext, 
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q == null)
@@ -3137,9 +3137,20 @@ namespace Raven.Server.Documents.Indexes
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
-                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1)) ;
+                var offset = length - sizeof(long) * 
+                                       ((q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1) +
+                                        (q.HasTimeSeries ? 1 : 0));
 
                 *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);
+            }
+
+            if (q.HasTimeSeries)
+            {
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last time series etag");
+
+                var offset = length - (sizeof(long) * (q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1));
+
+                *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastTimeSeriesEtag(documentsContext.Transaction.InnerTransaction);
             }
 
             if (q.HasCmpXchg || q.HasCmpXchgSelect)
@@ -3153,7 +3164,6 @@ namespace Raven.Server.Documents.Indexes
                         documentsContext.DocumentDatabase.ServerStore.Cluster
                             .GetLastCompareExchangeIndexForDatabase(transactionContext, documentsContext.DocumentDatabase.Name);
                 }
-
             }
         }   
 
@@ -3170,8 +3180,11 @@ namespace Raven.Server.Documents.Indexes
             if (q.CounterIncludes != null || q.HasCounterSelect)
                 length += sizeof(long); // last counter etag
 
+            if (q.HasTimeSeries)
+                length += sizeof(long); // last time series etag
+
             if (q.HasCmpXchg || q.HasCmpXchgSelect)           
-                length += sizeof(long); //last cmpxng etag
+                length += sizeof(long); //last cmpxchg etag
             
             return length;
         }

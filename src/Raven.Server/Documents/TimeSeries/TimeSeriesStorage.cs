@@ -1465,6 +1465,25 @@ namespace Raven.Server.Documents.TimeSeries
             return name;
         }
 
+        public long GetLastTimeSeriesEtag(DocumentsOperationContext context, string collection)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return 0;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(TimeSeriesSchema, collectionName.GetTableName(CollectionTableType.TimeSeries));
+
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return 0;
+
+            var result = table.ReadLast(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice]);
+            if (result == null)
+                return 0;
+
+            return DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref result.Reader);
+        }
+
         private enum TimeSeriesTable
         {
             // Format of this is:
