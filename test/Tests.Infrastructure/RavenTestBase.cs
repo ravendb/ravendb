@@ -695,32 +695,6 @@ namespace FastTests
             CreatedStores.Clear();
         }
 
-        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath,
-            RavenServer.CertificateHolder serverCertificateHolder,
-            Dictionary<string, DatabaseAccess> permissions,
-            SecurityClearance clearance,
-            RavenServer server = null)
-        {
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out var clietnCertBytes);
-            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = serverCertificate,
-                Server = server
-            }))
-            {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new PutClientCertificateOperation("RavenTestsClient", clientCertificate, permissions, clearance)
-                        .GetCommand(store.Conventions, context);
-
-                    requestExecutor.Execute(command, context);
-                }
-            }
-            return new X509Certificate2(clietnCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
-        }
-
         protected X509Certificate2 RegisterClientCertificate(TestCertificatesHolder certificates, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
             return RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, permissions, clearance, server);
@@ -745,27 +719,6 @@ namespace FastTests
             }
 
             return clientCertificate;
-        }
-
-        protected void AskCluster2ToTrustCluster1(X509Certificate2 cluster1Cert, X509Certificate2 cluster2Cert, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, RavenServer cluster2Leader)
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                Server = cluster2Leader,
-                ClientCertificate = cluster2Cert,
-                AdminCertificate = cluster2Cert,
-                CreateDatabase = false
-            }))
-            {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new PutClientCertificateOperation("cluster1 certificate", cluster1Cert, permissions, clearance)
-                        .GetCommand(store.Conventions, context);
-
-                    requestExecutor.Execute(command, context);
-                }
-            }
         }
 
         protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
@@ -823,17 +776,7 @@ namespace FastTests
             return certificates;
         }
 
-        private Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
-
-        protected string GetMasterKeyForDatabase(RavenServer server, string databaseName)
-        {
-            if (_serverDatabaseToMasterKey.TryGetValue((server, databaseName), out var key))
-            {
-                return key;
-            }
-
-            return null;
-        }
+        private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
 
         protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer ravenServer)
         {
