@@ -765,18 +765,6 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException("Parameters of method `timeseries` must be of type `string``, " +
                                                     $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
 
-                if (vt.Value == ValueTokenType.Parameter)
-                {
-/*
-                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
-                    {
-                        AddTimeSeriesToInclude(timeseriesIncludes, parameters, v, sourcePath);
-                    }
-*/
-
-                    continue;
-                }
-
                 args[index - start] = arg.Value.ToString();
 
 

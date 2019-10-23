@@ -3138,7 +3138,7 @@ namespace Raven.Server.Documents.Indexes
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
                 var offset = length - sizeof(long) * 
-                                       ((q.HasCmpXchg || q.HasCmpXchgSelect ? 2 : 1) +
+                                       (1 + (q.HasCmpXchg || q.HasCmpXchgSelect ? 1 : 0) +
                                         (q.HasTimeSeries ? 1 : 0));
 
                 *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(documentsContext.Transaction.InnerTransaction);

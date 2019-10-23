@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Includes
                 if (kvp.Key != string.Empty &&
                     document.Data.TryGet(kvp.Key, out docId) == false)
                 {
-                    throw new InvalidOperationException($"Cannot include counters for related document '{kvp.Key}', " +
+                    throw new InvalidOperationException($"Cannot include time series for related document '{kvp.Key}', " +
                                                         $"document {document.Id} doesn't have a field named '{kvp.Key}'. ");
                 }
 

@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Queries
 
 
         /// <summary>
-        /// todo
+        /// Gets or sets the TimeSeries included in the result.
         /// </summary>
         public BlittableJsonReaderObject TimeSeriesIncludes { get; set; }
 
