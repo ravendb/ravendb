@@ -108,13 +108,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
             }
 
-            const currentlyProcessingItem = smugglerDatabaseDetails.findCurrentlyProcessingItem(result);
+            const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);
             
             result.forEach(item => {
-                if (item.stage === "processing") {
-                    if (item.name !== currentlyProcessingItem) {
-                        item.stage = "pending";
-                    }
+                if (item.stage === "processing" && !_.includes(currentlyProcessingItems, item.name)) {
+                    item.stage = "pending";
                 }
 
                 if (item.stage === "pending" || item.stage === "skipped" || item.name === smugglerDatabaseDetails.extractingDataStageName) {
@@ -214,23 +212,23 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }
     }
     
-    private static findCurrentlyProcessingItem(result: Array<smugglerListItem>): string {
+    private static findCurrentlyProcessingItems(result: Array<smugglerListItem>): string[] {
         // since we don't know the contents of smuggler import file we assume that currently processed
-        // item is first item with status: 'processing' and positive read count
+        // items are all items with status: 'processing' and positive read count
         // if such item doesn't exist when use first item with processing state
         
         const processing = result.filter(x => x.stage === "processing");
         
-        const withPositiveReadCount = processing.find(x => x.hasReadCount && x.readCount !== '0');
-        if (withPositiveReadCount) {
-            return withPositiveReadCount.name;
+        const withPositiveReadCounts = processing.filter(x => x.hasReadCount && x.readCount !== '0');
+        if (withPositiveReadCounts.length) {
+            return withPositiveReadCounts.map(x => x.name);
         }
         
         if (processing.length) {
-            return processing[0].name;
+            return [processing[0].name];
         }
         
-        return null;
+        return [];
     }
 
     private addToUploadItems(backupType: string, items: Array<uploadListItem>,
