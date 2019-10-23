@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class OrderBy : RavenTestBase
     {
+        public OrderBy(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Section
         {
             public string Id { get; set; }

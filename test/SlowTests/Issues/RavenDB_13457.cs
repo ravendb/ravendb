@@ -11,11 +11,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13457 : ClusterTestBase
     {
+        public RavenDB_13457(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()

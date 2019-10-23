@@ -1,12 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12068 : RavenTestBase
     {
+        public RavenDB_12068(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TernaryOperatorPrecedence()
         {

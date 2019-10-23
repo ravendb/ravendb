@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SpatialQueries.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,11 +10,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class SpatialQueries : RavenTestBase
     {
+        public SpatialQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SpatialQueriesInMemoryTestIdx : AbstractIndexCreationTask<Listing>
         {
             public SpatialQueriesInMemoryTestIdx()

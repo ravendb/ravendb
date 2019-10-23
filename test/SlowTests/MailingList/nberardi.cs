@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Nberardi : RavenTestBase
     {
+        public Nberardi(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
         {

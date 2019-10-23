@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5489 : RavenTestBase
     {
+        public RavenDB_5489(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task IfIndexEncountersCorruptionItShouldBeMarkedAsErrored()
         {

@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9912 : RavenTestBase
     {
+        public RavenDB_9912(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task DocsAndAttachmentsDeletionsShouldBeProcessedCorrectly()
         {

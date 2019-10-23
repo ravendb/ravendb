@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11255 : RavenLowLevelTestBase
     {
+        public RavenDB_11255(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_update_lock_mode_and_priority_of_index_even_if_indexing_is_running()
         {

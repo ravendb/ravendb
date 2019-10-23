@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Server.Web.Studio;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14077 : RavenTestBase
     {
+        public RavenDB_14077(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GetDataDirectoryInfoCommand_ShouldReturnRootedPath()
         {

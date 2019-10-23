@@ -5,11 +5,16 @@ using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
     public unsafe class UnmanageJsonReaderTests : NoDisposalNeeded
     {
+        public UnmanageJsonReaderTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [MemberData(nameof(Samples))]
         public void CanReadAll(string name)

@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6931 : RavenTestBase
     {
+        public RavenDB_6931(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchAttachmentMetadataShouldThrow()
         {

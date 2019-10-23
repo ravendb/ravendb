@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Session
 {
     public class TimeSeriesRangesCache : RavenTestBase
     {
+        public TimeSeriesRangesCache(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldGetTimeSeriesValueFromCache()
         {

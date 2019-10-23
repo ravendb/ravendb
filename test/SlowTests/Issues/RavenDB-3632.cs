@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3632 : RavenTestBase
     {
+        public RavenDB_3632(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task IncludeWithLoadAsync()
         {

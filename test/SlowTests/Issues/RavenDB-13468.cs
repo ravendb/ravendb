@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Storage.Schema.Updates.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13468 : RavenTestBase
     {
+        public RavenDB_13468(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanMigrateLegacyCountersWithMultipleDbIds()
         {

@@ -2,11 +2,16 @@
 using System.IO;
 using Xunit;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class Updates : StorageTest
     {
+        public Updates(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUpdateVeryLargeValueAndThenDeleteIt()
         {

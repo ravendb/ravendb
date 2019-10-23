@@ -3,12 +3,17 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13695 : RavenTestBase
     {
+        public RavenDB_13695(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class NewsDocument
         {
             public List<string> AuthorNames { get; set; }

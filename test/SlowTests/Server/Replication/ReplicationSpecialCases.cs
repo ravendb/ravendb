@@ -7,11 +7,16 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationSpecialCases : ReplicationTestBase
     {
+        public ReplicationSpecialCases(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task NonIdenticalContentConflict()
         {

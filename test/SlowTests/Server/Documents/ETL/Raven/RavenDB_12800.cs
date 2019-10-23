@@ -5,11 +5,16 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_12800 : EtlTestBase
     {
+        public RavenDB_12800(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(@"
             var doc = loadToUsers(this);

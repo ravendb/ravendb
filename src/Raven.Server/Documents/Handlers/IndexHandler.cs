@@ -727,7 +727,7 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var name = GetIndexNameFromCollectionAndField(field, context) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+                var name = GetIndexNameFromCollectionAndField(field) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
                 var fromValue = GetStringQueryString("fromValue", required: false);
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
@@ -775,14 +775,14 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private string GetIndexNameFromCollectionAndField(string field, DocumentsOperationContext context)
+        private string GetIndexNameFromCollectionAndField(string field)
         {
             var collection = GetStringQueryString("collection", false);
             if (string.IsNullOrEmpty(collection))
                 return null;
             var query = new IndexQueryServerSide(new QueryMetadata($"from {collection} select {field}", null, 0));
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(Database.IndexStore);
-            var match = dynamicQueryToIndex.Match(DynamicQueryMapping.Create(query), context);
+            var match = dynamicQueryToIndex.Match(DynamicQueryMapping.Create(query));
             if (match.MatchType == DynamicQueryMatchType.Complete ||
                 match.MatchType == DynamicQueryMatchType.CompleteButIdle)
                 return match.IndexName;

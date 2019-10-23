@@ -12,11 +12,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Cluster
 {
     public class ClusterStressTests : ReplicationTestBase
     {
+        public ClusterStressTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         // the values are lower to make the cluster less stable
         protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {

@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_123 : RavenTestBase
     {
+        public RDBC_123(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Query_Using_an_Alias_on_Properties_of_Nested_Object_Array()
         {

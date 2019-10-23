@@ -4,11 +4,16 @@ using FastTests;
 using Orders;
 using Sparrow.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11794 : RavenTestBase
     {
+        public RavenDB_11794(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseLastModifiedInAutoIndex()
         {

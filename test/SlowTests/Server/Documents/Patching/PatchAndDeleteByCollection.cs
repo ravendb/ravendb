@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Patching
 {
     public class PatchAndDeleteByCollection : RavenTestBase
     {
+        public PatchAndDeleteByCollection(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(100)]
         [InlineData(1300)]

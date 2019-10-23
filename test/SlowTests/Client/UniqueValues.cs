@@ -10,11 +10,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class UniqueValues : RavenTestBase
     {
+        public UniqueValues(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanPutUniqueString()
         {

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Suggestions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Suggestions;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Suggestions
 {
     public class Suggestions : RavenTestBase
     {
+        public Suggestions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

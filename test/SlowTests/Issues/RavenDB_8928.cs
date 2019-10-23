@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class InfinityStringTest : RavenTestBase
     {
+        public InfinityStringTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TestInfinityString()
         {

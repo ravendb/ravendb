@@ -5,11 +5,16 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11217 : RavenTestBase
     {
+        public RavenDB_11217(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SessionWideNoTrackingShouldWork()
         {

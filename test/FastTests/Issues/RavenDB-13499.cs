@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_13499 : RavenTestBase
     {
+        public RavenDB_13499(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Alias_in_edge_relationships_select_clause_should_work()
         {

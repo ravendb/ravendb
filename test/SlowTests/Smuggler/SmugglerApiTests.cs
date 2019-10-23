@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,11 +23,16 @@ using Sparrow.Json;
 using Xunit;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
+using Xunit.Abstractions;
 
 namespace SlowTests.Smuggler
 {
     public class SmugglerApiTests : RavenTestBase
     {
+        public SmugglerApiTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()

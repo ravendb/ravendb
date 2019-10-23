@@ -10,11 +10,16 @@ using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public class MutatingJsonTests : NoDisposalNeeded
     {
+        public MutatingJsonTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string InitialJson = @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false}}";
 
         [Fact]

@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12870 : RavenTestBase
     {
+        public RavenDB_12870(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_handle_map_reduce_index_tombstones_update_delete()
         {

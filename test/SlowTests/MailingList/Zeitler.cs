@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Zeitler : RavenTestBase
     {
+        public Zeitler(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class PersistentCacheKey
         {
             public string Id { get; set; }

@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12292 : RavenTestBase
     {
+        public RavenDB_12292(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanExportRavenDbWithoutAttachments()
         {

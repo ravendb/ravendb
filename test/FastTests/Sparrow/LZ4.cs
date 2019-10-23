@@ -2,11 +2,16 @@
 using System;
 using System.Collections.Generic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public unsafe class LZ4Tests : NoDisposalNeeded
     {
+        public LZ4Tests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public static IEnumerable<object[]> Sizes
         {
             get

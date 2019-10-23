@@ -1,6 +1,7 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
@@ -22,6 +23,10 @@ namespace SlowTests.Core.Commands
 {
     public class Querying : RavenTestBase
     {
+        public Querying(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDoSimpleQueryOnDatabase()
         {

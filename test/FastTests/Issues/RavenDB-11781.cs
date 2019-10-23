@@ -2,13 +2,17 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_11781 : RavenTestBase
     {
+        public RavenDB_11781(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDeployMapReduceIndexWithOutputReduceToCollection()
         {

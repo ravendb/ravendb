@@ -2,11 +2,16 @@
 using Orders;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10746 : RavenTestBase
     {
+        public RavenDB_10746(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldBeAbleToParseRangeFacet()
         {

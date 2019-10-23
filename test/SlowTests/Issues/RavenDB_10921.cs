@@ -3,11 +3,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10921 : RavenTestBase
     {
+        public RavenDB_10921(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void MustNotPutIndexWithReplacementOfPrefix()
         {

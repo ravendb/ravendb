@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8929 : RavenTestBase
     {
+        public RavenDB_8929(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SelectWithKeywordsShouldWrok()
         {

@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9492: RavenTestBase
     {
+        public RavenDB_9492(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BetweenQueryOnIds()
         {

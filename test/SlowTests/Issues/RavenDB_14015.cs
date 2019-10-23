@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14015 : RavenTestBase
     {
+        public RavenDB_14015(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class X
         {
             public string Id { get; set; }

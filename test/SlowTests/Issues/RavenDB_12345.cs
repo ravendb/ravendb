@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12345 : RavenTestBase
     {
+        public RavenDB_12345(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Dog
         {
             public string Name { get; set; }

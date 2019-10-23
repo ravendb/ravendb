@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Etag.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -7,11 +7,16 @@
 using System;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class ChangeVectorExists : RavenTestBase
     {
+        public ChangeVectorExists(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WhenSaving_ThenGetsChangeVector()
         {

@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11824 : RavenTestBase
     {
+        public RavenDB_11824(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void AfterIncrementingMultipleCountersByScriptMetadataShouldHaveAllCountersNames()

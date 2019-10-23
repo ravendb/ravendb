@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class CanTransformWithDynamicFields : RavenTestBase
     {
+        public CanTransformWithDynamicFields(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static void CreateData(IDocumentStore store)
         {
             using (var session = store.OpenSession())

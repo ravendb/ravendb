@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb6055 : RavenTestBase
     {
+        public RavenDb6055(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
 #pragma warning disable 169,649

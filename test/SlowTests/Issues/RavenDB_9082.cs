@@ -2,11 +2,16 @@
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9082 : RavenTestBase
     {
+        public RavenDB_9082(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseProjectionWithArrowFunctionAndStatementBody()
         {

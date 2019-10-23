@@ -2,11 +2,16 @@
 using System.Collections.Generic;
 using Raven.Server.Documents.Queries.Parser;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_8680 : NoDisposalNeeded
     {
+        public RavenDB_8680(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public static IEnumerable<object[]> GetTestData()
         {
             yield return new object[] {"from Categories where id() = 'categories/8'", $"FROM Categories WHERE id() = 'categories/8'{Environment.NewLine}"};

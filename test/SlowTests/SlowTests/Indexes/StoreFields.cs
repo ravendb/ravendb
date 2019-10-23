@@ -9,11 +9,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Indexes
 {
     public class StoreFields : RavenTestBase
     {
+        public StoreFields(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryForDocumentWithStoreFields()
         {

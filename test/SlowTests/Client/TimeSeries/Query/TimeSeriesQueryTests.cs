@@ -7,11 +7,16 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Query
 {
     public class TimeSeriesQueryTests : RavenTestBase
     {
+        public TimeSeriesQueryTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TimeSeriesRangeAggregation
         {
 #pragma warning disable 649

@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Utils.Enumerators;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13972_encrypted : RavenDB_13972
     {
+        public RavenDB_13972_encrypted(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
         [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]
@@ -19,12 +24,12 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             var fileAfterDeletions = GetTempFileName();
 
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var storeToExport = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -53,12 +58,12 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public void CanStreamDocumentsWithPulsatingReadTransaction(int numberOfUsers, int numberOfOrders, int deleteUserFactor)
         {
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -76,12 +81,12 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {
@@ -99,12 +104,12 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
-            EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record =>
                 {

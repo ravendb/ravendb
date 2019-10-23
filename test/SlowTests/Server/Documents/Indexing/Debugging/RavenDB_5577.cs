@@ -13,11 +13,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Debugging
 {
     public class RavenDB_5577 : RavenLowLevelTestBase
     {
+        public RavenDB_5577(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Getting_identifiers_of_source_docs()
         {

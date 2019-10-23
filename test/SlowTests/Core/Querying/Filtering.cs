@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents.Linq;
@@ -18,6 +19,10 @@ namespace SlowTests.Core.Querying
 {
     public class Filtering : RavenTestBase
     {
+        public Filtering(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BasicFiltering()
         {

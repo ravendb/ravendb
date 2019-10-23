@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10726 : RavenTestBase
     {
+        public RavenDB_10726(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Operations_CanBeFetchedForGivenDatabase_WithoutDefaultDatabaseSet()
         {

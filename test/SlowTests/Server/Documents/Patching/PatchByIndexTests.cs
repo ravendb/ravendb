@@ -27,6 +27,10 @@ namespace SlowTests.Server.Documents.Patching
 {
     public class PatchByIndexTests : RavenTestBase
     {
+        public PatchByIndexTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly TimeSpan CancelAfter = TimeSpan.FromMinutes(10);
 
         [Fact]

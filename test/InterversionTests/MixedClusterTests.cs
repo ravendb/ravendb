@@ -27,11 +27,16 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace InterversionTests
 {
     public class MixedClusterTests : MixedClusterTestBase
     {
+        public MixedClusterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("4.1.7", "4.1.7", "4.1.7")]
         [InlineData("4.1.6", "4.1.6", "4.1.6")]

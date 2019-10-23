@@ -6,11 +6,16 @@
 
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class MultiReads : FastTests.Voron.StorageTest
     {
+        public MultiReads(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void MultiReadShouldKeepItemOrder()
         {

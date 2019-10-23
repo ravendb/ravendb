@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_1443 : RavenTestBase
     {
+        public RavenDB_1443(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Article
         {
             public string Id { get; set; }

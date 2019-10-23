@@ -7,11 +7,16 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class AutomaticConflictResolvingOnPut : ReplicationTestBase
     {
+        public AutomaticConflictResolvingOnPut(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanAutomaticlyResolveConflict()
         {

@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8448 : RavenTestBase
     {
+        public RavenDB_8448(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldBeAbleToUseIdMethod()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Vlad : RavenTestBase
     {
+        public Vlad(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SampleDoc
         {
             public long Number;

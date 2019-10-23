@@ -2,11 +2,16 @@
 using FastTests.Server.Replication;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationCleanTombstones : ReplicationTestBase
     {
+        public ReplicationCleanTombstones(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CleanTombstones()
         {

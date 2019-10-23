@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3758 : RavenTestBase
     {
+        public RavenDB_3758(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Orders_All : AbstractIndexCreationTask<Order>
         {
             public override string IndexName

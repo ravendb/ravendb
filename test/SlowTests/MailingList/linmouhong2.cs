@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class linmouhong2 : RavenTestBase
     {
+        public linmouhong2(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Product
         {
             public string Id { get; set; }

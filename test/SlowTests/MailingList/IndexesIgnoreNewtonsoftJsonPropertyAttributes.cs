@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample
 {
@@ -27,6 +28,10 @@ namespace SlowTests.MailingList
 {
     public class IndexesIgnoreNewtonsoftJsonPropertyAttributes : RavenTestBase
     {
+        public IndexesIgnoreNewtonsoftJsonPropertyAttributes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class StudentDto
         {
             [Raven.Imports.Newtonsoft.Json.Sample.JsonProperty("EmailAddress")]

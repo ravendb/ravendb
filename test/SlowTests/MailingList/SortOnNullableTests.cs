@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Tobias2.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class SortOnNullableTests : RavenTestBase
     {
+        public SortOnNullableTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly SortOnNullableEntity[] _data = new[]
         {
             new SortOnNullableEntity {Text = "fail", Num = null},

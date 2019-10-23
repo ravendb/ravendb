@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DateRanges.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -11,11 +11,16 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Json.Converters;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DateRanges : RavenTestBase
     {
+        public DateRanges(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryByDate()
         {

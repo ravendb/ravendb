@@ -1,10 +1,15 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Identifiers
 {
     public class LongId : RavenTestBase
     {
+        public LongId(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Entity
         {
             public string Id { get; set; }

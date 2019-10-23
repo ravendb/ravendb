@@ -13,11 +13,16 @@ using Voron;
 using Xunit;
 using Voron.Data;
 using Voron.Impl.Paging;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class Checksum : StorageTest
     {
+        public Checksum(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void ValidatePageChecksumShouldDetectDataCorruption()
         {

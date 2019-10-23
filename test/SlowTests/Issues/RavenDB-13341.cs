@@ -14,11 +14,16 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13341 : ReplicationTestBase
     {
+        public RavenDB_13341(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task DatabaseChangeVectorIsUpdatedCorrectly()
         {

@@ -2,11 +2,16 @@
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public class BlittableJsonEqualityTests : NoDisposalNeeded
     {
+        public BlittableJsonEqualityTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Equals_identical()
         {

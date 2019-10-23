@@ -1,10 +1,15 @@
 ﻿using System.Collections.Generic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Documents
 {
     public class Load : RavenTestBase
     {
+        public Load(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Name { get; set; }

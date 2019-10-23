@@ -1,11 +1,16 @@
 ﻿using System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class MultipleCollectionsRavenEtlTests : EtlTestBase
     {
+        public MultipleCollectionsRavenEtlTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Docs_from_two_collections_loaded_to_single_one()
         {

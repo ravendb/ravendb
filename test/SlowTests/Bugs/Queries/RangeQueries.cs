@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class RangeQueries : RavenTestBase
     {
+        public RangeQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LinqTranslateCorrectly()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="QueryResultsStreaming.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3326 : RavenTestBase
     {
+        public RavenDB_3326(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void streaming_and_projections_with_property_rename()
         {

@@ -1,13 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3420 : RavenTestBase
     {
+        public RavenDB_3420(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory(Skip = "RavenDB-6283")]
         [InlineData("ShardedDatabase", "ShardedDatabase")]
         [InlineData("ShardedDatabase1", "ShardedDatabase2")]

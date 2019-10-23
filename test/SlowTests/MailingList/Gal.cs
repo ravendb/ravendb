@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Gal : RavenTestBase
     {
+        public Gal(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class BlogPost
         {
             public string Id { get; set; }

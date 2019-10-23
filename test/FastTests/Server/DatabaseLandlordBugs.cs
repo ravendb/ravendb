@@ -1,10 +1,15 @@
 ﻿using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server
 {
     public class DatabaseLandlordBugs : RavenLowLevelTestBase
     {
+        public DatabaseLandlordBugs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanCreateAndDeleteDbWithNameBeingPrefix()
         {

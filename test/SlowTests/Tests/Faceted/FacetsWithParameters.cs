@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,11 +8,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class FacetsWithParameters : RavenTestBase
     {
+        public FacetsWithParameters(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public DateTime? DateIn { get; set; }

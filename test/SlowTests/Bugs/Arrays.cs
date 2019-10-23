@@ -1,10 +1,15 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class Arrays : RavenTestBase
     {
+        public Arrays(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanRetrieveMultiDimensionalArray()
         {

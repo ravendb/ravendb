@@ -744,7 +744,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
+        internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
         {
             // Using a partial copy of the Pkcs12Store class
             // Workaround for https://github.com/dotnet/corefx/issues/30946

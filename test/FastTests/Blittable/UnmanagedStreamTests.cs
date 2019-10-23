@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public unsafe class UnmanagedStreamTests : NoDisposalNeeded
     {
+        public UnmanagedStreamTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EnsureSingleChunk()
         {

@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_164 : RavenTestBase
     {
+        public RDBC_164(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task DeepIndexingArray()
         {

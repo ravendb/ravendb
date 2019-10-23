@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDb_2215 : RavenTestBase
     {
+        public RavenDb_2215(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Sale
         {
             public string Id { get; set; }

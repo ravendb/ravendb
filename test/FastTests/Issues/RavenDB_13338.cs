@@ -2,11 +2,16 @@
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_13338 : RavenTestBase
     {
+        public RavenDB_13338(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SkipAddingIdFieldToDynamicObjectShouldWork()
         {

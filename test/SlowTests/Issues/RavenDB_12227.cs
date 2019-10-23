@@ -5,11 +5,16 @@ using Voron;
 using Voron.Impl.Compaction;
 using Voron.Util.Conversion;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12227 : StorageTest
     {
+        public RavenDB_12227(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(8)]
         [InlineData(16)]

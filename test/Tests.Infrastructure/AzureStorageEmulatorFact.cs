@@ -17,6 +17,8 @@ namespace Tests.Infrastructure
 
         static AzureStorageEmulatorFact()
         {
+            RavenAzureClient.TestMode = true;
+
             if (RavenTestHelper.IsRunningOnCI == false)
                 return;
 
@@ -28,7 +30,6 @@ namespace Tests.Infrastructure
 
             KillAzureStorageEmulator();
             InitializeAzureStorageEmulator();
-            RavenAzureClient.TestMode = true;
         }
          
         public AzureStorageEmulatorFact([CallerMemberName] string memberName = "")

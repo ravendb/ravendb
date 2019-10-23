@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12051 : RavenTestBase
     {
+        public RavenDB_12051(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CompareBlittableShouldNotFailWhenOldPropIsArrayAndNewPropIsObjectWithTypeAndCollection()
         {

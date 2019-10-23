@@ -3,11 +3,16 @@ using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_13218 : EtlTestBase
     {
+        public RavenDB_13218(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("Orders", null)]
         [InlineData(null, null)]

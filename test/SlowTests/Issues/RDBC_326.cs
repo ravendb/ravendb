@@ -3,11 +3,16 @@ using System.Text.RegularExpressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_326 : RavenTestBase
     {
+        public RDBC_326(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Entity
         {
             public string Id { get; set; }

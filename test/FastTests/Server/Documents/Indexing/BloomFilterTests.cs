@@ -4,11 +4,16 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing
 {
     public class BloomFilterTests : StorageTest
     {
+        public BloomFilterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Basic()
         {

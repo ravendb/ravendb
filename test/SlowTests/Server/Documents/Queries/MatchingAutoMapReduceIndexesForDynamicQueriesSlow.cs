@@ -9,11 +9,16 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries
 {
     public class MatchingAutoMapReduceIndexesForDynamicQueriesSlow : RavenLowLevelTestBase
     {
+        public MatchingAutoMapReduceIndexesForDynamicQueriesSlow(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private DocumentDatabase _documentDatabase;
         protected DynamicQueryToIndexMatcher _sut;
 

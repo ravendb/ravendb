@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="MapReduce_IndependentSteps.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -15,11 +15,16 @@ using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Views
 {
     public class MapReduce_IndependentSteps : RavenTestBase
     {
+        public MapReduce_IndependentSteps(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string Map =
             @"from post in docs.Blogs
 select new {

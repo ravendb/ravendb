@@ -5,11 +5,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_328:RavenTestBase
     {
+        public RDBC_328(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCustomizeDeserialization()
         {

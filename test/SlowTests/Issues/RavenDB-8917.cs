@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8917 : RavenTestBase
     {
+        public RavenDB_8917(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static string DocId = "test";
 
         [Fact]

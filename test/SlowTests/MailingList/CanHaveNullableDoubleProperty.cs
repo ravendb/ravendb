@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class CanHaveNullableDoubleProperty : RavenTestBase
     {
+        public CanHaveNullableDoubleProperty(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillSupportNullableDoubles()
         {

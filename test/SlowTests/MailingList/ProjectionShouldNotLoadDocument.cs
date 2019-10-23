@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ProjectionShouldNotLoadDocument.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ProjectionShouldNotLoadDocument : RavenTestBase
     {
+        public ProjectionShouldNotLoadDocument(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Index1 : AbstractIndexCreationTask
         {
             public override string IndexName { get; } = "Index1";

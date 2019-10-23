@@ -8,12 +8,13 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.AdminConsole
 {
     public class AdminJsConsoleTests : RavenTestBase
     {
-        public AdminJsConsoleTests()
+        public AdminJsConsoleTests(ITestOutputHelper output) : base(output)
         {
             DoNotReuseServer();
         }

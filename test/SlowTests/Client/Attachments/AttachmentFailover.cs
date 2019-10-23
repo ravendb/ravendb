@@ -11,11 +11,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentFailover : ClusterTestBase
     {
+        public AttachmentFailover(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task PutAttachmentsWithFailover_Session()
         {

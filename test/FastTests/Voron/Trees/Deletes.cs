@@ -7,11 +7,16 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class Deletes : StorageTest
     {
+        public Deletes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAddVeryLargeValueAndThenDeleteIt()
         {

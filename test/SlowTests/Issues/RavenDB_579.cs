@@ -1,11 +1,16 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_579 : RavenTestBase
     {
+        public RavenDB_579(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly IList<string> _shardNames = new List<string>
         {
             "1",

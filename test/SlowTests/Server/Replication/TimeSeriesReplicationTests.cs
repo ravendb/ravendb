@@ -10,12 +10,16 @@ using Raven.Client.Documents;
 using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace SlowTests.Server.Replication
 {
     public class TimeSeriesReplicationTests : ReplicationTestBase
     {
+        public TimeSeriesReplicationTests(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public async Task CanReplicate()

@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="AfterDeletingTheIndexStopsBeingStale.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,11 +8,16 @@ using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AfterDeletingTheIndexStopsBeingStale : RavenTestBase
     {
+        public AfterDeletingTheIndexStopsBeingStale(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Deletion()
         {

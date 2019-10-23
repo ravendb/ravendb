@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsBigFiles : RavenTestBase
     {
+        public AttachmentsBigFiles(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
@@ -20,11 +25,12 @@ namespace SlowTests.Client.Attachments
             if (encrypted)
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = EncryptedServer(out adminCert, out dbName);
+                var key = EncryptedServer(out var certificates, out dbName);
+                adminCert = certificates.ServerCertificate.Value;
             }
             else
             {
-                dbName = GetDatabaseName();                
+                dbName = GetDatabaseName();
             }
 
             using (var store = GetDocumentStore(new Options
@@ -80,7 +86,8 @@ namespace SlowTests.Client.Attachments
             if (encrypted)
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = EncryptedServer(out adminCert, out dbName);
+                var key = EncryptedServer(out var certificates, out dbName);
+                adminCert = certificates.ServerCertificate.Value;
             }
             else
             {

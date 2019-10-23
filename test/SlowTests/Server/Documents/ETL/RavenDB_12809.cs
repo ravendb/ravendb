@@ -5,17 +5,22 @@ using System.Text;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_12809 : EtlTestBase
     {
+        public RavenDB_12809(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_setup_etl_from_encrypted_to_non_encrypted_db()
         {
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

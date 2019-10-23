@@ -6,11 +6,16 @@
 
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.ScratchBuffer
 {
     public class ScratchCanForceToFlushOldPages: StorageTest
     {
+        public ScratchCanForceToFlushOldPages(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

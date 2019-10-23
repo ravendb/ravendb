@@ -1,11 +1,16 @@
-using System.Dynamic;
+﻿using System.Dynamic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Async
 {
     public class DynamicGeneratedIds : RavenTestBase
     {
+        public DynamicGeneratedIds(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AsyncMatchesSyncGeneratedIdForDynamicBehavior()
         {

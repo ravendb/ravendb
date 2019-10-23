@@ -20,11 +20,16 @@ using Sparrow.Json;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Subscriptions
 {
     public class SubscriptionsBasic : RavenTestBase
     {
+        public SubscriptionsBasic(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
         [Fact]

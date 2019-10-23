@@ -1,14 +1,19 @@
-using System.Reflection;
+﻿using System.Reflection;
 using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class JohanNilsson : RavenTestBase
     {
+        public JohanNilsson(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private interface IEntity
         {
             string Id2 { get; set; }

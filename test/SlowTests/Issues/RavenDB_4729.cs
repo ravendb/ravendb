@@ -1,10 +1,15 @@
 ﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4729 : RavenTestBase
     {
+        public RavenDB_4729(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSaveModifyEntityThatHasUntrackedProperties()
         {

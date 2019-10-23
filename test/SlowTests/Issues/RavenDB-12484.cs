@@ -2,11 +2,16 @@
 using FastTests;
 using Newtonsoft.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12484 : RavenTestBase
     {
+        public RavenDB_12484(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ProjectionAgainstMissingBasicValueTypes()
         {

@@ -4,11 +4,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12442 : RavenTestBase
     {
+        public RavenDB_12442(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue)]
         [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString)]

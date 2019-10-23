@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class WhereStringEqualsInCollection : RavenTestBase
     {
+        public WhereStringEqualsInCollection(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private void CreateData(IDocumentStore store)
         {
             using (var session = store.OpenSession())

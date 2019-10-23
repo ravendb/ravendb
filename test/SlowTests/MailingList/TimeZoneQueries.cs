@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class TimeZoneQueries : RavenTestBase
     {
+        public TimeZoneQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public DateTimeOffset At { get; set; }

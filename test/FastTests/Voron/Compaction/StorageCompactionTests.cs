@@ -16,12 +16,13 @@ using Xunit;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl.Compaction;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Compaction
 {
     public class StorageCompactionTests : StorageTest
     {
-        public StorageCompactionTests()
+        public StorageCompactionTests(ITestOutputHelper output) : base(output)
         {
             IOExtensions.DeleteDirectory(DataDir);
 

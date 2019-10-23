@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8826 : RavenTestBase
     {
+        public RavenDB_8826(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseEscapedFields()
         {

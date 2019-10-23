@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Graph
 {
     public class ClientGraphQueries : RavenTestBase
     {
+        public ClientGraphQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanGraphQuery()
         {

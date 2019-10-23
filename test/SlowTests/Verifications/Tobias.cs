@@ -4,11 +4,16 @@ using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class Tobias : RavenTestBase
     {
+        public Tobias(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanWork()
         {

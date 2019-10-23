@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_11791 : RavenTestBase
     {
+        public RavenDB_11791(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         public class PeopleIndex : AbstractIndexCreationTask<Person>
         {

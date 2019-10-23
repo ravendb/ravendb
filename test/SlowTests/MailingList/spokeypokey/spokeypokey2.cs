@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.ObjectModel;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.spokeypokey
 {
     public class spokeypokey2 : RavenTestBase
     {
+        public spokeypokey2(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private enum AddressTypeEnumPto2
         {
             ProviderAddress = 0,

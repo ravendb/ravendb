@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11804 : RavenTestBase
     {
+        public RavenDB_11804(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldThrowUnknownAlias1()
         {

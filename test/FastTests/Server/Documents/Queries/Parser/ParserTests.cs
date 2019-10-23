@@ -6,11 +6,16 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
     public class ParserTests : NoDisposalNeeded
     {
+        public ParserTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(@"from Orders
 select ID('not valid argument')", QueryType.Select)]

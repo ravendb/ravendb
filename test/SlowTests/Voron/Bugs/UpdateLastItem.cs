@@ -1,10 +1,15 @@
 ﻿using Voron.Data.BTrees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public unsafe class UpdateLastItem : FastTests.Voron.StorageTest
     {
+        public UpdateLastItem(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldWork()
         {

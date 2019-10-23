@@ -2,11 +2,16 @@
 using FastTests;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9889 : RavenTestBase
     {
+        public RavenDB_9889(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public string Id { get; set; }

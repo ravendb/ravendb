@@ -3,11 +3,16 @@ using System.IO;
 using Raven.Server.Utils;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class Isolation : FastTests.Voron.StorageTest
     {
+        public Isolation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void MultiTreeIteratorShouldBeIsolated1()
         {

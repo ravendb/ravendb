@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9727 : RavenTestBase
     {
+        public RavenDB_9727(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Load_with_Argument_that_has_String_Interpolation()
         {

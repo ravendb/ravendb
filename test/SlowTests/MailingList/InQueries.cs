@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class InQueries : RavenTestBase
     {
+        public InQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Country { get; set; }

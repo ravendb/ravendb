@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7463 : RavenTestBase
     {
+        public RavenDB_7463(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class SimpleIndex : AbstractIndexCreationTask<User>
         {
             public override IndexDefinition CreateIndexDefinition()

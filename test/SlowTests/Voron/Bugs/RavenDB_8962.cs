@@ -1,11 +1,16 @@
 ﻿using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class RavenDB_8962 : FastTests.Voron.StorageTest
     {
+        public RavenDB_8962(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_not_throw_if_didnt_find_exact_match_when_looking_for_parent_of_branch()
         {

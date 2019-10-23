@@ -1,11 +1,16 @@
 ﻿using System.IO;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12731 : NoDisposalNeeded
     {
+        public RavenDB_12731(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCompareLazyStringValueAndLazyCompressedStringValue()
         {

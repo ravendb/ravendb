@@ -7,11 +7,16 @@ using FastTests.Graph;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13767 : ReplicationTestBase
     {
+        public RavenDB_13767(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task PatchingClusterTransactionDocumentShouldWork()
         {

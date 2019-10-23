@@ -1,12 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3013 : RavenTestBase
     {
+        public RavenDB_3013(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPersistLinqWhereIEnumerable()
         {

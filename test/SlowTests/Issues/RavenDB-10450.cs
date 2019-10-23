@@ -2,11 +2,16 @@
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10450 : RavenTestBase
     {
+        public RavenDB_10450(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Slow_IO_hints_are_stored_and_can_be_read()
         {

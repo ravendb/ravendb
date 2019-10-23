@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,11 +25,16 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Smuggler
 {
     public class BackupDatabaseRecordTests : RavenTestBase
     {
+        public BackupDatabaseRecordTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanExportAndImportDatabaseRecord()
         {

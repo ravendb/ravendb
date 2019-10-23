@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10034 : NoDisposalNeeded
     {
+        public RavenDB_10034(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_get_db_and_server_from_oracle_connection_string()
         {

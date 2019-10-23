@@ -12,11 +12,16 @@ using Raven.Client.Http;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5824 : RavenTestBase
     {
+        public RavenDB_5824(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldBeAbleToReturnIndexStalenessReasons()
         {

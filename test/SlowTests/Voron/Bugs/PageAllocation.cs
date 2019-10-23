@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="SomeIssue.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using System.IO;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class PageAllocation : FastTests.Voron.StorageTest
     {
+        public PageAllocation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         /// <summary>
         /// https://issues.hibernatingrhinos.com/issue/RavenDB-1707
         /// </summary>

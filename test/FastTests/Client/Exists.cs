@@ -1,10 +1,15 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Exists : RavenTestBase
     {
+        public Exists(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CheckIfDocumentExists()
         {

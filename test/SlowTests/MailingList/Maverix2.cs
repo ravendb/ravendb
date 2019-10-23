@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -17,7 +18,7 @@ namespace SlowTests.MailingList
     {
         private readonly string _path;
 
-        public Maverix2()
+        public Maverix2(ITestOutputHelper output) : base(output)
         {
             _path = NewDataPath();
         }

@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class RavenDB_7044 : RavenTestBase
     {
+        public RavenDB_7044(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_filter_by_property_of_composite_group_by_key()
         {

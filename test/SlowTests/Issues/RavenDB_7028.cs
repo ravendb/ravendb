@@ -3,11 +3,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7028 : RavenTestBase
     {
+        public RavenDB_7028(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DeleteByCollectionShouldOnlyDeleteAllDocsFromThatCollection()
         {

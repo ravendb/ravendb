@@ -27,11 +27,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
     public class ClusterTransactionTests : ReplicationTestBase
     {
+        public ClusterTransactionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
             if (options == null)

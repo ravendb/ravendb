@@ -11,11 +11,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace BenchmarkTests.Indexing
 {
     public class Map : BenchmarkTestBase
     {
+        public Map(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int NumberOfCompanies = 5_000_000;
 
         private const int CompanyNameModulo = 10_000;

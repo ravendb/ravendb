@@ -9,11 +9,16 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13335 : RavenTestBase
     {
+        public RavenDB_13335(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Test
         {
             public bool Throw { get; set; }

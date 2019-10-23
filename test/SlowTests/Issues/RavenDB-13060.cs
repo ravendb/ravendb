@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13060 : RavenTestBase
     {
+        public RavenDB_13060(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_project_using_let_and_have_nested_query_with_let_that_refers_to_the_outer_let()
         {

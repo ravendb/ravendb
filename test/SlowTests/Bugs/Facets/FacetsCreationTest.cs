@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Facets
 {
     public class FacetsCreationTest : FacetTestBase
     {
+        public FacetsCreationTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PrestonThinksFacetsShouldAllowSimpleExpressionsDuringCreation()
         {

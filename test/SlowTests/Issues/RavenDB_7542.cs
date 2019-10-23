@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7542 : RavenTestBase
     {
+        public RavenDB_7542(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Wait_for_non_stale_results_as_of_now_on_index_working_on_all_docs()
         {

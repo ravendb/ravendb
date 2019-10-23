@@ -2,11 +2,16 @@
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7654 : NoDisposalNeeded
     {
+        public RavenDB_7654(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TimeSpanCanBeParsedFromStringIntAndDouble()
         {

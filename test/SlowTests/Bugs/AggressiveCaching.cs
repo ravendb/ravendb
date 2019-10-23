@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AggressiveCaching : RavenTestBase
     {
+        public AggressiveCaching(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public DocumentStore InitAggressiveCaching()
         {
             var store = GetDocumentStore();

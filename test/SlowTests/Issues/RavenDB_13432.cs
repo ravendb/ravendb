@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13432 : RavenTestBase
     {
+        public RavenDB_13432(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CountersInSelectClauseShouldAffectQueryEtag_CollectionQuery()
         {

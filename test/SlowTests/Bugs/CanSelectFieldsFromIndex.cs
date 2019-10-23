@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="CanSelectFieldsFromIndex.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanSelectFieldsFromIndex : RavenTestBase
     {
+        public CanSelectFieldsFromIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SelectFieldsFromIndex()
         {

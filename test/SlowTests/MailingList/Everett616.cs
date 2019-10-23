@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Everett616 : RavenTestBase
     {
+        public Everett616(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIndexWithNoErrors_DatetimeOffset()
         {

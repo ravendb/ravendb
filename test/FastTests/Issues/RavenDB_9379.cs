@@ -1,14 +1,18 @@
 ﻿using System;
-using System.Reflection;
 using Raven.Server.Config;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_9379 : NoDisposalNeeded
     {
+        public RavenDB_9379(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ServerUrlHostAndPortCliArgShouldStayTheSameAfterRestart()
         {

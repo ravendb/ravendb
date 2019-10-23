@@ -4,12 +4,17 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class NotModifiedQueryResults : RavenTestBase
     {
+        public NotModifiedQueryResults(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified()
         {

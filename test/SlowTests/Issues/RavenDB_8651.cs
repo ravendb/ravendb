@@ -5,11 +5,16 @@ using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8651 : RavenTestBase
     {
+        public RavenDB_8651(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_select_and_query_field_with_dot()
         {

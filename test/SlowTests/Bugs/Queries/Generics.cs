@@ -1,10 +1,15 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class Generics : RavenTestBase
     {
+        public Generics(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class MyClass<T>
         {
             public string Id { get; set; }

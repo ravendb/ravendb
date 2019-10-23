@@ -4,11 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10520 : NoDisposalNeeded
     {
+        public RavenDB_10520(ITestOutputHelper output)
+            : base(output)
+        {
+        }
+
         [Fact]
         public void DocumentQueriesShouldNotInheritForEnumerableInterface()
         {

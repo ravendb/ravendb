@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8847 : RavenTestBase
     {
+        public RavenDB_8847(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_set_first_batch_timeout_of_newly_created_auto_index()
         {

@@ -1,11 +1,16 @@
 ﻿using System;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public unsafe class UnmanagedWriteBufferTests : NoDisposalNeeded
     {
+        public UnmanagedWriteBufferTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int DefaultBufferSize = 16;
 
         private static readonly byte[] NoAllocationsBatch;

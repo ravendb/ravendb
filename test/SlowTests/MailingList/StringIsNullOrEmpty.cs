@@ -1,14 +1,19 @@
-using System.IO;
+﻿using System.IO;
 using System.Text;
 using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class StringIsNullOrEmpty : NoDisposalNeeded
     {
+        public StringIsNullOrEmpty(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldWork()
         {

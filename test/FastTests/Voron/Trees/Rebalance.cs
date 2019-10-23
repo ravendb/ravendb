@@ -1,10 +1,15 @@
-using System.IO;
+﻿using System.IO;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class Rebalance : StorageTest
     {
+        public Rebalance(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanMergeRight()
         {

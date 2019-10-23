@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11703 : RavenTestBase
     {
+        public RavenDB_11703(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetNotificationAboutCounterIncrement()
         {

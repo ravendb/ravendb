@@ -10,11 +10,15 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
     public class RavenDB_13861 : RavenTestBase
     {
+        public RavenDB_13861(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact32Bit]
         public async Task BatchMemorySizeLimitationShouldBeExactIn32Bit()
@@ -54,10 +58,9 @@ namespace StressTests.Issues
         {
             var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());
 
-
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
@@ -155,10 +158,9 @@ namespace StressTests.Issues
         {
             var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());
 
-
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

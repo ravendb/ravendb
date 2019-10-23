@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class ConflictsWithRemote: RavenTestBase
     {
+        public ConflictsWithRemote(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class DeviceStatusRecord
         {
             public int DeviceId { get; set; }

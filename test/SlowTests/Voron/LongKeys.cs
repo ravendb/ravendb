@@ -10,11 +10,16 @@ using System.IO;
 using FastTests.Voron;
 using SlowTests.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class LongKeys : StorageTest
     {
+        public LongKeys(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldHaveEnoughSpaceDuringTruncate()
         {

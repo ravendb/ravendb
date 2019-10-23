@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
@@ -12,7 +13,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         private readonly LazyStringReader _sut = new LazyStringReader();
         private readonly JsonOperationContext _ctx;
 
-        public LazyStringValueReaderTests()
+        public LazyStringValueReaderTests(ITestOutputHelper output) : base(output)
         {
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }

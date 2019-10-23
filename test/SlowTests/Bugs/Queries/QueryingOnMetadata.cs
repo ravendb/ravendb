@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class QueryingOnMetadata : RavenTestBase
     {
+        public QueryingOnMetadata(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryOnNullableProperty()
         {

@@ -13,11 +13,16 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10546 : RavenTestBase
     {
+        public RavenDB_10546(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSetStudioConfiguration()
         {

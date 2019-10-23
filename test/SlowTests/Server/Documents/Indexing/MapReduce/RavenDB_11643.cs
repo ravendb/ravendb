@@ -16,11 +16,16 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
     public class RavenDB_11643 : RavenLowLevelTestBase
     {
+        public RavenDB_11643(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PageModificationInAnyTreeMustRemoveItFromListOfFreedPagesInAllStores()
         {

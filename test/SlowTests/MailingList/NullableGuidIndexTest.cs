@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class NullableGuidIndexTest : RavenTestBase
     {
+        public NullableGuidIndexTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestDocument
         {
             public string Id { get; set; }

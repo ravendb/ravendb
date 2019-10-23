@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8427 : NoDisposalNeeded
     {
+        public RavenDB_8427(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldCleanEscapePositionWhenTakenFromCache()
         {

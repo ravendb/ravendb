@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12378 : RavenTestBase
     {
+        public RavenDB_12378(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseQueryParametersInDeclareFunction()
         {

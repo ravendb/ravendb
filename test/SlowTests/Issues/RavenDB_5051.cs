@@ -7,11 +7,16 @@ using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5051 : RavenTestBase
     {
+        public RavenDB_5051(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FormatShouldWork()
         {

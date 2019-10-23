@@ -5,11 +5,16 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class RavenDB_11391_PtachPutWithAttachmentsOrCounters : RavenTestBase
     {
+        public RavenDB_11391_PtachPutWithAttachmentsOrCounters(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchPut_WhileContainAttachments_TheNewDocumentShouldNotContainThem()
         {

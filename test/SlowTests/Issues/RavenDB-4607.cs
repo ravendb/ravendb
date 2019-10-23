@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-4607.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,11 +6,16 @@
 
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4607 : RavenTestBase
     {
+        public RavenDB_4607(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Company
         {
             public Address Address { get; set; }

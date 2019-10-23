@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_9875 : NoDisposalNeeded
     {
+        public RavenDB_9875(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly HashSet<Type> _willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat
             = new HashSet<Type>
             {

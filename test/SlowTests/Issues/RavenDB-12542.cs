@@ -5,11 +5,16 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12542 : RavenTestBase
     {
+        public RavenDB_12542(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Single_node_index_query_should_work()
         {

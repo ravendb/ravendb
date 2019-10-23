@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Auto
 {
     public class RavenDB_9292 : RavenTestBase
     {
+        public RavenDB_9292(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Group_by_array_and_sum_by_array_items()
         {

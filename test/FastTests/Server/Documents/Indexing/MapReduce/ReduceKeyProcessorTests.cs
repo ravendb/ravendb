@@ -6,11 +6,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
     public class ReduceKeyProcessorTests : NoDisposalNeeded
     {
+        public ReduceKeyProcessorTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_handle_values_of_different_types()
         {

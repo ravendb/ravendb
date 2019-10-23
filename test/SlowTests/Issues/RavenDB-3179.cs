@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3179 : RavenTestBase
     {
+        public RavenDB_3179(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task To_Facet_Lazy_Async()
         {

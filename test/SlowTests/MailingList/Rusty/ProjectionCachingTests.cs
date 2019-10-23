@@ -4,11 +4,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
 using FastTests;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Rusty
 {
     public class ProjectionCachingTests : RavenTestBase
     {
+        public ProjectionCachingTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Projection_Fails_To_Update_Property_After_Associated_Document_Updates()
         {

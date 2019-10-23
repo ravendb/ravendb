@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12650 : RavenTestBase
     {
+        public RavenDB_12650(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex()
         {

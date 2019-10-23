@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Metadata
 {
     public class Querying : RavenTestBase
     {
+        public Querying(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_query_metadata()
         {

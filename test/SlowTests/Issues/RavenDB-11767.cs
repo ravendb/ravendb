@@ -1,13 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11767 : RavenTestBase
     {
+        public RavenDB_11767(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldSimplifyTransparentIdentifierParameters()
         {

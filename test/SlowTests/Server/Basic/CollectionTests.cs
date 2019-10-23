@@ -4,11 +4,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Basic
 {
     public class CollectionTests : RavenTestBase
     {
+        public CollectionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanDeleteCollection()
         {

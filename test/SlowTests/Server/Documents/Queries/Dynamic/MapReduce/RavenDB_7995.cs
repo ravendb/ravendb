@@ -5,11 +5,16 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class RavenDB_7995 : RavenTestBase
     {
+        public RavenDB_7995(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Cannot_filter_if_field_isnt_aggregation_nor_part_of_group_by_key()
         {

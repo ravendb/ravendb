@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class EntitiesWithAttributes : RavenTestBase
     {
+        public EntitiesWithAttributes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [DataContract]
         private class Item
         {

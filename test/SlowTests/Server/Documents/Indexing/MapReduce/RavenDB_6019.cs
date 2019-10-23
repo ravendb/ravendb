@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
     public class RavenDB_6019 : RavenTestBase
     {
+        public RavenDB_6019(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(2)]

@@ -1,4 +1,4 @@
-// //-----------------------------------------------------------------------
+﻿// //-----------------------------------------------------------------------
 // // <copyright company="Hibernating Rhinos LTD">
 // //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // // </copyright>
@@ -7,11 +7,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class NullableEnums : RavenTestBase
     {
+        public NullableEnums(ITestOutputHelper output) : base(output)
+        {
+        }
+
         #region MonitorCategory enum
 
         private enum MonitorCategory

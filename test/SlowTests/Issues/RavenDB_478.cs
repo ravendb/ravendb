@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_478 : RavenTestBase
     {
+        public RavenDB_478(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class ProductContent
         {
             public string Slug { get; set; }

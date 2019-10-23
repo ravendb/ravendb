@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_3237.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3237 : RavenTestBase
     {
+        public RavenDB_3237(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CaseOne()
         {

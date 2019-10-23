@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AllPropertiesIndex : RavenTestBase
     {
+        public AllPropertiesIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string FirstName { get; set; }

@@ -1,11 +1,16 @@
 ﻿using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_9900 : NoDisposalNeeded
     {
+        public RavenDB_9900(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Database_creation_using_relative_path_creates_directories_incorrectly()
         {

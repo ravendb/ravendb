@@ -13,11 +13,16 @@ using Raven.Client.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8450 : RavenTestBase
     {
+        public RavenDB_8450(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("hello\nthere", "\n")]
         [InlineData("hello\r\nthere", "\r\n")]

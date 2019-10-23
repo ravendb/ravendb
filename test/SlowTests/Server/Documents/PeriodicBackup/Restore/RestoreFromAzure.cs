@@ -11,11 +11,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromAzure : RavenTestBase
     {
+        public RestoreFromAzure(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
         private AzureSettings _azureSettings = GenerateAzureSettings();

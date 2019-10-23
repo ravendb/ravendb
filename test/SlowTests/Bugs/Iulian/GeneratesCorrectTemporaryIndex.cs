@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Iulian
 {
     public class GeneratesCorrectTemporaryIndex : RavenTestBase
     {
+        public GeneratesCorrectTemporaryIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Inner
         {
             public bool Flag { get; set; }

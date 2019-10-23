@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CreatingIndexes : RavenTestBase
     {
+        public CreatingIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class AllDocs1 : AbstractIndexCreationTask<object>
         {
             public AllDocs1()

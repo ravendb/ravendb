@@ -6,11 +6,16 @@ using System.Text;
 using Raven.Client.Http;
 using Raven.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_6341 : RavenTestBase
     {
+        public RavenDB_6341(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly HashSet<string> _fieldsToIgnore = new HashSet<string>
         {
             nameof(RavenCommand<object>.Result),

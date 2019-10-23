@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class RavenDB_6407 : RavenTestBase
     {
+        public RavenDB_6407(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name;

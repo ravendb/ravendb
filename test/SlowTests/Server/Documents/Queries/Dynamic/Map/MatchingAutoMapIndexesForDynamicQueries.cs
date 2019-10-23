@@ -9,11 +9,16 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.Map
 {
     public class MatchingAutoMapIndexesForDynamicQueries : RavenLowLevelTestBase
     {
+        public MatchingAutoMapIndexesForDynamicQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private DocumentDatabase _documentDatabase;
         private DynamicQueryToIndexMatcher _sut;
 

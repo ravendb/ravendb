@@ -4,11 +4,16 @@ using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12477 : RavenTestBase
     {
+        public RavenDB_12477(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_handle_delete_revision_of_doc_that_changed_collection()
         {

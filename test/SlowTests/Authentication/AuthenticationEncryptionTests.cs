@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -18,20 +18,25 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Authentication
 {
     public class AuthenticationEncryptionTests : RavenTestBase
     {
+        public AuthenticationEncryptionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseEncryption()
         {
-            string dbName = SetupEncryptedDatabase(out X509Certificate2 adminCert, out var _);
+            string dbName = SetupEncryptedDatabase(out var certificates, out var _);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -80,9 +85,9 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanRestartEncryptedDbWithIndexes()
         {
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
@@ -174,9 +179,9 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanCompactEncryptedDb()
         {
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

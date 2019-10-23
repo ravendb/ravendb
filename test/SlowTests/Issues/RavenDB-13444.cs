@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13444 : RavenTestBase
     {
+        public RavenDB_13444(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestDocument
         {
             public int Field { get; set; }

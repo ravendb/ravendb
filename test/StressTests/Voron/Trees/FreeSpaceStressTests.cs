@@ -2,11 +2,16 @@
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Trees;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Voron.Trees
 {
     public class FreeSpaceStressTests : NoDisposalNeeded
     {
+        public FreeSpaceStressTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(400000, 60, 2)] // originally set in the test
         [InlineDataWithRandomSeed(400000, 60)]
@@ -14,7 +19,7 @@ namespace StressTests.Voron.Trees
         public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated(int maxPageNumber,
             int numberOfFreedPages, int seed)
         {
-            using (var test = new FreeSpaceTest())
+            using (var test = new FreeSpaceTest(Output))
             {
                 test.FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated(maxPageNumber, numberOfFreedPages, seed);
             }

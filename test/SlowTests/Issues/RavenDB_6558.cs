@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6558 : RavenTestBase
     {
+        public RavenDB_6558(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseDifferentPreAndPostTagsPerField()
         {

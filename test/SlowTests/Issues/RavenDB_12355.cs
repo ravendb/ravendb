@@ -5,11 +5,16 @@ using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Sparrow.Platform;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12355 : RavenTestBase
     {
+        public RavenDB_12355(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_Limit_Database_Relative_Path()
         {

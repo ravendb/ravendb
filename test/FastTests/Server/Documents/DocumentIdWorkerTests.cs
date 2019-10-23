@@ -1,11 +1,6 @@
-﻿using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,6 +8,10 @@ namespace FastTests.Server.Documents
 {
     public class DocumentIdWorkerTests : RavenTestBase
     {
+        public DocumentIdWorkerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task GetLower_WhenStringAscii_ShouldNotModifyTheValueAcceptToLower()
         {

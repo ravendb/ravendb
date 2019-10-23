@@ -1,15 +1,20 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3646 : RavenTestBase
     {
+        public RavenDB_3646(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryWithCustomize()
         {

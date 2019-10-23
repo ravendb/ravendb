@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="WhereClause.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,11 +12,16 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class WhereClause : RavenTestBase
     {
+        public WhereClause(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Renamed
         {
             [JsonProperty("Yellow")]

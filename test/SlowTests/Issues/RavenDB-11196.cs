@@ -4,11 +4,16 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11196 : EtlTestBase
     {
+        public RavenDB_11196(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_be_James()
         {

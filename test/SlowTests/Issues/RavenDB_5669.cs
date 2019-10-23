@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5669 : RavenTestBase
     {
+        public RavenDB_5669(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WorkingTestWithDifferentSearchTermOrder()
         {

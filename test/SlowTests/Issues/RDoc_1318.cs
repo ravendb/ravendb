@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDoc_1318 : RavenTestBase
     {
+        public RDoc_1318(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OpeningSessionWithoutDatabaseShouldThrowMeaningfulException()
         {

@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Johnson : RavenTestBase
     {
+        public Johnson(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Id { get; set; }

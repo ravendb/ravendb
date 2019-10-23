@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12056 : RavenTestBase
     {
+        public RavenDB_12056(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CountWorksWithPredicate()
         {

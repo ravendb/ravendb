@@ -2,11 +2,16 @@
 using System.Collections.Generic;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class SortingTests : NoDisposalNeeded
     {
+        public SortingTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Small()
         {

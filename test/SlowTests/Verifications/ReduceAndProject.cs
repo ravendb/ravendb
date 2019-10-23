@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
     public class ReduceAndProject : RavenTestBase
     {
+        public ReduceAndProject(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Personnel
         {
             public string Id { get; set; }

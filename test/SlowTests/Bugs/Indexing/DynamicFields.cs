@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class DynamicFields : RavenTestBase
     {
+        public DynamicFields(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Product
         {
             public string Id { get; set; }

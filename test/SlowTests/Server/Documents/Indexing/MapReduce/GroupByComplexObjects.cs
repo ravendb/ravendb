@@ -13,11 +13,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
     public class GroupByComplexObjects : RavenLowLevelTestBase
     {
+        public GroupByComplexObjects(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task By_single_complex_object()
         {

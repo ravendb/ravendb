@@ -13,11 +13,16 @@ using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ExternalReplicationTests : ReplicationTestBase
     {
+        public ExternalReplicationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(3000)]
         public async Task ExternalReplicationShouldWorkWithSmallTimeoutStress(int timeout)

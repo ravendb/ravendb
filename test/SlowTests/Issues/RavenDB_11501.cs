@@ -4,11 +4,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11501 : RavenTestBase
     {
+        public RavenDB_11501(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class ActivitiesStateDetailByHourIndex : AbstractIndexCreationTask<ActivityEntryCollection, ActivityEntryDetail>
         {
             public ActivitiesStateDetailByHourIndex()

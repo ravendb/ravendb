@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.PhilJones
 {
     public class Projections : RavenTestBase
     {
+        public Projections(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WorkWithRealTypes()
         {

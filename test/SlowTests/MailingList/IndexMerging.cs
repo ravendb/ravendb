@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AutoIndexMerging : RavenTestBase
     {
+        public AutoIndexMerging(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string SampleLogfileStoreId = "123";
 
         [Fact]

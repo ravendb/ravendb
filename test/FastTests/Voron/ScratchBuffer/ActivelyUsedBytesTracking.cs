@@ -3,11 +3,16 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.ScratchBuffer
 {
     public class ActivelyUsedBytesTracking : NoDisposalNeeded
     {
+        public ActivelyUsedBytesTracking(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void Scratch_file_is_aware_of_potentialy_active_readers()
         {

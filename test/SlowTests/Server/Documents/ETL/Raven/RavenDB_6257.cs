@@ -5,11 +5,16 @@ using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_6257 : EtlTestBase
     {
+        public RavenDB_6257(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Collection_specific_etl_process_is_aware_of_processed_tombstones()
         {

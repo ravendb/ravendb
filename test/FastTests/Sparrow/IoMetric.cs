@@ -4,11 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Sparrow.Server.Meters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class IoMetric : NoDisposalNeeded
     {
+        public IoMetric(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanProperlyReportIoMetrics()
         {

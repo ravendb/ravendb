@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class WhereInQueryTests : RavenTestBase
     {
+        public WhereInQueryTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private void CreateData(IDocumentStore store)
         {
             using (IDocumentSession session = store.OpenSession())

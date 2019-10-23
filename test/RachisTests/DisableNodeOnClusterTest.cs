@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class DisableNodeOnClusterTest : ReplicationTestBase
     {
+        public DisableNodeOnClusterTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task BackToFirstNodeAfterRevive()
         {

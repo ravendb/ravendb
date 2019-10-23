@@ -8,11 +8,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents
 {
     public class DocumentsCrud : RavenLowLevelTestBase
     {
+        public DocumentsCrud(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private DocumentDatabase _documentDatabase;
         private IDisposable _disposeDatabase;
 

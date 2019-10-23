@@ -7,11 +7,16 @@ using NodaTime;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11750 : RavenTestBase
     {
+        public RavenDB_11750(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public static class JsonConverterExtensions
         {
             public class InstantConverter : JsonConverter<Instant>

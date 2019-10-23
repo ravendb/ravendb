@@ -2,11 +2,16 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12946 : RavenTestBase
     {
+        public RavenDB_12946(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Raven_Should_Support_Include_More_Than_Once_On_Same_Doc()
         {

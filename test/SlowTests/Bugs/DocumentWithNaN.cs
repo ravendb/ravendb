@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="DocumentWithNaN.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
@@ -19,6 +20,10 @@ namespace SlowTests.Bugs
     }
     public class DocumentWithNaN : RavenTestBase
     {
+        public DocumentWithNaN(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanSaveUsingLegacyMode()
         {

@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class DynamicQueriesOnMetadata : RavenTestBase
     {
+        public DynamicQueriesOnMetadata(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryOnMetadataUsingDynamicQueries()
         {

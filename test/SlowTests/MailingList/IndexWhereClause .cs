@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class IndexWhereClause : RavenTestBase
     {
+        public IndexWhereClause(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Where_clause_with_greater_than_or_less_than()
         {

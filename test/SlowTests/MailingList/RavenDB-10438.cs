@@ -4,10 +4,15 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 namespace SlowTests.MailingList
 {
     public class RavenDB_10438 : RavenTestBase
     {
+        public RavenDB_10438(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQuery2()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class IndexLocking : RavenTestBase
     {
+        public IndexLocking(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task LockingIndexesInMemoryWillNotFail()
         {

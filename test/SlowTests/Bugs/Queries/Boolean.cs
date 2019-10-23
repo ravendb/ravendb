@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class Boolean : RavenTestBase
     {
+        public Boolean(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryOnNegation()
         {

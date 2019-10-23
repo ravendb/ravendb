@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8369 : ReplicationTestBase
     {
+        public RavenDB_8369(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class FooBar
         {
             public string Foo { get; set; }

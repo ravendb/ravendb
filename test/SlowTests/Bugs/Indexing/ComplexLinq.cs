@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class ComplexLinq : RavenTestBase
     {
+        public ComplexLinq(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryOnNegation()
         {

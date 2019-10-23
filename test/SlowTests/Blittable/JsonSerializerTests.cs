@@ -9,11 +9,16 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Blittable
 {
     public class JsonSerializerTests : RavenTestBase
     {
+        public JsonSerializerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Command
         {
             public BlittableJsonReaderArray BlittableArray { get; set; }

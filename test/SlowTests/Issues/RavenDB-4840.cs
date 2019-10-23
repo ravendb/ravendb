@@ -11,11 +11,16 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4840 : RavenTestBase
     {
+        public RavenDB_4840(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Huge_document_hints_are_stored_and_can_be_read()
         {
@@ -30,6 +35,8 @@ namespace SlowTests.Issues
                 database.HugeDocuments.AddIfDocIsHuge("orders/2-A", 20 * 1024 * 1024);
                 database.HugeDocuments.AddIfDocIsHuge("orders/3-A", 30 * 1024 * 1024);
                 database.HugeDocuments.AddIfDocIsHuge("orders/4-A", 40 * 1024 * 1024);
+
+                database.HugeDocuments.UpdateHugeDocuments(null);
 
                 Assert.True(database.ConfigurationStorage.NotificationsStorage.GetPerformanceHintCount() > 0);
 

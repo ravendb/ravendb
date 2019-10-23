@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8213 : RavenTestBase
     {
+        public RavenDB_8213(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void SyntaxErrorInDeclareFunctionShouldReportLineAndColumnNumber()

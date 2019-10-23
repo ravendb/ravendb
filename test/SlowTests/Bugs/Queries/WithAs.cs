@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Queries
 {
     public class WithAs : RavenTestBase
     {
+        public WithAs(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillAutomaticallyGenerateSelect()
         {

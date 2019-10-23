@@ -1,12 +1,16 @@
-﻿using Sparrow.Platform;
+﻿using System.Runtime.CompilerServices;
+using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
+using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public class LinuxRaceConditionWorkAround
+    public abstract class LinuxRaceConditionWorkAround : XunitLoggingBase
     {
         static LinuxRaceConditionWorkAround()
         {
+            XunitLogging.EnableExceptionCapture();
+            
             if (PlatformDetails.RunningOnPosix)
             {
                 // open/close a file to force load assembly for parallel test success
@@ -16,5 +20,8 @@ namespace FastTests
             }
         }
 
+        protected LinuxRaceConditionWorkAround(ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(output, sourceFile)
+        {
+        }
     }
 }

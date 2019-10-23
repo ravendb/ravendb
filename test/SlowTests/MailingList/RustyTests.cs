@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RustyTests : RavenTestBase
     {
+        public RustyTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Projection_With_Multiple_Nested_Loads_Should_Not_Throw_Exception()
         {

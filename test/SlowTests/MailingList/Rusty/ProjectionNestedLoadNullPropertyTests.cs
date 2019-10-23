@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Rusty
 {
     public class ProjectionNestedLoadNullPropertyTests : RavenTestBase
     {
+        public ProjectionNestedLoadNullPropertyTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Projection_Returns_Null_For_Nested_Property()
         {

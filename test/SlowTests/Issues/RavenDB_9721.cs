@@ -8,11 +8,16 @@ using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9721 : RavenTestBase
     {
+        public RavenDB_9721(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_include_last_tombstone_as_cutoff_etag()
         {

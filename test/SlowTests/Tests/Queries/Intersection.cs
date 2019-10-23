@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Intersection.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Queries
 {
     public class IntersectionQuery : RavenTestBase
     {
+        public IntersectionQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPerformIntersectionQuery()
         {

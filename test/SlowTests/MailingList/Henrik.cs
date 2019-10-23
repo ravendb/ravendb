@@ -3,11 +3,16 @@ using FastTests;
 using Xunit;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Henrik : RavenTestBase
     {
+        public Henrik(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Company
         {
             public string Id { get; set; }

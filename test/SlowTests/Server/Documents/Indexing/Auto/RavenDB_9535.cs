@@ -4,11 +4,16 @@ using Raven.Server.ServerWide;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Auto
 {
     public class RavenDB_9535: NoDisposalNeeded
     {
+        public RavenDB_9535(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Invalid_hash_calculation_on_null()
         {

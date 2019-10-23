@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDBBookJavaScriptIndexes : RavenTestBase
     {
+        public RavenDBBookJavaScriptIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact(Skip="This is just a playground test for javascript indexes")]
         public void PlaygroundTest()

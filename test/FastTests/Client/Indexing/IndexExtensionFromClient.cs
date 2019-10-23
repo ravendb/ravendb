@@ -13,11 +13,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using static FastTests.Client.Indexing.PeopleUtil;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Indexing
 {
     public class IndexExtensionFromClient : RavenTestBase
     {
+        public IndexExtensionFromClient(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCompileIndexWithExtensions()
         {

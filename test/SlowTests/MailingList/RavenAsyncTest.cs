@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AsyncTest : RavenTestBase
     {
+        public AsyncTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Dummy
         {
             public string Id { get; set; }

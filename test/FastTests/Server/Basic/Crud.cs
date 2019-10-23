@@ -5,11 +5,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
     public class Crud : RavenTestBase
     {
+        public Crud(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanSaveAndLoad()
         {

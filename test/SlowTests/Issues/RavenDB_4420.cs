@@ -10,11 +10,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4420 : RavenTestBase
     {
+        public RavenDB_4420(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static void ModifyStore(DocumentStore store)
         {
             store.Conventions.SaveEnumsAsIntegers = true;

@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12785 : RavenTestBase
     {
+        public RavenDB_12785(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseOutputCollectionOnMapReduceJsIndex()
         {

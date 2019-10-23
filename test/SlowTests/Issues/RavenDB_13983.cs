@@ -6,11 +6,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13983 : RavenTestBase
     {
+        public RavenDB_13983(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Contact
         {
             public string Name { get; set; }

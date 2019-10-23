@@ -10,11 +10,16 @@ using Raven.Client.Json.Converters;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11650 : RavenTestBase
     {
+        public RavenDB_11650(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanLimitOffsetCollectionQuery()
         {

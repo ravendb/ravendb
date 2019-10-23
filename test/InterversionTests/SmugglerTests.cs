@@ -16,11 +16,16 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace InterversionTests
 {
     public class SmugglerTests : InterversionTestBase
     {
+        public SmugglerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanExportFrom40AndImportTo41()
         {

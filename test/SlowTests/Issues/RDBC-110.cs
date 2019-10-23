@@ -2,11 +2,16 @@
 using System.Collections.ObjectModel;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_110 : RavenTestBase
     {
+        public RDBC_110(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EntityToBlittableShouldSimplifyCollectionProperty()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CanTrackWhatCameFromWhat.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,11 +14,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.NestedIndexing
 {
     public class CanTrackWhatCameFromWhat : RavenTestBase
     {
+        public CanTrackWhatCameFromWhat(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public string Id { get; set; }

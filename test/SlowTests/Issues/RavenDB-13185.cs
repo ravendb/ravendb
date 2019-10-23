@@ -14,11 +14,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents.Patch;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13185 : ReplicationTestBase
     {
+        public RavenDB_13185(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanHandleCorsHeaders()
         {
@@ -26,25 +31,25 @@ namespace SlowTests.Issues
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: true);
 
-            
-            X509Certificate2 adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            var certificates = GenerateAndSaveSelfSignedCertificate();
+            X509Certificate2 adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             var members = leader.ServerStore.GetClusterTopology().Members.Values.ToList();
             var nonLeaderUrl = members.First(x => x != leader.WebUrl);
             var leaderUrl = leader.WebUrl;
             var externalUrl = "http://example.com";
 
-            foreach (var certToUse in new List<X509Certificate2>{ null, adminCertificate })
+            foreach (var certToUse in new List<X509Certificate2> { null, adminCertificate })
             {
                 // endpoint with public Cors access - it should respond 
-                { 
+                {
                     // empty origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/setup/alive", response =>
                     {
                         Assert.True(response.IsSuccessStatusCode);
                         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
                     }, certificate: certToUse);
-                    
+
                     // leader as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/setup/alive", response =>
                     {
@@ -52,7 +57,7 @@ namespace SlowTests.Issues
                         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
                         Assert.Equal(leaderUrl, response.Headers.GetValues("Access-Control-Allow-Origin").FirstOrDefault());
                     }, leaderUrl, certToUse);
-                    
+
                     // member as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/setup/alive", response =>
                     {
@@ -60,7 +65,7 @@ namespace SlowTests.Issues
                         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
                         Assert.Equal(nonLeaderUrl, response.Headers.GetValues("Access-Control-Allow-Origin").FirstOrDefault());
                     }, nonLeaderUrl, certToUse);
-                    
+
                     // random as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/setup/alive", response =>
                     {
@@ -71,14 +76,14 @@ namespace SlowTests.Issues
                 }
 
                 { // endpoint with cluster wide CORS policy
-                    
+
                     // empty origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/cluster/demote", response =>
                     {
                         Assert.True(response.IsSuccessStatusCode);
                         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
                     }, certificate: certToUse);
-                    
+
                     // leader as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/cluster/demote", response =>
                     {
@@ -86,7 +91,7 @@ namespace SlowTests.Issues
                         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
                         Assert.Equal(leaderUrl, response.Headers.GetValues("Access-Control-Allow-Origin").FirstOrDefault());
                     }, leaderUrl, certToUse);
-                    
+
                     // member as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/cluster/demote", response =>
                     {
@@ -94,36 +99,36 @@ namespace SlowTests.Issues
                         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
                         Assert.Equal(nonLeaderUrl, response.Headers.GetValues("Access-Control-Allow-Origin").FirstOrDefault());
                     }, nonLeaderUrl, certToUse);
-                    
+
                     // random as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/cluster/demote", response =>
                     {
                         Assert.True(response.IsSuccessStatusCode);
                         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
                     }, externalUrl, certToUse);
-                    
+
                 }
-                
+
                 { // endpoint with out CORS policy
-                    
+
                     // empty origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/databases", response =>
                     {
                         Assert.False(response.IsSuccessStatusCode);
                     }, certificate: certToUse);
-                    
+
                     // leader as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/databases", response =>
                     {
                         Assert.False(response.IsSuccessStatusCode);
                     }, leaderUrl, certToUse);
-                    
+
                     // member as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/databases", response =>
                     {
                         Assert.False(response.IsSuccessStatusCode);
                     }, nonLeaderUrl, certToUse);
-                    
+
                     // random as origin
                     await ExecuteRequest(HttpMethod.Options, leaderUrl + "/admin/databases", response =>
                     {
@@ -145,7 +150,7 @@ namespace SlowTests.Issues
             {
                 handler.ClientCertificates.Add(certificate);
             }
-            
+
             using (var httpClient = new HttpClient(handler))
             {
                 HttpRequestMessage request = new HttpRequestMessage
@@ -153,12 +158,12 @@ namespace SlowTests.Issues
                     Method = method,
                     RequestUri = new Uri(uri)
                 };
-                
+
                 if (origin != null)
                 {
-                    request.Headers.Add("Origin", origin);    
+                    request.Headers.Add("Origin", origin);
                 }
-                
+
                 using (var response = await httpClient.SendAsync(request))
                 {
                     assertion(response);

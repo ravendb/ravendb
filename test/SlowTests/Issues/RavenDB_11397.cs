@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11397 : RavenTestBase
     {
+        public RavenDB_11397(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class InvalidMapReduce : AbstractIndexCreationTask<User, InvalidMapReduce.Result>
         {
             public class Result

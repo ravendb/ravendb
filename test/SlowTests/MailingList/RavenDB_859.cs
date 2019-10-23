@@ -1,7 +1,8 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -15,6 +16,10 @@ namespace SlowTests.MailingList
     /// </summary>
     public class RavenDB_859 : RavenTestBase
     {
+        public RavenDB_859(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Id { get; set; }

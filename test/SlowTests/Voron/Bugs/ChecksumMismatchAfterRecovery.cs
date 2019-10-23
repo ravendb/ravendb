@@ -8,11 +8,16 @@ using System;
 using System.IO;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class ChecksumMismatchAfterRecovery : FastTests.Voron.StorageTest
     {
+        public ChecksumMismatchAfterRecovery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotThrowChecksumMismatch()
         {

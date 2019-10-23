@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Bugs.Vlko
 {
     public class QueryWithMultipleWhere : RavenTestBase
     {
+        public QueryWithMultipleWhere(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldGenerateProperPrecedence()
         {

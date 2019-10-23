@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6427 : RavenTestBase
     {
+        public RavenDB_6427(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Stuff
         {
             public int Key { get; set; }

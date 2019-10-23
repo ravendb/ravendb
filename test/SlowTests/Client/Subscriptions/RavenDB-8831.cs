@@ -11,11 +11,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_8831:RavenTestBase
     {
+        public RavenDB_8831(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReadDocWithCompressedStringFromOneContextAndWriteToAnother()
         {

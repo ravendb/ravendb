@@ -15,11 +15,16 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
     public class RemoveNodeFromCluster : ClusterTestBase
     {
+        public RemoveNodeFromCluster(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task RemovedNodeChangeReplicationFactor()
         {

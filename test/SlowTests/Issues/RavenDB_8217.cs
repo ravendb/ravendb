@@ -6,11 +6,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8217 : RavenTestBase
     {
+        public RavenDB_8217(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NonLinuxFact]
         public async Task CanGetProperErrorForIndexCreationFailure()
         {

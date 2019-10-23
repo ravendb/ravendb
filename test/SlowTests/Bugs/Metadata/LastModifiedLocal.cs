@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="LastModifiedLocal.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Metadata
 {
     public class LastModifiedLocal : RavenTestBase
     {
+        public LastModifiedLocal(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAccessLastModifiedAsMetadata()
         {

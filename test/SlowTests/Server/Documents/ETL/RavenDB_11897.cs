@@ -4,11 +4,16 @@ using System.IO;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_11897 : EtlTestBase
     {
+        public RavenDB_11897(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(@"
     
@@ -44,14 +49,14 @@ namespace SlowTests.Server.Documents.ETL
                     };
                     session.Store(entity, "users/1");
 
-                    session.Advanced.Attachments.Store(entity, "photo", new MemoryStream(new byte[] {1, 2, 3}));
+                    session.Advanced.Attachments.Store(entity, "photo", new MemoryStream(new byte[] { 1, 2, 3 }));
 
                     session.CountersFor(entity).Increment("likes");
 
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -68,7 +73,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -84,7 +89,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -99,7 +104,7 @@ namespace SlowTests.Server.Documents.ETL
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.False(etlDone.Wait(TimeSpan.FromSeconds(3)));
 
                 using (var session = dest.OpenSession())
                 {

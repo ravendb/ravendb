@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="NoNonDisposableTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using System.Linq;
 using System.Reflection;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests
 {
     public class NoNonDisposableTests : NoDisposalNeeded
     {
+        public NoNonDisposableTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         // In linux we might encounter Microsoft's VisualStudio assembly types, so we skip this test in linux, and rely on the windows tests result as good for linux too

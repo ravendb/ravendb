@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="UsingDynamicQueryWithLocalServer.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,11 +10,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {
     public class HighlightesTests : RavenTestBase
     {
+        public HighlightesTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private interface ISearchable
         {
             string Slug { get; set; }

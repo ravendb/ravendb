@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Voron.Issues
 {
     public class RavenDB_7667 : RavenTestBase
     {
+        public RavenDB_7667(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IndexTreeNeedsToReturnPageToAllocatorInsteadOfFreeSpaceHandling()
         {

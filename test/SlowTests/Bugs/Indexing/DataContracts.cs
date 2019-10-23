@@ -1,13 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Runtime.Serialization;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class DataContracts : RavenTestBase
     {
+        public DataContracts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RespectsNameOnDataMemberAttribute()
         {

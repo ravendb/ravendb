@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="StreamingHalfWay.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class StreamingHalfWay : RavenTestBase
     {
+        public StreamingHalfWay(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "Missing feature: /docs/stream")]
         public void ShouldWork()
         {

@@ -7,11 +7,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5435 : RavenTestBase
     {
+        public RavenDB_5435(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()

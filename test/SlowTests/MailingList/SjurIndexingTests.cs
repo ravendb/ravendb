@@ -3,10 +3,15 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList {
     
     public class SjurIndexingTests : RavenTestBase {
+
+        public SjurIndexingTests(ITestOutputHelper output) : base(output)
+        {
+        }
 
         public class Buyer
         {

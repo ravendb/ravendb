@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class MergedEnumeratorTests : NoDisposalNeeded
     {
+        public MergedEnumeratorTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Returns_items_in_order()
         {

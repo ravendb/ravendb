@@ -2,11 +2,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Severin_null_data_time : RavenTestBase
     {
+        public Severin_null_data_time(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryDateCompareTest()
         {

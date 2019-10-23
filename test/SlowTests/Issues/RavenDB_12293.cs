@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12293 : RavenTestBase
     {
+        public RavenDB_12293(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_not_throw_on_large_buffer()
         {

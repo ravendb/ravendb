@@ -1,16 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Sparrow.Server.Platform;
-using Voron;
+﻿using Voron;
 using Voron.Data.BTrees;
-using Voron.Impl.Paging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
     public class ClonedReadTransactions : StorageTest
     {
+        public ClonedReadTransactions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public unsafe void CanCloneAndReadOldDataFromReadTx()
         {

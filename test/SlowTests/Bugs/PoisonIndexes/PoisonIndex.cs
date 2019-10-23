@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.PoisonIndexes
 {
     public class PoisonIndex : RavenTestBase
     {
+        public PoisonIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotCauseFailures()
         {

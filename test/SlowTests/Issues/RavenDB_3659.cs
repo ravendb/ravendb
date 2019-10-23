@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
     {
         private readonly Dictionary<string, string> _invalidCustomSettings;
 
-        public RavenDB_3659()
+        public RavenDB_3659(ITestOutputHelper output) : base(output)
         {
             if (LinuxTestUtils.RunningOnPosix)
                 _invalidCustomSettings = new Dictionary<string, string>

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="T1.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests
 {
     public class ClientProjectionShouldWork : RavenTestBase
     {
+        public ClientProjectionShouldWork(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Employee
         {
             public string Id { get; set; }

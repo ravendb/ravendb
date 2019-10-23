@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class DynamicFacets : FacetTestBase
     {
+        public DynamicFacets(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPerformDynamicFacetedSearch_Embedded()
         {

@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsSession : RavenTestBase
     {
+        public AttachmentsSession(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task PutAttachments()
         {

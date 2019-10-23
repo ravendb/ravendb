@@ -14,11 +14,16 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14068 : RavenTestBase
     {
+        public RavenDB_14068(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private async Task SetupExpiration(DocumentStore store)
         {
             var config = new ExpirationConfiguration

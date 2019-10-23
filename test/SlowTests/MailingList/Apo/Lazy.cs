@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Apo
 {
     public class Lazy : RavenTestBase
     {
+        public Lazy(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestClass
         {
             public string Id { get; set; }

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="AaronSt.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ValerioBorioni : RavenTestBase
     {
+        public ValerioBorioni(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RavenJValue_recognize_NAN_Float_isEqual_to_NAN_String()
         {

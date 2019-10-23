@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,11 +11,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public class MongoDBMigrationTest : RavenTestBase
     {
+        public MongoDBMigrationTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Book
         {
             public class Comparer : IEqualityComparer<Book>

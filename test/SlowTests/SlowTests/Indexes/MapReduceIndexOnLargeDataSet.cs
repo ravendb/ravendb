@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Indexes
 {
     public class MapReduceIndexOnLargeDataSet : RavenTestBase
     {
+        public MapReduceIndexOnLargeDataSet(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillNotProduceAnyErrors()
         {

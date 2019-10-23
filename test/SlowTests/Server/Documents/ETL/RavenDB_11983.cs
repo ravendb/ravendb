@@ -3,11 +3,16 @@ using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_11983 : EtlTestBase
     {
+        public RavenDB_11983(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Should_have_process_per_transformation_script()
         {

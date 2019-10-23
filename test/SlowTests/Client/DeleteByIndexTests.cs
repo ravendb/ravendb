@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class IndexesDeleteByQueryTests : RavenTestBase
     {
+        public IndexesDeleteByQueryTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Delete_By_Index()
         {

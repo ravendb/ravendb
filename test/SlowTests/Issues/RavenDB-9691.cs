@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9691 : RavenTestBase
     {
+        public RavenDB_9691(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_serialize_with_default_enum_value()
         {

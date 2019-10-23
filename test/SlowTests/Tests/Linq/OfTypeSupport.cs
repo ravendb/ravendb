@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="OfTypeSupport.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class OfTypeSupport : RavenTestBase
     {
+        public OfTypeSupport(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void OfTypeWillBeConvertedToWhere()
         {

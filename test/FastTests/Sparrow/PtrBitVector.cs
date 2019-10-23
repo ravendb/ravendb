@@ -1,10 +1,15 @@
 ﻿using Sparrow.Binary;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public unsafe class PtrBitVectorTests : NoDisposalNeeded
     {
+        public PtrBitVectorTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SetIndex()
         {

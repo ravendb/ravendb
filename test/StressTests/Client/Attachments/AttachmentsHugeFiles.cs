@@ -5,11 +5,16 @@ using Microsoft.AspNetCore.Http.Features;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
     public class AttachmentsHugeFiles : NoDisposalNeeded
     {
+        public AttachmentsHugeFiles(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NightlyBuildTheory64Bit]
         [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=", false)] // 256 MB
         [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=", true)] // 256 MB
@@ -19,7 +24,7 @@ namespace StressTests.Client.Attachments
         {
             try
             {
-                using (var stress = new AttachmentsBigFiles())
+                using (var stress = new AttachmentsBigFiles(Output))
                 {
                     await stress.BatchRequestWithLongMultiPartSections(size, hash, encrypted);
                 }
@@ -39,7 +44,7 @@ namespace StressTests.Client.Attachments
         {
             try
             {
-                using (var stress = new AttachmentsBigFiles())
+                using (var stress = new AttachmentsBigFiles(Output))
                 {
                     await stress.SupportHugeAttachment(size, hash, encrypted);
                 }

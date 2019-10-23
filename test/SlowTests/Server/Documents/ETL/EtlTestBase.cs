@@ -8,12 +8,17 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     [Trait("Category", "ETL")]
     public abstract class EtlTestBase : RavenTestBase
     {
+        protected EtlTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
             var result1 = src.Maintenance.Send(new PutConnectionStringOperation<T>(connectionString));

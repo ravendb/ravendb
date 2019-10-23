@@ -6,11 +6,15 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Operations
 {
     public class TimeSeriesOperations : RavenTestBase
     {
+        public TimeSeriesOperations(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public void CanCreateAndGetSimpleTimeSeriesUsingStoreOperations()
@@ -550,7 +554,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                         Name = "Heartrate",
                         Tag = "watches/fitbit",
                         Timestamp = baseline.AddSeconds(i * 10),
-                        Values = new[] {59d}
+                        Values = new[] { 59d }
                     });
                 }
 

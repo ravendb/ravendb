@@ -6,11 +6,16 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10664 : RavenTestBase
     {
+        public RavenDB_10664(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task AutoNamingAlgorithmOfOngoingTasksShouldTakeNameAlreadyExistsIntoAccount()
         {

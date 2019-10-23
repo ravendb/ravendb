@@ -2,11 +2,16 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries
 {
     public class QueryingStopwordWithPrefixShouldWork : RavenTestBase
     {
+        public QueryingStopwordWithPrefixShouldWork(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo
         {
             public string Bar { get; set; }

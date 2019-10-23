@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class AnalyzerResolution : RavenTestBase
     {
+        public AnalyzerResolution(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void can_resolve_internal_analyzer()
         {

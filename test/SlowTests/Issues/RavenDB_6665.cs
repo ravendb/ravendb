@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.ServerWide;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6665 : NoDisposalNeeded
     {
+        public RavenDB_6665(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillThrowIfTimeoutIsInvalid()
         {

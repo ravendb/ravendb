@@ -16,21 +16,26 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class EncryptedBackupTest : RavenTestBase
     {
+        public EncryptedBackupTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -92,12 +97,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -163,12 +168,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -234,12 +239,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -302,12 +307,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -374,12 +379,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -446,12 +451,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -513,12 +518,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -582,12 +587,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -649,12 +654,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -960,7 +965,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
-        
+
         [Fact]
         public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
         {
@@ -1029,7 +1034,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         EncryptionMode = EncryptionMode.UseProvidedKey
                     }
                 };
-                
+
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
@@ -1048,7 +1053,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.Counters.Processed);
                 Assert.Equal(1, backupResult.Counters.ReadCount);
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -1202,7 +1207,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 using (var session = store.OpenSession())
                 {
-                     session.Store(new User { Name = "oren" }, "users/1");
+                    session.Store(new User { Name = "oren" }, "users/1");
                     session.CountersFor("users/1").Increment("likes", 100);
                     session.SaveChanges();
                 }
@@ -1262,12 +1267,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -1394,7 +1399,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
-        public async Task  snapshot_and_restore_unencrypted_db_and_unencrypted_backup_1()
+        public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -1513,12 +1518,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out X509Certificate2 adminCert, out string dbName);
+            var key = EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()

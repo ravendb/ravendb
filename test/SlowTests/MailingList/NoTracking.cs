@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="NoTracking.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class NoTracking : RavenTestBase
     {
+        public NoTracking(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly string One = Guid.Parse("00000000-0000-0000-0000-000000000001").ToString();
         private static readonly string Two = Guid.Parse("00000000-0000-0000-0000-000000000002").ToString();
 

@@ -4,11 +4,16 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {
     public class PatchOnCounters : RavenTestBase
     {
+        public PatchOnCounters(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIncrementSingleCounter()
         {

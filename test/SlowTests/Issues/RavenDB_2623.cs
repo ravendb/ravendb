@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2623.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,11 +14,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2623 : RavenTestBase
     {
+        public RavenDB_2623(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class People_ByName : AbstractIndexCreationTask<Person>
         {
             public People_ByName()

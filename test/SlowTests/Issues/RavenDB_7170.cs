@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7170 : NoDisposalNeeded
     {
+        public RavenDB_7170(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Indexing_func_must_return_anonymous_object()
         {

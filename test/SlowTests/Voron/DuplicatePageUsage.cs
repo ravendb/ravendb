@@ -4,11 +4,16 @@ using FastTests;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class DuplicatePageUsage : NoDisposalNeeded
     {
+        public DuplicatePageUsage(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         private readonly TableSchema _entriesSchema = new TableSchema()
            .DefineKey(new TableSchema.SchemaIndexDef

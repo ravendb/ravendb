@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Weave : RavenTestBase
     {
+        public Weave(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class CalcSystem
         {
             public int ClientID { get; set; }

@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9723 : RavenTestBase
     {
+        public RavenDB_9723(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_wait_until_index_processes_tombstone()
         {

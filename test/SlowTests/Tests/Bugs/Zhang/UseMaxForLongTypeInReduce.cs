@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Bugs.Zhang
 {
     public class UseMaxForLongTypeInReduce : RavenTestBase
     {
+        public UseMaxForLongTypeInReduce(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string Map = @"
 from doc in docs.Items
 from tag in doc.Tags

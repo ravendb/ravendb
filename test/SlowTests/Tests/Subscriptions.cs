@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests
 {
     public class Subscriptions : RavenTestBase
     {
+        public Subscriptions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task BasicSusbscriptionTest()
         {

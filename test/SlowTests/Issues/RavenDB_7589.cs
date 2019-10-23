@@ -10,11 +10,16 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7589 : RavenTestBase
     {
+        public RavenDB_7589(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private int _numberOfDatabasesRemoved;
 
         [Fact]

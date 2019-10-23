@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Smuggler
 {
     public class RavenDB_12890 : RavenTestBase
     {
+        public RavenDB_12890(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanImportDumpWithoutAttachment()
         {

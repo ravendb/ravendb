@@ -10,11 +10,16 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_9072 : RavenTestBase
     {
+        public RavenDB_9072(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanTestScript()
         {

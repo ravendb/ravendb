@@ -6,11 +6,16 @@ using Raven.Client;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_372 : RavenTestBase
     {
+        public RDBC_372(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public async Task RawQueryWithBlittableJsonReturnType_WithGroupByAndSelect()

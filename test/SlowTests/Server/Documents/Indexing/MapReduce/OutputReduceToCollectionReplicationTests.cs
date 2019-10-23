@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,11 +9,16 @@ using Raven.Client.Documents.Replication;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
     public class OutputReduceToCollectionReplicationTests : ReplicationTestBase, ITombstoneAware
     {
+        public OutputReduceToCollectionReplicationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReduceOutputShouldNotBeReplicated()
         {

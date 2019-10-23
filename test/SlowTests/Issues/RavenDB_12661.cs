@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12661 : RavenTestBase
     {
+        public RavenDB_12661(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_delete_simple_attachment()
         {

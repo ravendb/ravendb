@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9995 : RavenTestBase
     {
+        public RavenDB_9995(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryOnArrays()
         {

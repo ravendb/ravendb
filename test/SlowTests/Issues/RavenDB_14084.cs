@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14084 : RavenTestBase
     {
+        public RavenDB_14084(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Companies_ByUnknown : AbstractIndexCreationTask<Company>
         {
             public override IndexDefinition CreateIndexDefinition()

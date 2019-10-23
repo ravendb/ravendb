@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Bugs
 {
     public class TempIndexScore : RavenTestBase
     {
+        public TempIndexScore(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Blog
         {
             public string Title { get; set; }

@@ -3,11 +3,16 @@ using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_10813 : StorageTest
     {
+        public RavenDB_10813(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly byte[] _masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
         protected override void Configure(StorageEnvironmentOptions options)

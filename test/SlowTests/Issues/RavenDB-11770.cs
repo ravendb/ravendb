@@ -4,11 +4,16 @@ using FastTests;
 using FastTests.Utils;
 using Orders;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11770 : RavenTestBase
     {
+        public RavenDB_11770(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanGetRevisionsByDate()
         {

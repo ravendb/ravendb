@@ -9,6 +9,7 @@ using FastTests;
 using Sparrow.Platform;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Sparrow
 {
@@ -639,6 +640,10 @@ namespace StressTests.Sparrow
 
     public class DisposeOnceTests : NoDisposalNeeded
     {
+        public DisposeOnceTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         private static void RunWithScheduler(int numThreads, Action<TaskScheduler> action)
         {

@@ -17,11 +17,16 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8355 : RavenTestBase
     {
+        public RavenDB_8355(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseCustomSorter()
         {

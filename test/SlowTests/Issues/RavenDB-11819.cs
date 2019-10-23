@@ -7,11 +7,16 @@ using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11819 : RavenTestBase
     {
+        public RavenDB_11819(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IncrementCounter_WhenDocumentHasNoMetadata_ShouldWork()
         {

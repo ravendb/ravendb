@@ -10,11 +10,16 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Revisions
 {
     public class RevertRevisionsTests : ReplicationTestBase
     {
+        public RevertRevisionsTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Revert()
         {

@@ -2,12 +2,17 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace BenchmarkTests
 {
     [Collection(nameof(Init))]
     public class Init : BenchmarkTestBase
     {
+        public Init(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Initialize()
         {
