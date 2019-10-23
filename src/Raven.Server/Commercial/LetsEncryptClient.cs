@@ -315,7 +315,7 @@ namespace Raven.Server.Commercial
                 string responseText;
                 try
                 {
-				    // // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
+				    // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
                     (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
 
                     while (result.Status == "pending")
