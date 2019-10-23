@@ -206,6 +206,9 @@ namespace Raven.Client.Json
                 case int i:
                     _manualBlittableJsonDocumentBuilder.WriteValue(i);
                     break;
+                case short s:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(s);
+                    break;
                 case double d:
                     _manualBlittableJsonDocumentBuilder.WriteValue(d);
                     break;
@@ -226,6 +229,9 @@ namespace Raven.Client.Json
                     break;
                 case DateTimeOffset dto:
                     _manualBlittableJsonDocumentBuilder.WriteValue(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                    break;
+                case TimeSpan dto:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.ToString("c"));
                     break;
                 case IDictionary<string, string> dics:
                     WriteDictionary(dics);
