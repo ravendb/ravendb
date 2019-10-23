@@ -9,5 +9,7 @@ namespace Voron.Data.Compression
         public byte* CompressionOutputPtr;
 
         public CompressedNodesHeader Header;
+
+        public bool InvalidateFromCache;
     }
 }

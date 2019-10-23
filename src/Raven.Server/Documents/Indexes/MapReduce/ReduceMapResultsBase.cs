@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
 
                         throw new UnexpectedReduceTreePageException(
-                            $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree.");
+                            $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree (tree state: {tree.State})");
                     }
 
                     var parentPage = tree.GetParentPageOf(leafPage);
