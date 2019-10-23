@@ -1,11 +1,16 @@
 ﻿using System.IO;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12657 : RavenTestBase
     {
+        public RavenDB_12657(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotThrowConcurrencyException()
         {

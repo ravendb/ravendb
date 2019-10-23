@@ -1,14 +1,19 @@
-using System;
+ï»¿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Track
 {
     public class LinqTest : RavenTestBase
     {
+        public LinqTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class JoinedChildTransport
         {
             public string ChildId { get; set; }
@@ -78,7 +83,7 @@ namespace SlowTests.Tests.Track
                 {
                     // Store two children
                     session.Store(new Child { Id = "B1", Name = "Thor Arne" });
-                    session.Store(new Child { Id = "B2", Name = "Ståle" });
+                    session.Store(new Child { Id = "B2", Name = "StÃ¥le" });
 
                     // Store four Transports
                     session.Store(new Transport { Id = "A1", ChildId = "B1" });
@@ -111,11 +116,11 @@ namespace SlowTests.Tests.Track
                     // skyssavtaler for B2
                     Assert.Equal("A3", transports[2].TransportId);
                     Assert.Equal("B2", transports[2].ChildId);
-                    Assert.Equal("Ståle", transports[2].Name);
+                    Assert.Equal("StÃ¥le", transports[2].Name);
 
                     Assert.Equal("A4", transports[3].TransportId);
                     Assert.Equal("B2", transports[3].ChildId);
-                    Assert.Equal("Ståle", transports[3].Name);
+                    Assert.Equal("StÃ¥le", transports[3].Name);
                 }
             }
         }

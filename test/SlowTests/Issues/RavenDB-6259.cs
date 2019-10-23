@@ -9,11 +9,16 @@ using Raven.Client.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6259 : ReplicationTestBase
     {
+        public RavenDB_6259(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class PersonAndAddressIndex : AbstractIndexCreationTask<Person, Address>
         {
             public PersonAndAddressIndex()

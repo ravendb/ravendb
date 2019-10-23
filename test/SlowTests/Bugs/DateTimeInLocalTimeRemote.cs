@@ -1,11 +1,16 @@
-using System;
+﻿using System;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DateTimeInLocalTimeRemote : RavenTestBase
     {
+        public DateTimeInLocalTimeRemote(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSaveAndLoadSameTimeLocal()
         {

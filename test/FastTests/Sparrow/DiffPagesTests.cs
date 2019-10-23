@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Server.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public unsafe class DiffPagesTests : NoDisposalNeeded
     {
+        public DiffPagesTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanComputeNoDifference()
         {

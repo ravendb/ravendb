@@ -5,11 +5,16 @@ using Orders;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB8384 : RavenTestBase
     {
+        public RavenDB8384(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseLoadInSubscriptions()
         {

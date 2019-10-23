@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="PhilJones_SelectMany_NoResults.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class PhilJones_SelectMany_NoResults : RavenTestBase
     {
+        public PhilJones_SelectMany_NoResults(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Service
         {
             public class EmailAddress

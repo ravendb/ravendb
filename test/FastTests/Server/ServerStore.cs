@@ -8,11 +8,16 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server
 {
     public class ServerStore : RavenTestBase
     {
+        public ServerStore(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Admin_databases_endpoint_should_refuse_document_with_lower_etag_with_concurrency_Exception()
         {

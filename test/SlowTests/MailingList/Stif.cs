@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,11 +7,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Stif : RavenTestBase
     {
+        public Stif(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [DataContract]
         private class MyDoc
         {
@@ -24,7 +29,7 @@ namespace SlowTests.MailingList
         }
 
         [DataContract]
-        private class Context
+        private class StifContext
         {
             [DataMember]
             public string Key { get; set; }

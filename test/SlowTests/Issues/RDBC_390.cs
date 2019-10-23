@@ -2,11 +2,16 @@
 using Orders;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_390 : RavenTestBase
     {
+        public RDBC_390(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FacetQueryShouldEscapeFieldNameAndDisplayFieldNameProperlyIfNeeded()
         {

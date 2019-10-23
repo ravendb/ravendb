@@ -19,11 +19,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13293 : ReplicationTestBase
     {
+        public RavenDB_13293(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanPassNodeTagToChangesApi()
         {

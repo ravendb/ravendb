@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class StatsTest : RavenTestBase
     {
+        public StatsTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         // Audio POCO
         private class AudioTest
         {

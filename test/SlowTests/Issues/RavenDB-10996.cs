@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10996 : RavenTestBase
     {
+        public RavenDB_10996(ITestOutputHelper output) : base(output)
+        {
+        }
+
         const string Doc = @"{
   ""Name"": ""0e5d5967-28e6-467d-a3f7-85488cea8a83"",
   ""Properties"": [

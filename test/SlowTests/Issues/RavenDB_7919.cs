@@ -10,11 +10,16 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_7919 : RavenLowLevelTestBase
     {
+        public RavenDB_7919(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Should_use_auto_index_even_if_idle_when_match_is_complete()
         {

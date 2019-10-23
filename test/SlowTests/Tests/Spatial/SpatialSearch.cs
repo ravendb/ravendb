@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using FastTests;
@@ -8,11 +8,16 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class SpatialSearch : RavenTestBase
     {
+        public SpatialSearch(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SpatialIdx : AbstractIndexCreationTask<Event>
         {
             public SpatialIdx()

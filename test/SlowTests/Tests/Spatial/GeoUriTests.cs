@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class GeoUriTests : RavenTestBase
     {
+        public GeoUriTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SpatialDoc
         {
             public string Id { get; set; }

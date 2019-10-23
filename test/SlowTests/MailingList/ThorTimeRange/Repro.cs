@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Repro.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.ThorTimeRange
 {
     public class Repro : RavenTestBase
     {
+        public Repro(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static class Utility
         {
             public static void CreateTestData(IDocumentStore docStore)

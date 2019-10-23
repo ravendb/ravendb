@@ -1,13 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13326 : RavenTestBase
     {
+        public RavenDB_13326(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Project_With_Multiple_Nested_Loads_Executes()
         {

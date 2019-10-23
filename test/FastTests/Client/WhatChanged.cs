@@ -4,11 +4,16 @@ using System.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class WhatChanged : RavenTestBase
     {
+        public WhatChanged(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void What_Changed_New_Field()
         {

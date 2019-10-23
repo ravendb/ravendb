@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents.Commands.MultiGet;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.MultiGet
 {
     public class MultiGetBasic : RavenTestBase
     {
+        public MultiGetBasic(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

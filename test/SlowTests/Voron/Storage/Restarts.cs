@@ -1,11 +1,16 @@
-using System.IO;
+﻿using System.IO;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class Restarts : FastTests.Voron.StorageTest
     {
+        public Restarts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DataIsKeptAfterRestart_OnDisk()
         {

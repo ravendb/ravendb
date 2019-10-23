@@ -167,6 +167,7 @@ namespace Raven.Server.NotificationCenter
         public new void Dispose()
         {
             Paging?.Dispose();
+            RequestLatency?.Dispose();
             SlowWrites?.Dispose();
 
             base.Dispose();

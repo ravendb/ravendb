@@ -3,11 +3,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5615 : RavenTestBase
     {
+        public RavenDB_5615(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanEnableAndDisableIndex()
         {

@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class JoelAsync : RavenTestBase
     {
+        public JoelAsync(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Dummy
         {
             public string Id { get; set; }

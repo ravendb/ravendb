@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,11 +10,16 @@ using Sparrow.Json.Parsing;
 using Xunit;
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
+using Xunit.Abstractions;
 
 namespace SlowTests.Core.Session
 {
     public class Advanced : RavenTestBase
     {
+        public Advanced(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanGetChangesInformation()
         {

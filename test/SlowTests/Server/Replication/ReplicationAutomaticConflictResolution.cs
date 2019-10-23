@@ -17,11 +17,16 @@ using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class AutomaticConflictResolution : ReplicationTestBase
     {
+        public AutomaticConflictResolution(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ScriptResolveToTombstone()
         {

@@ -12,12 +12,17 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure.ConnectionString;
+using Xunit.Abstractions;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public abstract class SqlAwareTestBase : RavenTestBase
     {
+        protected SqlAwareTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         private const int CommandTimeout = 10 * 60; // We want to avoid timeout exception. We don't care about performance here. The query can take long time if all the outer database are working simultaneously on the same machine 
 
         protected void ApplyDefaultColumnNamesMapping(DatabaseSchema dbSchema, MigrationSettings settings, bool binaryToAttachment = false)

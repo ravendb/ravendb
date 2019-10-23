@@ -4,12 +4,17 @@ using FastTests;
 using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     //additional tests for edge-cases of RavenDB-11676 (mainstream cases are in the Graph API feature test suites)
     public class RavenDB_11676 : RavenTestBase
     {
+        public RavenDB_11676(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_handle_string_array_as_edge_simple_select()
         {

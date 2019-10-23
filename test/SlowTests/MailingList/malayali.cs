@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class malayali : RavenTestBase
     {
+        public malayali(ITestOutputHelper output) : base(output)
+        {
+        }
+
          class FanOutTestIndex : AbstractIndexCreationTask<Level2SimpleTestDocument>
         {
             public FanOutTestIndex()

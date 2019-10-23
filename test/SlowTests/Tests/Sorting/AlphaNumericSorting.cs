@@ -9,11 +9,16 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using SlowTests.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Sorting
 {
     public class AlphaNumericSorting : RavenTestBase
     {
+        public AlphaNumericSorting(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void basic_alphanumeric_sort()
         {

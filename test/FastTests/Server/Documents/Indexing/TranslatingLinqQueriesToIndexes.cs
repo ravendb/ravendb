@@ -6,11 +6,16 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing
 {
     public class TranslatingLinqQueriesToIndexes : NoDisposalNeeded
     {
+        public TranslatingLinqQueriesToIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void WillTranslateReferenceToIdTo__document_id()
         {

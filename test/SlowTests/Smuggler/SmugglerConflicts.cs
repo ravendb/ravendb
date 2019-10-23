@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Smuggler
 {
     public class SmugglerConflicts : ReplicationTestBase
     {
+        public SmugglerConflicts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private string _file;
         private DocumentStore _store1, _store2;
 

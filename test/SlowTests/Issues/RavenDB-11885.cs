@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11885 : RavenTestBase
     {
+        public RavenDB_11885(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DocumentStorageReadLastEtagShouldTakeIntoAccountTheLastCounterEtag()
         {

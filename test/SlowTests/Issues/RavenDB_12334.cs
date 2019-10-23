@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12334 : RavenTestBase
     {
+        public RavenDB_12334(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Map_reduce_results_should_not_contains_implicit_nulls_wich_were_not_indexed()
         {

@@ -9,12 +9,17 @@ using Xunit;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
+using Xunit.Abstractions;
 
 
 namespace FastTests.Voron.Tables
 {
     public unsafe class BasicUsage : TableStorageTest
     {
+        public BasicUsage(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public  void CanInsertThenRead()

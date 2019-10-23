@@ -14,11 +14,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Static
 {
     public class RavenDB_11469 : RavenLowLevelTestBase
     {
+        public RavenDB_11469(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]

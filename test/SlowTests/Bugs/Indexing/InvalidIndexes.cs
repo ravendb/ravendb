@@ -1,13 +1,18 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class InvalidIndexes : RavenTestBase
     {
+        public InvalidIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CannotCreateIndexesUsingDateTimeNow()
         {

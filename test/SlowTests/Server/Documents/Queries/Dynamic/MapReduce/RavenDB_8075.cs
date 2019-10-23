@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class RavenDB_8075 : RavenLowLevelTestBase
     {
+        public RavenDB_8075(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_match_auto_map_reduce_index_if_analyzed_field_isnt_used_in_where()
         {

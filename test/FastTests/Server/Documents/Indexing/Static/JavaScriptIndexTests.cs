@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
     public class JavaScriptIndexTests : RavenTestBase
     {
+        public JavaScriptIndexTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Company
         {
             public string Name { get; set; }

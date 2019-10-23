@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class ChangeThreadPriorityTest : NoDisposalNeeded
     {
+        public ChangeThreadPriorityTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NonLinuxFact]
         public void StartChangeThreadPriority()
         {

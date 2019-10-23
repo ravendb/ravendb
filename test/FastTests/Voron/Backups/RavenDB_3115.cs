@@ -9,11 +9,16 @@ using Xunit;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Backups
 {
     public class RavenDB_3115 : StorageTest
     {
+        public RavenDB_3115(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly IncrementalBackupTestUtils _incrementalBackupTestUtils = new IncrementalBackupTestUtils();
 
         protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options)

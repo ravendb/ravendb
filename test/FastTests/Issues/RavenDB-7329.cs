@@ -2,11 +2,16 @@
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7329 : NoDisposalNeeded
     {
+        public RavenDB_7329(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string FakeCertPath = "C:\\fake\\cert\\path.crt";
 
         [Fact]

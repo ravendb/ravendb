@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class LateBoundValue : RavenTestBase
     {
+        public LateBoundValue(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SampleData : AggregateBaseEx<string>
         {
         }

@@ -4,11 +4,16 @@ using System.IO;
 using System.Text;
 using FastTests.Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class PageSplitterTests : StorageTest
     {
+        public PageSplitterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         readonly Random _random = new Random(1234);
 
         private string RandomString(int size)

@@ -10,11 +10,16 @@ using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12233 : RavenTestBase
     {
+        public RavenDB_12233(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FailingTest_Context()
         {

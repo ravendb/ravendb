@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class MissingIncludes : RavenTestBase
     {
+        public MissingIncludes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
 #pragma warning disable 414

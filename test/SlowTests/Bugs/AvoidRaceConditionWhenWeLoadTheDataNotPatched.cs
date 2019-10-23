@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -8,11 +8,16 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AvoidRaceConditionWhenWeLoadTheDataNotPatched : RavenTestBase
     {
+        public AvoidRaceConditionWhenWeLoadTheDataNotPatched(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GetReturnsFilteredResults()
         {

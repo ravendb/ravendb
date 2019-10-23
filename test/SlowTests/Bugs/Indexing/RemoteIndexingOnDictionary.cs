@@ -2,11 +2,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class RemoteIndexingOnDictionary : RavenTestBase
     {
+        public RemoteIndexingOnDictionary(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIndexOnRangeForNestedValuesForDictionaryAsPartOfDictionary()
         {

@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_163 : RavenTestBase
     {
+        public RDBC_163(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public User(string personId, List<string> roles, string email, byte[] password, bool isActive, DateTimeOffset? lockedOutUntil = null, Guid? activationGuid = null, Guid? passwordResetGuid = null, string id = null)

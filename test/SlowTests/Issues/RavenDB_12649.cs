@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12649 : RavenTestBase
     {
+        public RavenDB_12649(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string StatusPostfix = "/status";
 
         [Fact]

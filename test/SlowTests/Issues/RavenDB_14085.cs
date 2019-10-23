@@ -3,11 +3,16 @@ using FastTests;
 using Orders;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14085 : RavenTestBase
     {
+        public RavenDB_14085(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void NegativeSkipAndTakeInQueryShouldThrow()
         {

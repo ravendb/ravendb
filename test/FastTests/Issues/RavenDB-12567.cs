@@ -2,11 +2,16 @@
 using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12567 : RavenTestBase
     {
+        public RavenDB_12567(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Recursive_queries_should_handle_self_cycles_properly()
         {

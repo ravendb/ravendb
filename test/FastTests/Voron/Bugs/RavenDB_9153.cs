@@ -1,11 +1,16 @@
 ﻿using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Bugs
 {
     public class RavenDB_9153 : StorageTest
     {
+        public RavenDB_9153(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Overflow_shrink_should_decrease_number_of_allocated_pages_in_scratch()
         {

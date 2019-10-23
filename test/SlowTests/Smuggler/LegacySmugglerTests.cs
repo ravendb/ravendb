@@ -13,11 +13,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Smuggler
 {
     public class LegacySmugglerTests : RavenTestBase
     {
+        public LegacySmugglerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)

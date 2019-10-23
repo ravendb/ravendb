@@ -6,12 +6,17 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Queries
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class WaitingForNonStaleResults : RavenTestBase
     {
+        public WaitingForNonStaleResults(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Cutoff_etag_usage()
         {

@@ -2,11 +2,16 @@
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10641 : RavenTestBase
     {
+        public RavenDB_10641(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanEditObjectsInMetadata()
         {

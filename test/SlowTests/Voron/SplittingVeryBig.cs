@@ -5,11 +5,16 @@ using FastTests.Voron;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class SplittingVeryBig : StorageTest
     {
+        public SplittingVeryBig(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;

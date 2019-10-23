@@ -14,11 +14,16 @@ using Raven.Server;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
     public class ClusterMaintenanceTest : ClusterTestBase
     {
+        public ClusterMaintenanceTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override RavenServer GetNewServer(ServerCreationOptions options = null)
         {
             if (options == null)

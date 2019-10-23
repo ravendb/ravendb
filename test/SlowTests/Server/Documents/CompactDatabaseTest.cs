@@ -10,11 +10,16 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents
 {
     public class CompactDatabaseTest : RavenTestBase
     {
+        public CompactDatabaseTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanCompactDatabase()
         {

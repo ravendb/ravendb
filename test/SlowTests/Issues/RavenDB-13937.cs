@@ -12,11 +12,16 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Xunit;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13937 : RavenLowLevelTestBase
     {
+        public RavenDB_13937(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task SearchForPageShouldNotSkipLastPage()
         {

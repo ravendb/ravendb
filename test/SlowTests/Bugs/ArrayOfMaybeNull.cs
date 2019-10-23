@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class ArrayOfMaybeNull : RavenTestBase
     {
+        public ArrayOfMaybeNull(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Orders_Search : AbstractIndexCreationTask<Order>
         {
             public class ReduceResult

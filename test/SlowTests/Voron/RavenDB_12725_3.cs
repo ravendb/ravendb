@@ -5,11 +5,16 @@ using Raven.Server.Config.Settings;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class RavenDB_12725_3 : StorageTest
     {
+        public RavenDB_12725_3(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Voron_schema_update_will_update_headers_file_and_bump_version_there()
         {

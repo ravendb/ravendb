@@ -6,11 +6,16 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_3917 : RavenTestBase
     {
+        public RavenDB_3917(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task SmugglerShouldNotExportImportSubscribtionIdentities()
         {

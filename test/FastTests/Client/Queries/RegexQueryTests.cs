@@ -3,11 +3,16 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Queries
 {
     public class RegexQueryTests : RavenTestBase
     {
+        public RegexQueryTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueriesWithRegexShouldWork()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2984.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Reflection;
 using FastTests;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2984 : NoDisposalNeeded
     {
+        public RavenDB_2984(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestClass
         {
             public string PublicProperty { get; set; }

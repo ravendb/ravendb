@@ -7,11 +7,16 @@
 using System;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class DataCorruptionInOverflow : FastTests.Voron.StorageTest
     {
+        public DataCorruptionInOverflow(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

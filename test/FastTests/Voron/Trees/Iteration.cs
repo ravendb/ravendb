@@ -2,11 +2,16 @@
 using System.IO;
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public unsafe class Iteration : StorageTest
     {
+        public Iteration(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EmptyIterator()
         {

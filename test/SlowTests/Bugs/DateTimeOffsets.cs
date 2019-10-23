@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DateTimeOffsets : RavenTestBase
     {
+        public DateTimeOffsets(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_save_and_load()
         {

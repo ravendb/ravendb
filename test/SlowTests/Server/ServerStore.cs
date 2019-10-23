@@ -10,17 +10,22 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server
 {
     public class ServerStore : RavenTestBase
     {
+        public ServerStore(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Server_store_basic_read_write_should_work()
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate(), (string)null, X509KeyStorageFlags.MachineKeySet);
+                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
@@ -53,7 +58,7 @@ namespace SlowTests.Server
         {
             using (GetDocumentStore())
             {
-                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate(), (string)null, X509KeyStorageFlags.MachineKeySet);
+                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate().ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
 
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

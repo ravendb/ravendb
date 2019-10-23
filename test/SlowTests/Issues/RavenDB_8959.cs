@@ -4,11 +4,16 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8959 : RavenTestBase
     {
+        public RavenDB_8959(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class SingleNodeAsyncMultiDatabaseHiLoIdGenerator : AsyncMultiDatabaseHiLoIdGenerator
         {
             public SingleNodeAsyncMultiDatabaseHiLoIdGenerator(DocumentStore store, DocumentConventions conventions) : base(store, conventions)

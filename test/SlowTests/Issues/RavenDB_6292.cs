@@ -19,11 +19,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6292 : ReplicationTestBase
     {
+        public RavenDB_6292(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task IfIncludedDocumentIsConflictedItShouldNotThrowConflictException()
         {

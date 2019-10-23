@@ -6,11 +6,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class MultipleLoad : RavenTestBase
     {
+        public MultipleLoad(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestableDTO
         {
             public string Id

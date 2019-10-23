@@ -2,18 +2,20 @@
 using System.Collections.Concurrent;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class RequestLatencyDetail : INotificationDetails
     {
         private const int RequestLatencyDetailLimit = 50;
+
         public ConcurrentDictionary<string, ConcurrentQueue<RequestLatencyInfo>> RequestLatencies { get; set; }
 
         public RequestLatencyDetail()
         {
             RequestLatencies = new ConcurrentDictionary<string, ConcurrentQueue<RequestLatencyInfo>>();
         }
-        
+
         public void Update(long duration, string action, string query)
         {
             if (RequestLatencies.TryGetValue(action, out var hintQueue) == false)
@@ -40,10 +42,10 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         public DynamicJsonValue ToJson()
         {
             var djv = new DynamicJsonValue();
-            
+
             var dict = new DynamicJsonValue();
             djv[nameof(RequestLatencies)] = dict;
-            
+
             foreach (var key in RequestLatencies.Keys)
             {
                 var queue = RequestLatencies[key];

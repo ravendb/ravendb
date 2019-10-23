@@ -7,11 +7,16 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10925 : RavenTestBase
     {
+        public RavenDB_10925(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task SurpassedAutoMapWillBeDeletedOrMerged()
         {

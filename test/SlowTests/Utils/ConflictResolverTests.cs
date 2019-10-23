@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Utils
 {
     public class ConflictResolverTests : NoDisposalNeeded
     {
+        public ConflictResolverTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanResolveEmpty()
         {

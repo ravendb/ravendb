@@ -4,11 +4,16 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12198 : RavenTestBase
     {
+        public RavenDB_12198(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Missing_as_keyword_should_properly_throw_in_non_recursive_query()
         {

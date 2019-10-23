@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ComplexIndexMerge.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,11 +8,16 @@ using System;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class ComplexIndexMerge : RavenTestBase
     {
+        public ComplexIndexMerge(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Ref
         {
             public Guid Id { get; set; }

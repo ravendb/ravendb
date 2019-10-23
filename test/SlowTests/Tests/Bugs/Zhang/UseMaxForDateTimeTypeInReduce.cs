@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Bugs.Zhang
 {
     public class UseMaxForDateTimeTypeInReduce : RavenTestBase
     {
+        public UseMaxForDateTimeTypeInReduce(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string Map = @"
 from doc in docs.Items
 from tag in doc.Tags

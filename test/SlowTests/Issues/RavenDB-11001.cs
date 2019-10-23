@@ -5,11 +5,16 @@ using Sparrow.Json.Parsing;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11001:RavenTestBase
     {
+        public RavenDB_11001(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls()
         {

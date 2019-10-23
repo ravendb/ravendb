@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,11 +11,16 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Patching;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Patching
 {
     public class AdvancedPatching : RavenTestBase
     {
+        public AdvancedPatching(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class CustomType
         {
             public string Id { get; set; }

@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class IndexTest : RavenTestBase
     {
+        public IndexTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FloatArrayIndexTest()
         {

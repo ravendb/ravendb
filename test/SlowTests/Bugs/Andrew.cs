@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Andrew.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Task = System.Threading.Tasks.Task;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class Andrew : RavenTestBase
     {
+        public Andrew(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User { }
         private class Car { }
 

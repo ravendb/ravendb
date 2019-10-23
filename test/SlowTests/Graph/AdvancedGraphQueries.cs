@@ -12,11 +12,16 @@ using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
 using Product = FastTests.Server.Basic.Entities.Product;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
+using Xunit.Abstractions;
 
 namespace SlowTests.Graph
 {
     public class AdvancedGraphQueries : RavenTestBase
     {
+        public AdvancedGraphQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_query_with_edge_defined_in_embedded_object()
         {

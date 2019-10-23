@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_10734 : RavenTestBase
     {
+        public RavenDB_10734(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Complex_object_should_generate_csharp_class_properly()
         {

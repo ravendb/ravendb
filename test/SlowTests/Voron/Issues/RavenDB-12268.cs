@@ -4,11 +4,16 @@ using FastTests.Voron;
 using Sparrow;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_12268 : StorageTest
     {
+        public RavenDB_12268(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);

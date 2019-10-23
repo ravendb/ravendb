@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Highlighting;
 using SlowTests.Core.Utils.Indexes;
+using Xunit.Abstractions;
 
 using Xunit;
 
@@ -19,6 +20,10 @@ namespace SlowTests.Core.Indexing
 {
     public class CustomAnalyzers : RavenTestBase
     {
+        public CustomAnalyzers(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
         {

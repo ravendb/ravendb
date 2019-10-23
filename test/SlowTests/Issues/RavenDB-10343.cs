@@ -8,11 +8,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10343 : RavenTestBase
     {
+        public RavenDB_10343(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class LatestBuildsIndex : AbstractIndexCreationTask<Build>
         {
             public class Entry

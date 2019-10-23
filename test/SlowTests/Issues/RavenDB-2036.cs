@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2036 : RavenTestBase
     {
+        public RavenDB_2036(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Index__TestByName : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()

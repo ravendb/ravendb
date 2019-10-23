@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DeserializationToObjectTests : RavenTestBase
     {
+        public DeserializationToObjectTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "RavenDB-6124")]
         public void Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()
         {

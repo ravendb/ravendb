@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13512 : RavenTestBase
     {
+        public RavenDB_13512(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_restore_legacy_counters_from_full_backup()
         {

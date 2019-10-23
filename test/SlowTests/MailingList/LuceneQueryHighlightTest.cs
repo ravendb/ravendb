@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class LuceneQueryHighlightTest : RavenTestBase
     {
+        public LuceneQueryHighlightTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
         [Theory]

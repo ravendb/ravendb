@@ -8,11 +8,16 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Xunit;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5998 : RavenLowLevelTestBase
     {
+        public RavenDB_5998(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("SlowTests.Smuggler.Northwind_3.5.35168.ravendbdump")]
         public void CanImportNorthwind(string file)

@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class WiseShrek : RavenTestBase
     {
+        public WiseShrek(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Soft
         {
             public int f_platform { get; set; }

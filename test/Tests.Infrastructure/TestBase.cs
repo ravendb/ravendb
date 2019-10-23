@@ -19,6 +19,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -28,6 +29,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests
 {
@@ -108,6 +110,10 @@ namespace FastTests
             ConcurrentTestsSemaphore = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
         }
 
+        protected TestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected string GetDatabaseName([CallerMemberName] string caller = null)
         {
             if (caller != null && caller.Contains(".ctor"))
@@ -127,34 +133,30 @@ namespace FastTests
             _doNotReuseServer = true;
         }
 
-        protected static volatile string _selfSignedCertFileName;
+        protected static TestCertificatesHolder _selfSignedCertificates;
 
-        protected string GenerateAndSaveSelfSignedCertificate(bool createNew = false)
+        protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
-           if (_selfSignedCertFileName == null || createNew)
-                GenerateSelfSignedCertFileName(createNew);
+            var selfSignedCertificatePaths = _selfSignedCertificates;
+            if (selfSignedCertificatePaths != null && createNew == false)
+                return ReturnCertificatesHolder(selfSignedCertificatePaths);
 
-            var tmp = GetTempFileName();
-            File.Copy(_selfSignedCertFileName, tmp, true);
-
-            return tmp;
-        }
-
-        protected string GetTempFileName()
-        {
-            var tmp = Path.GetTempFileName();
-
-            _localPathsToDelete.Add(tmp);
-
-            return tmp;
-        }
-
-        private static void GenerateSelfSignedCertFileName(bool createNew = false)        {
             lock (typeof(TestBase))
             {
-                if (_selfSignedCertFileName != null && createNew == false)
-                    return;
+                selfSignedCertificatePaths = _selfSignedCertificates;
+                if (selfSignedCertificatePaths == null || createNew)
+                    _selfSignedCertificates = selfSignedCertificatePaths = Generate();
 
+                return ReturnCertificatesHolder(selfSignedCertificatePaths);
+            }
+
+            TestCertificatesHolder ReturnCertificatesHolder(TestCertificatesHolder certificates)
+            {
+                return new TestCertificatesHolder(certificates, GetTempFileName);
+            }
+
+            TestCertificatesHolder Generate()
+            {
                 var log = new StringBuilder();
                 byte[] certBytes;
                 try
@@ -166,9 +168,10 @@ namespace FastTests
                     throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
 
+                X509Certificate2 serverCertificate;
                 try
                 {
-                    new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+                    serverCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {
@@ -178,25 +181,71 @@ namespace FastTests
                 if (certBytes.Length == 0)
                     throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
 
-                string tempFileName = null;
+                string serverCertificatePath = null;
                 try
                 {
-                    tempFileName = Path.GetTempFileName();
-                    File.WriteAllBytes(tempFileName, certBytes);
+                    serverCertificatePath = Path.GetTempFileName();
+                    File.WriteAllBytes(serverCertificatePath, certBytes);
                 }
                 catch (Exception e)
                 {
                     throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
-                                                        $"tempFileName = {tempFileName}" +
+                                                        $"tempFileName = {serverCertificatePath}" +
                                                         $"certBytes.Length = {certBytes.Length}" +
                                                         $"MachineName = {Environment.MachineName}.", e);
 
                 }
 
-                _selfSignedCertFileName = tempFileName;
+                GlobalPathsToDelete.Add(serverCertificatePath);
 
-                GlobalPathsToDelete.Add(_selfSignedCertFileName);
+                SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+
+                var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
+                var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk);
+                var clientCertificate3Path = GenerateClientCertificate(3, serverCertificate, pk);
+
+                return new TestCertificatesHolder(serverCertificatePath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
             }
+
+            string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
+            {
+                CertificateUtils.CreateSelfSignedClientCertificate(
+                    $"{Environment.MachineName}_CC_{index}",
+                    new RavenServer.CertificateHolder
+                    {
+                        Certificate = serverCertificate,
+                        PrivateKey = pk
+                    },
+                    out var certBytes);
+
+                string clientCertificatePath = null;
+                try
+                {
+                    clientCertificatePath = Path.GetTempFileName();
+                    File.WriteAllBytes(clientCertificatePath, certBytes);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
+                                                        $"tempFileName = {clientCertificatePath}" +
+                                                        $"certBytes.Length = {certBytes.Length}" +
+                                                        $"MachineName = {Environment.MachineName}.", e);
+
+                }
+
+                GlobalPathsToDelete.Add(clientCertificatePath);
+
+                return clientCertificatePath;
+            }
+        }
+
+        protected string GetTempFileName()
+        {
+            var tmp = Path.GetTempFileName();
+
+            _localPathsToDelete.Add(tmp);
+
+            return tmp;
         }
 
         private static int _serverCounter;
@@ -252,7 +301,7 @@ namespace FastTests
                 {
                     if (_globalServer == null || _globalServer.Disposed)
                     {
-                        var globalServer = GetNewServer(new ServerCreationOptions{RegisterForDisposal = false});
+                        var globalServer = GetNewServer(new ServerCreationOptions { RegisterForDisposal = false });
                         using (var currentProcess = Process.GetCurrentProcess())
                         {
                             Console.WriteLine(
@@ -426,7 +475,7 @@ namespace FastTests
             {
                 get => _registerForDisposal;
                 set
-                { 
+                {
                     AssertNotFrozen();
                     _registerForDisposal = value;
                 }
@@ -444,7 +493,7 @@ namespace FastTests
             {
                 _frozen = frozen;
             }
-            private static readonly Lazy<ServerCreationOptions> _default = new Lazy<ServerCreationOptions>(() => new ServerCreationOptions(frozen:true));
+            private static readonly Lazy<ServerCreationOptions> _default = new Lazy<ServerCreationOptions>(() => new ServerCreationOptions(frozen: true));
             public static ServerCreationOptions Default => _default.Value;
         }
 
@@ -470,7 +519,7 @@ namespace FastTests
                         configuration.SetSetting(setting.Key, setting.Value);
                     }
                 }
-             
+
                 configuration.Initialize();
                 configuration.Logs.Mode = LogMode.None;
                 if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls)) == false)
@@ -480,7 +529,7 @@ namespace FastTests
                 configuration.Server.Name = ServerName;
 
                 configuration.Core.RunInMemory = options.RunInMemory;
-              
+
                 if (options.CustomSettings == null || options.CustomSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.DataDirectory)) == false)
                 {
                     configuration.Core.DataDirectory =
@@ -559,7 +608,7 @@ namespace FastTests
 
         protected abstract void Dispose(ExceptionAggregator exceptionAggregator);
 
-        public virtual void Dispose()
+        public override void Dispose()
         {
             GC.SuppressFinalize(this);
 

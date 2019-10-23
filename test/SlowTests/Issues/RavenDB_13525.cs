@@ -5,11 +5,16 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Dynamic;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13525 : RavenTestBase
     {
+        public RavenDB_13525(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Patch_by_id_must_not_cause_endless_operation()
         {

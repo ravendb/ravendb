@@ -7,11 +7,16 @@ using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 using Voron.Util.Settings;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class RavenDB_12725 : StorageTest
     {
+        public RavenDB_12725(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

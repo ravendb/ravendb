@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
     public class RavenDB_8257 : RavenTestBase
     {
+        public RavenDB_8257(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class ReduceIndex : AbstractIndexCreationTask<User>
         {
             public ReduceIndex()

@@ -6,11 +6,16 @@ using FastTests.Voron;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class Recovery : StorageTest
     {
+        public Recovery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()
         {

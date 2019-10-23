@@ -1,11 +1,16 @@
 ﻿using System;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_8097 : NoDisposalNeeded
     {
+        public RavenDB_8097(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TcpServerUrlShouldOnlyAllowTcpScheme()
         {

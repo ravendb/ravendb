@@ -3,11 +3,16 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
     public unsafe class Serialization : StorageTest
     {
+        public Serialization(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private void SchemaIndexDefEqual(TableSchema.SchemaIndexDef expectedIndex,
             TableSchema.SchemaIndexDef actualIndex)
         {

@@ -7,11 +7,16 @@ using Raven.Server.Utils.Cpu;
 using Sparrow.Json;
 using Xunit;
 using Assert = Xunit.Assert;
+using Xunit.Abstractions;
 
 namespace SlowTests.ExtensionPoints
 {
     public class CpuUsageExtensionPointTests : RavenTestBase
     {
+        public CpuUsageExtensionPointTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string SkipMsg = "https://github.com/dotnet/corefx/issues/30691";
 
         [Fact(Skip = SkipMsg)]

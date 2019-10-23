@@ -4,13 +4,14 @@ using System.Linq;
 using FastTests.Voron;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class Snapshots : StorageTest
     {
-        public Snapshots()
-            : base(StorageEnvironmentOptions.CreateMemoryOnly())
+        public Snapshots(ITestOutputHelper output)
+            : base(StorageEnvironmentOptions.CreateMemoryOnly(), output)
         {
 
         }

@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12077 : RavenTestBase
     {
+        public RavenDB_12077(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanProjectSingleCollectionProperty()
         {

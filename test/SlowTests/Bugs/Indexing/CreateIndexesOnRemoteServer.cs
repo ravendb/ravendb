@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class CreateIndexesOnRemoteServer : RavenTestBase
     {
+        public CreateIndexesOnRemoteServer(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateIndex()
         {

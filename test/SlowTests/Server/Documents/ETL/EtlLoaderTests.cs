@@ -5,11 +5,16 @@ using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class EtlLoaderTests : EtlTestBase
     {
+        public EtlLoaderTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Raises_alert_if_script_has_invalid_name()
         {

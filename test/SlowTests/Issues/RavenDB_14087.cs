@@ -6,11 +6,16 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_14087 : RavenTestBase
     {
+        public RavenDB_14087(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAssignArrayToPropertyInPatch()
         {

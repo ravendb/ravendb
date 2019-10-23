@@ -2,11 +2,16 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_11424 : RavenTestBase
     {
+        public RavenDB_11424(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanChangeBackupFrequency()
         {

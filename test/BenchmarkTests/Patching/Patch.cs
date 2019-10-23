@@ -7,11 +7,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace BenchmarkTests.Patching
 {
     public class Patch : BenchmarkTestBase
     {
+        public Patch(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Simple_Patch_1M()
         {

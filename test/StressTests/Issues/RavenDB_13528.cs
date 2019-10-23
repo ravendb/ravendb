@@ -3,11 +3,16 @@ using System.Runtime.InteropServices;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
     public class RavenDB_13528 : StorageTest
     {
+        public RavenDB_13528(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public unsafe void Can_write_more_than_4GB_to_journal_file()
         {

@@ -1,5 +1,6 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents;
@@ -14,6 +15,10 @@ namespace SlowTests.Core.Querying
 {
     public class Intersection : RavenTestBase
     {
+        public Intersection(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPerformIntersectQuery()
         {

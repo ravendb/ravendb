@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class TermVectorsInMultiMapIndexes : RavenTestBase
     {
+        public TermVectorsInMultiMapIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateTermVectorInIndex()
         {

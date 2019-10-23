@@ -3,11 +3,16 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12557 : StorageTest
     {
+        public RavenDB_12557(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact64Bit]
         public void ShouldNotAllowToIncreaseFileSizeWhenUsingCopyOnWriteMode()
         {

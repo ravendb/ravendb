@@ -1,14 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AlexanderLapa : RavenTestBase
     {
+        public AlexanderLapa(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ExecuteIndex_Success()
         {

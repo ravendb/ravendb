@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
     public class HashingTests : NoDisposalNeeded
     {
+        public HashingTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void XXHash64_UseActualValues()
         {

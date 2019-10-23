@@ -15,11 +15,16 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
     public class OutputReduceToCollectionTests : RavenTestBase
     {
+        public OutputReduceToCollectionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ReduceResultsBackAsDocuments()
         {

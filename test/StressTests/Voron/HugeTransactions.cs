@@ -17,11 +17,16 @@ using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl.Paging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Voron
 {
     public class HugeTransactions : StorageTest
     {
+        public HugeTransactions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public const long Gb = 1024L * 1024 * 1024;
         public const long HalfGb = 512L * 1024 * 1024;
         public const long Mb = 1024L * 1024;

@@ -9,11 +9,16 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.LeafsCompression
 {
     public class RavenDB_5384 : StorageTest
     {
+        public RavenDB_5384(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(777, 2048, false, 1)]
         [InlineData(777, 2048, false, 2019845912)]

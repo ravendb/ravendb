@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3285 : RavenTestBase
     {
+        public RavenDB_3285(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LockIndex()
         {

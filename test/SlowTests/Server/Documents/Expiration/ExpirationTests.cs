@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ExpirationTests.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -18,11 +18,16 @@ using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Expiration
 {
     public class ExpirationTests : RavenTestBase
     {
+        public ExpirationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private async Task SetupExpiration(DocumentStore store)
         {
             var config = new ExpirationConfiguration

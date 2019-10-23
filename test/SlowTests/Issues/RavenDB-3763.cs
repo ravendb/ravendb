@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -14,6 +15,10 @@ namespace SlowTests.Issues
     {
         public class IsInTriggersSyncFromAsync : RavenTestBase
         {
+        public IsInTriggersSyncFromAsync(ITestOutputHelper output) : base(output)
+        {
+        }
+
             private void CreateData(IDocumentStore store)
             {
                 new Index().Execute(store);

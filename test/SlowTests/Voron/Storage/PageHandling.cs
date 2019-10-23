@@ -1,10 +1,15 @@
 ﻿using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public unsafe class PageHandling : FastTests.Voron.StorageTest
     {
+        public PageHandling(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AllocateOverflowPages()
         {

@@ -2,11 +2,16 @@
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests
 {
     public class RavenDB_10571 : RavenTestBase
     {
+        public RavenDB_10571(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIterateOverBlittableProperties()
         {

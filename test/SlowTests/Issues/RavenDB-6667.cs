@@ -3,11 +3,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6667 : RavenTestBase
     {
+        public RavenDB_6667(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryWithContainsOnIList()
         {

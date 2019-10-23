@@ -7,11 +7,16 @@ using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13709 : RavenTestBase
     {
+        public RavenDB_13709(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ImportExistingAutoMapReduceIndexShouldWork()
         {

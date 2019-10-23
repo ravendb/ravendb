@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Arun.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,11 +12,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Arun : RavenTestBase
     {
+        public Arun(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SaveDynamicEntityWithStronglyTypedProperties()
         {
@@ -38,7 +43,7 @@ namespace SlowTests.MailingList
                     Prices = new List<Price>()
                     {
                         new Price() {price = "10$"},
-                        new Price() {price = "8�"}
+                        new Price() {price = "8£"}
                     },
                     Subjects = new List<Subject>()
                     {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RDBQA_11.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,11 +16,16 @@ using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBQA_11 : RavenTestBase
     {
+        public RDBQA_11(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Product
         {
             public string Id { get; set; }

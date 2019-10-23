@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="PeterBalzli.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class PeterBalzli : RavenTestBase
     {
+        public PeterBalzli(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static void ModifyStore(DocumentStore store)
         {
             store.Conventions.CustomizeJsonSerializer = serializers => serializers.Converters.Add(new CustomerNumberJsonConverter());

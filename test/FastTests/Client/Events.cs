@@ -1,11 +1,16 @@
 ﻿using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Events : RavenTestBase
     {
+        public Events(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Before_Store_Listerner()
         {

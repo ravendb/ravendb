@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using FastTests;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DateTimeOffsetIssues : RavenTestBase
     {
+        public DateTimeOffsetIssues(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Book
         {
             public string Id { get; set; }

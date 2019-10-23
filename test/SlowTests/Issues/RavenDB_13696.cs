@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13696 : RavenTestBase
     {
+        public RavenDB_13696(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchShouldPreserverOrderOfProperties()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using Xunit;
@@ -10,11 +10,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9120 : RavenTestBase
     {
+        public RavenDB_9120(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task FullAndIncrementalBackupsInSameFolderShouldWork()
         {

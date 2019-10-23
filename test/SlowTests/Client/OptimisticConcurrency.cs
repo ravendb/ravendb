@@ -1,11 +1,16 @@
 ﻿using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class OptimisticConcurrency : RavenTestBase
     {
+        public OptimisticConcurrency(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Foo
         {
             public string Name; 

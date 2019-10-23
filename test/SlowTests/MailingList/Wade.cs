@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Wade : RavenTestBase
     {
+        public Wade(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class PersonDOBIndex : AbstractIndexCreationTask<Person>
         {
             public PersonDOBIndex()

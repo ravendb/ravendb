@@ -2,11 +2,16 @@
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Vandieren : RavenTestBase
     {
+        public Vandieren(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         public class DemoIndex : AbstractIndexCreationTask<DemoObject>
         {

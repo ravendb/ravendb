@@ -3,11 +3,16 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {
     public class MySQLSchemaTest : SqlAwareTestBase
     {
+        public MySQLSchemaTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [RequiresMySqlFact]
         public void CanFetchSchema()
         {

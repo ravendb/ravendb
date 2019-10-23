@@ -3,11 +3,16 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11701 : RavenTestBase
     {
+        public RavenDB_11701(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RawQueryIncludeCounterByPropertyWithoutAliasNotation()
         {

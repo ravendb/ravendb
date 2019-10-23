@@ -13,11 +13,16 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsRevisions : RavenTestBase
     {
+        public AttachmentsRevisions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public static Guid dbId = new Guid("00000000-48c4-421e-9466-000000000000");
         [Fact]
         public async Task PutAttachments()

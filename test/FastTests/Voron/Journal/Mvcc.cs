@@ -9,11 +9,16 @@ using Xunit;
 using Voron;
 using System.Linq;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Journal
 {
     public class Mvcc : StorageTest
     {
+        public Mvcc(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;

@@ -3,11 +3,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10920 : RavenTestBase
     {
+        public RavenDB_10920(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanOverrideDefaultUnitsWhenWktIsUsed()
         {

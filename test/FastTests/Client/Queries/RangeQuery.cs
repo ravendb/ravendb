@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Queries
 {
     public class RangeQueryTest : RavenTestBase
     {
+        public RangeQueryTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RangeQuery()
         {

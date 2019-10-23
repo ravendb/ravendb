@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {
     public class UsingStronglyTypedDocumentQuery : RavenTestBase
     {
+        public UsingStronglyTypedDocumentQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static IDocumentQuery<IndexedUser> CreateUserQuery()
         {
             return new DocumentQuery<IndexedUser>(null, "IndexName", null, false);

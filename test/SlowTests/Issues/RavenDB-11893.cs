@@ -1,13 +1,18 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11893 : RavenTestBase
     {
+        public RavenDB_11893(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CreatingNewCountersViaPatchByQueryShouldNotUpdateMetadataMoreThanOncePerDoc()
         {

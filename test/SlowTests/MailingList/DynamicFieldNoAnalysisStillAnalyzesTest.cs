@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 // ReSharper disable MemberCanBePrivate.Local
 // ReSharper disable InconsistentNaming
@@ -13,6 +14,10 @@ namespace SlowTests.MailingList
 {
     public class DynamicFieldNoAnalysisStillAnalyzesTest : RavenTestBase
     {
+        public DynamicFieldNoAnalysisStillAnalyzesTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void ToFacets_UsingDynamicFieldsWithoutAnalysis_ReturnsFacetValuesInOriginalCasing()

@@ -5,11 +5,16 @@ using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
     public class PeepingTomTest : NoDisposalNeeded
     {
+        public PeepingTomTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(123456, 65535, 0)]
         [InlineData(1234, 535, 0)]

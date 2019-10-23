@@ -22,11 +22,16 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.NotificationCenter
 {
     public class NotificationCenterTests : RavenLowLevelTestBase
     {
+        public NotificationCenterTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_get_notification()
         {
@@ -53,16 +58,18 @@ namespace SlowTests.Server.NotificationCenter
                     .RequestLatency
                     .AddHint(5, "Query", "Query1");
 
-
                 database.NotificationCenter
                     .RequestLatency
                     .AddHint(10, "Stream", "Query2");
-                
+
                 database.NotificationCenter
                     .RequestLatency
                     .AddHint(10, "Stream", "Query3");
 
-                
+                database.NotificationCenter
+                    .RequestLatency
+                    .UpdateRequestLatency(null);
+
                 var storedRequestLatencyDetails = database.NotificationCenter.RequestLatency
                     .GetRequestLatencyDetails();
                 Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies.Count);
@@ -71,7 +78,6 @@ namespace SlowTests.Server.NotificationCenter
                 Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies["Stream"].Count);
             }
         }
-
 
         [Fact]
         public void Persistent_action_is_stored_and_can_be_read()
@@ -331,7 +337,6 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-
         [Fact]
         public void Persistent_actions_are_returned_in_creation_order()
         {
@@ -426,7 +431,7 @@ namespace SlowTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                database.NotificationCenter.Add(OperationChanged.Create(database.Name,1, new Operations.OperationDescription(), new OperationState()
+                database.NotificationCenter.Add(OperationChanged.Create(database.Name, 1, new Operations.OperationDescription(), new OperationState()
                 {
                     Result = new PersistableResult()
                 }, false));
@@ -641,7 +646,6 @@ namespace SlowTests.Server.NotificationCenter
 
             public bool ShouldPersist => true;
         }
-
 
         public class TestRequestParams : IDictionary<string, string[]>, IQueryCollection
         {

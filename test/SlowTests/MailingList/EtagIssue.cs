@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,11 +10,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class EtagIssue : RavenTestBase
     {
+        public EtagIssue(ITestOutputHelper output) : base(output)
+        {
+        }
+
         #region Domain
 
         private enum CredentialsStatus

@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DictionaryOfDateTime : RavenTestBase
     {
+        public DictionaryOfDateTime(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class WithDic
         {
             public Dictionary<DateTime, int> Items { get; set; }

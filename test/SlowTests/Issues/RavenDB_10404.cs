@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10404 : RavenTestBase
     {
+        public RavenDB_10404(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanMigrateDatabaseFromFirstStable()
         {

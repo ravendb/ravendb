@@ -8,11 +8,16 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class NamedSubscriptions : RavenTestBase
     {
+        public NamedSubscriptions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanNameAndOpenWithNameOnly()
         {
@@ -53,6 +58,10 @@ namespace SlowTests.Client.Subscriptions
     public class SubscriptionOperationsSignaling : RavenTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
+
+        public SubscriptionOperationsSignaling(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public void WaitOnSubscriptionTaskWhenSubscriptionIsOvertaken()

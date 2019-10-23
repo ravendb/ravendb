@@ -8,12 +8,17 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     // ReSharper disable once InconsistentNaming
     public class RavenDB_6602 : ClusterTestBase
     {
+        public RavenDB_6602(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name { get; set; }

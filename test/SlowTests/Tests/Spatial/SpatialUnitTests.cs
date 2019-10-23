@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class SpatialUnitTests : RavenTestBase
     {
+        public SpatialUnitTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Test()
         {

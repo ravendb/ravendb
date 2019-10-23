@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12066 : RavenTestBase
     {
+        public RavenDB_12066(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FilteredMinAndMaxProjectionAgainstEmptyCollection()
         {

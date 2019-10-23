@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5151 : RavenTestBase
     {
+        public RavenDB_5151(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDoPrefixQueryOnAnalyzedFields()
         {

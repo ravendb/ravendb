@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Operations;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11902 : RavenTestBase
     {
+        public RavenDB_11902(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_insert_doc_with_single_quotation_char_in_id()
         {

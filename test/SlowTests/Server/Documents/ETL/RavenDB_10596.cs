@@ -8,11 +8,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_10596 : EtlTestBase
     {
+        public RavenDB_10596(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task AggregatesTransformationErrorsInSingleAlert()
         {

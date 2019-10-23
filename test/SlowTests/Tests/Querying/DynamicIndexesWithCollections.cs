@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DynamicIndexesWithCollections.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -14,11 +14,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Session;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {
     public class DynamicIndexesWithCollections : RavenTestBase
     {
+        public DynamicIndexesWithCollections(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
         {

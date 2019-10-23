@@ -11,11 +11,16 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Static
 {
     public class BasicStaticMapReduceIndexing : RavenLowLevelTestBase
     {
+        public BasicStaticMapReduceIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Static_map_reduce_index_with_multiple_outputs_per_document()
         {

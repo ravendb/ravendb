@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="AnalyzerPerField.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -10,11 +10,16 @@ using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AnalyzerPerField : RavenTestBase
     {
+        public AnalyzerPerField(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseAnalyzerPerField()
         {

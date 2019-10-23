@@ -7,11 +7,16 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Server.Documents.ETL.SQL;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class ConnectionStringTests : EtlTestBase
     {
+        public ConnectionStringTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanAddAndRemoveConnectionStrings()
         {

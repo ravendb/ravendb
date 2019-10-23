@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DanTurner : RavenTestBase
     {
+        public DanTurner(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private Person _john;
         private Car _patrol;
         private Car _focus;

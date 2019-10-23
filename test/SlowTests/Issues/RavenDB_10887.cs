@@ -6,11 +6,16 @@ using Raven.Tests.Core.Utils.Entities;
 using Voron;
 using Voron.Global;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10887 : RavenTestBase
     {
+        public RavenDB_10887(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanSetMaxScratchBufferFileSize()
         {

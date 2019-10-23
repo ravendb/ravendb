@@ -9,11 +9,16 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.MapReduce
 {
     public class RavenDB_5383 : RavenLowLevelTestBase
     {
+        public RavenDB_5383(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(1)]
         [InlineData(1000)]

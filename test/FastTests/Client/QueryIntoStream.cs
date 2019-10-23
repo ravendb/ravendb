@@ -7,11 +7,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class QueryIntoStream : RavenTestBase
     {
+        public QueryIntoStream(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void QueryWithToStream()
         {

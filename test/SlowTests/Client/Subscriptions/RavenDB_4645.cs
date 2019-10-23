@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class RavenDB_4645 : RavenTestBase
     {
+        public RavenDB_4645(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldStopPullingTaskWhenSubscriptionIsDeleted()
         {

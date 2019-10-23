@@ -18,11 +18,16 @@ using Raven.Server.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Indexing
 {
     public class IndexesFromClient : RavenTestBase
     {
+        public IndexesFromClient(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanReset()
         {

@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.NestedIndexing
 {
     public class CanIndexReferencedEntity : RavenTestBase
     {
+        public CanIndexReferencedEntity(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public string Id { get; set; }

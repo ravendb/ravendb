@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
     public class JamesCrowley : RavenTestBase
     {
+        public JamesCrowley(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GeoSpatialTest()
         {

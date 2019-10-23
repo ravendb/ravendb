@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2660 .cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_2660 : RavenTestBase
     {
+        public RavenDB_2660(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class UsersByName : AbstractIndexCreationTask<User>
         {
             public UsersByName()

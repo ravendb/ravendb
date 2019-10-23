@@ -2,11 +2,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12278 : RavenTestBase
     {
+        public RavenDB_12278(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void AggressivelyCachedSessionShouldGenerateProperCacheKeyForPostRequest()
         {

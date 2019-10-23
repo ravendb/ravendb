@@ -1,14 +1,19 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
 using FastTests;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class DecimalQueries : RavenTestBase
     {
+        public DecimalQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Money
         {
             public decimal Amount { get; set; }

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Faceted
 {
@@ -13,7 +14,7 @@ namespace SlowTests.SlowTests.Faceted
         private readonly IList<Camera> _data;
         private const int NumCameras = 1000;
 
-        public FacetPaging()
+        public FacetPaging(ITestOutputHelper output) : base(output)
         {
             _data = GetCameras(NumCameras);
         }

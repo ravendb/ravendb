@@ -10,11 +10,16 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.Indexing
 {
     public class DebugIndexing : RavenTestBase
     {
+        public DebugIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public string Name { get; set; }

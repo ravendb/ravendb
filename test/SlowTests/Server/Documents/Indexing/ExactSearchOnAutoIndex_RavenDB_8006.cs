@@ -10,11 +10,16 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
     public class ExactSearchOnAutoIndex_RavenDB_8006 : RavenTestBase
     {
+        public ExactSearchOnAutoIndex_RavenDB_8006(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseExactInAutoIndex()
         {

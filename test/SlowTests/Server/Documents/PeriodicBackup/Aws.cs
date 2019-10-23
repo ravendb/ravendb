@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,11 +12,16 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Exceptions.PeriodicBackup;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class Aws : NoDisposalNeeded
     {
+        public Aws(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string AwsAccessKey = "<aws_access_key>";
         private const string AwsSecretKey = "<aws_secret_key>";
         private const string AwsSessionToken = "<aws_session_token>";

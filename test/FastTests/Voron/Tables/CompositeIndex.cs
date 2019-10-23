@@ -2,11 +2,16 @@
 using Sparrow.Server;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
     public unsafe class CompositeIndex : TableStorageTest
     {
+        public CompositeIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         [Fact]
         public void CanInsertThenReadByComposite()

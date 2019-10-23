@@ -12,11 +12,16 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11571 : ClusterTestBase
     {
+        public RavenDB_11571(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CounterStorage_Increment_ShouldCheckForOverflow()
         {

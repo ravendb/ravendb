@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11439 : RavenTestBase
     {
+        public RavenDB_11439(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task can_continue_incremental_backup_with_same_folder()
         {

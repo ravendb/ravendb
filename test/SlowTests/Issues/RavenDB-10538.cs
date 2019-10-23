@@ -8,11 +8,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10538 : RavenTestBase
     {
+        public RavenDB_10538(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FacetWithNullableDateTime()
         {

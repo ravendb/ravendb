@@ -4,11 +4,16 @@ using Raven.Client;
 using Raven.Client.Extensions.Streams;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_10308 : EtlTestBase
     {
+        public RavenDB_10308(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_load_all_attachments_when_no_script_is_defined()
         {

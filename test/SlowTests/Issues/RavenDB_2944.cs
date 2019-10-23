@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2944.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2944 : RavenTestBase
     {
+        public RavenDB_2944(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int MaxNumberOfItemsToProcessInTestIndexes = 256;
 
         //protected override void ModifyConfiguration(InMemoryRavenConfiguration configuration)

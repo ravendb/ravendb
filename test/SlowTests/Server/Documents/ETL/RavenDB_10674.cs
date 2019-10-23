@@ -3,11 +3,16 @@ using System.Threading;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_10674 : EtlTestBase
     {
+        public RavenDB_10674(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EntersFallbackModeIfCantConnectTheDestination()
         {

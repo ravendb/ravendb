@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class LargeQuery : RavenTestBase
     {
+        public LargeQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanExecuteLargeQuery()
         {

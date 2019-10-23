@@ -9,11 +9,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Hilo : ReplicationTestBase
     {
+        public Hilo(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class HiloDoc
         {
             public long Max { get; set; }

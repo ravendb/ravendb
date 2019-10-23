@@ -6,11 +6,16 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12725_Raven : RavenTestBase
     {
+        public RavenDB_12725_Raven(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanLoadDatabaseAndIgnoreMissingJournals()
         {

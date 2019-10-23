@@ -7,11 +7,16 @@ using System.Runtime.CompilerServices;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_6451 : NoDisposalNeeded
     {
+        public RavenDB_6451(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         private IEnumerable<Assembly> GetAssemblies(Assembly assemblyToScan)

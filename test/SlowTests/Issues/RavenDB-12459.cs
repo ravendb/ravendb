@@ -3,11 +3,16 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12459 : RavenTestBase
     {
+        public RavenDB_12459(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Should_fail_on_missing_projection_for_edge_arrays()
         {

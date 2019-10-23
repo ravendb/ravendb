@@ -6,11 +6,16 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11372 : RavenTestBase
     {
+        public RavenDB_11372(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanGetGoodErrorForBadTopologies()
         {

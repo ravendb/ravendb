@@ -1,11 +1,16 @@
 ﻿using System;
 using System.IO;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class VeryBig : FastTests.Voron.StorageTest
     {
+        public VeryBig(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanGrowBeyondInitialSize()
         {

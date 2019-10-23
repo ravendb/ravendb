@@ -6,11 +6,16 @@ using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Sparrow;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client.BulkInsert
 {
     public class BulkInserts : RavenTestBase
     {
+        public BulkInserts(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SimpleBulkInsertShouldWork()
         {

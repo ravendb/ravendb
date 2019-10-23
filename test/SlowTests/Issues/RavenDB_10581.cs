@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10581 : RavenTestBase
     {
+        public RavenDB_10581(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ShouldWork()
         {

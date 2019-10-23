@@ -1,13 +1,18 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class DuplicatedFiledNames : RavenTestBase
     {
+        public DuplicatedFiledNames(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotDoThat()
         {

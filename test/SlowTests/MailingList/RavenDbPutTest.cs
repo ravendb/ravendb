@@ -1,12 +1,17 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RavenDbPutTest : RavenTestBase
     {
+        public RavenDbPutTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Book
         {
             public string Id { get; set; }

@@ -6,11 +6,16 @@ using FastTests.Server.Replication;
 using Raven.Server.Config;
 using Xunit;
 using Raven.Tests.Core.Utils.Entities;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13284 : ReplicationTestBase
     {
+        public RavenDB_13284(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ExternalReplicationCanReestablishAfterServerRestarts()
         {

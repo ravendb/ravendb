@@ -39,12 +39,17 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public class RavenTestBase : TestBase
+    public abstract class RavenTestBase : TestBase
     {
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
+
+        protected RavenTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
@@ -66,11 +71,11 @@ namespace FastTests
 
         private readonly object _getDocumentStoreSync = new object();
 
-        protected string EncryptedServer(out X509Certificate2 adminCert, out string name)
+        protected string EncryptedServer(out TestCertificatesHolder certificates, out string name)
         {
-            var serverCertPath = SetupServerAuthentication();
+            certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
@@ -101,7 +106,7 @@ namespace FastTests
             if (Servers.Count == 0)
                 return;
 
-            var tasks = Servers.Where(s => s.ServerStore.Disposed == false && 
+            var tasks = Servers.Where(s => s.ServerStore.Disposed == false &&
                                            s.ServerStore.Engine.CurrentState != RachisState.Passive)
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
@@ -136,7 +141,7 @@ namespace FastTests
                 {
                     options = options ?? Options.Default;
                     var serverToUse = options.Server ?? Server;
-                    
+
                     var name = GetDatabaseName(caller);
 
                     if (options.ModifyDatabaseName != null)
@@ -168,7 +173,7 @@ namespace FastTests
                     };
 
                     if (options.Encrypted)
-                    {                        
+                    {
                         SetupForEncryptedDatabase(options, name, serverToUse, doc);
                     }
 
@@ -268,7 +273,9 @@ namespace FastTests
                                     {
                                         using (var adminStore = new DocumentStore
                                         {
-                                            Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate
+                                            Urls = UseFiddler(serverToUse.WebUrl),
+                                            Database = name,
+                                            Certificate = options.AdminCertificate
                                         }.Initialize())
                                         {
                                             result = adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
@@ -298,7 +305,7 @@ namespace FastTests
                                 catch (NoLeaderException)
                                 {
                                     continue;
-                                }                                
+                                }
                             }
                         }
                     };
@@ -354,8 +361,9 @@ namespace FastTests
                 }
                 else
                 {
-                    options.ClientCertificate = options.AdminCertificate = AskServerForClientCertificate(mainServer.Configuration.Security.CertificatePath, new Dictionary<string, DatabaseAccess>(),
-                        SecurityClearance.ClusterAdmin, server: mainServer);
+                    var certificates = GenerateAndSaveSelfSignedCertificate();
+                    RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: mainServer);
+                    options.AdminCertificate = options.ClientCertificate = certificates.ClientCertificate1.Value;
                 }
             }
         }
@@ -372,7 +380,7 @@ namespace FastTests
             var mainTag = mainServer.ServerStore.NodeTag;
             topology.Members.Add(mainTag);
             var rand = new Random();
-            var serverTags = Servers.Where(s=> s != mainServer).Select(s => s.ServerStore.NodeTag).ToList();
+            var serverTags = Servers.Where(s => s != mainServer).Select(s => s.ServerStore.NodeTag).ToList();
 
             for (var i = 0; i < options.ReplicationFactor - 1; i++)
             {
@@ -692,99 +700,30 @@ namespace FastTests
             CreatedStores.Clear();
         }
 
-        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath,
-            RavenServer.CertificateHolder serverCertificateHolder,
-            Dictionary<string, DatabaseAccess> permissions,
-            SecurityClearance clearance,
-            RavenServer server = null)
+        protected X509Certificate2 RegisterClientCertificate(TestCertificatesHolder certificates, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out var clietnCertBytes);
-            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
-            using (var store = GetDocumentStore(new Options
-            {
-                AdminCertificate = serverCertificate,
-                Server = server
-            }))
-            {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new PutClientCertificateOperation("RavenTestsClient", clientCertificate, permissions, clearance)
-                        .GetCommand(store.Conventions, context);
-
-                    requestExecutor.Execute(command, context);
-                }
-            }
-            return new X509Certificate2(clietnCertBytes, (string)null, X509KeyStorageFlags.MachineKeySet);
+            return RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, permissions, clearance, server);
         }
 
-        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
+        protected X509Certificate2 RegisterClientCertificate(X509Certificate2 serverCertificate, X509Certificate2 clientCertificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
         {
-            X509Certificate2 serverCertificate;
-            try
-            {
-                serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
-            }
-            catch (CryptographicException e)
-            {
-                throw new CryptographicException($"Failed to load the test certificate from {serverCertPath}.", e);
-            }
-
-            X509Certificate2 clientCertificate;
-
             using (var store = GetDocumentStore(new Options
             {
                 CreateDatabase = false,
                 Server = server,
                 ClientCertificate = serverCertificate,
                 AdminCertificate = serverCertificate,
-                ModifyDocumentStore = s=>s.Conventions = new DocumentConventions
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
                 {
                     DisableTopologyUpdates = true
                 }
             }))
             {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new CreateClientCertificateOperation("client certificate", permissions, clearance)
-                        .GetCommand(store.Conventions, context);
-
-                    requestExecutor.Execute(command, context);
-                    using (var archive = new ZipArchive(new MemoryStream(command.Result.RawData)))
-                    {
-                        var entry = archive.Entries.First(e => string.Equals(Path.GetExtension(e.Name), ".pfx", StringComparison.OrdinalIgnoreCase));
-                        using (var stream = entry.Open())
-                        {
-                            var destination = new MemoryStream();
-                            stream.CopyTo(destination);
-                            clientCertificate = new X509Certificate2(destination.ToArray(), (string)null, X509KeyStorageFlags.MachineKeySet);
-                        }
-                    }
-                }
+                var operation = new PutClientCertificateOperation("client certificate", clientCertificate, permissions, clearance);
+                store.Maintenance.Server.Send(operation);
             }
+
             return clientCertificate;
-        }
-
-        protected void AskCluster2ToTrustCluster1(X509Certificate2 cluster1Cert, X509Certificate2 cluster2Cert, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, RavenServer cluster2Leader)
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                Server = cluster2Leader,
-                ClientCertificate = cluster2Cert,
-                AdminCertificate = cluster2Cert,
-                CreateDatabase = false
-            }))
-            {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new PutClientCertificateOperation("cluster1 certificate", cluster1Cert, permissions, clearance)
-                        .GetCommand(store.Conventions, context);
-
-                    requestExecutor.Execute(command, context);
-                }
-            }
         }
 
         protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
@@ -824,54 +763,40 @@ namespace FastTests
             });
         }
 
-        protected string SetupServerAuthentication(
-            IDictionary<string, string> customSettings = null,
-            string serverUrl = null, bool createNew = false, string serverCertPath = null)
+        protected TestCertificatesHolder SetupServerAuthentication(IDictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null)
         {
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
 
-            if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)
-            {
-                if (serverCertPath == null)
-                    serverCertPath = GenerateAndSaveSelfSignedCertificate(createNew);
+            if (certificates == null)
+                certificates = GenerateAndSaveSelfSignedCertificate();
 
-                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
-            }
+            if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)
+                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
 
             customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
 
             DoNotReuseServer(customSettings);
 
-            return serverCertPath;
+            return certificates;
         }
 
-        private Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
-
-        protected string GetMasterKeyForDatabase(RavenServer server, string databaseName)
-        {
-            if(_serverDatabaseToMasterKey.TryGetValue((server,databaseName),out var key))
-            {
-                return key;
-            }
-
-            return null;
-        }
+        private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
 
         protected void PutSecrectKeyForDatabaseInServersStore(string dbName, RavenServer ravenServer)
-        {            
+        {
             var base64key = CreateMasterKey(out _);
             var base64KeyClone = string.Copy(base64key);
             EnsureServerMasterKeyIsSetup(ravenServer);
             ravenServer.ServerStore.PutSecretKey(base64key, dbName, true);
-            _serverDatabaseToMasterKey.Add((ravenServer, dbName), base64KeyClone);                        
+            _serverDatabaseToMasterKey.Add((ravenServer, dbName), base64KeyClone);
         }
 
-        protected string SetupEncryptedDatabase(out X509Certificate2 adminCert,out byte[] masterKey, [CallerMemberName] string caller = null)
+        protected string SetupEncryptedDatabase(out TestCertificatesHolder certificates, out byte[] masterKey, [CallerMemberName] string caller = null)
         {
-            var serverCertPath = SetupServerAuthentication();
+            certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName(caller);
-            adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             string base64Key = CreateMasterKey(out masterKey);
 
@@ -1090,9 +1015,9 @@ namespace FastTests
         {
             using (var session = store.OpenSession())
             {
-                var entityA = new Entity{ Id = "entity/1", Name = "A" };
-                var entityB = new Entity{ Id = "entity/2", Name = "B" };
-                var entityC = new Entity{ Id = "entity/3", Name = "C" };
+                var entityA = new Entity { Id = "entity/1", Name = "A" };
+                var entityB = new Entity { Id = "entity/2", Name = "B" };
+                var entityC = new Entity { Id = "entity/3", Name = "C" };
 
                 session.Store(entityA);
                 session.Store(entityB);

@@ -2,11 +2,16 @@
 using FastTests;
 using Orders;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10067 : RavenTestBase
     {
+        public RavenDB_10067(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void NodeTagWillNotBeEmpty()
         {

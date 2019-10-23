@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class IsNullOrEmpty : RavenTestBase
     {
+        public IsNullOrEmpty(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestDoc
         {
             public string SomeProperty { get; set; }

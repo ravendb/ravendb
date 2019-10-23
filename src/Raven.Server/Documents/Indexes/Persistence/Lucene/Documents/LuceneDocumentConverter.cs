@@ -12,15 +12,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly BlittableJsonTraverser _blittableTraverser;
 
-        public LuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool reduceOutput = false)
-            : base(fields, indexImplicitNull, reduceOutput)
+        public LuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = true, bool reduceOutput = false)
+            : base(fields, indexImplicitNull, indexEmptyEntries, reduceOutput)
         {
             _blittableTraverser = reduceOutput ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
-        
-        protected override int GetFields<T>(T instance, LazyStringValue key, object doc, JsonOperationContext indexContext) 
+
+        protected override int GetFields<T>(T instance, LazyStringValue key, object doc, JsonOperationContext indexContext)
         {
-            int newFields = 0; 
+            int newFields = 0;
 
             var document = (Document)doc;
             if (key != null)
@@ -53,10 +53,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             value = StaticIndexBase.CreateSpatialField(spatialField, wktValue);
                             break;
                         case AutoSpatialOptions.AutoSpatialMethodType.Point:
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var latValue) ==false)
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[0], out var latValue) == false)
                                 continue;
 
-                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out var lngValue) ==false)
+                            if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, spatialOptions.MethodArguments[1], out var lngValue) == false)
                                 continue;
 
                             value = StaticIndexBase.CreateSpatialField(spatialField, latValue, lngValue);

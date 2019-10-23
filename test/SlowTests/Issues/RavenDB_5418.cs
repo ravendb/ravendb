@@ -1,10 +1,15 @@
 ﻿using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5418 : RavenTestBase
     {
+        public RavenDB_5418(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Order
         {
         }

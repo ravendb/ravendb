@@ -3,6 +3,7 @@ using Sparrow.Json;
 using System;
 using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
@@ -12,6 +13,10 @@ namespace FastTests.Blittable
     }
     public class SerializationDeserializationValidation : NoDisposalNeeded
     {
+        public SerializationDeserializationValidation(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Values
         {
             public int intMinVal;

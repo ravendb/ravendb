@@ -16,11 +16,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
     public class QueriesWithCustomFunctions : RavenTestBase
     {
+        public QueriesWithCustomFunctions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Define_Custom_Functions_Inside_Select()
         {
@@ -3503,6 +3508,10 @@ from Orders as o load o.Company as company select output(o, company)", query.ToS
 
         public class ProjectionParameters : RavenTestBase
         {
+            public ProjectionParameters(ITestOutputHelper output) : base(output)
+            {
+            }
+            
             public class Document
             {
                 public string Id { get; set; }

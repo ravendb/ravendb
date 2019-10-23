@@ -9,11 +9,16 @@ using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
     public unsafe class ValidHeaders : NoDisposalNeeded
     {
+        public ValidHeaders(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ValidateNoOverlap()
         {

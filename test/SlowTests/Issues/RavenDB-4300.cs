@@ -9,11 +9,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4300 : RavenTestBase
     {
+        public RavenDB_4300(ITestOutputHelper output) : base(output)
+        {
+        }
+
         // The search text must 
         //    (1) contain a space
         //    (2) end in a backslash

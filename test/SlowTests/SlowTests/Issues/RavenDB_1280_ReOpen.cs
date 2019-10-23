@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1280_ReOpen.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Issues
 {
     public class RavenDB_1280_ReOpen : RavenTestBase
     {
+        public RavenDB_1280_ReOpen(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Index_With_Missing_LoadDocument_References()
         {

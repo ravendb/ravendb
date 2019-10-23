@@ -5,11 +5,16 @@ using System.Reflection;
 using System.Text;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7953 : NoDisposalNeeded
     {
+        public RavenDB_7953(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static readonly HashSet<string> StringMethodsToIgnore = new HashSet<string>
         {
             nameof(string.IsNormalized),

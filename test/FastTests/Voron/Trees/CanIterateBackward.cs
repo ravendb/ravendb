@@ -1,11 +1,16 @@
 ﻿using System.IO;
 using Xunit;
 using Voron;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
     public class CanIterateBackward : StorageTest
     {
+        public CanIterateBackward(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SeekLastOnEmptyResultInFalse()
         {

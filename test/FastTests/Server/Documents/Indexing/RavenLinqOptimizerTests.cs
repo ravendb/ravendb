@@ -4,11 +4,16 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing
 {
     public class RavenLinqOptimizerTests : NoDisposalNeeded
     {
+        public RavenLinqOptimizerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(@"docs.SelectMany(match => match.Teams, (match, team) => new { match = match, team = team })
                           .SelectMany(this0 => this0.team.Series, (this0, serie) => new { this0 = this0, serie = serie })

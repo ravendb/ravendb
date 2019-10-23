@@ -6,12 +6,17 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Xunit.Abstractions;
 
 
 namespace SlowTests
 {
     public abstract class FacetTestBase : RavenTestBase
     {
+        protected FacetTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         public static void CreateCameraCostIndex(IDocumentStore store)
         {
             var index = new CameraCostIndex();

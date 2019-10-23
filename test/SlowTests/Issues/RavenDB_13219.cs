@@ -4,11 +4,16 @@ using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13219 : RavenTestBase
     {
+        public RavenDB_13219(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldNotBeAbleToCreateCountersWithoutNames()
         {

@@ -1,12 +1,17 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_3465 : RavenTestBase
     {
+        public RavenDB_3465(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact(Skip = "RavenDB-6283")]
         public void get_metadata_for_sharded()
         {

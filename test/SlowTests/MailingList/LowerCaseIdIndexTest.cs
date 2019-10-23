@@ -1,13 +1,18 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class LowerCaseIdIndexTest : RavenTestBase
     {
+        public LowerCaseIdIndexTest(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanIndexAndQuery()
         {

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,11 +6,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Caching
 {
     public class CachingOfPostQueries : RavenTestBase
     {
+        public CachingOfPostQueries(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Person
         {
             public string Name { get; set; }

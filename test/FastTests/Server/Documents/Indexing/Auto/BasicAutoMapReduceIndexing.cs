@@ -15,12 +15,17 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Auto
 {
     [SuppressMessage("ReSharper", "ConsiderUsingConfigureAwait")]
     public class BasicAutoMapReduceIndexing : RavenLowLevelTestBase
     {
+        public BasicAutoMapReduceIndexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanUseSimpleReduction()
         {

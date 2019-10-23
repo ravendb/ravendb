@@ -3,11 +3,16 @@ using Xunit;
 using System;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class IncludesUtilTests : RavenTestBase
     {
+        public IncludesUtilTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void include_with_prefix()
         {

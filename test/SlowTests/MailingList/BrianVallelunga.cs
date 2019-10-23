@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="BrianVallelunga.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class BrianVallelunga : RavenTestBase
     {
+        public BrianVallelunga(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Profile
         {
             public string Name { get; set; }

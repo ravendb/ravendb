@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Employee = Orders.Employee;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class BasicRavenEtlTests : EtlTestBase
     {
+        public BasicRavenEtlTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Simple_script()
         {

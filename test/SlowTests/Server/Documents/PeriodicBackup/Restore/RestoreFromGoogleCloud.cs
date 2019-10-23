@@ -14,11 +14,16 @@ using Tests.Infrastructure;
 using Xunit;
 using FastTests.Server.Basic.Entities;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
     public class RestoreFromGoogleCloud : RavenTestBase
     {
+        public RestoreFromGoogleCloud(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly string _cloudPathPrefix = $"{nameof(RestoreFromGoogleCloud)}-{Guid.NewGuid()}";
         
         [Fact]

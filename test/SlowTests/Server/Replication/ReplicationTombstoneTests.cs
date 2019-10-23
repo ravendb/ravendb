@@ -6,11 +6,16 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationTombstoneTests : ReplicationTestBase
     {
+        public ReplicationTombstoneTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task DontReplicateTombstoneBack()
         {

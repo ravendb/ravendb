@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2209.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,11 +7,16 @@
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2209 : RavenTestBase
     {
+        public RavenDB_2209(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void LazyLoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
         {

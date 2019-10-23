@@ -5,11 +5,16 @@ using FastTests.Graph;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Graph
 {
     public class IntersectionTests : RavenTestBase
     {
+        public IntersectionTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_query_multiple_match_clauses_with_union_no_intersecting_results()
         {

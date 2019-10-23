@@ -2,11 +2,16 @@
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12582 : RavenTestBase
     {
+        public RavenDB_12582(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PatchOperationShouldReceiveCompleteInformation()
         {

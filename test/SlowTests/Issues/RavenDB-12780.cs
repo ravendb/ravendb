@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12780 : RavenTestBase
     {
+        public RavenDB_12780(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_access_id_of_a_missing_loaded_document()
         {

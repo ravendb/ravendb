@@ -6,11 +6,16 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class Full : StorageTest
     {
+        public Full(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.MaxLogFileSize = 1000 * Constants.Storage.PageSize;

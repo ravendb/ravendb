@@ -3,6 +3,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
@@ -15,6 +16,10 @@ namespace FastTests.Issues
 
     public class RavenDB_10837 : RavenTestBase
     {
+        public RavenDB_10837(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanWaitForIndex()
         {

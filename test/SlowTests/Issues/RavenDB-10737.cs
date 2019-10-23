@@ -4,11 +4,16 @@ using Raven.Client;
 using Sparrow;
 using Sparrow.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10737: RavenTestBase
     {
+        public RavenDB_10737(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class SampleItem
         {
             public string Id { get; set; }

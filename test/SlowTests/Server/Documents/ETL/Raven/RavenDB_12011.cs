@@ -9,11 +9,16 @@ using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_12011 : RavenTestBase
     {
+        public RavenDB_12011(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanTestDeletion()
         {

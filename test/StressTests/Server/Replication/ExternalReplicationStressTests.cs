@@ -11,26 +11,15 @@ using Raven.Server.Config;
 using SlowTests.Server.Replication;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Server.Replication
 {
     public class ExternalReplicationStressTests : ReplicationTestBase
     {
-        [Fact64Bit]
-        public void ExternalReplicationShouldWorkWithSmallTimeoutStress()
+        public ExternalReplicationStressTests(ITestOutputHelper output) : base(output)
         {
-            for (int i = 0; i < 10; i++)
-            {
-                Parallel.For(0, 3, RavenTestHelper.DefaultParallelOptions, _ =>
-                {
-                    using (var test = new ExternalReplicationTests())
-                    {
-                        test.ExternalReplicationShouldWorkWithSmallTimeoutStress(20000).Wait();
-                    }
-                });
-            }
         }
-
 
         [Fact]
         public async Task TwoWayExternalReplicationShouldNotLoadIdleDatabase()

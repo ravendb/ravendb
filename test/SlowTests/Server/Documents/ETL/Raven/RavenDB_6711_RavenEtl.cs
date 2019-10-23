@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
     public class RavenDB_6711_RavenEtl : EtlTestBase
     {
+        public RavenDB_6711_RavenEtl(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Error_if_script_has_both_apply_to_all_documents_and_collections_specified()
         {

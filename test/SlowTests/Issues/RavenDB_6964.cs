@@ -2,11 +2,16 @@
 using System.IO;
 using FastTests.Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6964 : StorageTest
     {
+        public RavenDB_6964(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldProperlyShrinkOverflowPageOnStreamAdd()
         {

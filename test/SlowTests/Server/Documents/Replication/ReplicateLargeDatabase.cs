@@ -5,11 +5,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Replication;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Replication
 {
     public class ReplicateLargeDatabase : ReplicationTestBase
     {
+        public ReplicateLargeDatabase(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task AutomaticResolveWithIdenticalContent()
         {

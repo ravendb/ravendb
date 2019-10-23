@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="LastModifiedRemote.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -9,11 +9,16 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Metadata
 {
     public class EscapeQuotesRemote : RavenTestBase
     {
+        public EscapeQuotesRemote(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanProperlyEscapeQuotesInMetadata_Remote_1()
         {

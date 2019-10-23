@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11734 : RavenTestBase
     {
+        public RavenDB_11734(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const int USER_COUNT = 500;
 
         [Fact]

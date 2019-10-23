@@ -11,11 +11,16 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Tombstones
 {
     public class BasicTombstones : RavenLowLevelTestBase
     {
+        public BasicTombstones(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanCreateAndGetTombstone()
         {

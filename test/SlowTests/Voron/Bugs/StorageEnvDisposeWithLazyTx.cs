@@ -7,11 +7,16 @@
 using FastTests;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class StorageEnvDisposeWithLazyTx : NoDisposalNeeded
     {
+        public StorageEnvDisposeWithLazyTx(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDisposeStorageWithLazyTx()
         {

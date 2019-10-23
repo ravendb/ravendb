@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,11 +8,16 @@ using FastTests;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class GoogleStorage : RavenTestBase
     {
+        public GoogleStorage(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [GoogleCloudFact]
         public void list_buckets()
         {

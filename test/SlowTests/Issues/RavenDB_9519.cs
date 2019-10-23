@@ -12,11 +12,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9519 : RavenTestBase
     {
+        public RavenDB_9519(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("From%20companies")]
         [InlineData("match%20(Companies)")]

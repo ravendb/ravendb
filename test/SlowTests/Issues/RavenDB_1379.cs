@@ -1,11 +1,16 @@
 ﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_1379_Client_Lazy : RavenTestBase
     {
+        public RavenDB_1379_Client_Lazy(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class SomeEntity
         {
             public string Id { get; set; }

@@ -1,12 +1,17 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Server.Utils.Metrics;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_5686 : RavenTestBase
     {
+        public RavenDB_5686(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSerializeAndDeserializeMeterValue()
         {

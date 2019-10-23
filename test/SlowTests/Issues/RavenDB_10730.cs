@@ -5,11 +5,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10730 : RavenLowLevelTestBase
     {
+        public RavenDB_10730(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_enable_errored_index()
         {

@@ -9,11 +9,16 @@ using Xunit;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Tests.Core.Utils.Entities;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12598 : ClusterTestBase
     {
+        public RavenDB_12598(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task ChangesApiShouldWorkOnAllDatabaseInClusterWhenUsingAggresiveCaching()
         {

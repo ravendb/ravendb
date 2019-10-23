@@ -6,11 +6,16 @@ using GeoAPI;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10046: RavenTestBase
     {        
+        public RavenDB_10046(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Home
         {
             public Hero Hero { get; set; }

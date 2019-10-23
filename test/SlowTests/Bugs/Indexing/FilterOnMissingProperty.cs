@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class FilterOnMissingProperty : RavenTestBase
     {
+        public FilterOnMissingProperty(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanFilter()
         {

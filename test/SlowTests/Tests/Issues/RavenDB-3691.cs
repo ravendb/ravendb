@@ -1,11 +1,16 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Issues
 {
     public class RavenDB_3691 : RavenTestBase
     {
+        public RavenDB_3691(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanPutDocumentWithMetadataPropertyBeingNull()
         {

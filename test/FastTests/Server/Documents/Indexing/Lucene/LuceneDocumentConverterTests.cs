@@ -7,6 +7,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 using Document = Raven.Server.Documents.Document;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
@@ -19,7 +20,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         private readonly ConcurrentSet<BlittableJsonReaderObject> _docs = new ConcurrentSet<BlittableJsonReaderObject>();
         private readonly ConcurrentSet<LazyStringValue> _lazyStrings = new ConcurrentSet<LazyStringValue>();
 
-        public LuceneDocumentConverterTests()
+        public LuceneDocumentConverterTests(ITestOutputHelper output) : base(output)
         {
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }

@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_2314 : RavenTestBase
     {
+        public RavenDB_2314(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Pizzeria
         {
             public string Name { get; set; }

@@ -4,11 +4,16 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10929 : RavenTestBase
     {
+        public RavenDB_10929(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUpdateDatabaseRecord()
         {

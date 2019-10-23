@@ -5,11 +5,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8318 : RavenTestBase
     {
+        public RavenDB_8318(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_patch_by_dynamic_query_with_filtering()
         {

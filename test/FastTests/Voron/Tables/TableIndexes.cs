@@ -3,11 +3,16 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
     public class TableIndexes : StorageTest
     {
+        public TableIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Insert_same_value_to_fixed_sized_index_throws()
         {

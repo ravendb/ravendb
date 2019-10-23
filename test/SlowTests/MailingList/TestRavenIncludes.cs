@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class TestRavenIncludes : RavenTestBase
     {
+        public TestRavenIncludes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task CanIncludeRelatedDocuments()
         {

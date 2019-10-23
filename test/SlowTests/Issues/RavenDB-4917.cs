@@ -1,14 +1,19 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4917 : RavenTestBase
     {
+        public RavenDB_4917(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void side_by_side_doesnt_create_new_index()
         {

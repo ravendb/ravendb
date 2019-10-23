@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class RavenTestSample : RavenTestBase
     {
+        public RavenTestSample(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class ClassWithDouble
         {
             public string Id { get; set; }

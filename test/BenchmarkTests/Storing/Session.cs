@@ -3,11 +3,16 @@ using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace BenchmarkTests.Storing
 {
     public class Session : BenchmarkTestBase
     {
+        public Session(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Store_100k_Batch_Size_1()
         {

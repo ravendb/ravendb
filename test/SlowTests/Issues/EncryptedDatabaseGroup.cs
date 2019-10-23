@@ -8,11 +8,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class EncryptedDatabaseGroup: ClusterTestBase
     {
+        public EncryptedDatabaseGroup(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task AddingNodeToEncryptedDatabaseGroupShouldThrow()
         {

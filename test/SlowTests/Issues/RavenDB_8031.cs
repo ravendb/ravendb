@@ -7,11 +7,16 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8031 : RavenTestBase
     {
+        public RavenDB_8031(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Can_talk_to_db_if_it_was_created_after_document_store_initialization()
         {

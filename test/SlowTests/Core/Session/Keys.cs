@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Keys.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 using FastTests;
 using Xunit;
@@ -19,6 +20,10 @@ namespace SlowTests.Core.Session
 {
     public class Keys : RavenTestBase
     {
+        public Keys(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GetDocumentId()
         {

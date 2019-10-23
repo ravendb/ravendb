@@ -1,11 +1,16 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Strange_select_behaviour_in_query_tests : RavenTestBase
     {
+        public Strange_select_behaviour_in_query_tests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestCommodityGroup
         {
             public string Id { get; set; }

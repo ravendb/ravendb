@@ -1,13 +1,18 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class WithStartWith : RavenTestBase
     {
+        public WithStartWith(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanQueryDocumentsFilteredByMap()
         {

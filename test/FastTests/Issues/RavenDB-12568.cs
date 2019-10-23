@@ -7,11 +7,16 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_12568 : RavenTestBase
     {
+        public RavenDB_12568(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void PuttingBlittableWithAttachmentsShouldThrowIfNotExist()
         {

@@ -2,11 +2,16 @@
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_7636 : NoDisposalNeeded
     {
+        public RavenDB_7636(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void GivenNoCertificateSpecifiedAndServerBoundOutsideOfUnsecureAccessAllowedShouldError()
         {

@@ -2,11 +2,16 @@
 using FastTests.Server.Replication;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13510 : ReplicationTestBase
     {
+        public RavenDB_13510(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Writing_of_a_new_counter_group_document_upon_incoming_replication_should_affect_metrics()
         {

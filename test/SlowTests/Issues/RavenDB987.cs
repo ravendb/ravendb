@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB987.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB987 : RavenTestBase
     {
+        public RavenDB987(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private sealed class Categories_InUse_ByCity : AbstractIndexCreationTask<Restaurant, Categories_InUse_ByCity.Result>
         {
             public Categories_InUse_ByCity()

@@ -1,10 +1,11 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // ----------------------------------------------------------------------
 
 using System.Linq;
+using Xunit.Abstractions;
 
 using FastTests;
 
@@ -16,6 +17,10 @@ namespace SlowTests.Core.Querying
 {
     public class Projections : RavenTestBase
     {
+        public Projections(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void BasicProjections()
         {

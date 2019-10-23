@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_4613.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -16,11 +16,16 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class RavenDB_4163 : RavenTestBase
     {
+        public RavenDB_4163(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [AzureStorageEmulatorFact]
         public void put_blob_64MB()
         {

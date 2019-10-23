@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="AsyncSetBasedOps.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,11 +13,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Bugs
 {
     public class AsyncSetBasedOps : RavenTestBase
     {
+        public AsyncSetBasedOps(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string FirstName;

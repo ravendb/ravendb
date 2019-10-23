@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8254 : RavenTestBase
     {
+        public RavenDB_8254(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseTransformWithSpatial()
         {

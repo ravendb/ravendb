@@ -1,12 +1,17 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10490 : RavenTestBase
     {
+        public RavenDB_10490(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_Load_Inside_Let_With_Argument_Predefined_in_Let()
         {

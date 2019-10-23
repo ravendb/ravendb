@@ -9,11 +9,16 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestBase
     {
+        public ReplicationResolveConflictsOnConfigurationChange(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         public async Task<List<ModifyOngoingTaskResult>> GenerateConflictsAndSetupMasterMasterReplication(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
         {

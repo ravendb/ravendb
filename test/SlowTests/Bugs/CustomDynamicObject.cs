@@ -1,14 +1,19 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CustomDynamicObject : RavenTestBase
     {
+        public CustomDynamicObject(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanReadFromDB()
         {

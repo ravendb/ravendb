@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="MultiMapWildCardSearch.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiMapSearch
 {
     public class MultiMapWildCardSearch : RavenTestBase
     {
+        public MultiMapWildCardSearch(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSearch()
         {

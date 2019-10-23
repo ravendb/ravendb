@@ -5,11 +5,16 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
     public class IncludeUtilTests : NoDisposalNeeded
     {
+        public IncludeUtilTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void FindDocIdFromPath_with_array_of_nested_objects_should_work1()
         {

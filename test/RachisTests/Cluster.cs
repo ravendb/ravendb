@@ -10,11 +10,16 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
     public class Cluster : ClusterTestBase
     {
+        public Cluster(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
             var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));

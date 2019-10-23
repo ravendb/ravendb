@@ -11,11 +11,16 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
+using Xunit.Abstractions;
 
 namespace BenchmarkTests
 {
     public abstract class BenchmarkTestBase : RavenTestBase
     {
+        protected BenchmarkTestBase(ITestOutputHelper output) : base(output)
+        {
+        }
+        
         public abstract Task InitAsync(DocumentStore store);
 
         protected override RavenServer GetNewServer(ServerCreationOptions options = null)

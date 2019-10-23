@@ -10,11 +10,16 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Web.System;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13161 : RavenTestBase
     {
+        public RavenDB_13161(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void DatabaseNameWithDocsValidation()
         {

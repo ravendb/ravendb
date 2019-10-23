@@ -5,11 +5,16 @@ using FastTests.Server.Basic.Entities;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8728 : RavenTestBase
     {
+        public RavenDB_8728(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_sum_or_group_by_list_count()
         {

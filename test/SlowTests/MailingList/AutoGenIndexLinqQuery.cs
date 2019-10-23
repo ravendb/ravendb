@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="AutoGenIndexLinqQuery.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,11 +10,16 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class AutoGenIndexLinqQuery : RavenTestBase
     {
+        public AutoGenIndexLinqQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Book
         {
             public String Name { get; set; }

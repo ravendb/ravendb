@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class CustomerMetadataAfterSaveChanges : RavenTestBase
     {
+        public CustomerMetadataAfterSaveChanges(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Page
         {
             public string PageId;

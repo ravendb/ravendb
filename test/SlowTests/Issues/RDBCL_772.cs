@@ -6,11 +6,16 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBCL_772 : RavenTestBase
     {
+        public RDBCL_772(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldStoreLastAuthorizedNonClusterAdminRequestTime()
         {
@@ -24,9 +29,9 @@ namespace SlowTests.Issues
                 [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = dataPath
             };
 
-            var serverCertPath = SetupServerAuthentication(customSettings: customSettings);
-            var adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var certificates = SetupServerAuthentication(customSettings: customSettings);
+            var adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });

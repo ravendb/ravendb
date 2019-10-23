@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8782 : RavenTestBase
     {
+        public RavenDB_8782(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_group_by_composite_key_with_custom_names()
         {

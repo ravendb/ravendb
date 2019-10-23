@@ -10,11 +10,16 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
     public class CriteriaScript : SubscriptionTestBase
     {
+        public CriteriaScript(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
 
         [Theory]
@@ -27,9 +32,9 @@ namespace SlowTests.Client.Subscriptions
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                var certificates = SetupServerAuthentication();
+                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite
                 });
@@ -88,9 +93,9 @@ namespace SlowTests.Client.Subscriptions
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                var certificates = SetupServerAuthentication();
+                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite,
                 });

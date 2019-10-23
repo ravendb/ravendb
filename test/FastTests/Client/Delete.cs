@@ -1,10 +1,15 @@
 ﻿using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Client
 {
     public class Delete : RavenTestBase
     {
+        public Delete(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Delete_Document_By_entity()
         {

@@ -1,11 +1,16 @@
 ﻿using System.IO;
 using System.Text;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
     public class Snapshots : FastTests.Voron.StorageTest
     {
+        public Snapshots(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
 
         [Fact]

@@ -1,15 +1,20 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using FastTests.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB815 : RavenTestBase
     {
+        public RavenDB815(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Foo1
         {
             public string Id { get; set; }

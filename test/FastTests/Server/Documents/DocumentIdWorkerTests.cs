@@ -13,6 +13,10 @@ namespace FastTests.Server.Documents
 {
     public class DocumentIdWorkerTests : RavenTestBase
     {
+        public DocumentIdWorkerTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task GetLower_WhenStringAscii_ShouldNotModifyTheValueAcceptToLower()
         {

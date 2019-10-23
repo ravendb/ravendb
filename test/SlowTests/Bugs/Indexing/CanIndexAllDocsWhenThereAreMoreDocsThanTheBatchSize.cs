@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {
     public class CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize : RavenTestBase
     {
+        public CanIndexAllDocsWhenThereAreMoreDocsThanTheBatchSize(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

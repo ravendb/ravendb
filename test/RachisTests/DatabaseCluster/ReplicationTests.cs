@@ -19,11 +19,16 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
     public class ReplicationTests : ReplicationTestBase
     {
+        public ReplicationTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task WaitForCommandToApply()
         {
@@ -68,9 +73,9 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
-                clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
+                var certificates = GenerateAndSaveSelfSignedCertificate();
+                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
@@ -141,7 +146,8 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                var certificates = GenerateAndSaveSelfSignedCertificate();
+                adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
             }
 
             var watcherUrls = new Dictionary<string, string[]>();
@@ -555,7 +561,8 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                var certificates = GenerateAndSaveSelfSignedCertificate();
+                adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
             }
 
             using (var store = new DocumentStore()
@@ -619,9 +626,9 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
-                clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
+                var certificates = GenerateAndSaveSelfSignedCertificate();
+                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
@@ -668,7 +675,7 @@ namespace RachisTests.DatabaseCluster
                         var cv = DocumentsStorage.GetDatabaseChangeVector(context);
 
                         return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
-            }
+                    }
                 }, expected: true, timeout: 60000));
             }
 
@@ -703,10 +710,10 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task ReplicateToWatcherWithAuth()
         {
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var opCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var opCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
 
             using (var store1 = GetDocumentStore(new Options
             {
@@ -739,11 +746,11 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task ReplicateToWatcherWithInvalidAuth()
         {
-            var serverCertPath = SetupServerAuthentication();
+            var certificates = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-            var userCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert1 = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var userCert2 = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName + "otherstuff"] = DatabaseAccess.Admin
             });
@@ -772,7 +779,24 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                Assert.Throws<AuthorizationException>(() => WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
+                var value = WaitForValue(() =>
+                {
+                    try
+                    {
+                        using (var session = store2.OpenSession())
+                        {
+                            var user = session.Load<User>("users/1");
+                        }
+
+                        return false;
+                    }
+                    catch (AuthorizationException)
+                    {
+                        return true;
+                    }
+                }, true);
+
+                Assert.True(value);
             }
         }
 

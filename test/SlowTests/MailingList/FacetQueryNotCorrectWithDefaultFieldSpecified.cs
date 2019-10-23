@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -6,11 +6,16 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class FacetQueryNotCorrectWithDefaultFieldSpecified : RavenTestBase
     {
+        public FacetQueryNotCorrectWithDefaultFieldSpecified(ITestOutputHelper output) : base(output)
+        {
+        }
+
         /// <summary>
         /// Works
         /// </summary>

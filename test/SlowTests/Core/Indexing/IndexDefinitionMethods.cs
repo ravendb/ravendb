@@ -1,8 +1,9 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 using Contact = SlowTests.Core.Utils.Entities.Contact;
@@ -12,6 +13,10 @@ namespace SlowTests.Core.Indexing
 {
     public class IndexDefinitionMethods : RavenTestBase
     {
+        public IndexDefinitionMethods(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseMetadataFor()
         {

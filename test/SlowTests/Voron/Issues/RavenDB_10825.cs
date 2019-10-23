@@ -7,11 +7,16 @@ using Voron;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {
     public class RavenDB_10825: StorageTest
     {
+        public RavenDB_10825(ITestOutputHelper output) : base(output)
+        {
+        }
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             base.Configure(options);

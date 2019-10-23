@@ -5,11 +5,16 @@ using FastTests.Server.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_4997 : ReplicationTestBase
     {
+        public RavenDB_4997(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Name { get; set; }

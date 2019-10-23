@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_391 : RavenTestBase
     {
+        public RDBC_391(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUseOperationsWithSelectedNodeTagWhenDisableTopologyUpdatesIsTrue()
         {

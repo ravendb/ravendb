@@ -3,11 +3,16 @@ using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {
     public class RavenDB_8076 : RavenTestBase
     {
+        public RavenDB_8076(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_sort_by_aggregation_function_in_dynamic_group_by_query()
         {

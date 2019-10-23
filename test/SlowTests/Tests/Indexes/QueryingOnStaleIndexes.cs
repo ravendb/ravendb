@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="QueryingOnStaleIndexes.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -11,11 +11,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class QueryingOnStaleIndexes : RavenTestBase
     {
+        public QueryingOnStaleIndexes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()

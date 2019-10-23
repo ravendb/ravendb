@@ -4,11 +4,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10998 : RavenTestBase
     {
+        public RavenDB_10998(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Document
         {
             public int[] Indexes { get; set; }

@@ -1,11 +1,16 @@
 ﻿using System.IO;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12665 : RavenTestBase
     {
+        public RavenDB_12665(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void EntityShouldNotBeMarkedAsChangedWhenItContainsControlCharacters2()
         {

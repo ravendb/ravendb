@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {
     public class TreeRebalancer : FastTests.Voron.StorageTest
     {
+        public TreeRebalancer(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TreeRabalancerShouldCopyNodeFlagsWhenMultiValuePageRefIsSet()
         {

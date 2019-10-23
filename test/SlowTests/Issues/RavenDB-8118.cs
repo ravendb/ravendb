@@ -2,11 +2,16 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class CanDeployIndex : RavenTestBase
     {
+        public CanDeployIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void can_deploy_index1()
         {

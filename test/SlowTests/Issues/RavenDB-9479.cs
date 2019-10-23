@@ -4,11 +4,16 @@ using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_9479 : RavenTestBase
     {
+        public RavenDB_9479(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData((char)0)]
         [InlineData((char)1)]

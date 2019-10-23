@@ -3,11 +3,16 @@ using Orders;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12383 : RavenTestBase
     {
+        public RavenDB_12383(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void IncludeShouldSkipDocumentsThatArePartOfResults()
         {

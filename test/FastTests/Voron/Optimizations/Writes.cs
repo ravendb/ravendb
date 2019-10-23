@@ -7,11 +7,16 @@
 using System.IO;
 using Xunit;
 using Voron.Debugging;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Optimizations
 {
     public class Writes : StorageTest
     {
+        public Writes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SinglePageModificationDoNotCauseCopyingAllIntermediatePages()
         {

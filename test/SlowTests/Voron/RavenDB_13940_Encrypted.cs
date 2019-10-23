@@ -10,11 +10,16 @@ using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Journal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class RavenDB_13940_Encrypted : StorageTest
     {
+        public RavenDB_13940_Encrypted(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly byte[] _masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
         private bool _onIntegrityErrorOfAlreadySyncedDataHandlerWasCalled;
 

@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Maxime2 : RavenTestBase
     {
+        public Maxime2(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
         {

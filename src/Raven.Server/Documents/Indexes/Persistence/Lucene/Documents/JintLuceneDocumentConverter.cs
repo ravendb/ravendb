@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class JintLuceneDocumentConverter : LuceneDocumentConverterBase
     {
-        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool reduceOutput = false) 
-            : base(fields, indexImplicitNull, reduceOutput)
+        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
+            : base(fields, indexImplicitNull, indexEmptyEntries, reduceOutput)
         {
         }
 

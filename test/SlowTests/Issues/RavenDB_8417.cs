@@ -4,11 +4,16 @@ using Orders;
 using Tests.Infrastructure;
 using Xunit;
 using Raven.Client.Documents.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_8417 : RavenTestBase
     {
+        public RavenDB_8417(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void TotalResultsShouldBeCountedProperlyForCollectionQueries()
         {

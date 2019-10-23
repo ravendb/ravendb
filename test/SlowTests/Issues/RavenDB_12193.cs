@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using Xunit;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_12193 : RavenTestBase
     {
+        public RavenDB_12193(ITestOutputHelper output) : base(output)
+        {
+        }
+
         // RavenDB-12481
         [Fact(Skip = "TaskScheduler.UnobservedTaskException registers globally so running the full test suite causes unexpected failures here")]
         public void Should_Throw_On_UnobservedTaskException()

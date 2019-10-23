@@ -2,11 +2,16 @@
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_8700 : RavenTestBase
     {
+        public RavenDB_8700(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class EntityGroupedByDayIndex : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()

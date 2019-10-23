@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
     public class CanQueryWithSavedKeywords : RavenTestBase
     {
+        public CanQueryWithSavedKeywords(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestDoc
         {
             public string SomeProperty { get; set; }

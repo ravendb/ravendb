@@ -9,11 +9,16 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_13491 : RavenTestBase
     {
+        public RavenDB_13491(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public async Task Counters_export_should_respect_collection_selection_1()
         {

@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Samina : RavenTestBase
     {
+        public Samina(ITestOutputHelper output) : base(output)
+        {
+        }
+
 
         private class Property
         {

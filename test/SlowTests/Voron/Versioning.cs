@@ -3,11 +3,16 @@ using System.IO;
 using FastTests.Voron;
 using SlowTests.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class Versioning : StorageTest
     {
+        public Versioning(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineDataWithRandomSeed]
         public void SplittersAndRebalancersShouldNotChangeNodeVersion(int seed)

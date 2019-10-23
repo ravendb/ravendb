@@ -1,9 +1,14 @@
 ﻿using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
     public class RavenDB_5178 : RavenTestBase
     {
+        public RavenDB_5178(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [NonLinuxFact]
         public void CanUsePathLongerThan260Chars()
         {

@@ -3,11 +3,16 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
     public class Validate : StorageTest
     {
+        public Validate(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ErrorsOnInvalidVariableSizeDef()
         {

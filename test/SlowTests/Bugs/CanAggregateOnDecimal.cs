@@ -1,14 +1,19 @@
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using System.Linq;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class CanAggregateOnDecimal : RavenTestBase
     {
+        public CanAggregateOnDecimal(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class DecimalAggregationMap : AbstractIndexCreationTask<Bank, BankTotal>
         {
             public DecimalAggregationMap()

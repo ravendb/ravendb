@@ -6,12 +6,17 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     // ReSharper disable once InconsistentNaming
     public class RavenDB_6886 : ClusterTestBase
     {
+        public RavenDB_6886(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

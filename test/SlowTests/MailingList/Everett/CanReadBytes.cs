@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="CanReadBytes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,11 +13,16 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Everett
 {
     public class CanReadBytes : RavenTestBase
     {
+        public CanReadBytes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void query_for_object_with_byte_array_with_TypeNameHandling_All()
         {

@@ -4,11 +4,16 @@ using Raven.Client.Documents.Indexes;
 using System.Linq;
 using Xunit;
 using FastTests;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class Andres_Indexing : RavenTestBase
     {
+        public Andres_Indexing(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Parameter
         {
             public string Name { get; set; }

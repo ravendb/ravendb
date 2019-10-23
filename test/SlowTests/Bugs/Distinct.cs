@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
@@ -7,11 +7,16 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class Distinct : RavenTestBase
     {
+        public Distinct(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private readonly IndexDefinition _index = new IndexDefinition
         {
             Name = "test",

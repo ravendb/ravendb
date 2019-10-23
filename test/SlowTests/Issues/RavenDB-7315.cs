@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -39,6 +40,10 @@ namespace SlowTests.Issues
 
     public class QueriesStartingWithAtShouldWork : RavenTestBase
     {
+        public QueriesStartingWithAtShouldWork(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ShouldAtBeEscaped()
         {

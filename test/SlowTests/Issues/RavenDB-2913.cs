@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class UpdateGetters : RavenTestBase
     {
+        public UpdateGetters(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public class Entity
         {
             public string Property { get; set; }

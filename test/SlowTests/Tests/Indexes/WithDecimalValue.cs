@@ -1,14 +1,19 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Indexes
 {
     public class WithDecimalValue : RavenTestBase
     {
+        public WithDecimalValue(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public decimal Value { get; set; }

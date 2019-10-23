@@ -5,11 +5,16 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_11575 : RavenTestBase
     {
+        public RavenDB_11575(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class TestIEnumerablesWhereSelectIndex : AbstractIndexCreationTask<MyExternalCooperationDocument, TestIEnumerablesWhereSelectIndex.Info>
         {
             public override string IndexName => "Index1";

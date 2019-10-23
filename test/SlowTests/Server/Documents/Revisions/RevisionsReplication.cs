@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Revisions.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -26,11 +26,16 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Sdk;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Revisions
 {
     public class RevisionsReplication : ReplicationTestBase, ITombstoneAware
     {
+        public RevisionsReplication(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
         {
             var id = "marker - " + Guid.NewGuid();

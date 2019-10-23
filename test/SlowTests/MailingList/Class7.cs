@@ -1,13 +1,18 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Class7 : RavenTestBase
     {
+        public Class7(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void ThrowsOnUnindexedSorts()
         {

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="ForceLogFlushes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,11 +9,16 @@ using System.IO;
 using Xunit;
 using Voron;
 using Voron.Global;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron.Journal
 {
     public class BasicActions : StorageTest
     {
+        public BasicActions(ITestOutputHelper output) : base(output)
+        {
+        }
+
         // all tests here relay on the fact than one log file can contains max 10 pages
         protected override void Configure(StorageEnvironmentOptions options)
         {

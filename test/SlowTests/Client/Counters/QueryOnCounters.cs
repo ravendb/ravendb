@@ -8,11 +8,16 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {
     public class QueryOnCounters : RavenTestBase
     {
+        public QueryOnCounters(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void RawQuerySelectSingleCounter()
         {

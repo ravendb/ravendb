@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="UsingDocumentQuery.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -9,11 +9,16 @@ using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {
     public class UsingDocumentQuery : RavenTestBase
     {
+        public UsingDocumentQuery(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanUnderstandSimpleEquality()
         {

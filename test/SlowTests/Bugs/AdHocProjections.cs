@@ -1,11 +1,16 @@
-using FastTests;
+﻿using FastTests;
 using Xunit;
 using System.Linq;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {
     public class AdHocProjections : RavenTestBase
     {
+        public AdHocProjections(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Query_can_project_to_a_different_model()
         {

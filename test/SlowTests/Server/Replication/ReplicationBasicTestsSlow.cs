@@ -8,11 +8,16 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {
     public class ReplicationBasicTestsSlow : ReplicationTestBase
     {
+        public ReplicationBasicTestsSlow(ITestOutputHelper output) : base(output)
+        {
+        }
+
         public readonly string DbName = "TestDB" + Guid.NewGuid();
 
         [Theory]
@@ -27,9 +32,9 @@ namespace SlowTests.Server.Replication
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+                var certificates = SetupServerAuthentication();
+                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             }
 
             using (var store1 = GetDocumentStore(new Options
@@ -96,7 +101,7 @@ namespace SlowTests.Server.Replication
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
-            {    
+            {
                 var externalList = await SetupReplicationAsync(store1, store2);
                 using (var session = store1.OpenSession())
                 {
@@ -132,7 +137,7 @@ namespace SlowTests.Server.Replication
 
                 var connectionDropped = await WaitForValueAsync(() => replicationConnection.IsConnectionDisposed, true);
                 Assert.True(connectionDropped);
-                
+
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User

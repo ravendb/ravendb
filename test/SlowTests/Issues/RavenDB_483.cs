@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -6,11 +6,16 @@ using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_483 : NoDisposalNeeded
     {
+        public RavenDB_483(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Driver
         {
             public string PersonId { get; set; }

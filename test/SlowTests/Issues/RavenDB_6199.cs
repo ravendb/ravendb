@@ -9,11 +9,16 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_6199 : RavenTestBase
     {
+        public RavenDB_6199(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class User
         {
             public string Id { get; set; }

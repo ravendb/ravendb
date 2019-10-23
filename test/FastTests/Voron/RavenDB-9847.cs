@@ -1,10 +1,15 @@
 ﻿using System.Linq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
     public class RavenDB_9847 : StorageTest
     {
+        public RavenDB_9847(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void Can_get_updated_overflow_value_in_same_tx()
         {

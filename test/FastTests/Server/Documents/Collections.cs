@@ -5,11 +5,16 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents
 {
     public class Collections : RavenTestBase
     {
+        public Collections(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanSurviveRestart()
         {

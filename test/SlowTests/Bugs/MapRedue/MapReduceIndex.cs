@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MapRedue
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Bugs.MapRedue
     {
         private readonly String[] m_documentIds;
 
-        public MapReduceIndex()
+        public MapReduceIndex(ITestOutputHelper output) : base(output)
         {
             m_documentIds = new String[5]
             {

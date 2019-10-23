@@ -1,15 +1,20 @@
-using System;
+﻿using System;
 using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {
     public class DeletionFromMultiTableWithGlobalIndex : StorageTest
     {
+        public DeletionFromMultiTableWithGlobalIndex(ITestOutputHelper output) : base(output)
+        {
+        }
+
         static DeletionFromMultiTableWithGlobalIndex()
         {
             using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))

@@ -1,4 +1,5 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Xunit.Abstractions;
 
 using Xunit;
 using System.Linq;
@@ -11,6 +12,10 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10 : RavenTestBase
     {
+        public RavenDB_10(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private class Item
         {
             public string Text { get; set; }

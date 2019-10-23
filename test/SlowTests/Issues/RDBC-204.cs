@@ -1,11 +1,16 @@
 ﻿using System;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
     public class RDBC_204 : RavenTestBase
     {
+        public RDBC_204(ITestOutputHelper output) : base(output)
+        {
+        }
+
         private const string _docId = "users/1-A";
 
         private class User

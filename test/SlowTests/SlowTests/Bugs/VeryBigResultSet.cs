@@ -1,13 +1,18 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.SlowTests.Bugs
 {
     public class VeryBigResultSet : RavenTestBase
     {
+        public VeryBigResultSet(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
         {
