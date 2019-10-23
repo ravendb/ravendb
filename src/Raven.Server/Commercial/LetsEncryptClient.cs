@@ -187,7 +187,7 @@ namespace Raven.Server.Commercial
         private async Task<HttpResponseMessage> SendAsyncInternal(HttpMethod method, Uri uri, object message, CancellationToken token)
         {
             var hasNonce = _nonce != null;
-            var retryOnce = true;
+            var retries = 3;
             do
             {
                 var request = new HttpRequestMessage(method, uri);
@@ -219,19 +219,38 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
-                    if (retryOnce)
+                    if (retries-- > 0)
                     {
-                        retryOnce = false;
                         continue;
                     }
                         
-                    throw new InvalidOperationException($"Let's Encrypt client failed to send the request (retried once): {request}", e);
+                    throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {request}", e);
                 }
 
                 if (response.Headers.TryGetValues("Replay-Nonce", out var vals))
                     _nonce = vals.FirstOrDefault();
                 else
                     _nonce = null;
+
+                if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
+                {
+                    var problemJson = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                    if (retries-- > 0)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        response.EnsureSuccessStatusCode();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {request}. Problem: {problemJson}", e);
+
+                    }
+                }
 
                 if(response.IsSuccessStatusCode || hasNonce || _nonce == null )
                 {
@@ -262,7 +281,8 @@ namespace Raven.Server.Commercial
             var results = new Dictionary<string, string>();
             foreach (var item in order.Authorizations)
             {
-                var (challengeResponse, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, item, null, token);
+                // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                var (challengeResponse, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, item, string.Empty, token);
 
                 var challenge = challengeResponse.Challenges.First(x => x.Type == "dns-01");
                 _challenges.Add(challenge);
@@ -295,14 +315,13 @@ namespace Raven.Server.Commercial
                 string responseText;
                 try
                 {
-                    (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, new AuthorizeChallenge
-                    {
-                        KeyAuthorization = _jws.GetKeyAuthorization(challenge.Token)
-                    }, token);
+				    // // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
+                    (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
 
                     while (result.Status == "pending")
                     {
-                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, challenge.Url, null, token);
+					    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                        (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
                         
                         await Task.Delay(500, token);
                     }
@@ -313,7 +332,8 @@ namespace Raven.Server.Commercial
                     string errorText = null;
                     try
                     {
-                        (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Get, challenge.Url, null, token);
+					    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                        (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
                     }
                     catch (Exception)
                     {
@@ -349,7 +369,8 @@ namespace Raven.Server.Commercial
 
             while (true)
             {
-                (response, responseText) = await SendAsync<Order>(HttpMethod.Get, response.Location, null, token);
+			    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                (response, responseText) = await SendAsync<Order>(HttpMethod.Post, response.Location, string.Empty, token);
 
                 if (response.Status == "valid")
                 {
@@ -367,7 +388,8 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Invalid order status: " + response.Status + Environment.NewLine +
                     responseText);
             }
-            var (pem, _) = await SendAsync<string>(HttpMethod.Get, response.Certificate, null, token);
+		    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+            var (pem, _) = await SendAsync<string>(HttpMethod.Post, response.Certificate, string.Empty, token);
 
             var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null, X509KeyStorageFlags.MachineKeySet);
 
@@ -761,9 +783,15 @@ namespace Raven.Server.Commercial
                     protectedHeader.Key = _jwk;
                 }
 
+                // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
+                var encodedPayload = "{}".Equals(payload)
+                    ? Base64UrlEncoded("{}")
+                    : Base64UrlEncoded(JsonConvert.SerializeObject(payload));
+
                 var message = new JwsMessage
                 {
-                    Payload = Base64UrlEncoded(JsonConvert.SerializeObject(payload)),
+				    // From: https://tools.ietf.org/html/rfc8555#section-6.3
+                    Payload =  string.Empty.Equals(payload) ? string.Empty : encodedPayload,
                     Protected = Base64UrlEncoded(JsonConvert.SerializeObject(protectedHeader))
                 };
 
