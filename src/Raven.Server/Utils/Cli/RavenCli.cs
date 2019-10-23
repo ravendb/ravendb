@@ -120,6 +120,7 @@ namespace Raven.Server.Utils.Cli
             ResetServer,
             Stats,
             TopThreads,
+            ThreadsInfo,
             Info,
             Gc,
             TrustServerCert,
@@ -1140,7 +1141,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"helpPrompt", "Detailed prompt command usage"},
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
-                new[] {"threadsInfo", "Online server's threads info (CPU, priority, state"},
+                new[] {"topThreads", "Online server's threads info (CPU, priority, state"},
                 new[] {"log [http-]<on|off|information/operations> [no-console]", "set log on/off or to specific mode. filter requests using http-on/off log. no-console to avoid printing in CLI"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
@@ -1540,9 +1541,13 @@ namespace Raven.Server.Utils.Cli
                     return false;
                 }
 
-                //For back compatibility - RavenDB-11249
+                // for back compatibility - RavenDB-11249
                 if (cmd == Command.ResetServer)
                     cmd = Command.RestartServer;
+
+                // for back compatibility - RavenDB-14165
+                if (cmd == Command.ThreadsInfo)
+                    cmd = Command.TopThreads;
 
                 ParsedCommand parsedCommand = new ParsedCommand { Command = cmd };
                 parsedLine.ParsedCommands.Add(parsedCommand);
