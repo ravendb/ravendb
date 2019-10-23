@@ -315,7 +315,9 @@ namespace Raven.Server.Commercial
                 string responseText;
                 try
                 {
-				    // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
+                    // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
+                    // The first request of AuthorizationChallenge is POST with {} in the body.
+                    // Then, all subsequent requests of AuthorizationChallenge (to get the status of the challenge) are POST-AS_GET with an empty body.
                     (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, "{}", token);
 
                     while (result.Status == "pending")
@@ -783,15 +785,32 @@ namespace Raven.Server.Commercial
                     protectedHeader.Key = _jwk;
                 }
 
-                // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
-                var encodedPayload = "{}".Equals(payload)
-                    ? Base64UrlEncoded("{}")
-                    : Base64UrlEncoded(JsonConvert.SerializeObject(payload));
+                string encodedPayload;
+
+                if (payload is string p)
+                {
+                    switch (p)
+                    {
+                        case "":
+                            // From: https://tools.ietf.org/html/rfc8555#section-6.3
+                            encodedPayload = string.Empty;
+                            break;
+                        case "{}":
+                            // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
+                            encodedPayload = Base64UrlEncoded("{}");
+                            break;
+                        default:
+                            throw new ArgumentException(nameof(payload));
+                    }
+                }
+                else
+                {
+                    encodedPayload = Base64UrlEncoded(JsonConvert.SerializeObject(payload));
+                }
 
                 var message = new JwsMessage
                 {
-				    // From: https://tools.ietf.org/html/rfc8555#section-6.3
-                    Payload =  string.Empty.Equals(payload) ? string.Empty : encodedPayload,
+                    Payload =  encodedPayload,
                     Protected = Base64UrlEncoded(JsonConvert.SerializeObject(protectedHeader))
                 };
 
