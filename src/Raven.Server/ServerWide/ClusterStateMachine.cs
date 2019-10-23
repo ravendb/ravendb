@@ -981,46 +981,43 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Action> actions)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
+                _rachisLogIndexNotifications.AddTask(index);
+                var count = actions.Count;
+
+                if (count == 0)
                 {
-                    _rachisLogIndexNotifications.AddTask(index);
-                    var count = actions.Count;
+                    NotifyAndSetCompleted(index);
+                    return;
+                }
 
-                    if (count == 0)
+                var exceptionAggregator =
+                    new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
+
+                foreach (var action in actions)
+                {
+                    TaskExecutor.Execute(_ =>
                     {
-                        NotifyAndSetCompleted(index);
-                        return;
-                    }
-
-                    var exceptionAggregator =
-                        new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
-
-                    foreach (var action in actions)
-                    {
-                        TaskExecutor.Execute(_ =>
+                        exceptionAggregator.Execute(action);
+                        if (Interlocked.Decrement(ref count) == 0)
                         {
-                            exceptionAggregator.Execute(action);
-                            if (Interlocked.Decrement(ref count) == 0)
+                            Exception error = null;
+                            try
                             {
-                                Exception error = null;
-                                try
-                                {
-                                    exceptionAggregator.ThrowIfNeeded();
-                                }
-                                catch (Exception e)
-                                {
-                                    error = e;
-                                }
-                                finally
-                                {
-                                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
-                                }
+                                exceptionAggregator.ThrowIfNeeded();
                             }
-                        }, null);
-                    }
+                            catch (Exception e)
+                            {
+                                error = e;
+                            }
+                            finally
+                            {
+                                _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                                _rachisLogIndexNotifications.SetTaskCompleted(index, error);
+                            }
+                        }
+                    }, null);
                 }
             };
         }
@@ -1687,23 +1684,17 @@ namespace Raven.Server.ServerWide
 
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
-                    ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
-                }
+                ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
             };
         }
 
         private void NotifyDatabaseAboutChanged(TransactionOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
-                    ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
-                }
+                ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
             };
         }
 
@@ -2207,13 +2198,10 @@ namespace Raven.Server.ServerWide
 
         private void OnTransactionDispose(TransactionOperationContext context, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
-                    _rachisLogIndexNotifications.AddTask(index);
-                    NotifyAndSetCompleted(index);
-                }
+                _rachisLogIndexNotifications.AddTask(index);
+                NotifyAndSetCompleted(index);
             };
         }
 
