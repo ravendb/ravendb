@@ -203,6 +203,9 @@ namespace Raven.Client.Json
                 case long l:
                     _manualBlittableJsonDocumentBuilder.WriteValue(l);
                     break;
+                case int i:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(i);
+                    break;
                 case double d:
                     _manualBlittableJsonDocumentBuilder.WriteValue(d);
                     break;
