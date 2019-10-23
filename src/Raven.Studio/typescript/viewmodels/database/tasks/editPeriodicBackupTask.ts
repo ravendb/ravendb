@@ -154,7 +154,7 @@ class editPeriodicBackupTask extends viewModelBase {
             });
     }
 
-    savePeriodicBackup() {
+    saveBackupSettings() {
         this.configuration().encryptionSettings().setKeyUsedBeforeSave();
         
         if (!this.validate()) {

@@ -110,8 +110,6 @@ class editServerWideBackup extends viewModelBase {
             title: "Destination was disabled by administrator",
             placement: "right"
         });
-
-        document.getElementById("backup-type").focus();
     }
 
     attached() {
@@ -158,7 +156,7 @@ class editServerWideBackup extends viewModelBase {
             });
     }
 
-    saveServerWideBackup() {
+    saveBackupSettings() {
         this.configuration().encryptionSettings().setKeyUsedBeforeSave();
         
         if (!this.validate()) {
