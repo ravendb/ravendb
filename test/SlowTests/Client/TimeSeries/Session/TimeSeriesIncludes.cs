@@ -10,11 +10,16 @@ using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Session
 {
     public class TimeSeriesIncludes : RavenTestBase
     {
+        public TimeSeriesIncludes(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void SessionLoadWithIncludeTimeSeries()
         {
