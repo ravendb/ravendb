@@ -397,13 +397,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    string topologyId;
-                    ClusterTopology clusterTopology;
-                    using (ctx.OpenReadTransaction())
-                    {
-                        clusterTopology = ServerStore.GetClusterTopology(ctx);
-                        topologyId = clusterTopology.TopologyId;
-                    }
+                    var clusterTopology = ServerStore.GetClusterTopology();
 
                     var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                     if (possibleNode.HasUrl)
@@ -416,7 +410,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (nodeInfo.TopologyId != null)
                     {
-                        AssertTopologyNotNull(clusterTopology, nodeInfo, nodeUrl);
+                        AssertCanAddNodeWithTopologyId(clusterTopology, nodeInfo, nodeUrl);
                     }
 
                     var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? tag : nodeInfo.NodeTag;
@@ -532,7 +526,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        private static void AssertTopologyNotNull(ClusterTopology clusterTopology, NodeInfo nodeInfo, string nodeUrl)
+        private static void AssertCanAddNodeWithTopologyId(ClusterTopology clusterTopology, NodeInfo nodeInfo, string nodeUrl)
         {
             if (clusterTopology.TopologyId != nodeInfo.TopologyId)
             {
