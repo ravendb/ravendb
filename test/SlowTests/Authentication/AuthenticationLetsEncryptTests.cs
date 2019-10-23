@@ -48,7 +48,7 @@ namespace SlowTests.Authentication
             Server.Configuration.Core.AcmeUrl = acmeStaging;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
 
-            var domain = "RavenClusterTest1985" + Environment.MachineName.Replace("-", "");
+            var domain = "RavenClusterTest" + Environment.MachineName.Replace("-", "");
             string email;
             string rootDomain;
 
