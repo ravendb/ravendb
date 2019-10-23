@@ -411,13 +411,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         public bool Equals(TimeSeriesRange x, TimeSeriesRange y)
         {
-            if (x?.Name == null)
-                return y?.Name == null;
-
-            if (y?.Name == null)
-                return false;
-
-            return x.Name.Equals(y.Name, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(x?.Name, y?.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         public int GetHashCode(TimeSeriesRange obj)

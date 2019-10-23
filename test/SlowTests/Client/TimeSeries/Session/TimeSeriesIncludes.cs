@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Extensions;
 using Xunit;
 
 namespace SlowTests.Client.TimeSeries.Session
@@ -858,6 +859,63 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(65d, values[2].Values[0]);
                     Assert.Equal("watches/fitbit", values[2].Tag);
                     Assert.Equal(baseline.AddMinutes(10), values[2].Timestamp);
+                }
+            }
+        }
+
+        [Fact]
+        public void RawQueryIncludeTimeSeriesWithParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        tsf.Append("Heartrate", baseline.AddSeconds(i * 10), "watches/fitbit", new[] { 67d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var start = baseline.GetDefaultRavenFormat();
+                    var end = baseline.AddHours(1).GetDefaultRavenFormat();
+
+                    var query = session.Advanced.RawQuery<User>("from Users include timeseries('Heartrate', $start, $end)")
+                        .AddParameter("start", start)
+                        .AddParameter("end", end);
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", baseline, baseline.AddMinutes(30))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(181, vals.Count);
+                    Assert.Equal(baseline, vals[0].Timestamp);
+                    Assert.Equal("watches/fitbit", vals[0].Tag);
+                    Assert.Equal(67d, vals[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(30), vals[180].Timestamp);
                 }
             }
         }
