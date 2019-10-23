@@ -1,5 +1,4 @@
-﻿using FastTests.Voron;
-using Sparrow.Platform.Posix;
+﻿using Sparrow.Platform.Posix;
 using Xunit;
 using Xunit.Abstractions;
 

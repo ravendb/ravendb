@@ -6,11 +6,15 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries
 {
-    class RavenDB_13574 : RavenTestBase
+    public class RavenDB_13574 : RavenTestBase
     {
+        public RavenDB_13574(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public void ShouldHaveTimeSeriesFlagInMetadata()

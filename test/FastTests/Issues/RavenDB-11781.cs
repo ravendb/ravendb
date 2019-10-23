@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 

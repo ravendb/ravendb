@@ -5,11 +5,15 @@ using FastTests;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Session
 {
     public class TimeSeriesSessionTests : RavenTestBase
     {
+        public TimeSeriesSessionTests(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public void CanCreateSimpleTimeSeries()

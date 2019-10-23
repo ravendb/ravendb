@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using Raven.Server.Config;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;

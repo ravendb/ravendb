@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Raven.Client.Documents.Queries;
+﻿using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
 

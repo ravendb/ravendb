@@ -1,17 +1,22 @@
 ﻿using System;
 using System.Globalization;
-using System.Linq;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents
 {
     public unsafe class TimeSeriesRangeTests : NoDisposalNeeded
     {
+        public TimeSeriesRangeTests(ITestOutputHelper output)
+            : base(output)
+        {
+        }
+
         [Theory]
         [InlineData("1s", "2019-05-05T06:03:51.1077101Z", "2019-05-05T06:03:51.0000000Z", "2019-05-05T06:03:52.0000000Z")]
         [InlineData("1m", "2019-05-05T06:03:51.1077101Z", "2019-05-05T06:03:00.0000000Z", "2019-05-05T06:04:00.0000000Z")]
@@ -48,12 +53,12 @@ namespace FastTests.Server.Documents
 
                 for (int i = 0; i < 12; i++)
                 {
-                     bitBuffer.AddValue((ulong)(i & 1), 1);
+                    bitBuffer.AddValue((ulong)(i & 1), 1);
                 }
 
                 bitBuffer.TryCompressBuffer(allocator, 0);
 
-                
+
                 bitBuffer.Uncompress(allocator, out var newBuffer);
 
                 for (int i = 0; i < 12; i++)
@@ -78,10 +83,10 @@ namespace FastTests.Server.Documents
 
                 var numberOfValues = values.Length;
 
-              
+
                 for (int i = 0; i < numberOfValues; i++)
                 {
-                 
+
                     bitBuffer.EnsureAdditionalBits(allocator, values[i].Item2);
                     bitBuffer.AddValue(values[i].Item1, values[i].Item2);
 

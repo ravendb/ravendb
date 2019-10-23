@@ -8,11 +8,16 @@ using SlowTests.Core.Utils.Entities.Faceted;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {
     public class RavenDB_12748 : RavenTestBase
     {
+        public RavenDB_12748(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Fact]
         public void CanDeserializeLegacyFacetSetup()
         {
