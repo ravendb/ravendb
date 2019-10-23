@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
-    public class Retention : RavenTestBase
+    public class Retention : NoDisposalNeeded
     {
         public Retention(ITestOutputHelper output) : base(output)
         {
