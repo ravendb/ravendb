@@ -85,6 +85,81 @@ namespace SlowTests.Client.TimeSeries
         }
 
         [Fact]
+        public void TimeSeriesNameShouldBeRemovedFromMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "fitbit", new[] { 58d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate2", baseline.AddMinutes(1), "apple", new[] { 58d });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.Contains(nameof(DocumentFlags.HasTimeSeries), flags);
+
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+
+                    Assert.Equal(2, tsNames.Count);
+                    Assert.Equal("Heartrate", tsNames[0]);
+                    Assert.Equal("Heartrate2", tsNames[1]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Remove("Heartrate2", DateTime.MinValue, DateTime.MaxValue);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.Contains(nameof(DocumentFlags.HasTimeSeries), flags);
+
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+
+                    Assert.Equal(1, tsNames.Count);
+                    Assert.Equal("Heartrate", tsNames[0]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Remove("Heartrate", DateTime.MinValue, DateTime.MaxValue);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata.TryGetValue(Constants.Documents.Metadata.Flags, out var flags);
+
+                    Assert.DoesNotContain(nameof(DocumentFlags.HasTimeSeries), flags);
+
+                    var tsNames = session.Advanced.GetTimeSeriesFor(user);
+
+                    Assert.Null(tsNames);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanGetSeriesMinMaxAndCount()
         {
             using (var store = GetDocumentStore())

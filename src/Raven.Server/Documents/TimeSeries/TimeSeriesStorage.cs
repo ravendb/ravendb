@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (location < 0)
                         return;
 
-                    tsNamesList.RemoveAt(~location);
+                    tsNamesList.RemoveAt(location);
 
                     data.Modifications = new DynamicJsonValue(data);
                     metadata.Modifications = new DynamicJsonValue(metadata);
