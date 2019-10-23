@@ -108,54 +108,28 @@ namespace Raven.Server.Documents
                 if (task.IsCanceled || task.IsFaulted)
                     return;
 
+                var database = task.Result;
+
                 switch (changeType)
                 {
                     case ClusterDatabaseChangeType.RecordChanged:
-                        if (task.IsCompleted)
+                        database.StateChanged(index);
+                        if (type == ClusterStateMachine.SnapshotInstalled)
                         {
-                            NotifyDatabaseAboutStateChange(databaseName, task, index);
-                            if (type == ClusterStateMachine.SnapshotInstalled)
-                            {
-                                NotifyPendingClusterTransaction(databaseName, task, index, changeType);
-                            }
-
-                            return;
+                            database.NotifyOnPendingClusterTransaction(index, changeType);
                         }
-
-                        task.ContinueWith(done =>
-                        {
-                            NotifyDatabaseAboutStateChange(databaseName, done, index);
-                            if (type == ClusterStateMachine.SnapshotInstalled)
-                            {
-                                NotifyPendingClusterTransaction(databaseName, done, index, changeType);
-                            }
-                        });
                         break;
+
                     case ClusterDatabaseChangeType.ValueChanged:
-                        if (task.IsCompleted)
-                        {
-                            NotifyDatabaseAboutValueChange(databaseName, task, index);
-                            return;
-                        }
-
-                        task.ContinueWith(done => { NotifyDatabaseAboutValueChange(databaseName, done, index); });
+                        database.ValueChanged(index);
                         break;
+
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                     case ClusterDatabaseChangeType.ClusterTransactionCompleted:
-                        if (task.IsCompleted)
-                        {
-                            task.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, task, index, changeType);
-                            return;
-                        }
-
-                        task.ContinueWith(done =>
-                        {
-                            done.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, done, index, changeType);
-                        });
-
+                        database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
+                        database.NotifyOnPendingClusterTransaction(index, changeType);
                         break;
+
                     default:
                         ThrowUnknownClusterDatabaseChangeType(changeType);
                         break;
@@ -177,11 +151,12 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}'";
+                var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}' at index {index}";
                 if (_logger.IsInfoEnabled)
                     _logger.Info(title, e);
                 _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+                throw;
             }
             finally
             {
@@ -197,7 +172,6 @@ namespace Raven.Server.Documents
             switch (type)
             {
                 case nameof(PutServerWideBackupConfigurationCommand):
-                    return true;
                 case nameof(UpdatePeriodicBackupStatusCommand):
                     return true;
                 default:
@@ -265,21 +239,6 @@ namespace Raven.Server.Documents
         private void UnloadDatabaseInternal(string databaseName)
         {
             DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _).Dispose();
-        }
-
-        public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task, long index, ClusterDatabaseChangeType changeType)
-        {
-            try
-            {
-                task.Result.NotifyOnPendingClusterTransaction(index, changeType);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to notify the database '{name}' about new cluster transactions.", e);
-                }
-            }
         }
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
@@ -403,38 +362,6 @@ namespace Raven.Server.Documents
 
                     NotifyLeaderAboutRemoval(dbName, databaseId);
                 }, TaskContinuationOptions.NotOnRanToCompletion);
-        }
-
-        private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done, long index)
-        {
-            try
-            {
-                done.Result.StateChanged(index);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to update database {changedDatabase} about new state", e);
-                }
-                // nothing to do here
-            }
-        }
-
-        private void NotifyDatabaseAboutValueChange(string changedDatabase, Task<DocumentDatabase> done, long index)
-        {
-            try
-            {
-                done.Result.ValueChanged(index);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to update database {changedDatabase} about new value", e);
-                }
-                // nothing to do here
-            }
         }
 
         public TimeSpan DatabaseLoadTimeout => _serverStore.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
