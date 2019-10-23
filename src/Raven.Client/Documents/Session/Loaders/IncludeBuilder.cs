@@ -260,19 +260,19 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
+        IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime from, DateTime to)
         {
             IncludeTimeSeries(string.Empty, name, from, to);
             return this;
         }
 
-        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime @from, DateTime to)
+        IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime from, DateTime to)
         {
             IncludeTimeSeries(string.Empty, name, from, to);
             return this;
         }
 
-        public IQueryIncludeBuilder<T> IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime @from, DateTime to)
+        IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to)
         {
             WithAlias(path);
             IncludeTimeSeries(path.ToPropertyPath(), name, from, to);

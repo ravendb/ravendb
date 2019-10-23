@@ -24,13 +24,11 @@ namespace Raven.Server.Documents.Queries.Counters
                 TimeSeries[key] = hashSet = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
             }
 
-            var (from, to) = TimeSeriesHandler.ParseDates(fromStr, toStr, timeseries);
-
             hashSet.Add(new TimeSeriesRange
             {
                 Name = timeseries,
-                From = from,
-                To = to
+                From = TimeSeriesHandler.ParseDate(fromStr, timeseries),
+                To = TimeSeriesHandler.ParseDate(toStr, timeseries)
             });
         }
     }

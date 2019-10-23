@@ -273,14 +273,14 @@ namespace Raven.Server.Documents.Handlers
         {
             includeTimeSeries = null;
 
-            var timeseriesNames = GetStringValuesQueryString("timeseries", required: false);
-            if (timeseriesNames.Count == 0)
+            var timeSeriesNames = GetStringValuesQueryString("timeseries", required: false);
+            if (timeSeriesNames.Count == 0)
                 return;
 
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
 
-            includeTimeSeries = new IncludeTimeSeriesCommand(database, context, timeseriesNames, fromList, toList);
+            includeTimeSeries = new IncludeTimeSeriesCommand(database, context, timeSeriesNames, fromList, toList);
         }
 
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,

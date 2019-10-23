@@ -6,17 +6,17 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        protected List<TimeSeriesIncludesToken> TimeSeriesIncludesTokens;
+        internal List<TimeSeriesIncludesToken> TimeSeriesIncludesTokens;
 
-        protected void IncludeTimeSeries(string alias, Dictionary<string, HashSet<TimeSeriesRange>> timeseriesToInclude)
+        protected void IncludeTimeSeries(string alias, Dictionary<string, HashSet<TimeSeriesRange>> timeSeriesToInclude)
         {
-            if (timeseriesToInclude?.Count > 0 == false)
+            if (timeSeriesToInclude?.Count > 0 == false)
                 return;
 
             TimeSeriesIncludesTokens = new List<TimeSeriesIncludesToken>();
             _includesAlias = _includesAlias ?? alias;
 
-            foreach (var kvp in timeseriesToInclude)
+            foreach (var kvp in timeSeriesToInclude)
             {
                 foreach (var range in kvp.Value)
                 {

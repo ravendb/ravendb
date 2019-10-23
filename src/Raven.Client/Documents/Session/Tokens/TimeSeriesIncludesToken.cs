@@ -4,7 +4,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class TimeSeriesIncludesToken : QueryToken
+    internal class TimeSeriesIncludesToken : QueryToken
     {
         private string _sourcePath;
         private readonly TimeSeriesRange _range;
