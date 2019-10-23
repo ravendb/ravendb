@@ -263,6 +263,31 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
+        public void CanSaveMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+
+                    var result = session.Advanced.GetMetadataFor(company);
+                    result["Version-int"] = 1;
+                    result["Version-History-int"] = new List<int> {1};
+
+                    result["Version-short"] = (short)1;
+                    result["Version-History-short"] = new List<short> { 1 };
+
+                    result["Version-timespan"] = TimeSpan.MaxValue;
+                    result["Version-History-timespan"] = new List<TimeSpan> { TimeSpan.MaxValue };
+
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseNumberOfRequests()
         {
             using (var store = GetDocumentStore())
