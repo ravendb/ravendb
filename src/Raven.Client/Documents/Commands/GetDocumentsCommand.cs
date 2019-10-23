@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool metadataOnly, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null)
+        public GetDocumentsCommand(string[] ids, string[] includes, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
@@ -55,17 +55,16 @@ namespace Raven.Client.Documents.Commands
             _ids = ids;
             _includes = includes;
             _metadataOnly = metadataOnly;
-            _timeSeriesIncludes = timeSeriesIncludes;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, bool metadataOnly, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null) 
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<TimeSeriesRange> timeSeriesIncludes, bool metadataOnly) 
             : this(ids, includes, metadataOnly)
         {
-            _counters = counterIncludes ?? throw new ArgumentNullException(nameof(counterIncludes));
+            _counters = counterIncludes;
             _timeSeriesIncludes = timeSeriesIncludes;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, bool metadataOnly, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null)
+        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, IEnumerable<TimeSeriesRange> timeSeriesIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
             _includeAllCounters = includeAllCounters;

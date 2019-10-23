@@ -61,7 +61,8 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 for (int i = 0; i < fromList.Count; i++)
                                 {
-                                    var (from, to) = ParseDates(fromList[i], toList[i], name);
+                                    var from = ParseDate(fromList[i], name);
+                                    var to = ParseDate(toList[i], name);
 
                                     WriteRange(context, writer, documentId, name, from, to);
                                 }
@@ -81,17 +82,13 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        public static (DateTime From, DateTime To) ParseDates(string fromStr, string toStr, string name)
+        public static DateTime ParseDate(string dateStr, string name)
         {
-            if (DateTime.TryParseExact(fromStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
-                    CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var from) == false)
-                ThrowInvalidDateTime(name, fromStr);
+            if (DateTime.TryParseExact(dateStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
+                    CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                ThrowInvalidDateTime(name, dateStr);
 
-            if (DateTime.TryParseExact(toStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
-                    CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var to) == false)
-                ThrowInvalidDateTime(name, toStr);
-
-            return (from, to);
+            return date;
         }
 
         private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to)

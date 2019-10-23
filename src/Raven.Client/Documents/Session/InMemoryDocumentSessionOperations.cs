@@ -1717,10 +1717,18 @@ more responsive application.
             for (int j = 0; j < valuesBlittable.Length; j++)
             {
                 var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
-                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false ||
-                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false ||
-                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
-                    continue;
+
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Timestamp), out DateTime timestamp) == false)
+                    throw new InvalidDataException($"Unable to read time series value on document : '{id}', timeseries : '{name}'. " +
+                                                   $"The time series value is missing '{nameof(TimeSeriesValue.Timestamp)}' property");
+
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Tag), out string tag) == false)
+                    throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
+                                                   $"The time series value is missing '{nameof(TimeSeriesValue.Tag)}' property");
+
+                if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesValue.Values), out BlittableJsonReaderArray values) == false)
+                    throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
+                                                   $"The time series value is missing '{nameof(TimeSeriesValue.Values)}' property");
 
                 valuesArray[j] = new TimeSeriesValue
                 {
