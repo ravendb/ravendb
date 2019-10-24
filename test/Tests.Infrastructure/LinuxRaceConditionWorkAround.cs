@@ -9,6 +9,7 @@ namespace FastTests
     {
         static LinuxRaceConditionWorkAround()
         {
+            XunitLogging.Init();
             XunitLogging.EnableExceptionCapture();
             
             if (PlatformDetails.RunningOnPosix)
