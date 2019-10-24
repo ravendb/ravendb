@@ -1,11 +1,7 @@
-﻿namespace Raven.Client.Documents.Operations.Attachments
-{
-    internal class AttachmentStreamDetails
-    {
-        public int Read;
-        public long Size;
-    }
+﻿using System;
 
+namespace Raven.Client.Documents.Operations.Attachments
+{
     public class AttachmentDetails : AttachmentName
     {
         public string ChangeVector;
@@ -24,6 +20,12 @@
     {
         public AttachmentRequest(string documentId, string name)
         {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentNullException($"{nameof(documentId)} cannot be null or whitespace.");
+
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException($"{nameof(name)} cannot be null or whitespace.");
+
             DocumentId = documentId;
             Name = name;
         }

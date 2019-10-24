@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class ConcatStream : Stream
+    internal class ConcatStream : Stream
     {
         private readonly RentedBuffer _prefix;
         private readonly Stream _remaining;
