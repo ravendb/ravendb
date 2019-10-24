@@ -304,6 +304,89 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
+        [Theory]
+        [InlineData(10, 3)]
+        [InlineData(10, 1024)]
+        [InlineData(1, 32768)]
+        [InlineData(10, 32768)]
+        [InlineData(100, 3)]
+        public void CanGetListOfAttachmentsAndReadPartially(int count, int size)
+        {
+            var attachmentDictionary = new Dictionary<string, MemoryStream>();
+            const string id = "users/1";
+            const string attachmentName = "Typical attachment name";
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "su" };
+                    session.Store(user, id);
+                    for (var i = 0; i < count; i++)
+                    {
+                        var rnd = new Random();
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var stream = new MemoryStream(bArr);
+                        session.Advanced.Attachments.Store(id, $"{attachmentName}_{i}", stream, "application/zip");
+                        attachmentDictionary[$"{attachmentName}_{i}"] = stream;
+                    }
+
+                    session.SaveChanges();
+                }
+
+                foreach (var stream in attachmentDictionary.Values)
+                    stream.Position = 0;
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
+                    var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+                    var rndRnd = new Random();
+                    while (attachmentsEnumerator.MoveNext())
+                    {
+                        var memoryStream = new MemoryStream();
+                        var attachmentResult = attachmentsEnumerator.Current;
+
+                        Assert.NotNull(attachmentsEnumerator.Current != null);
+
+                        if (rndRnd.Next(0, 2) == 0)
+                        {
+                            var s = size / 3;
+                            var buffer1 = new byte[s];
+                            var buffer2 = new byte[s];
+                            attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, s);
+
+                            var toRead = s;
+                            var r = 0;
+                            while (toRead > 0)
+                            {
+                                r = attachmentResult.Stream.Read(buffer2, 0 + r, toRead);
+                                toRead -= r;
+                            }
+
+                            Assert.True(buffer1.SequenceEqual(buffer2));
+                        }
+                        else
+                        {
+                            attachmentResult.Stream.CopyTo(memoryStream);
+                            memoryStream.Position = 0;
+
+                            var buffer1 = new byte[size];
+                            var buffer2 = new byte[size];
+
+                            Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                            Assert.True(buffer1.SequenceEqual(buffer2));
+                        }
+                    }
+                }
+            }
+
+            foreach (var stream in attachmentDictionary.Values)
+                stream.Dispose();
+        }
+
         [Fact]
         public async Task CanGetListOfAttachmentsAndReadOrderedAsync()
         {
