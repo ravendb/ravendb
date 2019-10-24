@@ -257,6 +257,9 @@ namespace Raven.Client.Json
                 case IDictionary<string, object> dico:
                     WriteDictionary(dico);
                     break;
+                case IDictionary iDictionary:
+                    WriteDictionary(iDictionary);
+                    break;
                 case DynamicJsonValue val:
                     foreach (var prop in val.Properties)
                     {
@@ -275,6 +278,18 @@ namespace Raven.Client.Json
                 default:
                     throw new NotSupportedException($"The value type {value.GetType().FullName} of key {propName} is not supported in the metadata");
             }
+        }
+
+        private void WriteDictionary(IDictionary iDictionary)
+        {
+            _manualBlittableJsonDocumentBuilder.StartWriteObject();
+            foreach (DictionaryEntry item in iDictionary)
+            {
+                var key = item.Key.ToString();
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(key);
+                WritePropertyValue(key, item.Value);
+            }
+            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
         }
 
         private void WriteDictionary<T>(IDictionary<string, T> dic)
