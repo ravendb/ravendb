@@ -273,14 +273,35 @@ namespace SlowTests.Core.Session
                     session.Store(company);
 
                     var result = session.Advanced.GetMetadataFor(company);
-                    result["Version-int"] = 1;
-                    result["Version-History-int"] = new List<int> {1};
+                    result["short"] = (short)1;
+                    result["short-list"] = new List<short> { 1 };
 
-                    result["Version-short"] = (short)1;
-                    result["Version-History-short"] = new List<short> { 1 };
+                    result["ushort"] = (ushort)1;
+                    result["ushort-list"] = new List<ushort> { 1 };
 
-                    result["Version-timespan"] = TimeSpan.MaxValue;
-                    result["Version-History-timespan"] = new List<TimeSpan> { TimeSpan.MaxValue };
+                    result["int"] = 1;
+                    result["int-list"] = new List<int> {1};
+
+                    result["uint"] = (uint)1;
+                    result["uint-list"] = new List<uint> { 1 };
+
+                    result["long"] = (long)1;
+                    result["long-list"] = new List<long> { 1 };
+
+                    result["ulong"] = (ulong)1;
+                    result["ulong-list"] = new List<ulong> { 1 };
+
+                    result["timespan"] = TimeSpan.MaxValue;
+                    result["timespan-list"] = new List<TimeSpan> { TimeSpan.MaxValue };
+
+                    result["byte"] = (byte)1;
+                    result["byte-list"] = new List<byte> { 1 };
+
+                    result["sbyte"] = (sbyte)1;
+                    result["sbyte-list"] = new List<sbyte> { 1 };
+
+                    result["char"] = (char)1;
+                    result["char-list"] = new List<char> { (char)1 };
 
                     session.SaveChanges();
                 }
