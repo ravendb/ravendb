@@ -659,21 +659,20 @@ namespace Sparrow.Logging
                     }
                     catch (OutOfMemoryException)
                     {
-                        Console.Error.WriteLine("ERROR! Out of memory exception while trying to log, will avoid logging for the next 5 seconds");
+                        Console.Error.WriteLine("Out of memory exception while trying to log, will avoid logging for the next 5 seconds");
 
                         DisableLogsFor(threadStates, TimeSpan.FromSeconds(5));
                     }
-                    catch (IOException ioe) when (IsOutOfDiskSpaceException(ioe))
-                    {
-                        Console.Error.WriteLine($"Couldn't create a new log file because of out of disk space! " +
-                                                $"Disabling the logs for 30 seconds {Environment.NewLine}{ioe}");
-
-                        DisableLogsFor(threadStates, TimeSpan.FromSeconds(30));
-                    }
                     catch (Exception e)
                     {
-                        var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
-                        Console.Error.WriteLine(msg);
+                        var msg = e is IOException i && IsOutOfDiskSpaceException(i)
+                            ? "Couldn't create a new log file because of out of disk space! " +
+                              "Disabling the logs for 30 seconds"
+                            : "FATAL ERROR trying to log!";
+
+                        Console.Error.WriteLine($"{msg}{Environment.NewLine}{e}");
+
+                        DisableLogsFor(threadStates, TimeSpan.FromSeconds(30));
                     }
                 }
             }
