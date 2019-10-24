@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -22,20 +23,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var random = new Random();
-                var properties = new List<string>();
-                for (var i = 0; i < 100; i++)
-                {
-                    var number = random.Next().ToString();
-                    if (properties.Contains(number))
-                        continue;
+                var (properties, djv) = GenerateRandomProperties();
 
-                    properties.Add(number);
-                }
+                var (nestedProps, nestedDjv) = GenerateRandomProperties();
 
-                var djv = new DynamicJsonValue();
-                foreach (var property in properties)
-                    djv[property] = null;
+                djv["Nested"] = nestedDjv;
 
                 using (var commands = store.Commands())
                 {
@@ -44,35 +36,61 @@ namespace SlowTests.Issues
                     commands.Put("items/1", null, json);
                 }
 
-                ValidateOrderOfProperties(store, properties);
+                ValidateOrderOfProperties(store, properties, nestedProps);
 
                 store.Operations.Send(new PatchOperation("items/1", null, new PatchRequest { Script = $"this['{properties[0]}'] = 10" }));
 
-                ValidateOrderOfProperties(store, properties);
+                ValidateOrderOfProperties(store, properties, nestedProps);
             }
         }
 
-        private static void ValidateOrderOfProperties(DocumentStore store, List<string> properties)
+        private static (List<string> properties, DynamicJsonValue djv) GenerateRandomProperties()
+        {
+            var random = new Random();
+            var properties = new List<string>();
+            for (var i = 0; i < 100; i++)
+            {
+                var number = random.Next().ToString();
+                if (properties.Contains(number))
+                    continue;
+
+                properties.Add(number);
+            }
+
+            var djv = new DynamicJsonValue();
+            foreach (var property in properties)
+                djv[property] = null;
+            return (properties, djv);
+        }
+
+        private static void ValidateOrderOfProperties(DocumentStore store, List<string> properties, List<string> nestedProps)
         {
             using (var commands = store.Commands())
             {
                 var json = commands.Get("items/1");
 
-                Assert.Equal(properties.Count + 1, json.BlittableJson.Count);
+                Assert.Equal(properties.Count + 2, json.BlittableJson.Count);
 
-                var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                var propertiesByInsertionOrder = json.BlittableJson.GetPropertiesByInsertionOrder();
-                for (var i = 0; i < propertiesByInsertionOrder.Properties.Count; i++)
-                {
-                    var propIndex = propertiesByInsertionOrder.Properties[i];
-                    json.BlittableJson.GetPropertyByIndex(propIndex, ref propDetails);
+                ValidateProperties(properties, json.BlittableJson);
 
-                    if (propDetails.Name == Constants.Documents.Metadata.Key)
-                        continue;
+                ValidateProperties(nestedProps, (BlittableJsonReaderObject)json.BlittableJson["Nested"]);
+            }
+        }
 
-                    var expected = properties[i];
-                    Assert.Equal(expected, propDetails.Name);
-                }
+        private static void ValidateProperties(List<string> properties, BlittableJsonReaderObject json)
+        {
+            var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+            var propertiesByInsertionOrder = json.GetPropertiesByInsertionOrder();
+            for (var i = 0; i < properties.Count; i++)
+            {
+                var propIndex = propertiesByInsertionOrder.Properties[i];
+                json.GetPropertyByIndex(propIndex, ref propDetails);
+
+                if (propDetails.Name == Constants.Documents.Metadata.Key)
+                    continue;
+
+                var expected = properties[i];
+                Assert.Equal(expected, propDetails.Name);
             }
         }
     }
