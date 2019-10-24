@@ -44,15 +44,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             if (_prefix.Count <= 0)
                 return _remaining.Read(buffer, offset, count);
 
-            var read = Math.Min(_prefix.Count, count);
-            Buffer.BlockCopy(_prefix.Buffer, _prefix.Offset, buffer, offset, read);
-            _prefix.Count -= read;
-            _prefix.Offset += read;
-            if (_prefix.Count == 0)
-            {
-                ArrayPool<byte>.Shared.Return(_prefix.Buffer);
-                _prefix.Buffer = null;
-            }
+            int read = ReadFromBuffer(buffer, offset, count);
 
             return read;
         }
@@ -64,6 +56,13 @@ namespace Raven.Client.Documents.Operations.Attachments
                 return _remaining.ReadAsync(buffer, offset, count, cancellationToken);
             }
 
+            int read = ReadFromBuffer(buffer, offset, count);
+
+            return Task.FromResult(read);
+        }
+
+        private int ReadFromBuffer(byte[] buffer, int offset, int count)
+        {
             var read = Math.Min(_prefix.Count, count);
             Buffer.BlockCopy(_prefix.Buffer, _prefix.Offset, buffer, offset, read);
             _prefix.Count -= read;
@@ -74,7 +73,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 _prefix.Buffer = null;
             }
 
-            return Task.FromResult(read);
+            return read;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
