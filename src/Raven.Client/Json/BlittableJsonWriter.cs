@@ -192,46 +192,64 @@ namespace Raven.Client.Json
             switch (value)
             {
                 case null:
-                    _manualBlittableJsonDocumentBuilder.WriteValueNull();
+                    WriteNull();
                     break;
                 case string strValue:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(strValue);
+                    WriteValue(strValue);
+                    break;
+                case char ch:
+                    WriteValue(ch);
+                    break;
+                case bool b:
+                    WriteValue(b);
                     break;
                 case LazyStringValue lazyStringValue:
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyStringValue);
                     break;
-                case long l:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(l);
+                case short s:
+                    WriteValue(s);
                     break;
                 case int i:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(i);
+                    WriteValue(i);
                     break;
-                case short s:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(s);
+                case long l:
+                    WriteValue(l);
+                    break;
+                case ushort us:
+                    WriteValue(us);
+                    break;
+                case uint ui:
+                    WriteValue(ui);
+                    break;
+                case ulong ul:
+                    WriteValue(ul);
                     break;
                 case double d:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(d);
+                    WriteValue(d);
                     break;
                 case decimal decVal:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(decVal);
+                    WriteValue(decVal);
                     break;
                 case float f:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(f);
+                    WriteValue(f);
                     break;
-                case bool b:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(b);
+                case byte b:
+                    WriteValue(b);
+                    break;
+                case sbyte sb:
+                    WriteValue(sb);
                     break;
                 case LazyNumberValue lazyNumber:
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
                     break;
                 case DateTime dt:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc));
+                    WriteValue(dt);
                     break;
                 case DateTimeOffset dto:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                    WriteValue(dto);
                     break;
-                case TimeSpan dto:
-                    _manualBlittableJsonDocumentBuilder.WriteValue(dto.ToString("c"));
+                case TimeSpan ts:
+                    WriteValue(ts);
                     break;
                 case IDictionary<string, string> dics:
                     WriteDictionary(dics);
@@ -310,6 +328,11 @@ namespace Raven.Client.Json
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
+        public override void WriteValue(short value)
+        {
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+        }
+
         public override void WriteValue(int value)
         {
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
@@ -335,11 +358,6 @@ namespace Raven.Client.Json
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
-        public override void WriteValue(short value)
-        {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
-        }
-
         public override void WriteValue(byte value)
         {
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
@@ -350,16 +368,16 @@ namespace Raven.Client.Json
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
-        public override void WriteValue(DateTime value)
+        public override void WriteValue(DateTime dt)
         {
-            var s = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
-            _manualBlittableJsonDocumentBuilder.WriteValue(s);
+            var value = dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
-        public override void WriteValue(DateTimeOffset value)
+        public override void WriteValue(DateTimeOffset dto)
         {
-            var s = value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
-            _manualBlittableJsonDocumentBuilder.WriteValue(s);
+            var value = dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(int? value)
@@ -499,12 +517,12 @@ namespace Raven.Client.Json
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
-        public override void WriteValue(uint value)
+        public override void WriteValue(ushort value)
         {
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
-        public override void WriteValue(uint? value)
+        public override void WriteValue(ushort? value)
         {
             if (value != null)
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
@@ -512,12 +530,12 @@ namespace Raven.Client.Json
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
-        public override void WriteValue(ushort value)
+        public override void WriteValue(uint value)
         {
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
-        public override void WriteValue(ushort? value)
+        public override void WriteValue(uint? value)
         {
             if (value != null)
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
@@ -538,9 +556,9 @@ namespace Raven.Client.Json
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
 
-        public override void WriteValue(TimeSpan value)
+        public override void WriteValue(TimeSpan ts)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value.ToString("c"));
+            _manualBlittableJsonDocumentBuilder.WriteValue(ts.ToString("c"));
         }
 
         public override void WriteValue(TimeSpan? value)
