@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
-using Raven.Server.Utils;
+using Raven.Client.Documents.Operations.Attachments;
 using Xunit;
 
 namespace FastTests.Utils
@@ -23,7 +23,7 @@ namespace FastTests.Utils
 
             var max = r.Next(1, bytes.Length / 2);
 
-            var entireStream = new LimitedStream(ms, 0, ms.Length);
+            var entireStream = new LimitedStream(ms, ms.Length);
             Assert.Equal(bytes, entireStream.ReadData());
 
             ms.Position = 0;
@@ -32,9 +32,10 @@ namespace FastTests.Utils
 
             for (int i = 0; i < numberOfChunks; i++)
             {
-                var pos = (int) ms.Position;
+                var pos = ms.Position;
+                var prev = Math.Min(pos + max, ms.Length);
 
-                var ls = new LimitedStream(ms, pos, Math.Min(pos + max, ms.Length));
+                var ls = new LimitedStream(ms, prev - pos);
 
                 if (i == numberOfChunks - 1)
                 {
@@ -48,7 +49,7 @@ namespace FastTests.Utils
                 var read = ls.ReadData();
 
                 Assert.Equal(ls.Length, read.Length);
-                Assert.Equal(bytes.Skip(pos).Take(read.Length).ToArray(), read);
+                Assert.Equal(bytes.Skip((int)pos).Take(read.Length).ToArray(), read);
             }
         }
     }

@@ -50,7 +50,7 @@ namespace SlowTests.Client.Attachments
                         while (attachmentsEnumerator.MoveNext())
                         {
                             Assert.NotNull(attachmentsEnumerator.Current != null);
-                            attachmentsEnumerator.Current.CopyTo(memoryStream);
+                            attachmentsEnumerator.Current.Stream.CopyTo(memoryStream);
                             memoryStream.Position = 0;
                         }
                         var buffer1 = new byte[size];
@@ -95,7 +95,7 @@ namespace SlowTests.Client.Attachments
                         while (attachmentsEnumerator.MoveNext())
                         {
                             Assert.NotNull(attachmentsEnumerator.Current != null);
-                            await attachmentsEnumerator.Current.CopyToAsync(memoryStream);
+                            await attachmentsEnumerator.Current.Stream.CopyToAsync(memoryStream);
                             memoryStream.Position = 0;
                         }
                         var buffer1 = new byte[size];
@@ -150,9 +150,9 @@ namespace SlowTests.Client.Attachments
                         var attachmentResult = attachmentsEnumerator.Current;
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.CopyTo(memoryStream);
+                        attachmentResult.Stream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
-                        attachmentResult.CopyTo(memoryStream);
+                        attachmentResult.Stream.CopyTo(memoryStream);
 
                         Assert.Equal(0, memoryStream.Position);
 
@@ -227,7 +227,7 @@ namespace SlowTests.Client.Attachments
                         var attachmentResult = attachmentsEnumerator.Current;
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.CopyTo(memoryStream);
+                        attachmentResult.Stream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
 
                         var buffer1 = new byte[size];
@@ -288,7 +288,7 @@ namespace SlowTests.Client.Attachments
                         var attachmentResult = attachmentsEnumerator.Current;
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.CopyTo(memoryStream);
+                        attachmentResult.Stream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
 
                         var buffer1 = new byte[size];
@@ -345,8 +345,8 @@ namespace SlowTests.Client.Attachments
                         var memoryStream = new MemoryStream();
                         var attachmentResult = attachmentsEnumerator.Current;
 
-                        Assert.NotNull(attachmentsEnumerator.Current != null);
-                        await attachmentResult.CopyToAsync(memoryStream);
+                        Assert.NotNull(attachmentResult != null);
+                        await attachmentResult.Stream.CopyToAsync(memoryStream);
 
                         memoryStream.Position = 0;
 
@@ -411,7 +411,7 @@ namespace SlowTests.Client.Attachments
                         var attachmentResult = attachmentsEnumerator.Current;
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.CopyTo(memoryStream);
+                        attachmentResult.Stream.CopyTo(memoryStream);
                         memoryStream.Position = 0;
 
                         var buffer1 = new byte[size];

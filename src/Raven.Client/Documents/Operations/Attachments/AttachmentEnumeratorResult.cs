@@ -1,34 +1,17 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
+﻿using System.IO;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
-    public class AttachmentEnumeratorResult : IDisposable
+    public class AttachmentEnumeratorResult
     {
-        private AttachmentsStream _internalStream;
+        public Stream Stream { get; }
 
-        internal AttachmentEnumeratorResult(AttachmentsStream internalStream)
+        public AttachmentDetails Details { get; }
+
+        public AttachmentEnumeratorResult(AttachmentDetails details, Stream stream)
         {
-            _internalStream = internalStream;
-        }
-
-        public AttachmentDetails Details;
-
-        public void CopyTo(Stream stream)
-        {
-            _internalStream.CopyTo(stream);
-        }
-
-        public Task CopyToAsync(Stream stream)
-        {
-            return _internalStream.CopyToAsync(stream);
-        }
-
-        public void Dispose()
-        {
-            _internalStream?.Dispose();
-            _internalStream = null;
+            Details = details;
+            Stream = stream;
         }
     }
 }
