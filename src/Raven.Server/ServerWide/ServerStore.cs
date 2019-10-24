@@ -2043,9 +2043,9 @@ namespace Raven.Server.ServerWide
                                 dbIdEtagDictionary[kvp.Key] = kvp.Value;
                             }
                         }
-                        IdleDatabases[idleDbInstance.Name] = dbIdEtagDictionary;
 
-                        DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTime());
+                        if (DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTime()))
+                            IdleDatabases[idleDbInstance.Name] = dbIdEtagDictionary;
                     }
                 }
                 catch (Exception e)

@@ -888,18 +888,18 @@ namespace Raven.Server.Documents
             ClusterTransactionCompleted
         }
 
-        public void UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
+        public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
         {
             if (ShouldContinueDispose(databaseName.Value, wakeup, out var dueTime) == false)
-                return;
+                return false;
 
             LastRecentlyUsed.TryRemove(databaseName, out _);
             DatabasesCache.RemoveLockAndReturn(databaseName.Value, CompleteDatabaseUnloading, out _, caller).Dispose();
 
-            if (dueTime == 0)
-                return;
+            if (dueTime > 0)
+                _wakeupTimers.TryAdd(databaseName.Value, new Timer(_ => StartDatabaseOnTimer(databaseName.Value, wakeup), null, dueTime, Timeout.Infinite));
 
-            _wakeupTimers.TryAdd(databaseName.Value, new Timer(_ => StartDatabaseOnTimer(databaseName.Value, wakeup), null, dueTime, Timeout.Infinite));
+            return true;
         }
 
         public void RescheduleDatabaseWakeup(string name, long milliseconds, DateTime? wakeup = null)
