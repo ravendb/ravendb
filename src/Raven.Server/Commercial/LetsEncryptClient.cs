@@ -90,7 +90,7 @@ namespace Raven.Server.Commercial
             _accountKey = new RSACryptoServiceProvider(4096);
             _client = GetCachedClient(_url);
             (_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("directory", UriKind.Relative), null, token);
-            
+
             // Use this when testing against pebble
             //(_directory, _) = await SendAsync<Directory>(HttpMethod.Get, new Uri("dir", UriKind.Relative), null, token);
 
@@ -223,7 +223,7 @@ namespace Raven.Server.Commercial
                     {
                         continue;
                     }
-                        
+
                     throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {request}", e);
                 }
 
@@ -252,7 +252,7 @@ namespace Raven.Server.Commercial
                     }
                 }
 
-                if(response.IsSuccessStatusCode || hasNonce || _nonce == null )
+                if (response.IsSuccessStatusCode || hasNonce || _nonce == null)
                 {
                     return response; // either successful or no point in retry
                 }
@@ -310,7 +310,7 @@ namespace Raven.Server.Commercial
             {
                 var challenge = _challenges[index];
 
-                
+
                 AuthorizationChallengeResponse result;
                 string responseText;
                 try
@@ -322,9 +322,9 @@ namespace Raven.Server.Commercial
 
                     while (result.Status == "pending")
                     {
-					    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                        // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
                         (result, responseText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
-                        
+
                         await Task.Delay(500, token);
                     }
                 }
@@ -334,7 +334,7 @@ namespace Raven.Server.Commercial
                     string errorText = null;
                     try
                     {
-					    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                        // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
                         (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
                     }
                     catch (Exception)
@@ -345,7 +345,7 @@ namespace Raven.Server.Commercial
                     if (err == null)
                         throw;
 
-                    throw new InvalidOperationException("Failed to complete challenge because: " + err.Error?.Detail  + 
+                    throw new InvalidOperationException("Failed to complete challenge because: " + err.Error?.Detail +
                         Environment.NewLine + errorText, e);
                 }
             }
@@ -371,7 +371,7 @@ namespace Raven.Server.Commercial
 
             while (true)
             {
-			    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+                // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
                 (response, responseText) = await SendAsync<Order>(HttpMethod.Post, response.Location, string.Empty, token);
 
                 if (response.Status == "valid")
@@ -390,7 +390,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Invalid order status: " + response.Status + Environment.NewLine +
                     responseText);
             }
-		    // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
+            // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
             var (pem, _) = await SendAsync<string>(HttpMethod.Post, response.Certificate, string.Empty, token);
 
             var cert = new X509Certificate2(Encoding.UTF8.GetBytes(pem), (string)null, X509KeyStorageFlags.MachineKeySet);
@@ -408,7 +408,7 @@ namespace Raven.Server.Commercial
                     blob = rsaCsp.ExportCspBlob(true);
                     break;
             }
-                
+
 
             _cache.CachedCerts[_currentOrder.Identifiers[0].Value] = new CertificateCache
             {
@@ -810,7 +810,7 @@ namespace Raven.Server.Commercial
 
                 var message = new JwsMessage
                 {
-                    Payload =  encodedPayload,
+                    Payload = encodedPayload,
                     Protected = Base64UrlEncoded(JsonConvert.SerializeObject(protectedHeader))
                 };
 
