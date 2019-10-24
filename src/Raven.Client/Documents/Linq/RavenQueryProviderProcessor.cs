@@ -173,7 +173,7 @@ namespace Raven.Client.Documents.Linq
                                 _documentQuery.WhereTrue();
                                 _documentQuery.AndAlso();
                                 _documentQuery.NegateNext();
-                                VisitMethodCall((MethodCallExpression)unaryExpressionOp, negated: true);
+                                VisitMethodCall((MethodCallExpression)unaryExpressionOp);
                                 _documentQuery.CloseSubclause();
                                 break;
                             default:
@@ -976,7 +976,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void VisitMethodCall(MethodCallExpression expression, bool negated = false)
+        private void VisitMethodCall(MethodCallExpression expression)
         {
             if (_conventions.AnyQueryMethodConverters)
             {
@@ -1028,7 +1028,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (declaringType == typeof(Enumerable))
             {
-                VisitEnumerableMethodCall(expression, negated);
+                VisitEnumerableMethodCall(expression);
                 return;
             }
 
@@ -1446,15 +1446,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void VisitEnumerableMethodCall(MethodCallExpression expression, bool negated)
+        private void VisitEnumerableMethodCall(MethodCallExpression expression)
         {
             switch (expression.Method.Name)
             {
                 case "Any":
                     {
-                        if (negated)
-                            throw new InvalidOperationException("Cannot process negated Any(), see RavenDB-732 https://issues.hibernatingrhinos.com/issue/RavenDB-732");
-
                         if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
                         {
                             VisitIsNullOrEmpty(expression, notEquals: true);
@@ -3222,7 +3219,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
             if (_afterQueryExecuted != null)
                 asyncDocumentQuery.AfterQueryExecuted(_afterQueryExecuted);
-           
+
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
             customization?.Invoke(_documentQuery);
 
