@@ -77,7 +77,8 @@ abstract class amazonSettings extends backupSettings {
             this.awsAccessKey,
             this.awsSecretKey,
             this.awsRegionName,
-            this.selectedAwsRegion
+            this.selectedAwsRegion,
+            this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -90,32 +91,30 @@ abstract class amazonSettings extends backupSettings {
             validation: [
                 {
                     validator: function (awsRegionName: string) {
-                        return self.validate(() => {
-                            if (!awsRegionName) {
-                                return false;
-                            }
+                        if (!awsRegionName) {
+                            return false;
+                        }
 
-                            const foundRegion = self.availableAwsRegionEndpoints.find(x =>
-                                x.value.toLowerCase() === awsRegionName.toLowerCase());
-                            if (foundRegion)
-                                return true;
+                        const foundRegion = self.availableAwsRegionEndpoints.find(x =>
+                            x.value.toLowerCase() === awsRegionName.toLowerCase());
+                        if (foundRegion)
+                            return true;
 
-                            if (!awsRegionName.includes("-") ||
-                                awsRegionName.startsWith("-") ||
-                                awsRegionName.endsWith("-")) {
-                                this.message = "AWS Region must include a '-' and cannot start or end with it";
-                                return false;
-                            }
+                        if (!awsRegionName.includes("-") ||
+                            awsRegionName.startsWith("-") ||
+                            awsRegionName.endsWith("-")) {
+                            this.message = "AWS Region must include a '-' and cannot start or end with it";
+                            return false;
+                        }
 
-                            // region wasn't found on the list
-                            // we allow custom regions only if administrator didn't resticted regions.
-                            if (self.allowedRegions) {
-                                this.message = "Invalid region";
-                                return false;
-                            } else {
-                                return true;
-                            }
-                        });
+                        // region wasn't found on the list
+                        // we allow custom regions only if administrator didn't resticted regions.
+                        if (self.allowedRegions) {
+                            this.message = "Invalid region";
+                            return false;
+                        } else {
+                            return true;
+                        }
                     }
                 }
             ]

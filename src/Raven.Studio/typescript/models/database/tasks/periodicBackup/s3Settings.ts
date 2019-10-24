@@ -18,7 +18,8 @@ class s3Settings extends amazonSettings {
             this.awsSecretKey,
             this.awsRegionName,
             this.remoteFolderName,
-            this.selectedAwsRegion
+            this.selectedAwsRegion,
+            this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -38,43 +39,37 @@ class s3Settings extends amazonSettings {
         this.bucketName.extend({
             validation: [
                 {
-                    validator: (bucketName: string) => this.validate(() =>
-                        bucketName && bucketName.length >= 3 && bucketName.length <= 63),
+                    validator: (bucketName: string) => bucketName && bucketName.length >= 3 && bucketName.length <= 63,
                     message: "Bucket name should be between 3 and 63 characters long"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() =>
-                        bucketName && regExp.test(bucketName)),
+                    validator: (bucketName: string) => bucketName && regExp.test(bucketName),
                     message: "Allowed characters are lowercase characters, numbers, periods, and dashes"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() =>
-                        bucketName && letterOrNumberRegex.test(bucketName[0])),
+                    validator: (bucketName: string) => bucketName && letterOrNumberRegex.test(bucketName[0]),
                     message: "Bucket name should start with a number or letter"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() =>
-                        bucketName && letterOrNumberRegex.test(bucketName[bucketName.length - 1])),
+                    validator: (bucketName: string) => bucketName && letterOrNumberRegex.test(bucketName[bucketName.length - 1]),
                     message: "Bucket name should end with a number or letter"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() =>
-                        bucketName && !bucketName.includes("..")),
+                    validator: (bucketName: string) => bucketName && !bucketName.includes(".."),
                     message: "Bucket name cannot contain consecutive periods"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() =>
-                        bucketName && !bucketName.includes(".-") && !bucketName.includes("-.")),
+                    validator: (bucketName: string) => bucketName && !bucketName.includes(".-") && !bucketName.includes("-."),
                     message: "Bucket names cannot contain dashes next to periods (e.g. \" -.\" and/or \".-\")"
                 },
                 {
-                    validator: (bucketName: string) => this.validate(() => !ipRegExp.test(bucketName)),
+                    validator: (bucketName: string) => !ipRegExp.test(bucketName),
                     message: "Bucket name must not be formatted as an IP address (e.g., 192.168.5.4)"
                 }
             ]
         });
 
-        this.validationGroup = ko.validatedObservable({
+        this.localConfigValidationGroup = ko.validatedObservable({
             awsAccessKey: this.awsAccessKey,
             awsSecretKey: this.awsSecretKey,
             awsRegionName: this.awsRegionName,
