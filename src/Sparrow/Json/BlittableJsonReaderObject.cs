@@ -1265,13 +1265,16 @@ namespace Sparrow.Json
             where T : struct, IUnmanagedWriteBuffer
         {
             AssertContextNotDisposed();
-
-            for (var i = 0; i < Count; i++)
+            using (var insertionOrder = GetPropertiesByInsertionOrder())
             {
                 var prop = new PropertyDetails();
-                GetPropertyByIndex(i, ref prop);
-                writer.WritePropertyName(prop.Name);
-                writer.WriteValue(ProcessTokenTypeFlags(prop.Token), prop.Value);
+                for (var i = 0; i < insertionOrder.Used; i++)
+                {
+                    var propIndex = insertionOrder.PropertiesBuffer[i];
+                    GetPropertyByIndex(propIndex, ref prop);
+                    writer.WritePropertyName(prop.Name);
+                    writer.WriteValue(ProcessTokenTypeFlags(prop.Token), prop.Value);
+                }
             }
         }
 
