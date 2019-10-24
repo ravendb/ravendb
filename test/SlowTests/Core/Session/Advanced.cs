@@ -303,6 +303,21 @@ namespace SlowTests.Core.Session
                     result["char"] = (char)1;
                     result["char-list"] = new List<char> { (char)1 };
 
+                    result["dictionary"] = new Dictionary<int, int>
+                    {
+                        { 1, 1 }
+                    };
+
+                    result["dictionary"] = new Dictionary<double, int>
+                    {
+                        { 1.1, 1 }
+                    };
+
+                    result["dictionary-class"] = new Dictionary<Company, int>
+                    {
+                        // will save the class name with the namespace
+                        { new Company(), 1 }
+                    };
                     session.SaveChanges();
                 }
             }
