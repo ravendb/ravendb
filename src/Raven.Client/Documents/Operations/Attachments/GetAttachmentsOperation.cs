@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -80,8 +80,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                                 writer.WriteComma();
                                 writer.WritePropertyName(nameof(AttachmentRequest.Name));
                                 writer.WriteString(attachment.Name);
-                                writer.WriteEndObject();;
-
+                                writer.WriteEndObject();
                             }
                             writer.WriteEndArray();
 
@@ -95,8 +94,6 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
             {
-                AttachmentsStreamInfo streamInfo;
-                var streamDetails = new List<AttachmentStreamDetails>();
                 var state = new JsonParserState();
                 Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
@@ -120,29 +117,40 @@ namespace Raven.Client.Documents.Operations.Attachments
                             {
                                 var cur = JsonDeserializationClient.AttachmentDetails(e);
                                 AttachmentsMetadata.Add(cur);
-                                streamDetails.Add(new AttachmentStreamDetails
-                                {
-                                    Read = 0,
-                                    Size = cur.Size
-                                });
                             }
                         }
                     }
 
                     var bufferSize = parser.BufferSize - parser.BufferOffset;
-                    var tmpBuffer = new byte[bufferSize];
-                    Array.Copy(buffer.Buffer.Array ?? throw new InvalidOperationException(), buffer.Buffer.Offset + parser.BufferOffset, tmpBuffer, 0, bufferSize);
+                    var copy = ArrayPool<byte>.Shared.Rent(bufferSize);
+                    Buffer.BlockCopy(buffer.Buffer.Array ?? throw new InvalidOperationException(), buffer.Buffer.Offset + parser.BufferOffset, copy, 0, bufferSize);
 
-                    streamInfo = new AttachmentsStreamInfo { AttachmentStreamDetails = streamDetails, Buffer = tmpBuffer };
+                    Result = Iterate(stream, copy, bufferSize).GetEnumerator();
                 }
 
-                Result = AttachmentsMetadata.Select(
-                    (attachment, index) => new AttachmentEnumeratorResult(new AttachmentsStream(stream, attachment.Name, index, attachment.Size, streamInfo))
-                    {
-                        Details = attachment
-                    }).GetEnumerator();
-
                 return ResponseDisposeHandling.Manually;
+            }
+
+            private IEnumerable<AttachmentEnumeratorResult> Iterate(Stream stream, byte[] copy, int bufferSize)
+            {
+                using (stream)
+                {
+                    LimitedStream prev = null;
+
+                    var cs = new ConcatStream(new ConcatStream.RentedBuffer
+                    {
+                        Buffer = copy,
+                        Count = bufferSize,
+                        Offset = 0
+                    }, stream);
+
+                    foreach (var attachment in AttachmentsMetadata)
+                    {
+                        prev?.ReadToEnd();
+                        prev = new LimitedStream(cs, attachment.Size);
+                        yield return new AttachmentEnumeratorResult(attachment, prev);
+                    }
+                }
             }
 
             public override bool IsReadRequest => true;
