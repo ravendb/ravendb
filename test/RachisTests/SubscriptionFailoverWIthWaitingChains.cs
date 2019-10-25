@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace RachisTests
 {
@@ -43,9 +44,11 @@ namespace RachisTests
                     cde.Dispose();
                 }
             }
-
         }
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
+
+        public SubscriptionFailoverWIthWaitingChains(ITestOutputHelper output) : base(output)
+        {
+        }
 
         [Fact]
         public async Task DoStuff()
