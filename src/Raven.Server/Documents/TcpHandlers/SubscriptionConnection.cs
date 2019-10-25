@@ -176,13 +176,13 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
             } while (shouldRetry);
 
-            // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)            
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
-
-            Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
-
             try
             {
+                // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)            
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+
+                Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
+
                 await SendNoopAck();
                 await WriteJsonAsync(new DynamicJsonValue
                 {
