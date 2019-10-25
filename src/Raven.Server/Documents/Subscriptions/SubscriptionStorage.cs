@@ -429,7 +429,8 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    if (subscriptionState.Query != subscriptionStateKvp.Value.Connection?.SubscriptionState.Query)
+                    SubscriptionConnection connection = subscriptionStateKvp.Value.Connection;
+                    if (connection != null && subscriptionState.Query != connection.SubscriptionState.Query)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
                         continue;
