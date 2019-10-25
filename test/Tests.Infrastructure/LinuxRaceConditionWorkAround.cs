@@ -9,6 +9,7 @@ namespace FastTests
     {
         static LinuxRaceConditionWorkAround()
         {
+            XunitLogging.RedirectStreams = false;
             XunitLogging.Init();
             XunitLogging.EnableExceptionCapture();
             
