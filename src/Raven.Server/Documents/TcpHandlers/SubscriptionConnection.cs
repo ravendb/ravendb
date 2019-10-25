@@ -896,7 +896,25 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     // ignored
                 }
-                CancellationTokenSource.Dispose();
+
+                try
+                {
+                    CancellationTokenSource.Cancel();
+                }
+                catch (Exception ex)
+                {
+                    // ignored
+                }
+
+                try
+                {
+                    CancellationTokenSource.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    // ignored
+                }
+                
                 Stats.Dispose();
 
                 _statusDescription?.Clear();
