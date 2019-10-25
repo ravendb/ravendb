@@ -61,9 +61,19 @@ namespace Raven.Server.Monitoring.Snmp
 
                 var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: true);
                 if (activate)
-                    snmpEngine.Start();
+                {
+                    if (snmpEngine.Active == false)
+                        snmpEngine.Start();
+                }
                 else
+                {
                     snmpEngine.Stop();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // ignore
+                // we are shutting down the server
             }
             finally
             {
@@ -86,7 +96,12 @@ namespace Raven.Server.Monitoring.Snmp
 
                 var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring(withNotification: true);
                 if (activate)
+                {
+                    if (_snmpEngine.Active)
+                        throw new InvalidOperationException("Cannot start SNMP Engine because it is already activated. Should not happen!");
+
                     _snmpEngine.Start();
+                }
 
                 _server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
             }
@@ -207,7 +222,7 @@ namespace Raven.Server.Monitoring.Snmp
 
             var engineGroup = new EngineGroup();
             var engineIdField = engineGroup.GetType().GetField("_engineId", BindingFlags.Instance | BindingFlags.NonPublic);
-            engineIdField.SetValue(engineGroup, new OctetString(Guid.NewGuid().ToString("N")));
+            engineIdField.SetValue(engineGroup, new OctetString(server.ServerStore.GetServerId().ToString("N")));
 
             var engine = new SnmpEngine(factory, listener, engineGroup);
             engine.Listener.AddBinding(new IPEndPoint(IPAddress.Any, server.Configuration.Monitoring.Snmp.Port));
