@@ -127,13 +127,13 @@ namespace Raven.Server.Documents.TcpHandlers
             return true;
         }
 
-        public DynamicJsonValue GetConnectionStats(JsonOperationContext context)
+        public DynamicJsonValue GetConnectionStats()
         {
             var stats = new DynamicJsonValue
             {
                 ["Id"] = Id,
                 ["Operation"] = Operation.ToString(),
-                ["ClientUri"] = TcpClient.Client.RemoteEndPoint.ToString(),
+                ["ClientUri"] = TcpClient?.Client?.RemoteEndPoint?.ToString(),
                 ["ConnectedAt"] = _connectedAt,
                 ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString()
             };
