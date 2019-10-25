@@ -55,6 +55,8 @@ namespace Raven.Server.Documents.Revisions
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
+        private readonly static TimeSpan MaxEnforceConfigurationSingleBatchTime = TimeSpan.FromSeconds(30);
+
         public enum RevisionsTable
         {
             /* ChangeVector is the table's key as it's unique and will avoid conflicts (by replication) */
@@ -1086,6 +1088,7 @@ namespace Raven.Server.Documents.Revisions
 
             var result = new EnforceConfigurationResult();
             var ids = new List<string>();
+            var sw = Stopwatch.StartNew();
 
             // send initial progress
             parameters.OnProgress?.Invoke(result);
@@ -1096,6 +1099,7 @@ namespace Raven.Server.Documents.Revisions
                 hasMore = false;
                 ids.Clear();
                 token.Delay();
+                sw.Restart();
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
@@ -1111,11 +1115,19 @@ namespace Raven.Server.Documents.Revisions
                             if (state == NextRevisionIdResult.Break)
                                 break;
                             if (state == NextRevisionIdResult.Continue)
-                                continue;
+                            {
+                                if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
+                                {
+                                    hasMore = true;
+                                    break;
+                                }
+                                else
+                                    continue;
+                            }
 
                             ids.Add(id);
 
-                            if (ids.Count > 1024 || ctx.AllocatedMemory > SizeLimit)
+                            if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
                             {
                                 hasMore = true;
                                 break;
@@ -1130,6 +1142,20 @@ namespace Raven.Server.Documents.Revisions
             }
 
             return result;
+
+            bool CanContinueBatch(List<string> idsToCheck, TimeSpan elapsed, JsonOperationContext context)
+            {
+                if (idsToCheck.Count > 1024)
+                    return false;
+
+                if (elapsed > MaxEnforceConfigurationSingleBatchTime)
+                    return false;
+
+                if (context.AllocatedMemory > SizeLimit)
+                    return false;
+
+                return true;
+            }
         }
 
         private static readonly RevisionsCollectionConfiguration ZeroConfiguration = new RevisionsCollectionConfiguration
