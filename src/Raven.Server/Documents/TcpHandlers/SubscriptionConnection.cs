@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -66,6 +67,26 @@ namespace Raven.Server.Documents.TcpHandlers
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
+        private ConcurrentQueue<string> _statusDescription = new ConcurrentQueue<string>();
+
+        public string[] GetRecentStatusDescriptions()
+        {
+            return _statusDescription?.ToArray()??Array.Empty<string>();
+        }
+
+        public void AddToStatusDescription(string message)
+        {
+            var arr = _statusDescription;
+            if (arr != null)
+            {
+                while (arr.Count > 50)
+                {
+                    arr.TryDequeue(out _);
+                }
+                arr.Enqueue(message);
+            }
+        }
+
         public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable, JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
         {
             TcpConnection = connectionOptions;
@@ -112,10 +133,12 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             await ParseSubscriptionOptionsAsync();
 
+            var message = $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}";
+            AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
-                    $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
+                    message);
             }
 
             // first, validate details and make sure subscription exists
@@ -142,13 +165,13 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (TimeoutException)
                 {
-                    if (timeout == TimeSpan.Zero && _logger.IsInfoEnabled)
+                    if (timeout == TimeSpan.FromMilliseconds(16) && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
                     timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2));
-                    await SendHeartBeat();
+                    await SendHeartBeat($"Client from IP Waiting {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
                     shouldRetry = true;
                 }
             } while (shouldRetry);
@@ -215,7 +238,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     Task.Run(async () =>
                     {
                         using (tcpConnectionOptions)
-                        using (tcpConnectionDisposable)
+                        using (tcpConnectionDisposable)                        
                         using (connection)
                         {
                             try
@@ -242,11 +265,11 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                             catch (Exception e)
                             {
+                                var errorMessage = $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}";
+                                connection.AddToStatusDescription($"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}; Sending response to client");
                                 if (connection._logger.IsInfoEnabled)
                                 {
-                                    connection._logger.Info(
-                                        $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}",
-                                        e);
+                                    connection._logger.Info(errorMessage,e);
                                 }
 
                                 try
@@ -260,6 +283,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                             finally
                             {
+                                connection.AddToStatusDescription("Finished processing subscription");
                                 if (connection._logger.IsInfoEnabled)
                                 {
                                     connection._logger.Info(
@@ -331,6 +355,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException)
                 {
+                    connection.AddToStatusDescription("Redirecting subscription client to different server");
                     if (connection._logger.IsInfoEnabled)
                     {
                         connection._logger.Info("Subscription does not belong to current node", ex);
@@ -348,6 +373,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else if (ex is SubscriptionChangeVectorUpdateConcurrencyException subscriptionConcurrency)
                 {
+                    connection.AddToStatusDescription("Subscription change vector update concurrency error");
                     if (connection._logger.IsInfoEnabled)
                     {
                         connection._logger.Info("Subscription change vector update concurrency error", ex);
@@ -366,6 +392,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else
                 {
+                    connection.AddToStatusDescription("Subscription error");
+
                     if (connection._logger.IsInfoEnabled)
                     {
                         connection._logger.Info("Subscription error", ex);
@@ -465,6 +493,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task ProcessSubscriptionAsync()
         {
+
+            this.AddToStatusDescription("Starting to precess subscription");
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info(
@@ -502,7 +532,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     _logger.Info(
                                         $"Did not find any documents to send for subscription {Options.SubscriptionName}");
                                 }
-
+                                this.AddToStatusDescription($"Acknowldeging docs processing progress without sending any documents to client. CV: {_lastChangeVector}");
                                 await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
                                     Options.SubscriptionName,
                                     // if this is a new subscription that we sent anything in this iteration, 
@@ -515,7 +545,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector ?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
                                 if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                    await SendHeartBeat();
+                                    await SendHeartBeat("Didnt' find any documents to send and more then 1000ms passed");
 
                                 using (docsContext.OpenReadTransaction())
                                 {
@@ -578,7 +608,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     replyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
-                await SendHeartBeat();
+                await SendHeartBeat("Waiting for client ACK");
                 await SendNoopAck();
             }
 
@@ -622,6 +652,8 @@ namespace Raven.Server.Documents.TcpHandlers
         /// <returns>Whether succeeded finding any documents to send</returns>
         private async Task<bool> TrySendingBatchToClient(DocumentsOperationContext docsContext, Stopwatch sendingCurrentBatchStopwatch)
         {
+            this.AddToStatusDescription("Starting trying to sent docs to client");
+
             bool anyDocumentsSentInCurrentIteration = false;
             int docsToFlush = 0;
             using (var writer = new BlittableJsonTextWriter(docsContext, _buffer))
@@ -645,7 +677,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                             {
-                                await SendHeartBeat();
+                                await SendHeartBeat("Skipping docs for more than 1000ms without sending any data");
                                 sendingCurrentBatchStopwatch.Restart();
                             }
 
@@ -695,16 +727,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (_buffer.Length > Constants.Size.Megabyte ||
                             sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                         {
-                            if (docsToFlush > 0)
-                            {
-                                await FlushDocsToClient(writer, docsToFlush);
-                                docsToFlush = 0;
-                                sendingCurrentBatchStopwatch.Restart();
-                            }
-                            else
-                            {
-                                await SendHeartBeat();
-                            }
+                            await FlushDocsToClient(writer, docsToFlush);
+                            docsToFlush = 0;
+                            sendingCurrentBatchStopwatch.Restart();
                         }
                     }
 
@@ -728,6 +753,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         writer.WriteString(nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch));
                         writer.WriteEndObject();
 
+                        this.AddToStatusDescription("Flushing sent docs to client");
                         await FlushDocsToClient(writer, docsToFlush, true);
                         if (_logger.IsInfoEnabled)
                         {
@@ -761,11 +787,16 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task SendHeartBeat()
+        private async Task SendHeartBeat(string reason)
         {
             try
             {
                 await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Subscription {Options.SubscriptionName} is sending a Hearbeat message to the client. Reason: {reason}");
+                }
             }
             catch (Exception ex)
             {
@@ -796,6 +827,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task<bool> WaitForChangedDocuments(Task pendingReply)
         {
+            this.AddToStatusDescription("Start waiting for changed documents");
             do
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
@@ -812,7 +844,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     return true;
                 }
 
-                await SendHeartBeat();
+                await SendHeartBeat("Waiting for changed documents");
                 await SendNoopAck();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
@@ -840,6 +872,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public void Dispose()
         {
+            this.AddToStatusDescription($"Disposed at {Environment.StackTrace}"); //todo: remove that
             if (_isDisposed)
                 return;
             _isDisposed = true;
@@ -865,6 +898,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 CancellationTokenSource.Dispose();
                 Stats.Dispose();
+
+                _statusDescription?.Clear();
+                _statusDescription = null;
             }
         }
 
