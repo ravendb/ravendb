@@ -189,6 +189,8 @@ namespace Raven.Server.ServerWide
 
         public TransactionContextPool ContextPool;
 
+        public IoChangesNotifications IoChanges { get; private set; }
+
         public long LastRaftCommitIndex
         {
             get
@@ -512,6 +514,8 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
             var storeAlertForLateRaise = new List<AlertRaised>();
 
+            IoChanges = new IoChangesNotifications();
+
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
@@ -519,7 +523,7 @@ namespace Raven.Server.ServerWide
             }
             else
             {
-                options = StorageEnvironmentOptions.ForPath(path.FullPath);
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, null);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
