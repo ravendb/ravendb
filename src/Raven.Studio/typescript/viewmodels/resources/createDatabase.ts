@@ -340,6 +340,12 @@ class createDatabase extends dialogViewModelBase {
                 return [];
             }
 
+            if (replicationFactor > 0 && selectedNodes.length === 0) {
+                // on first load the replication factor is set but the selected nodes aren't
+                // we cannot set it in CompositionComplete because the default replication factor might be smaller than the number of nodes
+                return databaseLocationInfo;
+            }
+
             return databaseLocationInfo.filter(x => selectedNodes.indexOf(x.NodeTag) > -1);
         });
 
@@ -508,8 +514,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     showAdvancedConfigurationFor(sectionName: availableConfigurationSectionId) {
-        const targetSection = this.getAvailableSections().find(x => x.id === sectionName);
-        
         this.currentAdvancedSection(sectionName);
 
         const sectionConfiguration = this.databaseModel.configurationSections.find(x => x.id === sectionName);
