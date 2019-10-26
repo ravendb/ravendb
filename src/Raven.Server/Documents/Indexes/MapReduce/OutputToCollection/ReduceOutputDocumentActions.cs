@@ -1,23 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
+using Voron.Impl;
 
-namespace Raven.Server.Documents.Indexes.MapReduce
+namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class ReduceOutputDocumentActions
     {
         private readonly MapReduceIndex _index;
         private const string ReduceOutputsTreeName = "ReduceOutputsTree";
+        private const string ReduceOutputsIdsToPatternReferenceIdsTreeName = "ReduceOutputsIdsToPatternReferenceIdsTree";
         internal static Slice PrefixesOfReduceOutputDocumentsToDeleteKey;
 
         private HashSet<string> _prefixesOfReduceOutputDocumentsToDelete;
+        private readonly string _collectionOfReduceOutputs;
+        private readonly long? _reduceOutputVersion;
+        private readonly OutputReferencesPattern _patternOfReduceOutputReferences;
 
         static ReduceOutputDocumentActions()
         {
@@ -30,6 +36,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public ReduceOutputDocumentActions(MapReduceIndex index)
         {
             _index = index;
+
+            Debug.Assert(string.IsNullOrEmpty(index.Definition.OutputReduceToCollection) == false);
+
+            _collectionOfReduceOutputs = index.Definition.OutputReduceToCollection;
+            _reduceOutputVersion = index.Definition.ReduceOutputIndex;
+
+            if (string.IsNullOrEmpty(index.Definition.PatternOfReduceOutputReferences) == false)
+                _patternOfReduceOutputReferences = new OutputReferencesPattern(index.Definition.PatternOfReduceOutputReferences);
         }
 
         public void Initialize(RavenTransaction tx)
@@ -49,6 +63,34 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     } while (it.MoveNext());
                 }
             }
+        }
+
+        public void AddPatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId, string referenceDocumentId)
+        {
+            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTreeName);
+
+            tree.Add(reduceResultId, referenceDocumentId);
+        }
+
+        public string GetPatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId)
+        {
+            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTreeName);
+
+            var result = tree.Read(reduceResultId);
+
+            return result.Reader.ReadString(result.Reader.Length);
+        }
+
+        public void DeletePatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId)
+        {
+            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTreeName);
+
+            tree.Delete(reduceResultId);
+        }
+
+        public OutputReduceToCollectionCommand CreateOutputReduceToCollectionCommand(JsonOperationContext indexContext, Transaction writeTransaction)
+        {
+            return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternOfReduceOutputReferences, _index, indexContext, writeTransaction);
         }
 
         public void AddPrefixesOfDocumentsToDelete(HashSet<string> prefixes)

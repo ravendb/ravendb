@@ -95,6 +95,11 @@ namespace Raven.Client.Documents.Indexes
         /// If not null than each reduce result will be created as a document in the specified collection name.
         /// </summary>
         protected string OutputReduceToCollection { get; set; }
+        
+        /// <summary>
+        /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
+        /// </summary>
+        protected Expression<Func<TReduceResult, string>> PatternOfReduceOutputReferences { get; set; }
 
         /// <summary>
         /// Register a field to be indexed

@@ -78,6 +78,7 @@ namespace Raven.Client.Documents.Indexes
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
+                PatternOfReduceOutputReferences = PatternOfReduceOutputReferences,
                 AdditionalSources = AdditionalSources,
                 Configuration = Configuration
             }.ToIndexDefinition(Conventions, validateMap: false);
