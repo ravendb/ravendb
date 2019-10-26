@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TcpManagementHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/tcp", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/tcp", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetAll()
         {
             var start = GetStart();
