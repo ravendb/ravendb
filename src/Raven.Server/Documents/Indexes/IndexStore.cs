@@ -22,6 +22,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Sorting;
@@ -319,7 +320,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null)
                             {
-                                var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
+                                var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
                                     definition.OutputReduceToCollection, replacementMapReduceIndex.Definition.ReduceOutputIndex.Value);
 
                                 if (currentIndex is MapReduceIndex currentMapReduceIndex)
@@ -424,7 +425,7 @@ namespace Raven.Server.Documents.Indexes
             
             if (definition.ReduceOutputIndex != null)
             {
-                var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
+                var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
                     definition.OutputReduceToCollection, definition.ReduceOutputIndex.Value);
 
                 prefixesOfDocumentsToDelete.Add(prefix);

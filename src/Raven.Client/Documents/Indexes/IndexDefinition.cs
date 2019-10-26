@@ -366,6 +366,11 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public long? ReduceOutputIndex { get; set; }
 
+        /// <summary>
+        /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
+        /// </summary>
+        public string PatternOfReduceOutputReferences { get; set; }
+
         public override string ToString()
         {
             return Name;

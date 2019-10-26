@@ -13,10 +13,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             GroupByFields = new HashSet<CompiledIndexField>(groupByFields);
             OutputReduceToCollection = definition.OutputReduceToCollection;
             ReduceOutputIndex = definition.ReduceOutputIndex;
+            PatternOfReduceOutputReferences = definition.PatternOfReduceOutputReferences;
         }
 
         public HashSet<CompiledIndexField> GroupByFields { get; }
         public string OutputReduceToCollection { get; }
         public long? ReduceOutputIndex { get; set; }
+        public string PatternOfReduceOutputReferences { get; }
     }
 }

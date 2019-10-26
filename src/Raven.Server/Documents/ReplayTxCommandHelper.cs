@@ -9,6 +9,7 @@ using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -217,7 +218,7 @@ namespace Raven.Server.Documents
                         peepingTomStream);
                 case nameof(TombstoneCleaner.DeleteTombstonesCommand):
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
-                case nameof(OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand):
+                case nameof(OutputReduceToCollectionCommand):
                     return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
                 case nameof(BatchHandler.ClusterTransactionMergedCommand):
                     return jsonSerializer.Deserialize<ClusterTransactionMergedCommandDto>(reader);
