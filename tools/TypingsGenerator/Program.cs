@@ -74,6 +74,7 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Raven.Server.Utils;
+using Raven.Server.Utils.IoMetrics;
 using Raven.Server.Web.Studio;
 using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
 using Sparrow.Json;
