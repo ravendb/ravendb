@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment IncludesSegment = new StringSegment("Includes");
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
+        private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
 
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
@@ -152,7 +153,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-            var timeout = TimeSpan.FromMilliseconds(16);
+            var timeout = InitialConnectionTimeout;
 
             bool shouldRetry;
 
@@ -165,7 +166,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 catch (TimeoutException)
                 {
-                    if (timeout == TimeSpan.FromMilliseconds(16) && _logger.IsInfoEnabled)
+                    if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
                     {
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
@@ -545,7 +546,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector ?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
                                 if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                    await SendHeartBeat("Didnt' find any documents to send and more then 1000ms passed");
+                                    await SendHeartBeat("Didn't find any documents to send and more then 1000ms passed");
 
                                 using (docsContext.OpenReadTransaction())
                                 {
