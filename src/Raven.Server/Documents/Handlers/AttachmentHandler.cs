@@ -110,8 +110,8 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
-                using (var responseStream = ResponseBodyStream())
                 {
+                    var responseStream = ResponseBodyStream();
                     foreach (var stream in attachmentsStreams)
                     {
                         using (var tmpStream = stream)

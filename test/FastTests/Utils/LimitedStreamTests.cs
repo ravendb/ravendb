@@ -20,10 +20,15 @@ namespace FastTests.Utils
             r.NextBytes(bytes);
 
             var ms = new MemoryStream(bytes);
-
+            var cs = new ConcatStream(new ConcatStream.RentedBuffer
+            {
+                Buffer = null,
+                Count = 0,
+                Offset = 0
+            }, ms);
             var max = r.Next(1, bytes.Length / 2);
 
-            var entireStream = new LimitedStream(ms, ms.Length);
+            var entireStream = new LimitedStream(cs, ms.Length);
             Assert.Equal(bytes, entireStream.ReadData());
 
             ms.Position = 0;
@@ -35,7 +40,7 @@ namespace FastTests.Utils
                 var pos = ms.Position;
                 var prev = Math.Min(pos + max, ms.Length);
 
-                var ls = new LimitedStream(ms, prev - pos);
+                var ls = new LimitedStream(cs, prev - pos);
 
                 if (i == numberOfChunks - 1)
                 {

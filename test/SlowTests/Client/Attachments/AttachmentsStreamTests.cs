@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server.Exceptions;
 using Xunit;
 
 namespace SlowTests.Client.Attachments
@@ -221,8 +222,6 @@ namespace SlowTests.Client.Attachments
                             continue;
                         }
 
-
-
                         var memoryStream = new MemoryStream();
                         var attachmentResult = attachmentsEnumerator.Current;
 
@@ -297,6 +296,54 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
                         Assert.True(buffer1.SequenceEqual(buffer2));
                     }
+                }
+            }
+
+            foreach (var stream in attachmentDictionary.Values)
+                stream.Dispose();
+        }
+
+        [Fact]
+        public void ShouldThrowOnDisposedStream()
+        {
+            int count = 2;
+            int size = 32768;
+            var attachmentDictionary = new Dictionary<string, MemoryStream>();
+            const string id = "users/1";
+            const string attachmentName = "Typical attachment name";
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "su" };
+                    session.Store(user, id);
+                    for (var i = 0; i < count; i++)
+                    {
+                        var rnd = new Random();
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var stream = new MemoryStream(bArr);
+                        session.Advanced.Attachments.Store(id, $"{attachmentName}_{i}", stream, "application/zip");
+                        attachmentDictionary[$"{attachmentName}_{i}"] = stream;
+                    }
+
+                    session.SaveChanges();
+                }
+
+                foreach (var stream in attachmentDictionary.Values)
+                    stream.Position = 0;
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
+                    var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+                    while (attachmentsEnumerator.MoveNext())
+                    {
+                    }
+
+                   Assert.Throws<StreamDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
                 }
             }
 
