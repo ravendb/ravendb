@@ -538,7 +538,8 @@ namespace RachisTests
                     Topology = new DatabaseTopology
                     {
                         Members = new List<string> {cluster.Leader.ServerStore.NodeTag,firstFollowerTag},
-                        ReplicationFactor = 2
+                        ReplicationFactor = 2,
+                        Stamp = new LeaderStamp()
                     }
                 },
                 Name = db

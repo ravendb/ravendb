@@ -54,11 +54,16 @@ namespace FastTests.Server.Basic
         }
 
         [Fact]
-        public void Should_throw_when_there_is_timeout()
+        public async Task Should_throw_when_there_is_timeout()
         {
             UseNewLocalServer();
+            var mre = new ManualResetEvent(false);
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(0, TimeUnit.Milliseconds);
-            Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100); // force timeout          
+            Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s =>
+            {
+                mre.Set();
+                Thread.Sleep(100);
+            }; // force timeout          
 
             var url = Server.WebUrl;
             var name = Guid.NewGuid().ToString();
@@ -66,16 +71,27 @@ namespace FastTests.Server.Basic
 
             try
             {
-                Assert.Throws<DatabaseLoadTimeoutException>(() =>
+
+                var t = Task.Run(() =>
                 {
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
                     using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
                     {
                         requestExecutor.Execute(
                             new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);
+                    }
+                });
+
+                Assert.Throws<DatabaseLoadTimeoutException>(() =>
+                {
+                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                    using (var requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, null, DocumentConventions.Default))
+                    {
+                        mre.WaitOne();
                         requestExecutor.Execute(new GetDocumentsCommand("Raven/HiloPrefix", includes: null, metadataOnly: false), ctx);
                     }
                 });
+                await t;
             }
             catch (TaskCanceledException e)
             {
