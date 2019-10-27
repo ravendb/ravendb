@@ -218,7 +218,6 @@ namespace RachisTests
                 }
                 catch (Exception ex)
                 {
-                    //  Console.WriteLine(ex);
                 }
             }
         }
@@ -252,8 +251,7 @@ namespace RachisTests
                 var rehabCount = 0;
                 var attempts = 10;
                 do
-                {
-                    Console.WriteLine($"Waiting for rehab on node {curNode.ServerStore.NodeTag}. Attempts: {attempts}. RehabCount: {rehabCount}");
+                {                    
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
