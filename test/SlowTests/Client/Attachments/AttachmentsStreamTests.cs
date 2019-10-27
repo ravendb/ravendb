@@ -5,8 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Server.Exceptions;
 using Xunit;
 
 namespace SlowTests.Client.Attachments
