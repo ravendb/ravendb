@@ -133,17 +133,14 @@ namespace Raven.Client.Documents.Operations.Attachments
 
             private IEnumerable<AttachmentEnumeratorResult> Iterate(Stream stream, byte[] copy, int bufferSize)
             {
-                using (stream)
+                LimitedStream prev = null;
+                using (var cs = new ConcatStream(new ConcatStream.RentedBuffer
                 {
-                    LimitedStream prev = null;
-
-                    var cs = new ConcatStream(new ConcatStream.RentedBuffer
-                    {
-                        Buffer = copy,
-                        Count = bufferSize,
-                        Offset = 0
-                    }, stream);
-
+                    Buffer = copy,
+                    Count = bufferSize,
+                    Offset = 0
+                }, stream))
+                {
                     foreach (var attachment in AttachmentsMetadata)
                     {
                         prev?.ReadToEnd();

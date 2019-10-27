@@ -11,6 +11,12 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly RentedBuffer _prefix;
         private readonly Stream _remaining;
 
+        public bool Disposed
+        {
+            get;
+            private set;
+        }
+
         public class RentedBuffer
         {
             public byte[] Buffer;
@@ -97,6 +103,8 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         protected override void Dispose(bool disposing)
         {
+            Disposed = true;
+
             if (_prefix.Buffer != null)
             {
                 ArrayPool<byte>.Shared.Return(_prefix.Buffer);

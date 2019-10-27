@@ -3,16 +3,17 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
     internal class LimitedStream : Stream
     {
         private readonly long _length;
-        private readonly Stream _inner;
+        private readonly ConcatStream _inner;
         private long _read;
 
-        public LimitedStream(Stream inner, long length)
+        public LimitedStream(ConcatStream inner, long length)
         {
             _inner = inner;
             _length = length;
@@ -35,6 +36,9 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (_inner.Disposed)
+                throw new StreamDisposedException($"{nameof(_inner)} stream is disposed.");
+
             var actualCount = _read + count > _length ? _length - _read : count;
             if (actualCount == 0)
                 return 0;
@@ -49,6 +53,9 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            if (_inner.Disposed)
+                throw new StreamDisposedException($"{nameof(_inner)} stream is disposed.");
+
             var actualCount = _read + count > _length ? _length - _read : count;
             if (actualCount == 0)
                 return 0;
@@ -67,8 +74,11 @@ namespace Raven.Client.Documents.Operations.Attachments
             throw new NotSupportedException();
         }
 
-        public void ReadToEnd()
+        internal void ReadToEnd()
         {
+            if (_inner.Disposed)
+                throw new StreamDisposedException($"{nameof(_inner)} stream is disposed.");
+
             if (_read == _length)
                 return;
 
