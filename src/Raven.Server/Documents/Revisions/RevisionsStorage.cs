@@ -609,32 +609,33 @@ namespace Raven.Server.Documents.Revisions
                         break;
 
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr);
-
-                    if (minimumTimeToKeep.HasValue &&
-                        _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
-                        return deletedRevisionsCount;
-
-                    hasValue = true;
-
-                    using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+                    using (var revision = TableValueToRevision(context, ref tvr))
                     {
-                        CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+                        if (minimumTimeToKeep.HasValue &&
+                            _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
+                            return deletedRevisionsCount;
 
-                        maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
-                        if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                        hasValue = true;
+
+                        using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
                         {
-                            _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
-                        }
+                            CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
 
-                        var docCollection = CollectionName.GetCollectionName(revision.Data);
-                        if (writeTable == null || docCollection != currentCollection)
-                        {
-                            currentCollection = docCollection;
-                            writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
-                        }
+                            maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
+                            if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                            {
+                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                            }
 
-                        writeTable.DeleteByKey(keySlice);
+                            var docCollection = CollectionName.GetCollectionName(revision.Data);
+                            if (writeTable == null || docCollection != currentCollection)
+                            {
+                                currentCollection = docCollection;
+                                writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
+                            }
+
+                            writeTable.DeleteByKey(keySlice);
+                        }
                     }
 
                     deletedRevisionsCount++;
