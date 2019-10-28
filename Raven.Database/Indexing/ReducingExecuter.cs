@@ -44,7 +44,10 @@ namespace Raven.Database.Indexing
             {
                 var mappedResultsInfo = actions.MapReduce.GetReduceTypesPerKeys(indexToWorkOn.IndexId,
                                                                     context.CurrentNumberOfItemsToReduceInSingleBatch, 
-                                                                    context.NumberOfItemsToExecuteReduceInSingleStep, token);
+                                                                    context.NumberOfItemsToExecuteReduceInSingleStep, message =>
+                                                                    {
+                                                                        indexToWorkOn.Index.AddIndexingError(new InvalidOperationException(message), message);
+                                                                    } ,token);
 
                 foreach (var key in mappedResultsInfo)
                 {

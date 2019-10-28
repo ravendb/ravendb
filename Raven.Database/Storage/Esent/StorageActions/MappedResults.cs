@@ -921,7 +921,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
             } while (Api.TryMoveNext(session, ReducedResults) && take > 0);
         }
 
-        public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken)
+        public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, Action<string> onError, CancellationToken cancellationToken)
         {
             var allKeysToReduce = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

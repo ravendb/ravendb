@@ -888,7 +888,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             RemoveReduceResults(() => reduceResultsByViewAndReduceKeyAndLevelAndSourceBucket.MultiRead(Snapshot, viewAndReduceKeyAndLevelAndSourceBucket), false, CancellationToken.None);
         }
 
-        public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, CancellationToken cancellationToken)
+        public IEnumerable<ReduceTypePerKey> GetReduceTypesPerKeys(int view, int take, int limitOfItemsToReduceInSingleStep, Action<string> onError, CancellationToken cancellationToken)
         {
             if (take <= 0)
                 take = 1;
@@ -899,7 +899,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             var scheduledReductionsByView = tableStorage.ScheduledReductions.GetIndex(Tables.ScheduledReductions.Indices.ByView);
             using (var iterator = scheduledReductionsByView.MultiRead(Snapshot, key))
             {
-                if (!iterator.Seek(Slice.BeforeAllKeys))
+                if (iterator.Seek(Slice.BeforeAllKeys) == false)
                     yield break;
 
                 var processedItems = 0;
@@ -910,8 +910,16 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
                     ushort version;
                     var value = LoadStruct(tableStorage.ScheduledReductions, iterator.CurrentKey, writeBatch.Value, out version);
-                    if (value == null) // TODO: Check if this is correct. 
-                        continue;
+                    if (value == null)
+                    {
+                        // the value doesn't exist in the table,
+                        // since we check this index for staleness using this index,
+                        // we need to delete the key from it to avoid an infinite loop
+                        scheduledReductionsByView.Delete(writeBatch.Value, key);
+                        onError?.Invoke($"The key '{iterator.CurrentKey}' is in the index '{nameof(Tables.ScheduledReductions.Indices.ByView)}' " +
+                                        $"but the value in the ScheduledReductions table is missing. Deleting the key from the index and skipping it.");
+                        break;
+                    }
 
                     allKeysToReduce.Add(value.ReadString(ScheduledReductionFields.ReduceKey));
                     processedItems++;
