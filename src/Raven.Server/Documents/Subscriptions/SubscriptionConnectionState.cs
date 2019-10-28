@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionConnectionState(long subscriptionId, string subscriptionName, SubscriptionStorage storage)
         {
             _subscriptionId = subscriptionId;
-            SubscriptionName = subscriptionName;
+            SubscriptionName = subscriptionName??subscriptionId.ToString();
             _storage = storage;
             ConnectionInUse.Set();
         }

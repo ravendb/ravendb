@@ -68,24 +68,15 @@ namespace Raven.Server.Documents.TcpHandlers
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
-        private ConcurrentQueue<string> _statusDescription = new ConcurrentQueue<string>();
-
-        public string[] GetRecentStatusDescriptions()
-        {
-            return _statusDescription?.ToArray()??Array.Empty<string>();
-        }
+        public readonly ConcurrentQueue<string> RecentSubscriptionStatuses = new ConcurrentQueue<string>();
 
         public void AddToStatusDescription(string message)
         {
-            var arr = _statusDescription;
-            if (arr != null)
+            while (RecentSubscriptionStatuses.Count > 50)
             {
-                while (arr.Count > 50)
-                {
-                    arr.TryDequeue(out _);
-                }
-                arr.Enqueue(message);
+                RecentSubscriptionStatuses.TryDequeue(out _);
             }
+            RecentSubscriptionStatuses.Enqueue(message);
         }
 
         public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable, JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
@@ -918,8 +909,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 
                 Stats.Dispose();
 
-                _statusDescription?.Clear();
-                _statusDescription = null;
+                RecentSubscriptionStatuses?.Clear();                
             }
         }
 
