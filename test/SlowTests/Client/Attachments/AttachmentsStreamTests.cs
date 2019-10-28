@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -18,6 +17,7 @@ namespace SlowTests.Client.Attachments
         [InlineData(32 * 1024)]
         [InlineData(256 * 1024)]
         [InlineData(1024 * 1024)]
+        [InlineData(128 * 1024 * 1024)]
         public void CanGetOneAttachment(int size)
         {
             var rnd = new Random();
@@ -34,9 +34,10 @@ namespace SlowTests.Client.Attachments
                     {
                         var user = new User { Name = "su" };
                         session.Store(user, id);
-                        session.Advanced.Attachments.Store(id, $"{attachmentName}", stream, "application/zip");
+                        session.SaveChanges();
                         session.SaveChanges();
                     }
+                    store.Operations.Send(new PutAttachmentOperation(id, $"{attachmentName}", stream, "application/zip"));
 
                     stream.Position = 0;
                     using (var session = store.OpenSession())
@@ -44,28 +45,24 @@ namespace SlowTests.Client.Attachments
                         var user = session.Load<User>(id);
                         var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                         var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
-                        var memoryStream = new MemoryStream();
 
                         while (attachmentsEnumerator.MoveNext())
                         {
                             Assert.NotNull(attachmentsEnumerator.Current != null);
-                            attachmentsEnumerator.Current.Stream.CopyTo(memoryStream);
-                            memoryStream.Position = 0;
+                            Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, stream));
                         }
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
-
-                        Assert.Equal(stream.Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
                     }
                 }
             }
         }
-
-        [Fact]
-        public async Task CanGetOneAttachmentAsync()
+        [Theory]
+        [InlineData(1024)]
+        [InlineData(32 * 1024)]
+        [InlineData(256 * 1024)]
+        [InlineData(1024 * 1024)]
+        [InlineData(128 * 1024 * 1024)]
+        public async Task CanGetOneAttachmentAsync(int size)
         {
-            int size = 1024;
             var rnd = new Random();
             var b = new byte[size];
             rnd.NextBytes(b);
@@ -89,18 +86,11 @@ namespace SlowTests.Client.Attachments
                         var user = await session.LoadAsync<User>(id);
                         var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
                         var attachmentsEnumerator = await session.Advanced.Attachments.GetAsync(attachmentsNames);
-                        var memoryStream = new MemoryStream();
-
                         while (attachmentsEnumerator.MoveNext())
                         {
                             Assert.NotNull(attachmentsEnumerator.Current != null);
-                            await attachmentsEnumerator.Current.Stream.CopyToAsync(memoryStream);
-                            memoryStream.Position = 0;
+                            Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, stream));
                         }
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
-                        Assert.Equal(await stream.ReadAsync(buffer1, 0, size), await memoryStream.ReadAsync(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
                     }
                 }
             }
@@ -219,18 +209,9 @@ namespace SlowTests.Client.Attachments
                             continue;
                         }
 
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.Stream.CopyTo(memoryStream);
-                        memoryStream.Position = 0;
-
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
-
-                        Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2), $"Skipped Attachments: {string.Join(" ", skippedIndexes)}");
+                        Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"], compareByteArray: true), $"Skipped Attachments: {string.Join(" ", skippedIndexes)}");
                     }
                 }
             }
@@ -280,18 +261,8 @@ namespace SlowTests.Client.Attachments
                     var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
-
                         Assert.NotNull(attachmentsEnumerator.Current != null);
-                        attachmentResult.Stream.CopyTo(memoryStream);
-                        memoryStream.Position = 0;
-
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
-
-                        Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
+                        Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"], compareByteArray: true));
                     }
                 }
             }
@@ -343,7 +314,7 @@ namespace SlowTests.Client.Attachments
                     {
                     }
 
-                    Assert.Throws<StreamDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
+                    Assert.Throws<ObjectDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
                 }
             }
 
@@ -400,11 +371,11 @@ namespace SlowTests.Client.Attachments
                             {
                                 if (attachmentsEnumerator.MoveNext() == false)
                                 {
-                                    Assert.Throws<StreamDisposedException>(() => stream.Read(new byte[1], 0, 1));
+                                    Assert.Throws<ObjectDisposedException>(() => stream.Read(new byte[1], 0, 1));
                                     continue;
                                 }
 
-                                Assert.Throws<StreamDisposedException>(() => stream.Read(new byte[1], 0, 1));
+                                Assert.Throws<ObjectDisposedException>(() => stream.Read(new byte[1], 0, 1));
                             }
 
                             skip = false;
@@ -415,7 +386,7 @@ namespace SlowTests.Client.Attachments
                         if (n == 0)
                         {
                             attachmentsEnumerator.Current.Stream.Dispose();
-                            Assert.Throws<StreamDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
+                            Assert.Throws<ObjectDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
                         } else if (n == 1)
                         {
                             var memoryStream = new MemoryStream();
@@ -520,11 +491,14 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Fact]
-        public async Task CanGetListOfAttachmentsAndReadOrderedAsync()
+        [Theory]
+        [InlineData(10, 3)]
+        [InlineData(10, 1024)]
+        [InlineData(1, 32768)]
+        [InlineData(10, 32768)]
+        [InlineData(100, 3)]
+        public async Task CanGetListOfAttachmentsAndReadOrderedAsync(int count, int size)
         {
-            int count = 10;
-            int size = 32768;
             var attachmentDictionary = new Dictionary<string, MemoryStream>();
 
             const string id = "users/1";
@@ -558,19 +532,8 @@ namespace SlowTests.Client.Attachments
                     var attachmentsEnumerator = await session.Advanced.Attachments.GetAsync(attachmentsNames);
                     while (attachmentsEnumerator.MoveNext())
                     {
-                        var memoryStream = new MemoryStream();
-                        var attachmentResult = attachmentsEnumerator.Current;
-
-                        Assert.NotNull(attachmentResult != null);
-                        await attachmentResult.Stream.CopyToAsync(memoryStream);
-
-                        memoryStream.Position = 0;
-
-                        var buffer1 = new byte[size];
-                        var buffer2 = new byte[size];
-
-                        Assert.Equal(attachmentDictionary[$"{attachmentResult.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
-                        Assert.True(buffer1.SequenceEqual(buffer2));
+                        Assert.NotNull(attachmentsEnumerator.Current != null);
+                        Assert.True(await CompareStreamsAsync(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"]));
                     }
                 }
             }
@@ -704,7 +667,123 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        private static int Factorial(int n)
+        internal static bool CompareStreams(Stream a, Stream b, bool compareByteArray = false)
+        {
+            if (a == null && b == null)
+                return true;
+
+            if (a == null || b == null)
+                throw new ArgumentNullException(a == null ? "a" : "b");
+
+            if (a.Length < b.Length)
+                return false;
+
+            if (a.Length > b.Length)
+                return false;
+
+            int s = (int)Math.Min(32 * 1024, a.Length);
+
+            var buffer1 = new byte[s];
+            var buffer2 = new byte[s];
+
+            var toRead = a.Length;
+            while (toRead > 0)
+            {
+                var read1 = 0;
+                var read2 = 0;
+                int r = (int)Math.Min(s, toRead);
+
+                while (r - read1 > 0)
+                {
+                    var r1 =  a.Read(buffer1, read1, r - read1);
+                    read1 += r1;
+                }
+
+                while (r - read2 > 0)
+                {
+                    var r2 = b.Read(buffer2, read2, r - read2);
+                    read2 += r2;
+                }
+
+                Assert.Equal(read1, read2);
+
+                if (compareByteArray)
+                {
+                    for (int i = 0; i < read1; i++)
+                    {
+                        if (buffer1[i] != buffer2[i])
+                        {
+                            return false;
+                        }
+                    }
+                }
+                else
+                {
+                    if (new ReadOnlySpan<byte>(buffer1).SequenceEqual(new ReadOnlySpan<byte>(buffer2)) == false)
+                        return false;
+                }
+
+                toRead -= read1;
+            }
+
+            return true;
+        }
+
+        private static async Task<bool> CompareStreamsAsync(Stream a, Stream b)
+        {
+            if (a == null && b == null)
+                return true;
+
+            if (a == null || b == null)
+                throw new ArgumentNullException(a == null ? "a" : "b");
+
+            if (a.Length < b.Length)
+                return false;
+
+            if (a.Length > b.Length)
+                return false;
+
+            int s = (int)Math.Min(32 * 1024, a.Length);
+
+            var buffer1 = new byte[s];
+            var buffer2 = new byte[s];
+
+            var toRead = a.Length;
+            while (toRead > 0)
+            {
+                var read1 = 0;
+                var read2 = 0;
+                int r = (int)Math.Min(s, toRead);
+
+                while (r - read1 > 0)
+                {
+                    var r1 = await a.ReadAsync(buffer1, read1, r - read1);
+                    read1 += r1;
+                }
+
+                while (r - read2 > 0)
+                {
+                   var r2 = await b.ReadAsync(buffer2, read2, r - read2);
+                    read2 += r2;
+                }
+
+                Assert.Equal(read1, read2);
+
+                for (int i = 0; i < read1; i++)
+                {
+                    if (buffer1[i] != buffer2[i])
+                    {
+                        return false;
+                    }
+                }
+
+                toRead -= read1;
+            }
+
+            return true;
+        }
+
+        internal static int Factorial(int n)
         {
             if (n < 0)
                 throw new ArgumentException("cant get Factorial of negative number");

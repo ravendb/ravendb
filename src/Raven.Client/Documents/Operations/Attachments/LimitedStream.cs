@@ -3,21 +3,24 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
     internal class LimitedStream : Stream
     {
+        public long OverallRead { get; private set; }
         private readonly long _length;
+        private readonly long _currentPos;
         private readonly Stream _inner;
         private long _read;
         private bool _disposed;
 
-        public LimitedStream(Stream inner, long length)
+        public LimitedStream(Stream inner, long length, long currentPos, long overallRead)
         {
+            OverallRead = overallRead;
             _inner = inner;
             _length = length;
+            _currentPos = currentPos;
         }
 
         public override void Flush()
@@ -40,15 +43,19 @@ namespace Raven.Client.Documents.Operations.Attachments
             if (_disposed)
                 ThrowDisposedException();
 
+            if (OverallRead < _currentPos)
+                ReadToEnd();
+
             var actualCount = _read + count > _length ? _length - _read : count;
             if (actualCount == 0)
                 return 0;
 
             var read = _inner.Read(buffer, offset, (int)actualCount);
             if (read == 0)
-                throw new EndOfStreamException($"You have reached the end of stream before reading whole attachment. _read / _length: {_read} / {_length}, actualCount: {actualCount}.");
+                ThrowEndOfStreamException((int)actualCount);
 
             _read += read;
+            OverallRead += read;
             return read;
         }
 
@@ -57,16 +64,19 @@ namespace Raven.Client.Documents.Operations.Attachments
             if (_disposed)
                 ThrowDisposedException();
 
+            if (OverallRead < _currentPos)
+                await ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+
             var actualCount = _read + count > _length ? _length - _read : count;
             if (actualCount == 0)
                 return 0;
 
             var read = await _inner.ReadAsync(buffer, offset, (int)actualCount, cancellationToken).ConfigureAwait(false);
             if (read == 0)
-                throw new EndOfStreamException($"You have reached the end of stream before reading whole attachment. _read / _length: {_read} / {_length}, actualCount: {actualCount}, IsCancellationRequested: {cancellationToken.IsCancellationRequested}");
+                ThrowEndOfStreamException((int)actualCount, cancellationToken);
 
             _read += read;
-
+            OverallRead += read;
             return read;
         }
 
@@ -83,17 +93,14 @@ namespace Raven.Client.Documents.Operations.Attachments
             _disposed = true;
         }
 
-        internal void ReadToEnd()
+        private void ReadToEnd()
         {
-            if (_read == _length)
-                return;
-
             var buffer = ArrayPool<byte>.Shared.Rent(16 * 1024);
             try
             {
                 while (true)
                 {
-                    var toRead = Math.Min(buffer.Length, _length - _read);
+                    var toRead = Math.Min(buffer.Length, _currentPos - OverallRead);
                     if (toRead == 0)
                         break;
 
@@ -101,11 +108,11 @@ namespace Raven.Client.Documents.Operations.Attachments
                     if (read == 0)
                         break;
 
-                    _read += read;
+                    OverallRead += read;
                 }
 
-                if (_read != _length)
-                    throw new EndOfStreamException($"You have reached the end of stream before finishing ReadToEnd. _read / _length: {_read} / {_length}");
+                if (_currentPos != OverallRead)
+                    ThrowEndOfStreamException();
             }
             finally
             {
@@ -113,9 +120,45 @@ namespace Raven.Client.Documents.Operations.Attachments
             }
         }
 
-        private void ThrowDisposedException()
+        private async Task ReadToEndAsync(CancellationToken ct)
         {
-            throw new StreamDisposedException("Stream was already disposed");
+            var buffer = ArrayPool<byte>.Shared.Rent(16 * 1024);
+            try
+            {
+                while (true)
+                {
+                    var toRead = Math.Min(buffer.Length, _currentPos - OverallRead);
+                    if (toRead == 0)
+                        break;
+
+                    var read = await _inner.ReadAsync(buffer, 0, (int)toRead, ct).ConfigureAwait(false);
+                    if (read == 0)
+                        break;
+
+                    OverallRead += read;
+                }
+
+                if (_currentPos != OverallRead)
+                    ThrowEndOfStreamException();
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        private static void ThrowDisposedException()
+        {
+            throw new ObjectDisposedException("Stream was already disposed");
+        }
+
+        private void ThrowEndOfStreamException(int? count = null, CancellationToken? cancellationToken = null)
+        {
+            var msg1 = count == null ? string.Empty : $", actualCount: {count}";
+            var msg2 = cancellationToken == null ? string.Empty : $"IsCancellationRequested: {cancellationToken.Value.IsCancellationRequested}";
+            var msg = $"You have reached the end of stream before finishing ReadToEnd. _read / _length: {_read} / {_length}, OverallRead / _currentPos: {OverallRead} / {_currentPos}{msg1}{msg2}";
+
+            throw new EndOfStreamException(msg);
         }
 
         public override bool CanRead => true;
