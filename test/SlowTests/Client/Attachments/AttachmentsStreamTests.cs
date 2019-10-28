@@ -18,8 +18,6 @@ namespace SlowTests.Client.Attachments
         [InlineData(32 * 1024)]
         [InlineData(256 * 1024)]
         [InlineData(1024 * 1024)]
-        [InlineData(128 * 1024 * 1024)]
-        [InlineData(1024 * 1024 * 1024)]
         public void CanGetOneAttachment(int size)
         {
             var rnd = new Random();
@@ -173,7 +171,6 @@ namespace SlowTests.Client.Attachments
         [InlineData(1, 32768)]
         [InlineData(10, 32768)]
         [InlineData(100, 3)]
-        [InlineData(1000, 1)]
         public void CanGetListOfAttachmentsAndSkip(int count, int size)
         {
             var attachmentDictionary = new Dictionary<string, MemoryStream>();
@@ -303,11 +300,14 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Fact]
-        public void ShouldThrowOnDisposedStream()
+        [Theory]
+        [InlineData(10, 3)]
+        [InlineData(10, 1024)]
+        [InlineData(1, 32768)]
+        [InlineData(10, 32768)]
+        [InlineData(100, 3)]
+        public void ShouldThrowOnDisposedStream(int count, int size)
         {
-            int count = 2;
-            int size = 32768;
             var attachmentDictionary = new Dictionary<string, MemoryStream>();
             const string id = "users/1";
             const string attachmentName = "Typical attachment name";
@@ -343,7 +343,93 @@ namespace SlowTests.Client.Attachments
                     {
                     }
 
-                   Assert.Throws<StreamDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
+                    Assert.Throws<StreamDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
+                }
+            }
+
+            foreach (var stream in attachmentDictionary.Values)
+                stream.Dispose();
+        }
+
+        [Theory]
+        [InlineData(10, 3)]
+        [InlineData(10, 1024)]
+        [InlineData(1, 32768)]
+        [InlineData(10, 32768)]
+        [InlineData(100, 3)]
+        public void ShouldThrowOnAccessingDisposedAttachment(int count, int size)
+        {
+            var attachmentDictionary = new Dictionary<string, MemoryStream>();
+            const string id = "users/1";
+            const string attachmentName = "Typical attachment name";
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "su" };
+                    session.Store(user, id);
+                    for (var i = 0; i < count; i++)
+                    {
+                        var rnd = new Random();
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var stream = new MemoryStream(bArr);
+                        session.Advanced.Attachments.Store(id, $"{attachmentName}_{i}", stream, "application/zip");
+                        attachmentDictionary[$"{attachmentName}_{i}"] = stream;
+                    }
+
+                    session.SaveChanges();
+                }
+
+                foreach (var stream in attachmentDictionary.Values)
+                    stream.Position = 0;
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+
+                    var attachmentsNames = session.Advanced.Attachments.GetNames(user).Select(x => new AttachmentRequest(id, x.Name));
+                    var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+
+                    var skip = true;
+                    while (attachmentsEnumerator.MoveNext())
+                    {
+                        if (skip)
+                        {
+                            using (var stream = attachmentsEnumerator.Current.Stream)
+                            {
+                                if (attachmentsEnumerator.MoveNext() == false)
+                                {
+                                    Assert.Throws<StreamDisposedException>(() => stream.Read(new byte[1], 0, 1));
+                                    continue;
+                                }
+
+                                Assert.Throws<StreamDisposedException>(() => stream.Read(new byte[1], 0, 1));
+                            }
+
+                            skip = false;
+                        }
+
+                        var rnd = new Random();
+                        var n = rnd.Next(0, 2);
+                        if (n == 0)
+                        {
+                            attachmentsEnumerator.Current.Stream.Dispose();
+                            Assert.Throws<StreamDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
+                        } else if (n == 1)
+                        {
+                            var memoryStream = new MemoryStream();
+                            attachmentsEnumerator.Current.Stream.CopyTo(memoryStream);
+                            memoryStream.Position = 0;
+
+                            var buffer1 = new byte[size];
+                            var buffer2 = new byte[size];
+
+                            Assert.Equal(attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"].Read(buffer1, 0, size), memoryStream.Read(buffer2, 0, size));
+                            Assert.True(buffer1.SequenceEqual(buffer2));
+                        }
+                    }
+
                 }
             }
 
