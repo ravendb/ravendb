@@ -11,7 +11,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42011; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42012; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -358,26 +358,25 @@ namespace Sparrow.Server.Platform
 
         private struct Converter : IDisposable
         {
-            public byte[] Buffer;
+            private byte[] _buffer;
             public byte* Pointer => (byte*)PinnedHandle.AddrOfPinnedObject();
-            public int Length;
-            private static Encoding CurrentEncoding = PlatformDetails.RunningOnPosix ? Encoding.UTF8 : Encoding.Unicode;
+            private static readonly Encoding CurrentEncoding = PlatformDetails.RunningOnPosix ? Encoding.UTF8 : Encoding.Unicode;
             private GCHandle PinnedHandle;
 
             public Converter(string s)
             {
                 var size = CurrentEncoding.GetMaxByteCount(s.Length) +1;
-                Buffer = ArrayPool<byte>.Shared.Rent(size);
-                Length= CurrentEncoding.GetBytes(s, 0, s.Length, Buffer, 0);
-                Buffer[Length] = 0;
-                PinnedHandle = GCHandle.Alloc(Buffer, GCHandleType.Pinned);
+                _buffer = ArrayPool<byte>.Shared.Rent(size);
+                int length = CurrentEncoding.GetBytes(s, 0, s.Length, _buffer, 0);
+                _buffer[length] = 0;
+                PinnedHandle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
             }
 
             public void Dispose()
             {
                 PinnedHandle.Free();
-                ArrayPool<byte>.Shared.Return(Buffer);
-                Buffer = null;
+                ArrayPool<byte>.Shared.Return(_buffer);
+                _buffer = null;
             }
         }
     }
