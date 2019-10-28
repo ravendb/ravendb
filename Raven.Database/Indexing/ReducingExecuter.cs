@@ -645,15 +645,15 @@ namespace Raven.Database.Indexing
         protected override bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions, bool isIdle, Reference<bool> onlyFoundIdleWork)
         {
             onlyFoundIdleWork.Value = false;
-            var isReduceStale = actions.Staleness.IsReduceStale(indexesStat.Id);
 
-            if (isReduceStale == false)
+            if (indexesStat.Priority.HasFlag(IndexingPriority.Disabled))
                 return false;
 
             if (indexesStat.Priority.HasFlag(IndexingPriority.Error))
                 return false;
 
-            return true;
+            var isReduceStale = actions.Staleness.IsReduceStale(indexesStat.Id);
+            return isReduceStale;
         }
 
         public override bool ShouldRun
