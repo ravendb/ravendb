@@ -62,7 +62,6 @@ namespace Raven.Database.Indexing
             if (indexingPriority == IndexingPriority.None)
                 return true;
 
-
             if ((indexingPriority & IndexingPriority.Normal) == IndexingPriority.Normal)
             {
                 onlyFoundIdleWork.Value = false;

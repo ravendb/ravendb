@@ -390,7 +390,6 @@ namespace Raven.Database.Indexing
             onlyFoundIdleWork = localFoundOnlyIdleWork.Value;
             if (indexesToWorkOn.Count == 0)
                 return false;
-            
 
             context.UpdateFoundWork();
             context.CancellationToken.ThrowIfCancellationRequested();
