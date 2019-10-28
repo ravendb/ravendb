@@ -3,6 +3,7 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
@@ -10,12 +11,7 @@ namespace Raven.Client.Documents.Operations.Attachments
     {
         private readonly RentedBuffer _prefix;
         private readonly Stream _remaining;
-
-        public bool Disposed
-        {
-            get;
-            private set;
-        }
+        private bool _disposed;
 
         public class RentedBuffer
         {
@@ -47,6 +43,9 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (_disposed)
+                ThrowDisposedException();
+
             if (_prefix.Count <= 0)
                 return _remaining.Read(buffer, offset, count);
 
@@ -57,10 +56,11 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            if (_disposed)
+                ThrowDisposedException();
+
             if (_prefix.Count <= 0)
-            {
                 return _remaining.ReadAsync(buffer, offset, count, cancellationToken);
-            }
 
             int read = ReadFromBuffer(buffer, offset, count);
 
@@ -87,6 +87,11 @@ namespace Raven.Client.Documents.Operations.Attachments
             throw new NotSupportedException();
         }
 
+        private void ThrowDisposedException()
+        {
+            throw new StreamDisposedException($"{nameof(_remaining)} stream was already disposed.");
+        }
+
         public override bool CanRead => true;
 
         public override bool CanSeek => false;
@@ -103,7 +108,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         protected override void Dispose(bool disposing)
         {
-            Disposed = true;
+            _disposed = true;
 
             if (_prefix.Buffer != null)
             {

@@ -134,6 +134,7 @@ namespace Raven.Client.Documents.Operations.Attachments
             private IEnumerable<AttachmentEnumeratorResult> Iterate(Stream stream, byte[] copy, int bufferSize)
             {
                 LimitedStream prev = null;
+
                 using (var cs = new ConcatStream(new ConcatStream.RentedBuffer
                 {
                     Buffer = copy,
@@ -144,9 +145,14 @@ namespace Raven.Client.Documents.Operations.Attachments
                     foreach (var attachment in AttachmentsMetadata)
                     {
                         prev?.ReadToEnd();
+                        prev?.Dispose();
+
                         prev = new LimitedStream(cs, attachment.Size);
                         yield return new AttachmentEnumeratorResult(attachment, prev);
                     }
+
+                    // mark the last attachment as disposed
+                    prev?.Dispose();
                 }
             }
 

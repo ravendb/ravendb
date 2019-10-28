@@ -10,10 +10,11 @@ namespace Raven.Client.Documents.Operations.Attachments
     internal class LimitedStream : Stream
     {
         private readonly long _length;
-        private readonly ConcatStream _inner;
+        private readonly Stream _inner;
         private long _read;
+        private bool _disposed;
 
-        public LimitedStream(ConcatStream inner, long length)
+        public LimitedStream(Stream inner, long length)
         {
             _inner = inner;
             _length = length;
@@ -36,8 +37,8 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (_inner.Disposed)
-                throw new StreamDisposedException($"{nameof(_inner)} stream is disposed.");
+            if (_disposed)
+                ThrowDisposedException();
 
             var actualCount = _read + count > _length ? _length - _read : count;
             if (actualCount == 0)
@@ -53,8 +54,8 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_inner.Disposed)
-                throw new StreamDisposedException($"{nameof(_inner)} stream is disposed.");
+            if (_disposed)
+                ThrowDisposedException();
 
             var actualCount = _read + count > _length ? _length - _read : count;
             if (actualCount == 0)
@@ -74,11 +75,16 @@ namespace Raven.Client.Documents.Operations.Attachments
             throw new NotSupportedException();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+        }
+
         internal void ReadToEnd()
         {
-            if (_inner.Disposed)
-                throw new StreamDisposedException($"{nameof(_inner)} stream is disposed.");
-
             if (_read == _length)
                 return;
 
@@ -105,6 +111,11 @@ namespace Raven.Client.Documents.Operations.Attachments
             {
                 ArrayPool<byte>.Shared.Return(buffer);
             }
+        }
+
+        private void ThrowDisposedException()
+        {
+            throw new StreamDisposedException("Stream was already disposed");
         }
 
         public override bool CanRead => true;
