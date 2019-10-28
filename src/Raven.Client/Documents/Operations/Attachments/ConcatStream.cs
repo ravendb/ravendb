@@ -3,7 +3,6 @@ using System.Buffers;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
 
 namespace Raven.Client.Documents.Operations.Attachments
 {
@@ -89,7 +88,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         private void ThrowDisposedException()
         {
-            throw new StreamDisposedException($"{nameof(_remaining)} stream was already disposed.");
+            throw new ObjectDisposedException($"{nameof(_remaining)} stream was already disposed.");
         }
 
         public override bool CanRead => true;

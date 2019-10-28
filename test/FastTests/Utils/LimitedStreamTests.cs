@@ -26,10 +26,12 @@ namespace FastTests.Utils
 
             var ms = new MemoryStream(bytes);
             var max = r.Next(1, bytes.Length / 2);
-            var entireStream = new LimitedStream(ms, ms.Length);
+            var entireStream = new LimitedStream(ms, ms.Length, 0, 0);
             Assert.Equal(bytes, entireStream.ReadData());
 
             ms.Position = 0;
+            long overallRead = 0;
+            long position = 0;
 
             var numberOfChunks = ms.Length / max + (ms.Length % max != 0 ? 1 : 0);
 
@@ -38,7 +40,7 @@ namespace FastTests.Utils
                 var pos = ms.Position;
                 var prev = Math.Min(pos + max, ms.Length);
 
-                var ls = new LimitedStream(ms, prev - pos);
+                var ls = new LimitedStream(ms, prev - pos, position, overallRead);
 
                 if (i == numberOfChunks - 1)
                 {
@@ -53,6 +55,9 @@ namespace FastTests.Utils
 
                 Assert.Equal(ls.Length, read.Length);
                 Assert.Equal(bytes.Skip((int)pos).Take(read.Length).ToArray(), read);
+
+                overallRead += read.Length;
+                position += prev - pos;
             }
         }
     }

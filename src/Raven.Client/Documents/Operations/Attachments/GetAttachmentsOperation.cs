@@ -142,12 +142,15 @@ namespace Raven.Client.Documents.Operations.Attachments
                     Offset = 0
                 }, stream))
                 {
+                    long position = 0;
+
                     foreach (var attachment in AttachmentsMetadata)
                     {
-                        prev?.ReadToEnd();
                         prev?.Dispose();
 
-                        prev = new LimitedStream(cs, attachment.Size);
+                        prev = new LimitedStream(cs, attachment.Size, position, prev?.OverallRead ?? 0);
+                        position += attachment.Size;
+
                         yield return new AttachmentEnumeratorResult(attachment, prev);
                     }
 
