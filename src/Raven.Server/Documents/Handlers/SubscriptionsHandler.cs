@@ -381,8 +381,8 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
                 [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsDJV(x.Stats),
                 [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
-                ["TCPConnectionStats"] = x.TcpConnection.GetConnectionStats(),
-                ["StatusSubscriptions"] = new DynamicJsonArray(x.GetRecentStatusDescriptions())
+                ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
+                [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray()??Array.Empty<string>())
             };
         }
 
