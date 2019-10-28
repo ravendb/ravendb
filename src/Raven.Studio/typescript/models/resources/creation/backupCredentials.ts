@@ -45,7 +45,7 @@ export class localServerCredentials extends restoreSettings {
     });
 
     getFolderPathOptions() {
-        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(this.backupDirectory(), true))
+        return super.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forServerLocal(this.backupDirectory(), false));
     }
     
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,

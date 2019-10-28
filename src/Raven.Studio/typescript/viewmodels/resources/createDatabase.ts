@@ -277,8 +277,11 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.path.dataPath.throttle(300).subscribe(newPath => {
             if (this.databaseModel.path.dataPath.isValid()) {
                 this.updateDatabaseLocationInfo(this.databaseModel.name(), newPath);
+                this.updateLocalFolderPath(newPath)
+                    .done(result => this.backupFolderPathOptions(result.List));
             } else {
                 this.databaseLocationInfo([]);
+                this.backupFolderPathOptions([]);
                 this.spinners.databaseLocationInfoLoading(false);
             }
         });
@@ -432,7 +435,7 @@ class createDatabase extends dialogViewModelBase {
         return getFolderPathOptionsCommand.forServerLocal(path, backupFolder)
             .execute();
     }
-    
+
     updateLegacyMigrationDataDirectoryPathOptions(path: string) {
         this.updateLocalFolderPath(path)
             .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
