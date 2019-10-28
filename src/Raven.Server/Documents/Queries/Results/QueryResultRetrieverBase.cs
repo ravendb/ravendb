@@ -871,7 +871,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out _);
                 if (result != LazyStringParser.Result.DateTime)
                     throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + str);
-                return dt.ToUniversalTime();
+                return dt;
             }
 
         }

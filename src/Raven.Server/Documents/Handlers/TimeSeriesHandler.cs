@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
@@ -82,13 +81,16 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        public static DateTime ParseDate(string dateStr, string name)
+        public static unsafe DateTime ParseDate(string dateStr, string name)
         {
-            if (DateTime.TryParseExact(dateStr, Sparrow.DefaultFormat.DateTimeOffsetFormatsToWrite,
-                    CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
-                ThrowInvalidDateTime(name, dateStr);
+            fixed (char* c = dateStr)
+            {
+                var result = LazyStringParser.TryParseDateTime(c, dateStr.Length, out var dt, out _);
+                if (result != LazyStringParser.Result.DateTime)
+                    ThrowInvalidDateTime(name, dateStr);
 
-            return date;
+                return dt;
+            }
         }
 
         private void WriteRange(DocumentsOperationContext context, BlittableJsonTextWriter writer, string docId, string name, DateTime from, DateTime to)
