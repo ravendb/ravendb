@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
@@ -280,7 +281,24 @@ namespace Raven.Server.Documents.Handlers
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
 
-            includeTimeSeries = new IncludeTimeSeriesCommand(database, context, timeSeriesNames, fromList, toList);
+            if (timeSeriesNames.Count != fromList.Count || fromList.Count != toList.Count)
+                throw new InvalidOperationException("Parameters 'timeseriesNames', 'fromList' and 'toList' must be of equal length. " +
+                                                    $"Got : timeseriesNames.Count = {timeSeriesNames.Count}, fromList.Count = {fromList.Count}, toList.Count = {toList.Count}.");
+
+            var hs = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
+
+            for (int i = 0; i < timeSeriesNames.Count; i++)
+            {
+                hs.Add(new TimeSeriesRange
+                {
+                    Name = timeSeriesNames[i],
+                    From = TimeSeriesHandler.ParseDate(fromList[i], timeSeriesNames[i]),
+                    To = TimeSeriesHandler.ParseDate(toList[i], timeSeriesNames[i]),
+                });
+            }
+
+            includeTimeSeries = new IncludeTimeSeriesCommand(database, context,
+                new Dictionary<string, HashSet<TimeSeriesRange>> {{string.Empty, hs}});
         }
 
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
