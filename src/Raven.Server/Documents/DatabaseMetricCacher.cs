@@ -1,6 +1,6 @@
 ﻿using System;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -15,7 +15,12 @@ namespace Raven.Server.Documents
 
         public void Initialize()
         {
-            //Register(MetricCacher.Keys.Database.CountOfAttachments, TimeSpan.FromSeconds(5), GetCountOfAttachments);
+            Register(MetricCacher.Keys.Database.DiskSpaceInfo, TimeSpan.FromSeconds(30), CalculateDiskSpaceInfo);
+        }
+
+        private DiskSpaceResult CalculateDiskSpaceInfo()
+        {
+            return DiskSpaceChecker.GetDiskSpaceInfo(_database.Configuration.Core.DataDirectory.FullPath);
         }
     }
 }

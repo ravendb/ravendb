@@ -25,6 +25,8 @@ namespace Raven.Server.Utils
                 public const string MemoryInfo = "MemoryInfo";
 
                 public const string MemoryInfoExtended = "MemoryInfoExtended";
+
+                public const string DiskSpaceInfo = "DiskSpaceInfo";
             }
 
             public class Database
@@ -33,7 +35,7 @@ namespace Raven.Server.Utils
                 {
                 }
 
-                public const string CountOfAttachments = "CountOfAttachments";
+                public const string DiskSpaceInfo = "DiskSpaceInfo";
             }
         }
 
