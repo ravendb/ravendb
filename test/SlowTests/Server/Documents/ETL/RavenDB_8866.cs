@@ -134,7 +134,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-14127")]
         public async Task CanResetEtl3()
         {
             using (var src = GetDocumentStore())
@@ -142,10 +142,12 @@ namespace SlowTests.Server.Documents.ETL
             {
                 var configuration = new RavenEtlConfiguration()
                 {
-                    ConnectionStringName = "test", Name = "myConfiguration", Transforms = {new Transformation() {Name = "allUsers", Collections = {"Users"}}}
+                    ConnectionStringName = "test",
+                    Name = "myConfiguration",
+                    Transforms = { new Transformation() { Name = "allUsers", Collections = { "Users" } } }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString {Name = "test", TopologyDiscoveryUrls = dest.Urls, Database = dest.Database,});
+                AddEtl(src, configuration, new RavenConnectionString { Name = "test", TopologyDiscoveryUrls = dest.Urls, Database = dest.Database, });
 
                 var t = Task.Run(async () =>
                 {

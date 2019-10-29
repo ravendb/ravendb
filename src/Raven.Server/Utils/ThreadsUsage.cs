@@ -115,7 +115,6 @@ namespace Raven.Server.Utils
                     }
                 }
 
-                threadsInfo.List.Sort();
                 _threadTimesInfo = threadTimesInfo;
                 threadsInfo.CpuUsage = Math.Min(totalCpuUsage, 100);
 

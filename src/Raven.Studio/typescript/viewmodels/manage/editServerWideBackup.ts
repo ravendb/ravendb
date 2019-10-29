@@ -110,8 +110,6 @@ class editServerWideBackup extends viewModelBase {
             title: "Destination was disabled by administrator",
             placement: "right"
         });
-
-        document.getElementById("backup-type").focus();
     }
 
     attached() {
@@ -158,7 +156,7 @@ class editServerWideBackup extends viewModelBase {
             });
     }
 
-    saveServerWideBackup() {
+    saveBackupSettings() {
         this.configuration().encryptionSettings().setKeyUsedBeforeSave();
         
         if (!this.validate()) {
@@ -182,7 +180,7 @@ class editServerWideBackup extends viewModelBase {
     }
 
     testCredentials(bs: backupSettings) {
-        if (!this.isValid(bs.validationGroup)) {
+        if (!this.isValid(bs.effectiveValidationGroup())) {
             return;
         }
 
@@ -214,24 +212,30 @@ class editServerWideBackup extends viewModelBase {
         if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
             valid = false;
 
-        if (!this.isValid(this.configuration().localSettings().validationGroup))
+        const localSettings = this.configuration().localSettings();
+        if (localSettings.enabled() && !this.isValid(localSettings.effectiveValidationGroup()))
             valid = false;
 
-        if (!this.isValid(this.configuration().s3Settings().validationGroup))
+        const s3Settings = this.configuration().s3Settings();
+        if (s3Settings.enabled() && !this.isValid(s3Settings.effectiveValidationGroup()))
             valid = false;
 
-        if (!this.isValid(this.configuration().azureSettings().validationGroup))
+        const azureSettings = this.configuration().azureSettings();
+        if (azureSettings.enabled() && !this.isValid(azureSettings.effectiveValidationGroup()))
             valid = false;
 
-        if (!this.isValid(this.configuration().googleCloudSettings().validationGroup))
+        const googleCloudSettings = this.configuration().googleCloudSettings();
+        if (googleCloudSettings.enabled() && !this.isValid(googleCloudSettings.effectiveValidationGroup()))
             valid = false;
 
-        if (!this.isValid(this.configuration().glacierSettings().validationGroup))
+        const glacierSettings = this.configuration().glacierSettings();
+        if (glacierSettings.enabled() && !this.isValid(glacierSettings.effectiveValidationGroup()))
             valid = false;
 
-        if (!this.isValid(this.configuration().ftpSettings().validationGroup))
+        const ftpSettings = this.configuration().ftpSettings();
+        if (ftpSettings.enabled() && !this.isValid(ftpSettings.effectiveValidationGroup()))
             valid = false;
-
+        
         return valid;
     }
 }

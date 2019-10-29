@@ -18,7 +18,8 @@ class glacierSettings extends amazonSettings {
             this.awsSecretKey,
             this.awsRegionName,
             this.remoteFolderName,
-            this.selectedAwsRegion
+            this.selectedAwsRegion,
+            this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -30,18 +31,17 @@ class glacierSettings extends amazonSettings {
         this.vaultName.extend({
             validation: [
                 {
-                    validator: (vaultName: string) => this.validate(() =>
-                        vaultName && vaultName.length >= 1 && vaultName.length <= 255),
+                    validator: (vaultName: string) => vaultName && vaultName.length >= 1 && vaultName.length <= 255,
                     message: "Vault name must be at least 1 character and no more than 255 characters long"
                 },
                 {
-                    validator: (vaultName: string) => this.validate(() => regExp.test(vaultName)),
+                    validator: (vaultName: string) => regExp.test(vaultName),
                     message: "Allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period)"
                 }
             ]
         });
 
-        this.validationGroup = ko.validatedObservable({
+        this.localConfigValidationGroup = ko.validatedObservable({
             awsAccessKey: this.awsAccessKey,
             awsSecretKey: this.awsSecretKey,
             awsRegionName: this.awsRegionName,

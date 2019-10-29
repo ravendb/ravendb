@@ -263,6 +263,67 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
+        public void CanSaveMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+
+                    var result = session.Advanced.GetMetadataFor(company);
+                    result["short"] = (short)1;
+                    result["short-list"] = new List<short> { 1 };
+
+                    result["ushort"] = (ushort)1;
+                    result["ushort-list"] = new List<ushort> { 1 };
+
+                    result["int"] = 1;
+                    result["int-list"] = new List<int> {1};
+
+                    result["uint"] = (uint)1;
+                    result["uint-list"] = new List<uint> { 1 };
+
+                    result["long"] = (long)1;
+                    result["long-list"] = new List<long> { 1 };
+
+                    result["ulong"] = (ulong)1;
+                    result["ulong-list"] = new List<ulong> { 1 };
+
+                    result["timespan"] = TimeSpan.MaxValue;
+                    result["timespan-list"] = new List<TimeSpan> { TimeSpan.MaxValue };
+
+                    result["byte"] = (byte)1;
+                    result["byte-list"] = new List<byte> { 1 };
+
+                    result["sbyte"] = (sbyte)1;
+                    result["sbyte-list"] = new List<sbyte> { 1 };
+
+                    result["char"] = (char)1;
+                    result["char-list"] = new List<char> { (char)1 };
+
+                    result["dictionary"] = new Dictionary<int, int>
+                    {
+                        { 1, 1 }
+                    };
+
+                    result["dictionary"] = new Dictionary<double, int>
+                    {
+                        { 1.1, 1 }
+                    };
+
+                    result["dictionary-class"] = new Dictionary<Company, int>
+                    {
+                        // will save the class name with the namespace
+                        { new Company(), 1 }
+                    };
+                    session.SaveChanges();
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseNumberOfRequests()
         {
             using (var store = GetDocumentStore())

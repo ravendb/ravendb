@@ -397,13 +397,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    string topologyId;
-                    ClusterTopology clusterTopology;
-                    using (ctx.OpenReadTransaction())
-                    {
-                        clusterTopology = ServerStore.GetClusterTopology(ctx);
-                        topologyId = clusterTopology.TopologyId;
-                    }
+                    var clusterTopology = ServerStore.GetClusterTopology();
 
                     var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                     if (possibleNode.HasUrl)
@@ -416,19 +410,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (nodeInfo.TopologyId != null)
                     {
-                        if (topologyId != nodeInfo.TopologyId)
-                        {
-                            throw new TopologyMismatchException(
-                                $"Adding a new node to cluster failed. The new node is already in another cluster. " +
-                                $"Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
-                        }
-
-                        if (nodeInfo.CurrentState != RachisState.Passive)
-                        {
-                            throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster " +
-                                                                $"because it's already in the cluster under tag :{nodeInfo.NodeTag} " +
-                                                                $"and URL: {clusterTopology.GetUrlFromTag(nodeInfo.NodeTag)}");
-                        }
+                        AssertCanAddNodeWithTopologyId(clusterTopology, nodeInfo, nodeUrl);
                     }
 
                     var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? tag : nodeInfo.NodeTag;
@@ -542,6 +524,29 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
             RedirectToLeader();
+        }
+
+        private static void AssertCanAddNodeWithTopologyId(ClusterTopology clusterTopology, NodeInfo nodeInfo, string nodeUrl)
+        {
+            if (clusterTopology.TopologyId != nodeInfo.TopologyId)
+            {
+                throw new TopologyMismatchException(
+                    $"Adding a new node to cluster failed. The new node is already in another cluster. " +
+                    $"Expected topology id: {clusterTopology.TopologyId}, but we get {nodeInfo.TopologyId}");
+            }
+
+            if (nodeInfo.NodeTag != RachisConsensus.InitialTag && clusterTopology.Contains(nodeInfo.NodeTag) == false)
+            {
+                // this is fine, since we probably adding back a node that we just removed
+                return;
+            }
+
+            if (nodeInfo.CurrentState != RachisState.Passive)
+            {
+                throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster " +
+                                                    $"because it's already in the cluster under tag :{nodeInfo.NodeTag} " +
+                                                    $"and URL: {clusterTopology.GetUrlFromTag(nodeInfo.NodeTag)}");
+            }
         }
 
         [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]

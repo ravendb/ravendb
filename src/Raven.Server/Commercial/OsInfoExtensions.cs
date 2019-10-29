@@ -206,6 +206,9 @@ namespace Raven.Server.Commercial
         {
             const string macOSName = "macOS";
 
+            if (osInfoVersion.StartsWith("10.15"))
+                return $"{macOSName} Catalina";
+
             if (osInfoVersion.StartsWith("10.14"))
                 return $"{macOSName} Mojave";
 
@@ -216,7 +219,7 @@ namespace Raven.Server.Commercial
                 return $"{macOSName} Sierra";
 
             if (osInfoVersion.StartsWith("10.11"))
-                return $"{macOSName} El Capitan";
+                return "OS X El Capitan";
 
             return $"{macOSName} {osInfoVersion}";
         }

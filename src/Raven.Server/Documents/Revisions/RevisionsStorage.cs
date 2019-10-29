@@ -6,11 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
-using Raven.Server.Config.Categories;
-using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -58,12 +55,14 @@ namespace Raven.Server.Documents.Revisions
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
+        private readonly static TimeSpan MaxEnforceConfigurationSingleBatchTime = TimeSpan.FromSeconds(30);
+
         public enum RevisionsTable
         {
             /* ChangeVector is the table's key as it's unique and will avoid conflicts (by replication) */
             ChangeVector = 0,
             LowerId = 1,
-            /* We are you using the record separator in order to avoid loading another documents that has the same ID prefix, 
+            /* We are you using the record separator in order to avoid loading another documents that has the same ID prefix,
                 e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it. */
             RecordSeparator = 2,
             Etag = 3, // etag to keep the insertion order
@@ -76,6 +75,7 @@ namespace Raven.Server.Documents.Revisions
 
             // Field for finding the resolved conflicts
             Resolved = 10,
+
             SwappedLastModified = 11,
         }
 
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Revisions
                          return;
 
                      // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
-                     // a new instance, just in case 
+                     // a new instance, just in case
                      _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
                      {
                          collection.Name
@@ -478,7 +478,7 @@ namespace Raven.Server.Documents.Revisions
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
-                // We delete the old revisions after we put the current one, 
+                // We delete the old revisions after we put the current one,
                 // because in case that MinimumRevisionsToKeep is 3 or lower we may get a revision document from replication
                 // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.Revisions
                 if (lastModified >= time)
                     return false;
 
-                // We won't create tombstones here as it might create LOTS of tombstones 
+                // We won't create tombstones here as it might create LOTS of tombstones
                 // with the same transaction marker and the same change vector.
 
                 using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref deleted.Reader, out Slice lowerId))
@@ -609,32 +609,33 @@ namespace Raven.Server.Documents.Revisions
                         break;
 
                     var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr);
-
-                    if (minimumTimeToKeep.HasValue &&
-                        _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
-                        return deletedRevisionsCount;
-
-                    hasValue = true;
-
-                    using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+                    using (var revision = TableValueToRevision(context, ref tvr))
                     {
-                        CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
+                        if (minimumTimeToKeep.HasValue &&
+                            _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
+                            return deletedRevisionsCount;
 
-                        maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
-                        if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                        hasValue = true;
+
+                        using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
                         {
-                            _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
-                        }
+                            CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks);
 
-                        var docCollection = CollectionName.GetCollectionName(revision.Data);
-                        if (writeTable == null || docCollection != currentCollection)
-                        {
-                            currentCollection = docCollection;
-                            writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
-                        }
+                            maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
+                            if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                            {
+                                _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
+                            }
 
-                        writeTable.DeleteByKey(keySlice);
+                            var docCollection = CollectionName.GetCollectionName(revision.Data);
+                            if (writeTable == null || docCollection != currentCollection)
+                            {
+                                currentCollection = docCollection;
+                                writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
+                            }
+
+                            writeTable.DeleteByKey(keySlice);
+                        }
                     }
 
                     deletedRevisionsCount++;
@@ -676,7 +677,7 @@ namespace Raven.Server.Documents.Revisions
                 }
                 else
                 {
-                    // we need to generate a unique etag if we got a tombstone revisions from replication, 
+                    // we need to generate a unique etag if we got a tombstone revisions from replication,
                     // but we don't want to mess up the order of events so the delete revision etag we use is negative
                     revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
@@ -691,7 +692,7 @@ namespace Raven.Server.Documents.Revisions
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
-                return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
+                return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -1073,6 +1074,7 @@ namespace Raven.Server.Documents.Revisions
                 return result;
             }
         }
+
         public async Task<IOperationResult> EnforceConfiguration(Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var parameters = new Parameters
@@ -1087,7 +1089,8 @@ namespace Raven.Server.Documents.Revisions
 
             var result = new EnforceConfigurationResult();
             var ids = new List<string>();
-            
+            var sw = Stopwatch.StartNew();
+
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 
@@ -1097,6 +1100,7 @@ namespace Raven.Server.Documents.Revisions
                 hasMore = false;
                 ids.Clear();
                 token.Delay();
+                sw.Restart();
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
@@ -1112,11 +1116,19 @@ namespace Raven.Server.Documents.Revisions
                             if (state == NextRevisionIdResult.Break)
                                 break;
                             if (state == NextRevisionIdResult.Continue)
-                                continue;
+                            {
+                                if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
+                                {
+                                    hasMore = true;
+                                    break;
+                                }
+                                else
+                                    continue;
+                            }
 
                             ids.Add(id);
 
-                            if (ids.Count > 1024 || ctx.AllocatedMemory > SizeLimit)
+                            if (CanContinueBatch(ids, sw.Elapsed, ctx) == false)
                             {
                                 hasMore = true;
                                 break;
@@ -1131,6 +1143,20 @@ namespace Raven.Server.Documents.Revisions
             }
 
             return result;
+
+            bool CanContinueBatch(List<string> idsToCheck, TimeSpan elapsed, JsonOperationContext context)
+            {
+                if (idsToCheck.Count > 1024)
+                    return false;
+
+                if (elapsed > MaxEnforceConfigurationSingleBatchTime)
+                    return false;
+
+                if (context.AllocatedMemory > SizeLimit)
+                    return false;
+
+                return true;
+            }
         }
 
         private static readonly RevisionsCollectionConfiguration ZeroConfiguration = new RevisionsCollectionConfiguration
@@ -1685,7 +1711,6 @@ namespace Raven.Server.Documents.Revisions
 
             return result;
         }
-
 
         private unsafe ByteStringContext.ExternalScope GetResolvedSlice(DocumentsOperationContext context, DateTime date, out Slice slice)
         {

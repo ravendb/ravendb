@@ -380,7 +380,9 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(SubscriptionConnection.ClientUri)] = x.ClientUri,
                 [nameof(SubscriptionConnection.Strategy)] = x.Strategy,
                 [nameof(SubscriptionConnection.Stats)] = GetConnectionStatsDJV(x.Stats),
-                [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message
+                [nameof(SubscriptionConnection.ConnectionException)] = x.ConnectionException?.Message,
+                ["TcpConnectionStats"] = x.TcpConnection.GetConnectionStats(),
+                [nameof(SubscriptionConnection.RecentSubscriptionStatuses)] = new DynamicJsonArray(x.RecentSubscriptionStatuses?.ToArray()??Array.Empty<string>())
             };
         }
 

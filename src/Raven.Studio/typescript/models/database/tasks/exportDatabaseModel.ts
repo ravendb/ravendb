@@ -109,7 +109,7 @@ class exportDatabaseModel {
             operateOnTypes.push("Subscriptions");
         }
 
-        const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
+        const recordTypes = (databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined) as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
         
         return {
             Collections: this.includeAllCollections() ? null : this.includedCollections(),

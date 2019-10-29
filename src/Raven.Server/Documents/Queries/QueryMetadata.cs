@@ -214,7 +214,19 @@ namespace Raven.Server.Documents.Queries
                 IsCollectionQuery = false;
             }
 
-            IndexFieldNames.Add(indexFieldName);
+            if (IndexFieldNames.Add(indexFieldName) == false)
+            {
+                // RavenDB-14176
+                // Field might already exist in this list, but might be incomplete
+
+                if (WhereFields.TryGetValue(indexFieldName, out var existingField))
+                {
+                    search |= existingField.IsFullTextSearch;
+                    exact |= existingField.IsExactSearch;
+                    spatial = spatial ?? existingField.Spatial;
+                }
+            }
+
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
         }
 

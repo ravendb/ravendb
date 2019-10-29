@@ -274,22 +274,6 @@ namespace SlowTests.Tests.Linq
         }
 
         [Fact]
-        public void IsNullOrEmpty_Any_Negated_Not_Supported()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    var indexedUsers = GetRavenQueryInspector(session);
-                    var q = indexedUsers.Where(user => !user.Name.Any());
-
-                    var exception = Assert.Throws<InvalidOperationException>(() => q.ToString());
-                    Assert.Equal("Cannot process negated Any(), see RavenDB-732 https://issues.hibernatingrhinos.com/issue/RavenDB-732", exception.Message);
-                }
-            }
-        }
-
-        [Fact]
         public void IsNullOrEmpty_AnyEqTrue()
         {
             using (var store = GetDocumentStore())

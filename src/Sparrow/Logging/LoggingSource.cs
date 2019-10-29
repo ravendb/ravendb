@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Extensions;
+using Sparrow.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -585,6 +586,7 @@ namespace Sparrow.Logging
                             _hasEntries.Wait(1000);
                             continue;
                         }
+
                         using (currentFile)
                         {
                             _readyToCompress.Set();
@@ -657,31 +659,20 @@ namespace Sparrow.Logging
                     }
                     catch (OutOfMemoryException)
                     {
-                        Console.Error.WriteLine("ERROR! Out of memory exception while trying to log, will avoid logging for the next 5 seconds");
+                        Console.Error.WriteLine("Out of memory exception while trying to log, will avoid logging for the next 5 seconds");
 
-                        var time = 5000;
-                        var current = Stopwatch.GetTimestamp();
-
-                        while (time > 0 &&
-                            _hasEntries.Wait(time))
-                        {
-                            _hasEntries.Reset();
-                            time = (int)(((Stopwatch.GetTimestamp() - current) * Stopwatch.Frequency) / 1000);
-                            foreach (var threadStateRef in threadStates)
-                            {
-                                DiscardThreadLogState(threadStateRef);
-                            }
-                            foreach (var newThreadState in _newThreadStates)
-                            {
-                                DiscardThreadLogState(newThreadState);
-                            }
-                            current = Stopwatch.GetTimestamp();
-                        }
+                        DisableLogsFor(threadStates, TimeSpan.FromSeconds(5));
                     }
                     catch (Exception e)
                     {
-                        var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
-                        Console.Error.WriteLine(msg);
+                        var msg = e is IOException i && IsOutOfDiskSpaceException(i)
+                            ? "Couldn't create a new log file because of out of disk space! " +
+                              "Disabling the logs for 30 seconds"
+                            : "FATAL ERROR trying to log!";
+
+                        Console.Error.WriteLine($"{msg}{Environment.NewLine}{e}");
+
+                        DisableLogsFor(threadStates, TimeSpan.FromSeconds(30));
                     }
                 }
             }
@@ -691,6 +682,46 @@ namespace Sparrow.Logging
                 if (_compressLoggingThread?.Join(1000) == false)
                     _tokenSource.Cancel();
             }
+        }
+
+        private void DisableLogsFor(List<WeakReference<LocalThreadWriterState>> threadStates, TimeSpan timeout)
+        {
+            var prevIsInfoEnabled = IsInfoEnabled;
+            var prevIsOperationsEnabled = IsOperationsEnabled;
+
+            try
+            {
+                IsInfoEnabled = false;
+                IsOperationsEnabled = false;
+
+                // discard all logs
+                foreach (var threadStateRef in threadStates)
+                {
+                    DiscardThreadLogState(threadStateRef);
+                }
+
+                foreach (var newThreadState in _newThreadStates)
+                {
+                    DiscardThreadLogState(newThreadState);
+                }
+
+                Thread.Sleep(timeout);
+            }
+            finally
+            {
+                IsInfoEnabled = prevIsInfoEnabled;
+                IsOperationsEnabled = prevIsOperationsEnabled;
+            }
+        }
+
+        private static bool IsOutOfDiskSpaceException(IOException ioe)
+        {
+            const int posixOutOfDiskSpaceError = 28; // Errno.ENOSPC
+            const int windowsOutOfDiskSpaceError = 0x70; // Win32NativeFileErrors.ERROR_DISK_FULL
+
+            var expectedDiskFullError = PlatformDetails.RunningOnPosix ? posixOutOfDiskSpaceError : windowsOutOfDiskSpaceError;
+            var errorCode = PlatformDetails.RunningOnPosix ? ioe.HResult : ioe.HResult & 0xFFFF;
+            return errorCode == expectedDiskFullError;
         }
 
         private void BackgroundLoggerCompress()
