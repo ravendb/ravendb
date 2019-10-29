@@ -385,7 +385,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(DateTime dt)
         {
-            var value = dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc);
+            var value = dt.GetDefaultRavenFormat();
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
