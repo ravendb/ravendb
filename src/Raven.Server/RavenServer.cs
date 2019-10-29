@@ -60,6 +60,9 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Threading;
 
 namespace Raven.Server
@@ -118,6 +121,9 @@ namespace Raven.Server
             MetricCacher = new MetricCacher();
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
+
+            if (PlatformDetails.RunningOnLinux)
+                _smapsReader = new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });
         }
 
         public TcpListenerStatus GetTcpServerStatus()
@@ -136,7 +142,9 @@ namespace Raven.Server
 
             CpuUsageCalculator.Init();
 
-            MetricCacher.Register(MetricCacher.Keys.CpuUsage, TimeSpan.FromSeconds(1), CpuUsageCalculator.Calculate);
+            MetricCacher.Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromSeconds(1), CpuUsageCalculator.Calculate);
+            MetricCacher.Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
+            MetricCacher.Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromSeconds(1), CalculateMemoryInfoExtended);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
@@ -327,6 +335,18 @@ namespace Raven.Server
             }
         }
 
+        private readonly SmapsReader _smapsReader;
+
+        private object CalculateMemoryInfo()
+        {
+            return MemoryInformation.GetMemoryInfo();
+        }
+
+        private object CalculateMemoryInfoExtended()
+        {
+            return MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
+        }
+
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
 
         public class CpuCreditsState : IDynamicJson
@@ -420,7 +440,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    var (overallMachineCpuUsage, _) = MetricCacher.GetValue(MetricCacher.Keys.CpuUsage, CpuUsageCalculator.Calculate);
+                    var (overallMachineCpuUsage, _) = MetricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, CpuUsageCalculator.Calculate);
                     var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
                     CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
                     CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;

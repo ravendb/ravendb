@@ -84,8 +84,8 @@ namespace Raven.Server.Dashboard
 
         internal static MachineResources GetMachineResources(SmapsReader smapsReader, MetricCacher metricCacher, ICpuUsageCalculator cpuUsageCalculator)
         {
-            var memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extended: true);
-            var cpuInfo = metricCacher.GetValue(MetricCacher.Keys.CpuUsage, cpuUsageCalculator.Calculate);
+            var memInfo = metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+            var cpuInfo = metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, cpuUsageCalculator.Calculate);
 
             var machineResources = new MachineResources
             {
