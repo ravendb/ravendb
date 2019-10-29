@@ -115,6 +115,7 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricCounters();
+            MetricCacher = new MetricCacher();
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
         }
@@ -134,6 +135,8 @@ namespace Raven.Server
                 : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter);
 
             CpuUsageCalculator.Init();
+
+            MetricCacher.Register(MetricCacher.Keys.CpuUsage, TimeSpan.FromSeconds(1), CpuUsageCalculator.Calculate);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
@@ -285,17 +288,17 @@ namespace Raven.Server
                 {
                     if (Configuration.Server.CpuCreditsBase == null ||
                         Configuration.Server.CpuCreditsMax == null)
-                        throw new InvalidOperationException($"Both {RavenConfiguration.GetKey(s=> s.Server.CpuCreditsBase)} and {RavenConfiguration.GetKey(s => s.Server.CpuCreditsMax)} must be specified");
+                        throw new InvalidOperationException($"Both {RavenConfiguration.GetKey(s => s.Server.CpuCreditsBase)} and {RavenConfiguration.GetKey(s => s.Server.CpuCreditsMax)} must be specified");
 
                     if (string.IsNullOrEmpty(Configuration.Server.CpuCreditsExec))
                         throw new InvalidOperationException($"CPU credits were configured but missing the {RavenConfiguration.GetKey(s => s.Server.CpuCreditsExec)} key.");
 
                     CpuCreditsBalance.BaseCredits = Configuration.Server.CpuCreditsBase.Value;
                     CpuCreditsBalance.MaxCredits = Configuration.Server.CpuCreditsMax.Value;
-                    CpuCreditsBalance.BackgroundTasksThreshold = 
+                    CpuCreditsBalance.BackgroundTasksThreshold =
                         // default to 1/4 of the base CPU credits 
                         Configuration.Server.CpuCreditsExhaustionBackgroundTasksThreshold ?? CpuCreditsBalance.BaseCredits / 4;
-                    CpuCreditsBalance.FailoverThreshold = 
+                    CpuCreditsBalance.FailoverThreshold =
                         // default to disabled
                         Configuration.Server.CpuCreditsExhaustionFailoverThreshold ?? -1;
                     CpuCreditsBalance.RemainingCpuCredits = Math.Max(CpuCreditsBalance.BackgroundTasksThreshold, CpuCreditsBalance.FailoverThreshold) + 1;
@@ -363,7 +366,7 @@ namespace Raven.Server
                 {
                     var val = History[(current + i) % History.Length];
                     currentMinuteValue += val;
-                    if(++currentMinItems == 60)
+                    if (++currentMinItems == 60)
                     {
                         currentMinItems = 0;
                         historyByMinute.Add(currentMinuteValue / 60);
@@ -417,7 +420,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    var (overallMachineCpuUsage, _) = CpuUsageCalculator.Calculate();
+                    var (overallMachineCpuUsage, _) = MetricCacher.GetValue(MetricCacher.Keys.CpuUsage, CpuUsageCalculator.Calculate);
                     var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
                     CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
                     CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;
@@ -474,13 +477,13 @@ namespace Raven.Server
                     {
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
-                        if(err == null)
+                        if (err == null)
                             err = Stopwatch.StartNew();
                         else
                             err.Restart();
                     }
                 }
-                    
+
                 try
                 {
                     Task.Delay(1000).Wait(ServerStore.ServerShutdown);
@@ -492,12 +495,12 @@ namespace Raven.Server
             }
 
             void MaybeRaiseAlert(
-                double threshold, 
-                double threadholdReleaseValue, 
+                double threshold,
+                double threadholdReleaseValue,
                 MultipleUseFlag alertFlag,
                 string alertMessage,
                 int defaultTimeToAlert,
-                ref AlertRaised alert, 
+                ref AlertRaised alert,
                 ref int remainingTimeToAlert)
             {
                 if (CpuCreditsBalance.RemainingCpuCredits < threshold)
@@ -532,7 +535,7 @@ namespace Raven.Server
         {
             var response = GetCpuCreditsFromExec();
 
-            if(response.Timestamp < DateTime.UtcNow.AddHours(-1))
+            if (response.Timestamp < DateTime.UtcNow.AddHours(-1))
                 throw new InvalidOperationException($"Cannot sync the remaining CPU credits, got a result with a timestamp of more than one hour ago: {response.Timestamp}.");
 
             CpuCreditsBalance.RemainingCpuCredits = response.Remaining;
@@ -642,7 +645,7 @@ namespace Raven.Server
                                 s = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(buffer.Array, buffer.Offset, buffer.Count));
                             }
                         }
-                        catch 
+                        catch
                         {
                             // nothing to do
                         }
@@ -2056,6 +2059,7 @@ namespace Raven.Server
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
         private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;
+        public readonly MetricCacher MetricCacher;
 
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
