@@ -210,9 +210,53 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public event EventHandler<(string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType ChangeType)> DatabaseChanged;
+        public delegate Task DatabaseChangedDelegate(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType);
+        public delegate Task ValueChangedDelegate(long index, string type);
 
-        public event EventHandler<(long Index, string Type)> ValueChanged;
+        private DatabaseChangedDelegate[] _onDatabaseChanged = Array.Empty<DatabaseChangedDelegate>();
+        private ValueChangedDelegate[] _onValueChanged = Array.Empty<ValueChangedDelegate>();
+
+        public event DatabaseChangedDelegate DatabaseChanged
+        {
+            add
+            {
+                _onDatabaseChanged = _onDatabaseChanged.Concat(new[] {value}).ToArray();
+            }
+            remove
+            {
+                _onDatabaseChanged = _onDatabaseChanged.Where(x=> x != value).ToArray();
+            }
+        }
+
+        public event ValueChangedDelegate ValueChanged
+        {
+            add
+            {
+                _onValueChanged = _onValueChanged.Concat(new[] { value }).ToArray();
+            }
+            remove
+            {
+                _onValueChanged = _onValueChanged.Where(x => x != value).ToArray();
+            }
+        }
+
+        private async Task OnDatabaseChanges(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
+        {
+            var changes = _onDatabaseChanged;
+            foreach (var act in changes)
+            {
+                await act(databaseName, index, type, changeType);
+            }
+        }
+
+        private async Task OnValueChanges(long index, string type)
+        {
+            var changes = _onValueChanged;
+            foreach (var act in changes)
+            {
+                await act(index, type);
+            }
+        }
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
@@ -465,7 +509,7 @@ namespace Raven.Server.ServerWide
 
             PutSubscriptionCommand updateCommand = null;
             Exception exception = null;
-            var actionsByDatabase = new Dictionary<string, Action>();
+            var actionsByDatabase = new Dictionary<string, List<Func<Task>>>();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             try
             {
@@ -490,12 +534,17 @@ namespace Raven.Server.ServerWide
 
                     if (actionsByDatabase.ContainsKey(database) == false)
                     {
-                        actionsByDatabase[database] = () =>
-                            DatabaseChanged?.Invoke(this, (database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
+                        actionsByDatabase[database] = new List<Func<Task>>();
                     }
+
+                    actionsByDatabase[database].Add(() =>
+                        OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
                 }
 
-                ExecuteManyOnDispose(context, index, type, actionsByDatabase.Values.ToList());
+                foreach (var action in actionsByDatabase)
+                {
+                    ExecuteManyOnDispose(context, index, type, action.Value);
+                }
             }
             catch (Exception e)
             {
@@ -925,7 +974,7 @@ namespace Raven.Server.ServerWide
                 var removed = removedCmd.RemovedNode;
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-                var actions = new List<Action>();
+                var tasks = new List<Func<Task>>();
 
                 foreach (var record in ReadAllDatabases(context))
                 {
@@ -939,8 +988,9 @@ namespace Raven.Server.ServerWide
                             if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0 || deleteNow)
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
-                                actions.Add(() => DatabaseChanged?.Invoke(this,
-                                    (record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                                tasks.Add(()=>OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
+                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+
                                 continue;
                             }
                         }
@@ -962,11 +1012,10 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    actions.Add(() => DatabaseChanged?.Invoke(this,
-                        (record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                    tasks.Add(()=>OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 
-                ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), actions);
+                ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
             }
             catch (Exception e)
             {
@@ -979,12 +1028,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Action> actions)
+        private void ExecuteManyOnDispose(TransactionOperationContext context, long index, string type, List<Func<Task>> tasks)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
                 _rachisLogIndexNotifications.AddTask(index);
-                var count = actions.Count;
+                var count = tasks.Count;
 
                 if (count == 0)
                 {
@@ -992,33 +1041,36 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                var exceptionAggregator =
-                    new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
-
-                foreach (var action in actions)
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
-                    TaskExecutor.Execute(_ =>
+                    var exceptionAggregator =
+                        new ExceptionAggregator(_parent.Log, $"the raft index {index} is committed, but an error occured during executing the {type} command.");
+
+                    foreach (var task in tasks)
                     {
-                        exceptionAggregator.Execute(action);
-                        if (Interlocked.Decrement(ref count) == 0)
+                        Task.Run(async () =>
                         {
-                            Exception error = null;
-                            try
+                            await exceptionAggregator.ExecuteAsync(task());
+                            if (Interlocked.Decrement(ref count) == 0)
                             {
-                                exceptionAggregator.ThrowIfNeeded();
+                                Exception error = null;
+                                try
+                                {
+                                    exceptionAggregator.ThrowIfNeeded();
+                                }
+                                catch (Exception e)
+                                {
+                                    error = e;
+                                }
+                                finally
+                                {
+                                    _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
+                                    _rachisLogIndexNotifications.SetTaskCompleted(index, error);
+                                }
                             }
-                            catch (Exception e)
-                            {
-                                error = e;
-                            }
-                            finally
-                            {
-                                _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
-                                _rachisLogIndexNotifications.SetTaskCompleted(index, error);
-                            }
-                        }
-                    }, null);
-                }
+                        });
+                    }
+                };
             };
         }
 
@@ -1686,7 +1738,13 @@ namespace Raven.Server.ServerWide
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                ExecuteAsyncTask(index, () => ValueChanged?.Invoke(this, (index, type)));
+                // we do this under the write tx lock before we update the last applied index
+                _rachisLogIndexNotifications.AddTask(index);
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                {
+                    ExecuteAsyncTask(index, () => OnValueChanges(index, type));
+                };
             };
         }
 
@@ -1694,22 +1752,24 @@ namespace Raven.Server.ServerWide
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                ExecuteAsyncTask(index, () => DatabaseChanged?.Invoke(this, (databaseName, index, type, change)));
+                // we do this under the write tx lock before we update the last applied index
+                _rachisLogIndexNotifications.AddTask(index);
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+                {
+                    ExecuteAsyncTask(index, () => OnDatabaseChanges(databaseName, index, type, change));
+                };
             };
         }
 
-        private void ExecuteAsyncTask(long index, Action action)
+        private void ExecuteAsyncTask(long index, Func<Task> task)
         {
-            // we do this under the write tx lock before we update the last applied index
-            _rachisLogIndexNotifications.AddTask(index);
-
-            TaskExecutor.Execute(_ =>
+            Task.Run(async () =>
             {
                 Exception error = null;
-
                 try
                 {
-                    action();
+                    await task();
                 }
                 catch (Exception e)
                 {
@@ -1720,7 +1780,7 @@ namespace Raven.Server.ServerWide
                     _rachisLogIndexNotifications.NotifyListenersAbout(index, error);
                     _rachisLogIndexNotifications.SetTaskCompleted(index, error);
                 }
-            }, null);
+            });
         }
 
         private void UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
@@ -2039,7 +2099,7 @@ namespace Raven.Server.ServerWide
             if (toShrink.Count == 0)
                 return;
 
-            var actions = new List<Action>();
+            var tasks = new List<Func<Task>>();
             var type = "ClusterTopologyChanged";
 
             foreach (var record in toShrink)
@@ -2059,11 +2119,10 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
 
-                actions.Add(() => DatabaseChanged?.Invoke(this,
-                    (record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
             }
 
-            ExecuteManyOnDispose(context, index, type, actions);
+            ExecuteManyOnDispose(context, index, type, tasks);
         }
 
         public unsafe void PutLocalState(TransactionOperationContext context, string thumbprint, BlittableJsonReaderObject value)
@@ -2991,7 +3050,7 @@ namespace Raven.Server.ServerWide
 
         private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long index, Table items, TransactionOperationContext context)
         {
-            var actions = new List<Action> { () => ValueChanged?.Invoke(this, (index, type)) };
+            var tasks = new List<Func<Task>> { () => OnValueChanges(index, type) };
 
             foreach (var update in toUpdate)
             {
@@ -3001,10 +3060,10 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                actions.Add(() => DatabaseChanged?.Invoke(this, (update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged)));
+                tasks.Add(() => OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
             }
 
-            ExecuteManyOnDispose(context, index, type, actions);
+            ExecuteManyOnDispose(context, index, type, tasks);
         }
 
         public const string SnapshotInstalled = "SnapshotInstalled";
@@ -3028,27 +3087,19 @@ namespace Raven.Server.ServerWide
                 token.ThrowIfCancellationRequested();
 
                 // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
-                var onDatabaseChanged = DatabaseChanged;
-                if (onDatabaseChanged != null)
+                foreach (var db in GetDatabaseNames(context))
                 {
-                    var listOfDatabaseName = GetDatabaseNames(context).ToList();
-                    TaskExecutor.Execute(_ =>
+                    var t = Task.Run(async () =>
                     {
-                        foreach (var db in listOfDatabaseName)
-                        {
-                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
-                        }
-                    }, null);
+                        await OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    }, token);
                 }
 
-                var onValueChanged = ValueChanged;
-                if (onValueChanged != null)
+                var t2 = Task.Run(async () =>
                 {
-                    TaskExecutor.Execute(_ =>
-                    {
-                        onValueChanged.Invoke(this, (lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand)));
-                    }, null);
-                }
+                    await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                }, token);
+               
                 context.Transaction.Commit();
             }
             token.ThrowIfCancellationRequested();
@@ -3160,7 +3211,24 @@ namespace Raven.Server.ServerWide
             var task = tcs.Task;
 
             if (task.IsCompleted)
+            {
+                if (task.IsFaulted)
+                {
+                    try
+                    {
+                        await task; // will throw on error
+                    }
+                    catch (Exception e)
+                    {
+                        ThrowApplyException(index, e);
+                    }
+                }
+
+                if (task.IsCanceled)
+                    ThrowCanceledException(index, LastModifiedIndex);
+
                 return true;
+            }
 
             var result = await Task.WhenAny(task, waitingTask.Value);
 
@@ -3202,6 +3270,11 @@ namespace Raven.Server.ServerWide
             throw new TimeoutException(openingString +
                                        $"Last commit index is: {lastModifiedIndex}. " +
                                        $"Number of errors is: {_numberOfErrors}." + closingString);
+        }
+
+        private void ThrowApplyException(long index, Exception e)
+        {
+            throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);
         }
 
         private string PrintLastNotifications()

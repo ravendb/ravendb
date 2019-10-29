@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Logging;
 
@@ -26,6 +27,18 @@ namespace Raven.Server.Utils
             try
             {
                 action();
+            }
+            catch (Exception e)
+            {
+                _list.Add(e);
+            }
+        }
+
+        public async Task ExecuteAsync(Task task)
+        {
+            try
+            {
+                await task;
             }
             catch (Exception e)
             {
