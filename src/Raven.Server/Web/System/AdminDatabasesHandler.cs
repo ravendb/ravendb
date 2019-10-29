@@ -190,7 +190,16 @@ namespace Raven.Server.Web.System
                 databaseRecord.Topology.ReplicationFactor++;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
 
-                await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                try
+                {
+                    await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                }
+                catch (DatabaseLoadFailureException e)
+                {
+                    // the node was added successfully, but failed to start 
+                    // in this case we don't want the request executor of the client to fail-over (so we wouldn't create an additional node)
+                    throw new InvalidOperationException(e.Message);
+                }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 

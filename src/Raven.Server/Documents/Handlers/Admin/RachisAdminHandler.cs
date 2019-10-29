@@ -104,15 +104,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task WaitForIndex()
         {
             var index = GetLongQueryString("index");
-            try
-            {
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            }
-            catch
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.RequestTimeout;
-            }
+            await ServerStore.Cluster.WaitForIndexNotification(index);
         }
 
         [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
