@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -284,10 +285,10 @@ namespace Raven.Server.Web.Studio
     {
         public DataDirectoryResult()
         {
-            List = new List<SingleNodeDataDirectoryResult>();
+            List = new SortedSet<SingleNodeDataDirectoryResult>(new DataDirectoryComparer());
         }
 
-        public List<SingleNodeDataDirectoryResult> List;
+        public SortedSet<SingleNodeDataDirectoryResult> List;
 
         public DynamicJsonValue ToJson()
         {
@@ -295,6 +296,16 @@ namespace Raven.Server.Web.Studio
             {
                 [nameof(List)] = TypeConverter.ToBlittableSupportedType(List)
             };
+        }
+
+        private class DataDirectoryComparer : IComparer<SingleNodeDataDirectoryResult>
+        {
+            public int Compare(SingleNodeDataDirectoryResult x, SingleNodeDataDirectoryResult y)
+            {
+                Debug.Assert(x != null && y != null);
+
+                return string.Compare(x.NodeTag, y.NodeTag, StringComparison.OrdinalIgnoreCase);
+            }
         }
     }
 }

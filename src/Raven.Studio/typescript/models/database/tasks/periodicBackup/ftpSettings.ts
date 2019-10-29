@@ -41,7 +41,8 @@ class ftpSettings extends backupSettings {
             this.port, 
             this.userName,
             this.password,
-            this.certificateAsBase64
+            this.certificateAsBase64,
+            this.configurationScriptDirtyFlag().isDirty
         ], false,  jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -52,7 +53,7 @@ class ftpSettings extends backupSettings {
             },
             validation: [
                 {
-                    validator: (url: string) => this.validate(() => {
+                    validator: (url: string) => {
                         if (!url)
                             return false;
 
@@ -62,7 +63,7 @@ class ftpSettings extends backupSettings {
                         }
 
                         return true;
-                    }),
+                    },
                     message: "Url must start with ftp:// or ftps://"
                 }
             ]
@@ -71,7 +72,7 @@ class ftpSettings extends backupSettings {
         this.port.extend({
             validation: [
                 {
-                    validator: (port: number) => this.validate(() => {
+                    validator: (port: number) => {
                         if (!this.enabled())
                             return true;
 
@@ -79,7 +80,7 @@ class ftpSettings extends backupSettings {
                             return true;
 
                         return port >= 1 && port <= 65535;
-                    }),
+                    },
                     message: "Port number range: 1-65535"
                 }
             ]
@@ -103,7 +104,7 @@ class ftpSettings extends backupSettings {
             }
         });
 
-        this.validationGroup = ko.validatedObservable({
+        this.localConfigValidationGroup = ko.validatedObservable({
             url: this.url,
             port: this.port,
             userName: this.userName,

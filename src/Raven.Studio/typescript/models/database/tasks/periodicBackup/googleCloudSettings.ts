@@ -19,7 +19,8 @@ class googleCloudSettings extends backupSettings {
             this.enabled,
             this.bucket,
             this.remoteFolderName,
-            this.googleCredentialsJson
+            this.googleCredentialsJson,
+            this.configurationScriptDirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -34,26 +35,22 @@ class googleCloudSettings extends backupSettings {
         this.bucket.extend({
             validation: [
                 {
-                    validator: (bucket: string) => this.validate(() =>
-                        bucket && bucket.length >= 3 && bucket.length <= 222),
+                    validator: (bucket: string) => bucket && bucket.length >= 3 && bucket.length <= 222,
                     message: "Bucket name must contain 3 to 63 characters." +
                         "Names containing dots can contain up to 222 characters, but each dot-separated component can be no longer than 63 characters"
                 },
                 {
-                    validator: (bucket: string) => this.validate(() =>
-                        allowedCharactersRegExp.test(bucket)),
+                    validator: (bucket: string) => allowedCharactersRegExp.test(bucket),
                     message: "Bucket name must contain only lowercase letters, numbers, dashes (-), underscores (_), and dots (.)"
                 },
                 {
-                    validator: (bucket: string) => this.validate(() =>
-                        bucket && allowedBeginningCharactersRegExp.test(bucket[0]) && allowedBeginningCharactersRegExp.test(bucket[bucket.length - 1])),
+                    validator: (bucket: string) => bucket && allowedBeginningCharactersRegExp.test(bucket[0]) && allowedBeginningCharactersRegExp.test(bucket[bucket.length - 1]),
                     message: "Bucket name must start and end with a number or letter"
                 },
                 {
-                    validator: (bucket: string) => this.validate(() =>
-                        !firstDashRuleRegExp.test(bucket) && !secondDashRuleRegExp.test(bucket) &&
+                    validator: (bucket: string) => !firstDashRuleRegExp.test(bucket) && !secondDashRuleRegExp.test(bucket) &&
                         !thirdDashRuleRegExp.test(bucket) && !fourthDashesRegExp.test(bucket) &&
-                        !fifthDashesRegExp.test(bucket)),
+                        !fifthDashesRegExp.test(bucket),
                     message: "Dashes, periods and underscores are not permitted to be adjacent to another"
                 }
             ]
@@ -65,24 +62,21 @@ class googleCloudSettings extends backupSettings {
             },
             validation: [
                 {
-                    validator: (GoogleCredentialsJson: string) => this.validate(() =>
-                        GoogleCredentialsJson.includes("\"type\"")),
+                    validator: (json: string) => json && json.includes("\"type\""),
                     message: "Google credentials json is missing 'type' field"
                 },
                 {
-                    validator: (GoogleCredentialsJson: string) => this.validate(() =>
-                        GoogleCredentialsJson.includes("\"private_key\"")),
+                    validator: (json: string) => json && json.includes("\"private_key\""),
                     message: "Google credentials json is missing 'private_key' field"
                 },
                 {
-                    validator: (GoogleCredentialsJson: string) => this.validate(() =>
-                        GoogleCredentialsJson.includes("\"client_email\"")),
+                    validator: (json: string) => json && json.includes("\"client_email\""),
                     message: "Google credentials json is missing 'client_email' field"
                 }
             ]
         });
 
-        this.validationGroup = ko.validatedObservable({
+        this.localConfigValidationGroup = ko.validatedObservable({
             bucket: this.bucket,
             accountKey: this.googleCredentialsJson
         });

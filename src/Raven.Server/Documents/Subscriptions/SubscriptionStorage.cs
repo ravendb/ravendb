@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionConnectionState OpenSubscription(SubscriptionConnection connection)
         {
             var subscriptionState = _subscriptionConnectionStates.GetOrAdd(connection.SubscriptionId,
-                subscriptionId => new SubscriptionConnectionState(subscriptionId, this));
+                subscriptionId => new SubscriptionConnectionState(subscriptionId, connection.Options.SubscriptionName, this));
             return subscriptionState;
         }
 
@@ -143,13 +143,13 @@ namespace Raven.Server.Documents.Subscriptions
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
-                    throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
+                    throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
                     {
                         AppropriateNode = whoseTaskIsIt
                     };
                 }
                 if (subscription.Disabled)
-                    throw new SubscriptionClosedException($"The subscription {id} is disabled and cannot be used until enabled");
+                    throw new SubscriptionClosedException($"The subscription with id {id} and name {name} is disabled and cannot be used until enabled");
 
                 return subscription;
             }
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"Subscription with id {name} was deleted");
+                _logger.Info($"Subscription with name {name} was deleted");
             }
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {ex.Message}");
+                _logger.Info($"Subscription with id {subscriptionId} and name {subscriptionConnectionState.SubscriptionName} connection was dropped. Reason: {ex.Message}");
 
             return true;
         }
@@ -429,7 +429,8 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    if (subscriptionState.Query != subscriptionStateKvp.Value.Connection?.SubscriptionState.Query)
+                    SubscriptionConnection connection = subscriptionStateKvp.Value.Connection;
+                    if (connection != null && subscriptionState.Query != connection.SubscriptionState.Query)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} query has been modified, connection must be restarted"));
                         continue;

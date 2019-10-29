@@ -11,7 +11,7 @@ namespace Raven.Server.Dashboard
     {
         public DateTime Date => SystemTime.UtcNow;
 
-        public List<ThreadInfo> List { get; }
+        public SortedSet<ThreadInfo> List { get; }
 
         public double CpuUsage { get; set; }
 
@@ -21,7 +21,21 @@ namespace Raven.Server.Dashboard
 
         public ThreadsInfo()
         {
-            List = new List<ThreadInfo>();
+            List = new SortedSet<ThreadInfo>(new ThreadsInfoComparer());
+        }
+
+        private class ThreadsInfoComparer : IComparer<ThreadInfo>
+        {
+            public int Compare(ThreadInfo x, ThreadInfo y)
+            {
+                Debug.Assert(x != null && y != null);
+
+                var compareByCpu = y.CpuUsage.CompareTo(x.CpuUsage);
+                if (compareByCpu != 0)
+                    return compareByCpu;
+
+                return y.TotalProcessorTime.CompareTo(x.TotalProcessorTime);
+            }
         }
 
         public DynamicJsonValue ToJson()
@@ -37,7 +51,7 @@ namespace Raven.Server.Dashboard
         }
     }
 
-    public class ThreadInfo : IDynamicJson, IComparable<ThreadInfo>
+    public class ThreadInfo : IDynamicJson
     {
         public int Id { get; set; }
 
@@ -80,15 +94,6 @@ namespace Raven.Server.Dashboard
                 [nameof(Priority)] = Priority,
                 [nameof(WaitReason)] = WaitReason
             };
-        }
-
-        public int CompareTo(ThreadInfo other)
-        {
-            var compareByCpu = other.CpuUsage.CompareTo(CpuUsage);
-            if (compareByCpu != 0)
-                return compareByCpu;
-
-            return other.TotalProcessorTime.CompareTo(TotalProcessorTime);
         }
     }
 }

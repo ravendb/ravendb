@@ -18,9 +18,10 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SubscriptionStorage _storage;
         internal readonly AsyncManualResetEvent ConnectionInUse = new AsyncManualResetEvent();
 
-        public SubscriptionConnectionState(long subscriptionId, SubscriptionStorage storage)
+        public SubscriptionConnectionState(long subscriptionId, string subscriptionName, SubscriptionStorage storage)
         {
             _subscriptionId = subscriptionId;
+            SubscriptionName = subscriptionName??subscriptionId.ToString();
             _storage = storage;
             ConnectionInUse.Set();
         }
@@ -117,6 +118,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionConnection> RecentConnections => _recentConnections;
         public IEnumerable<SubscriptionConnection> RecentRejectedConnections => _rejectedConnections;
+
+        public string SubscriptionName { get; }
 
         public SubscriptionConnection MostRecentEndedConnection()
         {

@@ -16,7 +16,8 @@ class localSettings extends backupSettings {
         
         this.dirtyFlag = new ko.DirtyFlag([
             this.enabled,
-            this.folderPath
+            this.folderPath,
+            this.configurationScriptDirtyFlag().isDirty 
         ], false,  jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -27,7 +28,7 @@ class localSettings extends backupSettings {
             }
         });
 
-        this.validationGroup = ko.validatedObservable({
+        this.localConfigValidationGroup = ko.validatedObservable({
             folderPath: this.folderPath
         });
     }
