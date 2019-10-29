@@ -10,11 +10,9 @@ namespace Raven.Server.Config.Categories
     {
         public MemoryConfiguration()
         {
-            var memoryInfo = MemoryInformation.GetMemoryInfo();
-
             LowMemoryLimit = Size.Min(
                 new Size(2, SizeUnit.Gigabytes),
-                memoryInfo.TotalPhysicalMemory / 10);
+                MemoryInformation.TotalPhysicalMemory / 10);
 
             UseTotalDirtyMemInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
         }
