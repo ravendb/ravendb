@@ -119,12 +119,9 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricCounters();
-            MetricCacher = new MetricCacher();
+            MetricCacher = new ServerMetricCacher(this);
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("Server/TCP");
-
-            if (PlatformDetails.RunningOnLinux)
-                _smapsReader = new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });
         }
 
         public TcpListenerStatus GetTcpServerStatus()
@@ -142,11 +139,7 @@ namespace Raven.Server
                 : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter);
 
             CpuUsageCalculator.Init();
-
-            MetricCacher.Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromSeconds(1), CpuUsageCalculator.Calculate);
-            MetricCacher.Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
-            MetricCacher.Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromSeconds(1), CalculateMemoryInfoExtended);
-            MetricCacher.Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
+            MetricCacher.Initialize();
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
@@ -337,23 +330,6 @@ namespace Raven.Server
             }
         }
 
-        private readonly SmapsReader _smapsReader;
-
-        private object CalculateMemoryInfo()
-        {
-            return MemoryInformation.GetMemoryInfo();
-        }
-
-        private object CalculateMemoryInfoExtended()
-        {
-            return MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
-        }
-
-        private DiskSpaceResult CalculateDiskSpaceInfo()
-        {
-            return DiskSpaceChecker.GetDiskSpaceInfo(ServerStore.Configuration.Core.DataDirectory.FullPath);
-        }
-
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
 
         public class CpuCreditsState : IDynamicJson
@@ -447,7 +423,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    var (overallMachineCpuUsage, _) = MetricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, CpuUsageCalculator.Calculate);
+                    var (overallMachineCpuUsage, _) = MetricCacher.GetValue(Raven.Server.Utils.MetricCacher.Keys.Server.CpuUsage, CpuUsageCalculator.Calculate);
                     var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
                     CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
                     CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;
@@ -2086,7 +2062,7 @@ namespace Raven.Server
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
         private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;
-        public readonly MetricCacher MetricCacher;
+        public readonly ServerMetricCacher MetricCacher;
 
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
