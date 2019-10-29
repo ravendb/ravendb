@@ -321,7 +321,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new CpuCreditsFailoverAlertRaised(server.CpuCreditsBalance));
             store.Add(new CpuCreditsAlertRaised(server.CpuCreditsBalance));
 
-            store.Add(new ServerTotalMemory());
+            store.Add(new ServerTotalMemory(server.MetricCacher));
             store.Add(new ServerLowMemoryFlag());
 
             store.Add(new ServerLastRequestTime(server.Statistics));

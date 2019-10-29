@@ -2303,7 +2303,7 @@ namespace Raven.Server.ServerWide
 
         public NodeInfo GetNodeInfo()
         {
-            var memoryInformation = MemoryInformation.GetMemoryInfo();
+            var memoryInformation = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
             return new NodeInfo
             {
                 NodeTag = NodeTag,
