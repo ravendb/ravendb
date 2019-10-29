@@ -63,6 +63,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 
 namespace Raven.Server
@@ -145,6 +146,7 @@ namespace Raven.Server
             MetricCacher.Register(MetricCacher.Keys.Server.CpuUsage, TimeSpan.FromSeconds(1), CpuUsageCalculator.Calculate);
             MetricCacher.Register(MetricCacher.Keys.Server.MemoryInfo, TimeSpan.FromSeconds(1), CalculateMemoryInfo);
             MetricCacher.Register(MetricCacher.Keys.Server.MemoryInfoExtended, TimeSpan.FromSeconds(1), CalculateMemoryInfoExtended);
+            MetricCacher.Register(MetricCacher.Keys.Server.DiskSpaceInfo, TimeSpan.FromSeconds(15), CalculateDiskSpaceInfo);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
@@ -345,6 +347,11 @@ namespace Raven.Server
         private object CalculateMemoryInfoExtended()
         {
             return MemoryInformation.GetMemoryInfo(_smapsReader, extended: true);
+        }
+
+        private DiskSpaceResult CalculateDiskSpaceInfo()
+        {
+            return DiskSpaceChecker.GetDiskSpaceInfo(ServerStore.Configuration.Core.DataDirectory.FullPath);
         }
 
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
