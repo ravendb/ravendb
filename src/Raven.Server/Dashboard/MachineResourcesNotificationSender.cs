@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.Collections;
@@ -78,13 +79,13 @@ namespace Raven.Server.Dashboard
 
         internal MachineResources GetMachineResources(SmapsReader smapsReader)
         {
-            return GetMachineResources(smapsReader, _server.CpuUsageCalculator);
+            return GetMachineResources(smapsReader, _server.MetricCacher, _server.CpuUsageCalculator);
         }
 
-        internal static MachineResources GetMachineResources(SmapsReader smapsReader, ICpuUsageCalculator cpuUsageCalculator)
+        internal static MachineResources GetMachineResources(SmapsReader smapsReader, MetricCacher metricCacher, ICpuUsageCalculator cpuUsageCalculator)
         {
             var memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extended: true);
-            var cpuInfo = cpuUsageCalculator.Calculate();
+            var cpuInfo = metricCacher.GetValue(MetricCacher.Keys.CpuUsage, cpuUsageCalculator.Calculate);
 
             var machineResources = new MachineResources
             {
