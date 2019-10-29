@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public DeleteDatabaseCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
-            ErrorOnDatabaseDoesNotExists = true;
+            ErrorOnDatabaseDoesNotExists = false;
         }
 
         public override void Initialize(ServerStore serverStore, TransactionOperationContext context)
