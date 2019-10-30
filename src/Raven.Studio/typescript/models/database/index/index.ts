@@ -295,17 +295,25 @@ class index {
     }
 
     filter(indexName: string, allowedStatuses: indexStatusFilter[]): boolean {
-        const nameMatch = !indexName || this.name.toLowerCase().indexOf(indexName) >= 0;
-        
-        const statusMatch = this.matchesAnyStatus(allowedStatuses);
-        
-        const matches = nameMatch && statusMatch;
+        let matches = this.matches(indexName, allowedStatuses);
+
+        const replacement = this.replacement();
+        if (!matches && replacement && replacement.matches(indexName, allowedStatuses)) {
+            matches = true;
+        }
 
         this.filteredOut(!matches);
 
         return matches;
     }
-    
+
+    private matches(indexName: string, allowedStatuses: indexStatusFilter[]): boolean {
+        const nameMatch = !indexName || this.name.toLowerCase().indexOf(indexName) >= 0;
+        const statusMatch = this.matchesAnyStatus(allowedStatuses);
+        const matches = nameMatch && statusMatch;
+        return matches;
+    }
+
     private matchesAnyStatus(status: indexStatusFilter[]) {
         if (status.length === 0) {
             return false;
