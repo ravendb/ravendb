@@ -19,6 +19,8 @@ namespace Raven.Server.Documents
 
         private List<CounterChange> _counterNotifications;
 
+        private List<TimeSeriesChange> _timeSeriesNotifications;
+
         private bool _replaced;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
@@ -53,6 +55,15 @@ namespace Raven.Server.Documents
             _counterNotifications.Add(change);
         }
 
+        public void AddAfterCommitNotification(TimeSeriesChange change)
+        {
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
+
+            if (_timeSeriesNotifications == null)
+                _timeSeriesNotifications = new List<TimeSeriesChange>();
+            _timeSeriesNotifications.Add(change);
+        }
+
         private bool _isDisposed;
 
         public override void Dispose()
@@ -84,7 +95,7 @@ namespace Raven.Server.Documents
 
         private void AfterCommit()
         {
-            if (_documentNotifications == null && _counterNotifications == null)
+            if (_documentNotifications == null && _counterNotifications == null && _timeSeriesNotifications == null)
                 return;
 
             ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
@@ -103,6 +114,14 @@ namespace Raven.Server.Documents
             if (_counterNotifications?.Count > 0)
             {
                 foreach (var notification in _counterNotifications)
+                {
+                    _changes.RaiseNotifications(notification);
+                }
+            }
+
+            if (_timeSeriesNotifications?.Count > 0)
+            {
+                foreach (var notification in _timeSeriesNotifications)
                 {
                     _changes.RaiseNotifications(notification);
                 }

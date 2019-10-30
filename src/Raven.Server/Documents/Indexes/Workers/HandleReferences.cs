@@ -13,24 +13,45 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
-    public class HandleReferences : IIndexingWork
+    public sealed class HandleDocumentReferences : HandleReferences
+    {
+        public HandleDocumentReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+            : base(index, referencedCollections, documentsStorage, indexStorage, configuration)
+        {
+        }
+
+        protected unsafe override IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
+        {
+            using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
+            {
+                // when there is conflict, we need to apply same behavior as if the document would not exist
+                var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
+                if (doc == null)
+                    return default;
+
+                return new IndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, null, doc.Data.Size, doc);
+            }
+        }
+    }
+
+    public abstract class HandleReferences : IIndexingWork
     {
         private readonly Logger _logger;
 
         private readonly Index _index;
         private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
+        protected readonly DocumentsStorage _documentsStorage;
         private readonly IndexingConfiguration _configuration;
-        private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
-        private readonly Reference _reference = new Reference();
+        protected readonly Reference _reference = new Reference();
 
         public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
         {
             _index = index;
             _referencedCollections = referencedCollections;
-            _configuration = configuration;
             _documentsStorage = documentsStorage;
+            _configuration = configuration;
             _indexStorage = indexStorage;
             _logger = LoggingSource.Instance
                 .GetLogger<HandleReferences>(_indexStorage.DocumentDatabase.Name);
@@ -46,13 +67,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
-            var moreWorkFound = HandleDocuments(ActionType.Tombstone, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
-            moreWorkFound |= HandleDocuments(ActionType.Document, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            var moreWorkFound = HandleItems(ActionType.Tombstone, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            moreWorkFound |= HandleItems(ActionType.Document, databaseContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
 
             return moreWorkFound;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext,
             IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
@@ -67,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        private unsafe bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private unsafe bool HandleItems(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -133,32 +154,15 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 {
                                     case ActionType.Document:
                                         if (lastCollectionEtag == -1)
-                                            lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
+                                            lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, collection);
 
-                                        references = _documentsStorage
-                                            .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, 
-                                                DocumentFields.Id | DocumentFields.Etag)
-                                            .Select(document =>
-                                            {
-                                                _reference.Key = document.Id;
-                                                _reference.Etag = document.Etag;
-
-                                                return _reference;
-                                            });
+                                        references = GetItemReferences(databaseContext, referencedCollection, lastEtag, 0, pageSize);
                                         break;
                                     case ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
-                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
+                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection, isReference: true);
 
-                                        references = _documentsStorage
-                                            .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
-                                            .Select(tombstone =>
-                                            {
-                                                _reference.Key = tombstone.LowerId;
-                                                _reference.Etag = tombstone.Etag;
-
-                                                return _reference;
-                                            });
+                                        references = GetTombstoneReferences(databaseContext, referencedCollection, lastEtag, 0, pageSize);
                                         break;
                                     default:
                                         throw new NotSupportedException();
@@ -176,27 +180,25 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     batchCount++;
 
-                                    var documents = new List<Document>();
+                                    var items = new List<IndexItem>();
                                     foreach (var key in _indexStorage
-                                        .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
+                                        .GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
-                                        using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
-                                        {
-                                            // when there is conflict, we need to apply same behavior as if the document would not exist
-                                            var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
+                                        var item = GetItem(databaseContext, key);
 
-                                            if (doc != null && doc.Etag <= lastIndexedEtag)
-                                                documents.Add(doc);
-                                        }
+                                        if (item.Item != null && item.Etag <= lastIndexedEtag)
+                                            items.Add(item);
+                                        else
+                                            item.Dispose();
                                     }
 
-                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
+                                    using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
-                                        while (docsEnumerator.MoveNext(out IEnumerable mapResults))
+                                        while (itemsEnumerator.MoveNext(out IEnumerable mapResults, out var etag))
                                         {
                                             token.ThrowIfCancellationRequested();
 
-                                            var current = docsEnumerator.Current;
+                                            var current = itemsEnumerator.Current;
 
                                             if (indexWriter == null)
                                                 indexWriter = writeOperation.Value;
@@ -261,6 +263,34 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
+        protected IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)
+        {
+            return _documentsStorage
+                .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id | DocumentFields.Etag)
+                .Select(document =>
+                {
+                    _reference.Key = document.Id;
+                    _reference.Etag = document.Etag;
+
+                    return _reference;
+                });
+        }
+
+        protected IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)
+        {
+            return _documentsStorage
+                .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                .Select(tombstone =>
+                {
+                    _reference.Key = tombstone.LowerId;
+                    _reference.Etag = tombstone.Etag;
+
+                    return _reference;
+                });
+        }
+
+        protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
+
         public unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var tx = indexContext.Transaction.InnerTransaction;
@@ -275,7 +305,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             Tombstone
         }
 
-        private class Reference
+        protected class Reference
         {
             public LazyStringValue Key;
 

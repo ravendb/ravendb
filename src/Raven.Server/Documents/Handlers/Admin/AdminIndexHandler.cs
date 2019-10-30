@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            await PutInternal(validatedAsAdmin:true);
+            await PutInternal(validatedAsAdmin: true);
         }
 
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
@@ -39,9 +39,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
                 var raftRequestId = GetRaftRequestIdFromQuery();
-                foreach (var indexToAdd in indexes)
+                foreach (BlittableJsonReaderObject indexToAdd in indexes)
                 {
-                    var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
+                    var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
                     var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();

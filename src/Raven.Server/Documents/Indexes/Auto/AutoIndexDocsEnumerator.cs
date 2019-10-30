@@ -4,25 +4,27 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoIndexDocsEnumerator : IIndexedDocumentsEnumerator
+    public class AutoIndexDocsEnumerator : IIndexedItemEnumerator
     {
         private readonly IndexingStatsScope _documentReadStats;
-        private readonly IEnumerator<Document> _docsEnumerator;
+        private readonly IEnumerator<IndexItem> _itemsEnumerator;
         private readonly Document[] _results = new Document[1];
 
-        public AutoIndexDocsEnumerator(IEnumerable<Document> documents, IndexingStatsScope stats)
+        public AutoIndexDocsEnumerator(IEnumerable<IndexItem> items, IndexingStatsScope stats)
         {
             _documentReadStats = stats.For(IndexingOperation.Map.DocumentRead, start: false);
-            _docsEnumerator = documents.GetEnumerator();
+            _itemsEnumerator = items.GetEnumerator();
         }
 
-        public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
+        public bool MoveNext(out IEnumerable resultsOfCurrentDocument, out long? etag)
         {
             using (_documentReadStats.Start())
             {
-                var moveNext = _docsEnumerator.MoveNext();
+                var moveNext = _itemsEnumerator.MoveNext();
 
-                _results[0] = _docsEnumerator.Current;
+                var document = (Document)_itemsEnumerator.Current?.Item;
+                _results[0] = document;
+                etag = document?.Etag;
                 resultsOfCurrentDocument = _results;
 
                 return moveNext;
@@ -33,11 +35,11 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
         }
 
-        public Document Current => _docsEnumerator.Current;
+        public IndexItem Current => _itemsEnumerator.Current;
 
         public void Dispose()
         {
-            _docsEnumerator.Dispose();
+            _itemsEnumerator.Dispose();
         }
     }
 }

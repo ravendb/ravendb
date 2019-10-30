@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var tempHeader = (SegmentHeader*)(tempBuffer.Ptr + maximumSize);
 
-                Memory.Copy(tempHeader,Header, copiedHeaderSize);
+                Memory.Copy(tempHeader, Header, copiedHeaderSize);
 
                 var tempBitsBuffer = new BitsBuffer(tempBuffer.Ptr, maximumSize);
 
@@ -377,14 +377,14 @@ namespace Raven.Server.Documents.TimeSeries
             return context.GetLazyStringValue(tagPointer.Pointer);
         }
 
-        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(DocumentsOperationContext context, DateTime baseline)
+        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline)
         {
             var result = new TimeSeriesStorage.Reader.SingleResult();
             var values = new double[NumberOfValues];
             var states = new TimeStampState[NumberOfValues];
 
             var tagPointer = new TagPointer();
-            using (var enumerator = GetEnumerator(context.Allocator))
+            using (var enumerator = GetEnumerator(allocator))
             {
                 while (enumerator.MoveNext(out int ts, values, states, ref tagPointer))
                 {

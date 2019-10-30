@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
@@ -26,6 +27,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -70,7 +72,7 @@ namespace Raven.Server.Documents.Indexes
                                                  36 - // new Guid()
                                                  IndexCompiler.IndexExtension.Length -
                                                  4; // ".dll" 
-            
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -326,11 +328,11 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     // original index needs to delete docs created by side-by-side indexing
 
-                                    currentMapReduceIndex.ReduceOutputs?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
+                                    currentMapReduceIndex.ReduceOutputs?.AddPrefixesOfDocumentsToDelete(new HashSet<string> { prefix });
                                 }
                             }
                         }
-                        
+
                         DeleteIndexInternal(replacementIndex);
                     }
 
@@ -361,7 +363,7 @@ namespace Raven.Server.Documents.Indexes
                     if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.ReduceOutputs != null)
                     {
                         // we need to delete reduce output docs of existing index
-                        
+
                         CollectPrefixesOfDocumentsToDelete(oldMapReduceIndex, ref prefixesOfDocumentsToDelete);
                     }
 
@@ -382,7 +384,7 @@ namespace Raven.Server.Documents.Indexes
                         if (replacementIndex is MapReduceIndex oldReplacementMapReduceIndex && oldReplacementMapReduceIndex.ReduceOutputs != null)
                         {
                             // existing replacement index could already produce some reduce output documents, new replacement index needs to delete them
-                            
+
                             CollectPrefixesOfDocumentsToDelete(oldReplacementMapReduceIndex, ref prefixesOfDocumentsToDelete);
                         }
 
@@ -391,23 +393,46 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 Index index;
-                switch (definition.Type)
+                switch (definition.SourceType)
                 {
-                    case IndexType.Map:
-                    case IndexType.JavaScriptMap:
-                        index = MapIndex.CreateNew(definition, _documentDatabase);
+                    case IndexSourceType.Documents:
+                        var documentsIndexDefinition = (IndexDefinition)definition;
+                        switch (definition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapIndex.CreateNew(documentsIndexDefinition, _documentDatabase);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                var mapReduceIndex = MapReduceIndex.CreateNew(documentsIndexDefinition, _documentDatabase);
+
+                                if (mapReduceIndex.ReduceOutputs != null && prefixesOfDocumentsToDelete.Count > 0)
+                                    mapReduceIndex.ReduceOutputs.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                                index = mapReduceIndex;
+                                break;
+                            default:
+                                throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
+                        }
                         break;
-                    case IndexType.MapReduce:
-                    case IndexType.JavaScriptMapReduce:
-                        var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
-
-                        if (mapReduceIndex.ReduceOutputs != null && prefixesOfDocumentsToDelete.Count > 0)
-                            mapReduceIndex.ReduceOutputs.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
-
-                        index = mapReduceIndex;
+                    case IndexSourceType.TimeSeries:
+                        switch (definition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapTimeSeriesIndex.CreateNew(definition, _documentDatabase);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                throw new InvalidOperationException("TODO ppekrol");
+                                break;
+                            default:
+                                throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
+                        }
                         break;
                     default:
-                        throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
+                        throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }
 
                 CreateIndexInternal(index);
@@ -421,7 +446,7 @@ namespace Raven.Server.Documents.Indexes
         private static void CollectPrefixesOfDocumentsToDelete(MapReduceIndex mapReduceIndex, ref HashSet<string> prefixesOfDocumentsToDelete)
         {
             var definition = mapReduceIndex.Definition;
-            
+
             if (definition.ReduceOutputIndex != null)
             {
                 var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
@@ -672,18 +697,30 @@ namespace Raven.Server.Documents.Indexes
         {
             UpdateStaticIndexLockModeAndPriority(definition, existingIndex, indexDifferences);
 
-            switch (definition.Type)
+            switch (definition.SourceType)
             {
-                case IndexType.Map:
-                case IndexType.JavaScriptMap:
-                    MapIndex.Update(existingIndex, definition, _documentDatabase);
+                case IndexSourceType.Documents:
+                    var documentsIndexDefinition = (IndexDefinition)definition;
+
+                    switch (definition.Type)
+                    {
+                        case IndexType.Map:
+                        case IndexType.JavaScriptMap:
+                            MapIndex.Update(existingIndex, documentsIndexDefinition, _documentDatabase);
+                            break;
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMapReduce:
+                            MapReduceIndex.Update(existingIndex, documentsIndexDefinition, _documentDatabase);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+                    }
                     break;
-                case IndexType.MapReduce:
-                case IndexType.JavaScriptMapReduce:
-                    MapReduceIndex.Update(existingIndex, definition, _documentDatabase);
+                case IndexSourceType.TimeSeries:
+                    throw new InvalidOperationException("TODO ppekrol");
                     break;
                 default:
-                    throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
 
@@ -863,7 +900,7 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name,raftRequestId));
+            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
@@ -1381,7 +1418,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     await CreateIndex(definition, $"{raftRequestId}/{definition.Name}");
-                    await TryDeleteIndexIfExists(kvp.Key,$"{raftRequestId}/{kvp.Key}");
+                    await TryDeleteIndexIfExists(kvp.Key, $"{raftRequestId}/{kvp.Key}");
 
                     moreWork = true;
                     break; // extending only one auto-index at a time

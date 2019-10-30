@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition, AutoIndexField>
     {
         private AutoMapIndex(AutoMapIndexDefinition definition)
-            : base(IndexType.AutoMap, definition)
+            : base(IndexType.AutoMap, IndexSourceType.Documents, definition)
         {
         }
 
@@ -31,9 +31,9 @@ namespace Raven.Server.Documents.Indexes.Auto
             return instance;
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new AutoIndexDocsEnumerator(documents, stats);
+            return new AutoIndexDocsEnumerator(items, stats);
         }
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)

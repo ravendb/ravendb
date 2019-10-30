@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         }
 
         private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBase definition)
-            : base(IndexType.Faulty, definition)
+            : base(IndexType.Faulty, IndexSourceType.None, definition)
         {
             _e = e;
             _createdAt = DateTime.UtcNow;
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }

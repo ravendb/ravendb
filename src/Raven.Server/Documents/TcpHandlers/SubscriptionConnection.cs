@@ -893,7 +893,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     CancellationTokenSource.Cancel();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // ignored
                 }
@@ -902,7 +902,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     CancellationTokenSource.Dispose();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // ignored
                 }

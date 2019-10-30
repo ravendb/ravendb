@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         private readonly MapOutput _output;
 
         private AutoMapReduceIndex(AutoMapReduceIndexDefinition definition)
-            : base(IndexType.AutoMapReduce, definition)
+            : base(IndexType.AutoMapReduce, IndexSourceType.Documents, definition)
         {
             _isFanout = definition.GroupByFields.Any(x => x.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues);
             _output = new MapOutput(_isFanout);
@@ -71,9 +71,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             };
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new AutoIndexDocsEnumerator(documents, stats);
+            return new AutoIndexDocsEnumerator(items, stats);
         }
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)

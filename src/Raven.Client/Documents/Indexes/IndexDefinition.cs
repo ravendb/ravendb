@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
 
@@ -22,7 +21,6 @@ namespace Raven.Client.Documents.Indexes
         {
             _configuration = new IndexConfiguration();
         }
-
 
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
@@ -77,8 +75,26 @@ namespace Raven.Client.Documents.Indexes
             set => _configuration = value;
         }
 
+        private IndexSourceType? _indexSourceType;
+
+        public virtual IndexSourceType SourceType
+        {
+            get
+            {
+                if (_indexSourceType == null || _indexSourceType.Value == IndexSourceType.None)
+                {
+                    _indexSourceType = IndexSourceType.Documents; // TODO arek - do we really need this for backward compatibility?
+                }
+
+                return _indexSourceType.Value;
+            }
+            internal set => _indexSourceType = value;
+        }
+
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
+            // TODO arek need to compare other.SourceType ?
+
             if (other == null)
                 throw new ArgumentNullException(nameof(other));
 

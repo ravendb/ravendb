@@ -953,6 +953,10 @@ namespace Raven.Server.Json
             writer.WriteString(indexDefinition.Name);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(indexDefinition.SourceType));
+            writer.WriteString(indexDefinition.SourceType.ToString());
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(indexDefinition.Type));
             writer.WriteString(indexDefinition.Type.ToString());
             writer.WriteComma();

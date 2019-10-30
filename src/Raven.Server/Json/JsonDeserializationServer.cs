@@ -41,6 +41,7 @@ using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Raven.Server.ServerWide;
+using Raven.Client.Documents.Indexes.TimeSeries;
 
 namespace Raven.Server.Json
 {
@@ -86,6 +87,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
+
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesIndexDefinition> TimeSeriesIndexDefinition = GenerateJsonDeserializationRoutine<TimeSeriesIndexDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 

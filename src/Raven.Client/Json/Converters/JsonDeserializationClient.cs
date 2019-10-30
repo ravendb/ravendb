@@ -3,6 +3,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -212,5 +213,9 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, CounterBatch> CounterBatch = GenerateJsonDeserializationRoutine<CounterBatch>();
         
         internal static readonly Func<BlittableJsonReaderObject, DocumentTimeSeriesOperation> DocumentTimeSeriesOperation = GenerateJsonDeserializationRoutine<DocumentTimeSeriesOperation>();
+
+        internal static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
+
+        internal static readonly Func<BlittableJsonReaderObject, TimeSeriesIndexDefinition> TimeSeriesIndexDefinition = GenerateJsonDeserializationRoutine<TimeSeriesIndexDefinition>();
     }
 }

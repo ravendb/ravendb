@@ -191,6 +191,7 @@ class indexDefinition {
             Maps: this.maps().map(m => m.map()),
             Reduce: this.reduce(),
             Type: this.detectIndexType(),
+            SourceType: "Documents", // TODO marcin
             LockMode: this.lockMode,
             Priority: this.priority(),
             Configuration: this.configurationToDto(),
@@ -249,6 +250,7 @@ class indexDefinition {
             Configuration: null,
             //IsTestIndex: false,
             Type: "Map",
+            SourceType: "Documents", // TODO marcin
             OutputReduceToCollection: null,
             AdditionalSources: null
         });

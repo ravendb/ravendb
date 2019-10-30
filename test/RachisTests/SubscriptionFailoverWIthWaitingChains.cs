@@ -216,7 +216,7 @@ namespace RachisTests
                     }
                     await Task.Delay(16);
                 }
-                catch (Exception ex)
+                catch
                 {
                 }
             }

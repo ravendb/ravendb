@@ -10,7 +10,27 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
+    public abstract class AbstractDynamicObject : DynamicObject
+    {
+        public abstract void Set(object item);
+
+        public abstract dynamic GetId();
+
+        protected abstract bool TryGetByName(string name, out object result);
+
+        public override bool TryGetMember(GetMemberBinder binder, out object result)
+        {
+            var name = binder.Name;
+            return TryGetByName(name, out result);
+        }
+
+        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
+        {
+            return TryGetByName((string)indexes[0], out result);
+        }
+    }
+
+    public class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IBlittableJsonContainer
     {
         private const int DocumentIdFieldNameIndex = 0;
         private const int MetadataIdPropertyIndex = 1;
@@ -48,6 +68,10 @@ namespace Raven.Server.Documents.Indexes.Static
             _doc?.EnsureMetadata();
         }
 
+        public DynamicBlittableJson()
+        {
+        }
+
         public DynamicBlittableJson(Document document)
         {
             Set(document);
@@ -64,13 +88,18 @@ namespace Raven.Server.Documents.Indexes.Static
             BlittableJson = document.Data;
         }
 
+        public override void Set(object item)
+        {
+            Set((Document)item);
+        }
+
         public bool TryGetDocument(out Document doc)
         {
             doc = _doc;
             return _doc != null;
         }
 
-        public dynamic GetId()
+        public override dynamic GetId()
         {
             if (_doc == null)
                 return DynamicNullObject.Null;
@@ -83,18 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return BlittableJson.GetPropertyNames().Contains(key);
         }
 
-        public override bool TryGetMember(GetMemberBinder binder, out object result)
-        {
-            var name = binder.Name;
-            return TryGetByName(name, out result);
-        }
-
-        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
-        {
-            return TryGetByName((string)indexes[0], out result);
-        }
-
-        private bool TryGetByName(string name, out object result)
+        protected override bool TryGetByName(string name, out object result)
         {
             // Using ordinal ignore case versions to avoid the cast of calling String.Equals with non interned values.
             if (FastCompare(name, DocumentIdFieldNameIndex) ||

@@ -144,6 +144,15 @@ namespace Raven.Client.Documents.Changes
         Increment = 4
     }
 
+    public class TimeSeriesChange : DatabaseChange
+    {
+        internal bool TriggeredByReplicationThread;
+
+        public string DocumentId { get; set; }
+        public string CollectionName { get; set; }
+        public string Name { get; set; }
+    }
+
     public class CounterChange : DatabaseChange
     {
         /// <summary>

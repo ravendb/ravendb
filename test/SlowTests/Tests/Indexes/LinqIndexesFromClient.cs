@@ -42,9 +42,9 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(DocumentConventions.Default);
 
             indexDefinition.Name = "Index1";
-            var index = IndexCompiler.Compile(indexDefinition);
+            var index = (StaticIndexBase)IndexCompiler.Compile(indexDefinition);
 
-            var map = index.Maps.Values.First().First();
+            var map = index.Maps.Values.First().First().Value.First();
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
