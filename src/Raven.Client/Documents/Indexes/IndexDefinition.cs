@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
+using Raven.Client.Json.Converters;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -20,9 +22,33 @@ namespace Raven.Client.Documents.Indexes
         public override IndexSourceType SourceType => IndexSourceType.Documents;
     }
 
+    [CreateFromBlittableJson]
     public abstract class IndexDefinitionBase
     {
-        public IndexDefinitionBase()
+        private static IndexDefinitionBase CreateFromBlittableJson(BlittableJsonReaderObject json)
+        {
+            if (json == null)
+                return null;
+
+            IndexSourceType sourceType;
+            if (json.TryGet(nameof(SourceType), out string sourceTypeString) == false)
+                sourceType = IndexSourceType.Documents; // backward compatibility
+
+            if (Enum.TryParse(sourceTypeString, ignoreCase: true, out sourceType) == false)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            switch (sourceType)
+            {
+                case IndexSourceType.Documents:
+                    return JsonDeserializationClient.IndexDefinition(json);
+                case IndexSourceType.TimeSeries:
+                    return JsonDeserializationClient.TimeSeriesIndexDefinition(json);
+                default:
+                    throw new InvalidOperationException("TODO ppekrol");
+            }
+        }
+
+        protected IndexDefinitionBase()
         {
             _configuration = new IndexConfiguration();
         }
