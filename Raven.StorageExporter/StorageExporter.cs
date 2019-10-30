@@ -1,10 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Threading;
+using Microsoft.Isam.Esent.Interop;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.FileSystem;
@@ -13,6 +7,7 @@ using Raven.Bundles.Compression.Plugin;
 using Raven.Bundles.Encryption.Plugin;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Config;
+using Raven.Database.Extensions;
 using Raven.Database.FileSystem;
 using Raven.Database.FileSystem.Bundles.Encryption.Plugin;
 using Raven.Database.FileSystem.Infrastructure;
@@ -20,14 +15,24 @@ using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Database.Storage;
+using Raven.Database.Util;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Json.Linq;
-using Raven.Database.Util;
+using Raven.Storage.Esent;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Threading;
 
 namespace Raven.StorageExporter
 {
     public class StorageExporter : IDisposable
     {
+        private readonly string _tmpFolder;
+
         public StorageExporter(string databaseBaseDirectory, string databaseOutputFile, 
             int batchSize, Etag documentsStartEtag, bool hasCompression, EncryptionConfiguration encryption, string journalsPath, bool isRavenFs)
         {
@@ -53,13 +58,84 @@ namespace Raven.StorageExporter
                     }
                 }
             };
+
             if (isRavenFs)
             {
                 ravenConfiguration.FileSystem.DataDirectory = databaseBaseDirectory;
             }
+
+            var backupFile = Directory.GetFiles(ravenConfiguration.DataDirectory, "*.Backup").SingleOrDefault();
+            if (backupFile != null)
+            {
+                _tmpFolder = ravenConfiguration.DataDirectory = HandleBackupFile(backupFile, ravenConfiguration, isRavenFs);
+
+                if (isRavenFs)
+                {
+                    ravenConfiguration.FileSystem.DataDirectory = _tmpFolder;
+                }
+            }
+
             CreateTransactionalStorage(ravenConfiguration, isRavenFs);
             this.batchSize = batchSize;
             DocumentsStartEtag = documentsStartEtag;
+        }
+
+        private string HandleBackupFile(string backupFile, RavenConfiguration configuration, bool isRavenFs)
+        {
+            var voronBackupFile = "RavenDB.Voron.Backup";
+            var esentBackupFile = "RavenDB.Backup";
+
+            var tmpFolder = Guid.NewGuid().ToString();
+            var extractPath = Path.Combine(configuration.DataDirectory, tmpFolder);
+            Directory.CreateDirectory(extractPath);
+
+            var fileName = Path.GetFileName(backupFile);
+            if (fileName.Equals(voronBackupFile, StringComparison.OrdinalIgnoreCase))
+            {
+                ZipFile.ExtractToDirectory(backupFile, extractPath);
+            }
+            else if (fileName.Equals(esentBackupFile, StringComparison.OrdinalIgnoreCase))
+            {
+                Directory.CreateDirectory(Path.Combine(extractPath, "logs"));
+                Directory.CreateDirectory(Path.Combine(extractPath, "temp"));
+                Directory.CreateDirectory(Path.Combine(extractPath, "system"));
+                JET_INSTANCE instance;
+                TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
+                var ravenConfiguration = new RavenConfiguration();
+                ravenConfiguration.DataDirectory = extractPath;
+
+                if (isRavenFs)
+                {
+                    new Database.FileSystem.Storage.Esent.TransactionalStorageConfigurator(ravenConfiguration).ConfigureInstance(instance, extractPath);
+                }
+                else
+                {
+                    new TransactionalStorageConfigurator(ravenConfiguration, null).ConfigureInstance(instance, extractPath);
+                }
+
+                ravenConfiguration.Storage.Esent.JournalsStoragePath = extractPath;
+                Api.JetRestoreInstance(instance, configuration.DataDirectory, extractPath, null);
+            }
+            else
+            {
+                throw new InvalidOperationException($"The backup folder should contain only {voronBackupFile} or {esentBackupFile}");
+            }
+
+            if (isRavenFs == false)
+            {
+                // copy IndexDefinitions
+                const string indexesDefinitions = "IndexDefinitions";
+                var indexesDir = new DirectoryInfo(Path.Combine(configuration.DataDirectory, indexesDefinitions));
+                if (indexesDir.Exists == false)
+                    throw new InvalidOperationException();
+
+                var destIndexesPath = Path.Combine(extractPath, indexesDefinitions);
+                Directory.CreateDirectory(destIndexesPath);
+
+                indexesDir.GetFiles().ToList().ForEach(x => x.CopyTo(Path.Combine(destIndexesPath, x.Name), false));
+            }
+
+            return extractPath;
         }
 
         public Etag DocumentsStartEtag { get; set; }
@@ -670,7 +746,9 @@ namespace Raven.StorageExporter
         {
             return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
                    || File.Exists(Path.Combine(dataDir, "Data.ravenfs")) 
-                   || File.Exists(Path.Combine(dataDir, "Data"));
+                   || File.Exists(Path.Combine(dataDir, "Data"))
+                   || File.Exists(Path.Combine(dataDir, "RavenDB.Voron.Backup"))
+                   || File.Exists(Path.Combine(dataDir, "RavenDB.Backup"));
         }
 
         private static readonly string indexDefinitionFolder = "IndexDefinitions";
@@ -685,6 +763,14 @@ namespace Raven.StorageExporter
         {
             if (storage != null)
                 storage.Dispose();
+
+            if (fileStorage != null)
+                fileStorage.Dispose();
+
+            if (_tmpFolder != null)
+            {
+                IOExtensions.DeleteDirectory(_tmpFolder);
+            }
         }
     }
 }
