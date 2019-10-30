@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -11,7 +10,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminLogsHandler : RequestHandler
+    public class AdminLogsHandler : ServerRequestHandler
     {
         [RavenAction("/admin/logs/configuration", "GET", AuthorizationStatus.Operator)]
         public Task GetConfiguration()

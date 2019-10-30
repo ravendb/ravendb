@@ -61,7 +61,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminDatabasesHandler : RequestHandler
+    public class AdminDatabasesHandler : ServerRequestHandler
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AdminDatabasesHandler>("Server");
 
@@ -705,7 +705,6 @@ namespace Raven.Server.Web.System
                     throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
             }
 
-            HttpContext.Response.Headers[Constants.Headers.RefreshTopology] = "true";
             return restoreBackup.DatabaseName;
         }
 
