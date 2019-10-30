@@ -446,6 +446,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public bool HasTopologyChanged(long topologyEtag)
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var currentTopologyEtag = _engine.GetTopologyEtag(context);
+                return topologyEtag != currentTopologyEtag;
+            }
+        }
+
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);

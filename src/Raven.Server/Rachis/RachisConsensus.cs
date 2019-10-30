@@ -986,6 +986,19 @@ namespace Raven.Server.Rachis
             return JsonDeserializationRachis<ClusterTopology>.Deserialize(json);
         }
 
+        public unsafe long GetTopologyEtag(TransactionOperationContext context)
+        {
+            Debug.Assert(context.Transaction != null);
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+            var read = state.Read(TopologySlice);
+            if (read == null)
+                return -1;
+
+            var json = new BlittableJsonReaderObject(read.Reader.Base, read.Reader.Length, context);
+            json.TryGet(nameof(ClusterTopology.Etag), out long etag);
+            return etag;
+        }
+
         public unsafe BlittableJsonReaderObject GetTopologyRaw(TransactionOperationContext context)
         {
             Debug.Assert(context.Transaction != null);

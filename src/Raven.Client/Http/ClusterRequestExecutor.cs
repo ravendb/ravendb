@@ -110,6 +110,8 @@ namespace Raven.Client.Http
                         Etag = results.Etag
                     };
 
+                    TopologyEtag = results.Etag;
+
                     if (_nodeSelector == null)
                     {
                         _nodeSelector = new NodeSelector(newTopology);
