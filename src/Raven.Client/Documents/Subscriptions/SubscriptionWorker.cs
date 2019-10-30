@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -339,11 +340,28 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                     var appropriateNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]?.ToString();
+                    var rawReasons = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)];
+                    Dictionary<string, string> reasonsDictionary = new Dictionary<string, string>();
+                    if (rawReasons != null && rawReasons is BlittableJsonReaderArray rawReasonsArray)
+                    {
+                        foreach(var item in rawReasonsArray)
+                        {
+                            if (item is BlittableJsonReaderObject itemAsBlittable)
+                            {
+                                if (itemAsBlittable.Count == 1)
+                                {
+                                    var tagName = itemAsBlittable.GetPropertyNames()[0];
+                                    reasonsDictionary[tagName] = itemAsBlittable[tagName].ToString();
+                                }
+                            }
+                        }
+                    }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}"
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]\nReasons:{string.Join("\n",reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}"
                     )
                     {
-                        AppropriateNode = appropriateNode
+                        AppropriateNode = appropriateNode,
+                        Reasons = reasonsDictionary
                     };
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
                     throw new SubscriptionChangeVectorUpdateConcurrencyException(connectionStatus.Message);
@@ -586,6 +604,10 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
+                    while (_recentExceptions.Count > 10)
+                        _recentExceptions.TryDequeue(out _);
+
+                    _recentExceptions.Enqueue(ex);
                     try
                     {
                         if (_processingCts.Token.IsCancellationRequested)
@@ -619,7 +641,7 @@ namespace Raven.Client.Documents.Subscriptions
                         if (e == ex)
                             throw;
 
-                        throw new AggregateException(e, ex);
+                        throw new AggregateException(new[] { e }.Concat(_recentExceptions));
                     }
                 }
             }
@@ -627,6 +649,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private DateTime? _lastConnectionFailure;
         private TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
+        private ConcurrentQueue<Exception> _recentExceptions = new ConcurrentQueue<Exception>();
 
         private void AssertLastConnectionFailure()
         {
@@ -664,6 +687,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
 
                     return true;
+               
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
                 case SubscriptionInUseException _:
