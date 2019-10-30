@@ -19,7 +19,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
                 {
                     Name = "MyTsIndex",
-                    Maps = { "from doc in docs.Orders select new { doc.Name }" }
+                    Maps = { "from ts in timeSeries.People.HeartRate from entry in ts.Entries select new { HeartBeat = entry.Values[0], Date = entry.TimeStamp.Date, User = ts.Id }" }
                 }));
             }
         }

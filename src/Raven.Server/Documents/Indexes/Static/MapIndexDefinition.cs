@@ -14,9 +14,9 @@ namespace Raven.Server.Documents.Indexes.Static
     public class MapIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
     {
         private readonly bool _hasDynamicFields;
-        public readonly IndexDefinition IndexDefinition;
+        public readonly IndexDefinitionBase IndexDefinition;
 
-        public MapIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields)
+        public MapIndexDefinition(IndexDefinitionBase definition, HashSet<string> collections, string[] outputFields, bool hasDynamicFields)
             : base(definition.Name, collections, definition.LockMode ?? IndexLockMode.Unlock, definition.Priority ?? IndexPriority.Normal, GetFields(definition, outputFields))
         {
             _hasDynamicFields = hasDynamicFields;
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool HasDynamicFields => _hasDynamicFields;
 
-        private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
+        private static IndexField[] GetFields(IndexDefinitionBase definition, string[] outputFields)
         {
             definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out IndexFieldOptions allFields);
 

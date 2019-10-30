@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
@@ -26,6 +27,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -415,7 +417,20 @@ namespace Raven.Server.Documents.Indexes
                         }
                         break;
                     case IndexSourceType.TimeSeries:
-                        throw new InvalidOperationException("TODO ppekrol");
+                        var timeSeriesIndexDefinition = (TimeSeriesIndexDefinition)definition;
+                        switch (definition.Type)
+                        {
+                            case IndexType.Map:
+                            case IndexType.JavaScriptMap:
+                                index = MapTimeSeriesIndex.CreateNew(timeSeriesIndexDefinition, _documentDatabase);
+                                break;
+                            case IndexType.MapReduce:
+                            case IndexType.JavaScriptMapReduce:
+                                throw new InvalidOperationException("TODO ppekrol");
+                                break;
+                            default:
+                                throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");
+                        }
                         break;
                     default:
                         throw new InvalidOperationException("TODO ppekrol");
@@ -1728,7 +1743,7 @@ namespace Raven.Server.Documents.Indexes
                 _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
             }
 
-            public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId)
+            public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId)
             {
                 if (_command == null)
                     _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId);

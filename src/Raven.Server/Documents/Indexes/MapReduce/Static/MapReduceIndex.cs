@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
                 return;
 
-            var collections = index.Maps.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var collections = index.GetCollections();
             if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
                 throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
                                                 $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +

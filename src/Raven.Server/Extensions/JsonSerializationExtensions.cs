@@ -6,12 +6,13 @@ namespace Raven.Server.Extensions
 {
     public static class JsonSerializationExtensions
     {
-        public static DynamicJsonValue ToJson(this IndexDefinition definition)
+        public static DynamicJsonValue ToJson(this IndexDefinitionBase definition)
         {
             var result = new DynamicJsonValue();
 #if FEATURE_TEST_INDEX
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
 #endif
+            result[nameof(IndexDefinition.SourceType)] = definition.SourceType.ToString();
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString();
             result[nameof(IndexDefinition.Priority)] = definition.Priority?.ToString();
             result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;
