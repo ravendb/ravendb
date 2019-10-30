@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public abstract class AutoIndexDefinitionBase : IndexDefinitionBase<AutoIndexField>
+    public abstract class AutoIndexDefinitionBase : IndexDefinitionBaseServerSide<AutoIndexField>
     {
         public IndexState State { get; set; }
 
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected internal abstract override IndexDefinition GetOrCreateIndexDefinitionInternal();
 
-        public abstract override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
+        public abstract override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition);
 
         public abstract override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 

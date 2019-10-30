@@ -46,7 +46,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IIndexActions : IDisposable
     {
-        void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType);
+        void WriteIndex(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType);
         void WriteIndex(IndexDefinition indexDefinition);
     }
 

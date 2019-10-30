@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class MapIndexDefinition : IndexDefinitionBase<IndexField>
+    public class MapIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
     {
         private readonly bool _hasDynamicFields;
         public readonly IndexDefinition IndexDefinition;
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return definition;
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition)
         {
             return IndexDefinitionCompareDifferences.All;
         }

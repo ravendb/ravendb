@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return new AutoIndexDocsEnumerator(documents, stats);
         }
 
-        public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
             SetLock(definition.LockMode);
             SetPriority(definition.Priority);

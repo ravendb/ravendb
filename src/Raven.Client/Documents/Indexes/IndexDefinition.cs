@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
 
@@ -16,13 +15,19 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// A definition of a RavenIndex
     /// </summary>
-    public class IndexDefinition
+    public class IndexDefinition : IndexDefinitionBase
     {
-        public IndexDefinition()
+        public override IndexSourceType SourceType => IndexSourceType.Documents;
+    }
+
+    public abstract class IndexDefinitionBase
+    {
+        public IndexDefinitionBase()
         {
             _configuration = new IndexConfiguration();
         }
 
+        public abstract IndexSourceType SourceType { get; }
 
         /// <summary>
         /// This is the means by which the outside world refers to this index definition

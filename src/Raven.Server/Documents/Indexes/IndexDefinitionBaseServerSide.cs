@@ -17,7 +17,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class IndexDefinitionBase
+    public abstract class IndexDefinitionBaseServerSide
     {
         public string Name { get; protected set; }
 
@@ -101,16 +101,16 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
-        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition);
 
         public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 
         public Dictionary<string, IndexFieldBase> MapFields { get; protected set; }
 
-        public Dictionary<string, IndexField> IndexFields { get;  set; }
+        public Dictionary<string, IndexField> IndexFields { get; set; }
     }
 
-    public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase 
+    public abstract class IndexDefinitionBaseServerSide<T> : IndexDefinitionBaseServerSide where T : IndexFieldBase
     {
         protected const string MetadataFileName = "metadata";
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
+        protected IndexDefinitionBaseServerSide(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
         {
             Name = name;
             Collections = collections;
@@ -140,12 +140,12 @@ namespace Raven.Server.Documents.Indexes
                 else if (field is IndexField indexField)
                     IndexFields.Add(indexField.Name, indexField);
             }
-            
+
             LockMode = lockMode;
             Priority = priority;
         }
 
-        static IndexDefinitionBase()
+        static IndexDefinitionBaseServerSide()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
@@ -199,8 +199,8 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pKey = options.MasterKey)
             {
                 var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-                var subKey = stackalloc byte[(int)subKeyLen ];
-            
+                var subKey = stackalloc byte[(int)subKeyLen];
+
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)SodiumSubKeyId.IndexDef, ctx, pKey) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
@@ -270,11 +270,11 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pKey = options.MasterKey)
             {
                 var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-                var subKey = stackalloc byte[(int)subKeyLen ];
-            
+                var subKey = stackalloc byte[(int)subKeyLen];
+
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)SodiumSubKeyId.IndexDef, ctx, pKey) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
-                
+
                 ulong mLen;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
                     pDecryptedData,

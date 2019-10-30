@@ -66,7 +66,7 @@ using Size = Sparrow.Size;
 namespace Raven.Server.Documents.Indexes
 {
     public abstract class Index<TIndexDefinition, TField> : Index
-        where TIndexDefinition : IndexDefinitionBase<TField> where TField : IndexFieldBase
+        where TIndexDefinition : IndexDefinitionBaseServerSide<TField> where TField : IndexFieldBase
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; protected set; }
 
-        public IndexDefinitionBase Definition { get; private set; }
+        public IndexDefinitionBaseServerSide Definition { get; private set; }
 
         public string Name => Definition?.Name;
 
@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
-            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
 
             var indexPath = configuration.StoragePath.Combine(name);
 
@@ -560,7 +560,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
-                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+                var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
 
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
@@ -758,7 +758,7 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        public virtual void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
             Debug.Assert(Type.IsStatic());
 
@@ -2266,7 +2266,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
 
             var indexPath = Configuration.StoragePath.Combine(name);
 
@@ -3684,8 +3684,8 @@ namespace Raven.Server.Documents.Indexes
 
                         InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
 
-                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
-                        tempPath = Configuration.TempPath?.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Temp_Compact");
+                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+                        tempPath = Configuration.TempPath?.Combine(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name) + "_Temp_Compact");
 
                         using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                             StorageEnvironmentOptions.ForPath(compactPath.FullPath, tempPath?.FullPath, null, DocumentDatabase.IoChanges,
@@ -3886,7 +3886,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var index in indexes)
                 {
-                    if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                    if (directoryName == IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Key))
                     {
                         staticDef = index.Value;
                         autoDef = null;
@@ -3899,7 +3899,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var index in autoIndexes)
                 {
-                    if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                    if (directoryName == IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Key))
                     {
                         autoDef = index.Value;
                         staticDef = null;
