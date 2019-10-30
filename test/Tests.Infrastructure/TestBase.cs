@@ -28,12 +28,13 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public abstract class TestBase : LinuxRaceConditionWorkAround, IDisposable, IAsyncLifetime
+    public abstract class TestBase : LinuxRaceConditionWorkAround, IAsyncLifetime
     {
         private static int _counter;
 
@@ -617,7 +618,13 @@ namespace FastTests
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
+            var testOutcomeAnalyzer = new TestOutcomeAnalyzer(Context);
+            var threwRavenTimeoutException = testOutcomeAnalyzer.ThrewRavenTimeoutException();
+
             Dispose(exceptionAggregator);
+
+            if (threwRavenTimeoutException && _globalServer != null && _globalServer.Disposed == false)
+                exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(_globalServer, Context));
 
             if (_localServer != null && _localServer != _globalServer)
             {
@@ -626,7 +633,14 @@ namespace FastTests
                     _localServer.Dispose();
                     _localServer = null;
                 });
+
+                if (threwRavenTimeoutException)
+                    exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(_localServer, Context));
             }
+
+            var firstServerForDisposal = ServersForDisposal.FirstOrDefault();
+            if (threwRavenTimeoutException && firstServerForDisposal != null)
+                exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(firstServerForDisposal, Context));
 
             foreach (var server in ServersForDisposal)
             {
