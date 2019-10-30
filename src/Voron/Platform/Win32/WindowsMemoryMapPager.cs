@@ -121,7 +121,7 @@ namespace Voron.Platform.Win32
                 {
                     fileLength = NearestSizeToAllocationGranularity(fileLength);
 
-                    Win32NativeFileMethods.SetFileLength(_handle, fileLength);
+                    Win32NativeFileMethods.SetFileLength(_handle, fileLength, file.FullPath);
                 }
 
                 _totalAllocationSize = fileLength;
@@ -206,7 +206,7 @@ namespace Voron.Platform.Win32
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            Win32NativeFileMethods.SetFileLength(_handle, _totalAllocationSize + allocationSize);
+            Win32NativeFileMethods.SetFileLength(_handle, _totalAllocationSize + allocationSize, _fileInfo.FullName);
 
             PagerState newPagerState = CreatePagerState();
             newPagerState.CopyPrefetchState(this._pagerState);
