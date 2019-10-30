@@ -3,35 +3,49 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Config;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     /// <summary>
-    /// This is a static class because creating indexes is expensive, we want to cache them 
+    /// This is a static class because creating indexes is expensive, we want to cache them
     /// as much as possible, even across different databases and database instantiation. Per process,
-    /// we are going to have a single cache for all indexes. This also plays nice with testing, which 
-    /// will build up and tear down a server frequently, so we can still reduce the cost of compiling 
+    /// we are going to have a single cache for all indexes. This also plays nice with testing, which
+    /// will build up and tear down a server frequently, so we can still reduce the cost of compiling
     /// the indexes.
     /// </summary>
     public static class IndexCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> _indexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<AbstractStaticIndexBase>> _indexCache = new ConcurrentDictionary<CacheKey, Lazy<AbstractStaticIndexBase>>();
+
+        public static AbstractStaticIndexBase GetIndexInstance(IndexDefinitionBase definition, RavenConfiguration configuration)
+        {
+            switch (definition.SourceType)
+            {
+                case IndexSourceType.Documents:
+                    return GetIndexInstance((IndexDefinition)definition, configuration);
+                case IndexSourceType.TimeSeries:
+                    return GetIndexInstance((TimeSeriesIndexDefinition)definition, configuration);
+                default:
+                    throw new InvalidOperationException("TODO ppekrol");
+            }
+        }
 
         public static StaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
             var type = definition.DetectStaticIndexType();
             if (type.IsJavaScript())
-                return GenerateIndex(definition, configuration, type);
+                return (StaticIndexBase)GenerateIndex(definition, configuration, type);
 
             var key = GetCacheKey(definition);
 
-            Lazy<StaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
+            Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
 
             try
             {
-                return result.Value;
+                return (StaticIndexBase)result.Value;
             }
             catch (Exception)
             {
@@ -40,7 +54,31 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static CacheKey GetCacheKey(IndexDefinition definition)
+        public static StaticTimeSeriesIndexBase GetIndexInstance(TimeSeriesIndexDefinition definition, RavenConfiguration configuration)
+        {
+            var type = definition.DetectStaticIndexType();
+            if (type.IsJavaScript())
+            {
+                throw new NotImplementedException("TODO ppekrol");
+                //return GenerateIndex(definition, configuration, type);
+            }
+
+            var key = GetCacheKey(definition);
+
+            Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
+
+            try
+            {
+                return (StaticTimeSeriesIndexBase)result.Value;
+            }
+            catch (Exception)
+            {
+                _indexCache.TryRemove(key, out _);
+                throw;
+            }
+        }
+
+        private static CacheKey GetCacheKey(IndexDefinitionBase definition)
         {
             var list = new List<string>();
 
@@ -59,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new CacheKey(list);
         }
 
-        internal static StaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
+        internal static AbstractStaticIndexBase GenerateIndex(IndexDefinitionBase definition, RavenConfiguration configuration, IndexType type)
         {
             switch (type)
             {
@@ -72,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return IndexCompiler.Compile(definition);
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return new JavaScriptIndex(definition, configuration);
+                    return new JavaScriptIndex((IndexDefinition)definition, configuration);
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }

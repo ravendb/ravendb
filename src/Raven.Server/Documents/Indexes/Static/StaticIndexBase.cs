@@ -16,33 +16,15 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public delegate IEnumerable IndexingFunc(IEnumerable<dynamic> items);
 
-    public abstract class StaticIndexBase
+    public abstract class StaticTimeSeriesIndexBase : AbstractStaticIndexBase
+    {
+    }
+
+    public abstract class StaticIndexBase : AbstractStaticIndexBase
     {
         private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
-        public readonly Dictionary<string, List<IndexingFunc>> Maps = new Dictionary<string, List<IndexingFunc>>(StringComparer.OrdinalIgnoreCase);
-
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
-
-        public bool HasDynamicFields { get; set; }
-
-        public bool HasBoostedFields { get; set; }
-
-        public string Source;
-
-        public IndexingFunc Reduce;
-
-        public string[] OutputFields;
-
-        public CompiledIndexField[] GroupByFields;
-
-        public void AddMap(string collection, IndexingFunc map)
-        {
-            if (Maps.TryGetValue(collection, out List<IndexingFunc> funcs) == false)
-                Maps[collection] = funcs = new List<IndexingFunc>();
-
-            funcs.Add(map);
-        }
 
         public void AddReferencedCollection(string collection, string referencedCollection)
         {
@@ -270,7 +252,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public dynamic CounterNamesFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
-            var counters = metadata is DynamicNullObject 
+            var counters = metadata is DynamicNullObject
                 ? null : metadata[Constants.Documents.Metadata.Counters];
 
             return counters != null
@@ -316,6 +298,31 @@ namespace Raven.Server.Documents.Indexes.Static
                 return lnv.ToDouble(CultureInfo.InvariantCulture);
 
             return Convert.ToDouble(value);
+        }
+    }
+
+    public abstract class AbstractStaticIndexBase
+    {
+        public readonly Dictionary<string, List<IndexingFunc>> Maps = new Dictionary<string, List<IndexingFunc>>(StringComparer.OrdinalIgnoreCase);
+
+        public bool HasDynamicFields { get; set; }
+
+        public bool HasBoostedFields { get; set; }
+
+        public string Source;
+
+        public IndexingFunc Reduce;
+
+        public string[] OutputFields;
+
+        public CompiledIndexField[] GroupByFields;
+
+        public void AddMap(string collection, IndexingFunc map)
+        {
+            if (Maps.TryGetValue(collection, out List<IndexingFunc> funcs) == false)
+                Maps[collection] = funcs = new List<IndexingFunc>();
+
+            funcs.Add(map);
         }
     }
 }

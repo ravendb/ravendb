@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public static void ValidateReduceResultsCollectionName(IndexDefinitionBase definition, StaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
+        public static void ValidateReduceResultsCollectionName(IndexDefinitionBase definition, AbstractStaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
         {
             var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
@@ -117,12 +117,22 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                                 $"as this index is mapping all documents " +
                                                 $"and this will result in an infinite loop.");
 
-            foreach (var referencedCollection in index.ReferencedCollections)
+            switch (definition.SourceType)
             {
-                foreach (var collectionName in referencedCollection.Value)
-                {
-                    collections.Add(collectionName.Name);
-                }
+                case IndexSourceType.Documents:
+                    var documentsIndex = (StaticIndexBase)index;
+                    foreach (var referencedCollection in documentsIndex.ReferencedCollections)
+                    {
+                        foreach (var collectionName in referencedCollection.Value)
+                        {
+                            collections.Add(collectionName.Name);
+                        }
+                    }
+                    break;
+                case IndexSourceType.TimeSeries:
+                    break;
+                default:
+                    throw new InvalidOperationException("TODO ppekrol");
             }
 
             if (collections.Contains(outputReduceToCollection))
@@ -189,7 +199,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     var name = definition.Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
                         StringComparison.OrdinalIgnoreCase);
 
-                    return x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && 
+                    return x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
                            x.Definition.ReduceOutputIndex != null; // legacy index definitions don't have this field - side by side indexing isn't supported then
                 });
 
@@ -565,7 +575,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _reduceKeyProcessor.ReleaseBuffer();
                 }
 
-                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<CompiledIndexField> groupByFields, StaticIndexBase compiledIndex)
+                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<CompiledIndexField> groupByFields, AbstractStaticIndexBase compiledIndex)
                 {
                     throw new InvalidOperationException(
                         $"The output of the mapping function does not contain all fields that the index is supposed to group by.{Environment.NewLine}" +

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-        public static StaticIndexBase Compile(IndexDefinition definition)
+        public static AbstractStaticIndexBase Compile(IndexDefinitionBase definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, extensions: definition.AdditionalSources);
             var type = compilationResult.Type;
 
-            var index = (StaticIndexBase)Activator.CreateInstance(type);
+            var index = (AbstractStaticIndexBase)Activator.CreateInstance(type);
             index.Source = compilationResult.Code;
 
             return index;
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
-            
+
             var res = GetUsingDirectiveAndSyntaxTreesAndReferences(extensions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 : SyntaxFactory.ParseSyntaxTree(formattedCompilationUnit.ToFullString());
 
             res.SyntaxTrees.Add(st);
-            
+
             var compilation = CSharpCompilation.Create(
                 assemblyName: name,
                 syntaxTrees: res.SyntaxTrees,
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) 
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References)
             GetUsingDirectiveAndSyntaxTreesAndReferences(Dictionary<string, string> extensions)
         {
             if (extensions == null)
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return newReferences;
         }
 
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinitionBase definition)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     groupByFields,
                     (builder, field) => field.WriteTo(builder));
 
-                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -330,26 +330,40 @@ namespace Raven.Server.Documents.Indexes.Static
                 fields,
                 (builder, field) => builder.Append("\"").Append(field.Name).Append("\""));
 
-            statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
+            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
 
             var methods = methodDetector.Methods;
 
             if (methods.HasCreateField)
-                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             if (methods.HasBoost)
-                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
 
+            var @class = RoslynHelper.PublicClass(name);
 
-            return RoslynHelper.PublicClass(name)
-                .WithBaseClass<StaticIndexBase>()
+            switch (definition.SourceType)
+            {
+                case IndexSourceType.Documents:
+                    @class = @class
+                        .WithBaseClass<StaticIndexBase>();
+                    break;
+                case IndexSourceType.TimeSeries:
+                    @class = @class
+                        .WithBaseClass<StaticTimeSeriesIndexBase>();
+                    break;
+                default:
+                    throw new InvalidOperationException("TODO ppekrol");
+            }
+
+            return @class
                 .WithMembers(members.Add(ctor));
         }
 
-        private static List<CompiledIndexField> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
+        private static List<CompiledIndexField> GetIndexedFields(IndexDefinitionBase definition, FieldNamesValidator fieldNamesValidator)
         {
             var fields = fieldNamesValidator.Fields.ToList();
 
@@ -515,13 +529,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var cName in collectionNames)
             {
-                var collectionName = string.IsNullOrWhiteSpace(cName) 
-                    ? Constants.Documents.Collections.AllDocumentsCollection 
+                var collectionName = string.IsNullOrWhiteSpace(cName)
+                    ? Constants.Documents.Collections.AllDocumentsCollection
                     : cName;
 
                 var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
 
-                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+                results.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
 
                 if (mapRewriter.ReferencedCollections != null)
                 {
