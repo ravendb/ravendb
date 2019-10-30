@@ -12,16 +12,13 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
-using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data;
-using Voron.Platform;
 using Voron.Platform.Win32;
 using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32MemoryMapNativeMethods;
 using static Voron.Platform.Win32.Win32NativeFileMethods;
 using Constants = Voron.Global.Constants;
-
 
 namespace Voron.Impl.Paging
 {
@@ -124,7 +121,7 @@ namespace Voron.Impl.Paging
                 {
                     fileLength = NearestSizeToAllocationGranularity(fileLength);
 
-                    SetFileLength(_handle, fileLength);
+                    SetFileLength(_handle, fileLength, file.FullPath);
                 }
                 _totalAllocationSize = fileLength;
             }
@@ -618,7 +615,7 @@ namespace Voron.Impl.Paging
 
             var allocationSize = newLengthAfterAdjustment - _totalAllocationSize;
 
-            SetFileLength(_handle, _totalAllocationSize + allocationSize);
+            SetFileLength(_handle, _totalAllocationSize + allocationSize, _fileInfo.FullName);
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 

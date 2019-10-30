@@ -111,24 +111,22 @@ namespace Voron.Platform.Win32
 
         public static extern bool FlushFileBuffers(SafeFileHandle hFile);
 
-        public static void SetFileLength(SafeFileHandle fileHandle, long length)
+        public static void SetFileLength(SafeFileHandle fileHandle, long length, string filePath)
         {
             if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
             {
                 var exception = new Win32Exception(Marshal.GetLastWin32Error());
-                var filePath = GetFilePath();
-                
                 throw new IOException($"Could not move the pointer of file {filePath}", exception);
             }
 
             if (SetEndOfFile(fileHandle) == false)
             {
                 var lastError = Marshal.GetLastWin32Error();
-                var filePath = GetFilePath();
-
                 if (lastError == (int) Win32NativeFileErrors.ERROR_DISK_FULL)
                 {
-                    var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(filePath);
+                    var directoryPath = Path.GetDirectoryName(filePath);
+                    // disk space info is expecting the directory path and not the file path
+                    var driveInfo = DiskSpaceChecker.GetDiskSpaceInfo(directoryPath);
                     throw new DiskFullException(filePath, length, driveInfo?.TotalFreeSpace.GetValue(SizeUnit.Bytes), new Win32Exception(lastError).Message);
                 }
 
@@ -139,18 +137,6 @@ namespace Voron.Platform.Win32
                     throw new IOException($"Could not set the size of file {filePath} because it is inaccessible.", exception);
 
                 throw new IOException($"Could not set the size of file {filePath} to {Sizes.Humane(length)}", exception);
-            }
-
-            string GetFilePath()
-            {
-                try
-                {
-                    return DiskSpaceChecker.GetWindowsRealPathByHandle(fileHandle.DangerousGetHandle());
-                }
-                catch
-                {
-                    return null;
-                }
             }
         }
     }
