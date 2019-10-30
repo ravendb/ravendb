@@ -11,13 +11,14 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace RachisTests
 {
-    public class SubscriptionFailoverWIthWaitingChains : ClusterTestBase
+    public class SubscriptionFailoverWithWaitingChains : ClusterTestBase
     {
 
         public class CountdownsArray : IDisposable
@@ -46,29 +47,35 @@ namespace RachisTests
             }
         }
 
-        public SubscriptionFailoverWIthWaitingChains(ITestOutputHelper output) : base(output)
+        public SubscriptionFailoverWithWaitingChains(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public async Task DoStuff()
+        [Theory]        
+        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/3,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]        
+        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/3,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
+        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
+        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
+        //[InlineData(/*subscriptionsChainSize:*/3,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
+        public async Task SubscriptionsShouldFailoverAndReturnToOriginalNodes(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldMaintainElectionTimeout)
         {
             const int SubscriptionsCount = 20;
             const int DocsBatchSize = 10;
-            const int SubscriptionsChainSize = 2;
-            const int ClusterSize = 3;
-            const int DBGroupSIze = 3;
-
-            var cluster = await CreateRaftCluster(ClusterSize, shouldRunInMemory: false);
-
-            using (var cdeArray = new CountdownsArray(SubscriptionsChainSize, SubscriptionsCount))
+            var cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
+            
+            using (var cdeArray = new CountdownsArray(subscriptionsChainSize, SubscriptionsCount))
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
-                ReplicationFactor = DBGroupSIze
-
+                ReplicationFactor = dBGroupSize,
+                ModifyDocumentStore = s=>s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
             }))
             {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
                 var databaseName = store.Database;
 
                 var workerTasks = new List<Task>();
@@ -82,8 +89,19 @@ namespace RachisTests
                     await ContinuouslyGenerateDocs(DocsBatchSize, store);
                 });
 
-                await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, 0);
-                await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, 1);
+                foreach (var node in store.GetRequestExecutor().TopologyNodes.Take(dBGroupSize-1))
+                {
+
+                    var i = 0;
+
+                    for (; i<cluster.Nodes.Count; i++)
+                    {
+                        if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
+                            break;
+                    }
+
+                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, shouldMaintainElectionTimeout);                    
+                }
 
                 Assert.All(cdeArray.GetArray(), cde => Assert.Equal(cde.CurrentCount, SubscriptionsCount));
 
@@ -93,10 +111,10 @@ namespace RachisTests
                 }
 
                 foreach (var curNode in cluster.Nodes)
-                {
+                {                    
                     await AssertNoSubscriptionLeftAlive(databaseName, SubscriptionsCount, curNode);
                 }
-
+                
                 await Task.WhenAll(workerTasks);
             }
         }
@@ -154,15 +172,15 @@ namespace RachisTests
                         });
         }
 
-        private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index)
+        private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index, bool shouldMaintainElectionTimeout)
         {
             var node = cluster.Nodes[index];
 
-            node = await ToggleServer(node);
+            node = await ToggleServer(node, shouldMaintainElectionTimeout);
             cluster.Nodes[index] = node;
 
             await Task.Delay(5000);
-            node = await ToggleServer(node);
+            node = await ToggleServer(node, shouldMaintainElectionTimeout);
             cluster.Nodes[index] = node;
 
             await WaitForRehab(databaseName, cluster);
@@ -233,9 +251,9 @@ namespace RachisTests
             }, null, 10000, true);
 
             for (int i = 0; i < 10; i++)
-            {
+            {                
                 await DropSubscriptions(databaseName, SubscriptionsCount, cluster);
-
+                
                 if (await mainTcs.Task.WaitAsync(1000))
                     break;
             }
@@ -255,7 +273,17 @@ namespace RachisTests
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        rehabCount = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs.Count;
+                        try
+                        {
+                            rehabCount = curNode.ServerStore.Cluster.ReadDatabaseTopology(context, dbName).Rehabs.Count;
+                        }
+                        catch (Exception)
+                        {
+
+                            await Task.Delay(1000);
+                            rehabCount = 1;
+                            continue;
+                        }
                         await Task.Delay(1000);
                     }
                 }
@@ -297,26 +325,31 @@ namespace RachisTests
             }
         }
 
-        private async Task<Raven.Server.RavenServer> ToggleServer(Raven.Server.RavenServer node)
+        private async Task<Raven.Server.RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldMaintainElectionTimeout)
         {
             if (node.Disposed)
             {
                 var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-                node = GetNewServer(new ServerCreationOptions()
+
+                Dictionary<string, string> settings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl                    
+                };
+                if (false == shouldMaintainElectionTimeout)
+                    settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString();
+
+                node = base.GetNewServer(new ServerCreationOptions()
                 {
                     DeletePrevious = false,
                     RunInMemory = false,
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
-                    },
+                    CustomSettings = settings,
                     PartialPath = dataDir
                 });
 
             }
             else
             {
-                await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                var nodeInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
             }
 
             return node;
