@@ -190,6 +190,21 @@
     <None Update="SchemaUpgrade\Issues\VoronCurrentVersion\schema_999\Raven.voron">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Smuggler\Data\FSEsent.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Smuggler\Data\FSVoron.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Smuggler\Data\SampleDataEsent.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Smuggler\Data\SampleDataVoron.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Smuggler\Data\Tools.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Voron\LeafsCompression\Data\RavenDB-12700-page-1278-compressed">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

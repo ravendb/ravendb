@@ -12,7 +12,9 @@ namespace Raven.Client.ServerWide.Operations.Migration
         private const string EsentDBDataFile = "Data";
         private const string EsentFSDataFile = "Data.ravenfs";
         private const string VoronDataFile = "Raven.voron";
-        
+        private const string VoronBackupFile = "RavenDB.Voron.Backup";
+        private const string EsentBackupFile = "RavenDB.Backup";
+
         private OfflineMigrationConfiguration()
         {
             // for deserialization
@@ -66,7 +68,7 @@ namespace Raven.Client.ServerWide.Operations.Migration
             //otherwise return what we have
             return path;
         }
-        
+
         internal static void ValidateDataDirectory(string dataDirectory)
         {
             if (Directory.Exists(dataDirectory) == false)
@@ -75,14 +77,16 @@ namespace Raven.Client.ServerWide.Operations.Migration
             var esentDataDbFile = Path.Combine(dataDirectory, EsentDBDataFile);
             var esentDataFsFile = Path.Combine(dataDirectory, EsentFSDataFile);
             var voronDataFile = Path.Combine(dataDirectory, VoronDataFile);
-            if (!File.Exists(esentDataDbFile) && !File.Exists(esentDataFsFile) && !File.Exists(voronDataFile))
-                throw new FileNotFoundException($"Data directory should contain file '{EsentDBDataFile}', '{EsentFSDataFile}' or '{VoronDataFile}'");
+            var voronBackupFile = Path.Combine(dataDirectory, VoronBackupFile);
+            var esentBackupFile = Path.Combine(dataDirectory, EsentBackupFile);
+            if (!File.Exists(esentDataDbFile) && !File.Exists(esentDataFsFile) && !File.Exists(voronDataFile) && File.Exists(voronBackupFile) == false && File.Exists(esentBackupFile) == false)
+                throw new FileNotFoundException($"Data directory should contain file '{EsentDBDataFile}', '{EsentFSDataFile}' or '{VoronDataFile}' or '{VoronBackupFile}' or '{EsentBackupFile}'");
         }
 
         internal static void ValidateExporterPath(string dataExporterPath)
         {
             var effectivePath = EffectiveDataExporterFullPath(dataExporterPath);
-            
+
             if (File.Exists(effectivePath) == false)
                 throw new FileNotFoundException($"Could not find file {StorageExporterExecutable} at given location");
         }
@@ -97,7 +101,7 @@ namespace Raven.Client.ServerWide.Operations.Migration
             if (OutputFilePath == null)
             {
                 var rempDir = Path.GetTempPath();
-                
+
                 OutputFilePath = tmpFile = Path.Combine(rempDir, $"export-{DatabaseRecord.DatabaseName}-{SystemTime.UtcNow:yyyyMMdd_HHmmss}.ravendump");
             }
 
