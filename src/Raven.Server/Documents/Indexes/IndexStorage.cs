@@ -463,7 +463,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IEnumerable<Slice> GetDocumentKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
+        public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
         {
             var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
             if (collectionTree == null)
@@ -508,16 +508,14 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var keys in collections.Value)
                     {
-                        using (Slice.From(tx.InnerTransaction.Allocator, keys.Key, ByteStringType.Immutable, out Slice key))
+                        var key = keys.Key;
+                        foreach (var referenceKey in keys.Value)
                         {
-                            foreach (var referenceKey in keys.Value)
-                            {
-                                collectionTree.MultiAdd(referenceKey, key);
-                                referencesTree.MultiAdd(key, referenceKey);
-                            }
-
-                            RemoveReferences(key, collections.Key, keys.Value, tx);
+                            collectionTree.MultiAdd(referenceKey, key);
+                            referencesTree.MultiAdd(key, referenceKey);
                         }
+
+                        RemoveReferences(key, collections.Key, keys.Value, tx);
                     }
                 }
             }

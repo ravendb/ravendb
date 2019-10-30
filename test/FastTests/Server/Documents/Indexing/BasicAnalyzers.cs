@@ -120,7 +120,7 @@ namespace FastTests.Server.Documents.Indexing
 
     internal class TestIndex : Index
     {
-        public TestIndex() : base(IndexType.None, new TestIndexDefinitions())
+        public TestIndex() : base(IndexType.None, IndexSourceType.None, new TestIndexDefinitions())
         {
         }
 
@@ -129,7 +129,7 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             throw new NotImplementedException();
         }

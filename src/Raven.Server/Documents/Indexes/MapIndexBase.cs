@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Indexes
         private IndexingStatsScope _statsInstance;
         private readonly MapStats _stats = new MapStats();
 
-        protected MapIndexBase(IndexType type, T definition) : base(type, definition)
+        protected MapIndexBase(IndexType type, IndexSourceType sourceType, T definition) : base(type, sourceType, definition)
         {
         }
 

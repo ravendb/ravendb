@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public IPropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
         protected MapReduceIndex(MapReduceIndexDefinition definition, StaticIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
 
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
-        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
+        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Any(y => y.Value.Count > 1));
 
         public override void ResetIsSideBySideAfterReplacement()
         {
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
+        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, AbstractStaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
         {
             var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
@@ -117,12 +117,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                                 $"as this index is mapping all documents " +
                                                 $"and this will result in an infinite loop.");
 
-            foreach (var referencedCollection in index.ReferencedCollections)
+            switch (definition.SourceType)
             {
-                foreach (var collectionName in referencedCollection.Value)
-                {
-                    collections.Add(collectionName.Name);
-                }
+                case IndexSourceType.Documents:
+                    foreach (var referencedCollection in index.ReferencedCollections)
+                    {
+                        foreach (var collectionName in referencedCollection.Value)
+                        {
+                            collections.Add(collectionName.Name);
+                        }
+                    }
+                    break;
+                case IndexSourceType.TimeSeries:
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
 
             if (collections.Contains(outputReduceToCollection))
@@ -189,7 +198,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     var name = definition.Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty,
                         StringComparison.OrdinalIgnoreCase);
 
-                    return x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && 
+                    return x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
                            x.Definition.ReduceOutputIndex != null; // legacy index definitions don't have this field - side by side indexing isn't supported then
                 });
 
@@ -287,7 +296,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private static MapReduceIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
@@ -303,7 +312,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, Configuration));
             workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
@@ -319,9 +328,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, type);
+            return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, _compiled.Maps[collection], collection, stats, type);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
@@ -565,7 +574,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _reduceKeyProcessor.ReleaseBuffer();
                 }
 
-                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<CompiledIndexField> groupByFields, StaticIndexBase compiledIndex)
+                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<CompiledIndexField> groupByFields, AbstractStaticIndexBase compiledIndex)
                 {
                     throw new InvalidOperationException(
                         $"The output of the mapping function does not contain all fields that the index is supposed to group by.{Environment.NewLine}" +

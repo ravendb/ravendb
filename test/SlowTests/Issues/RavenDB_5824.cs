@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -95,58 +96,6 @@ namespace SlowTests.Issues
                         Name = s.Name
                     });
             }
-        }
-
-        private class GetIndexStalenessOperation : IMaintenanceOperation<IndexStaleness>
-        {
-            private readonly string _indexName;
-
-            public GetIndexStalenessOperation(string indexName)
-            {
-                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-            }
-
-            public RavenCommand<IndexStaleness> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new GetIndexStalenessCommand(conventions, _indexName);
-            }
-
-            private class GetIndexStalenessCommand : RavenCommand<IndexStaleness>
-            {
-                private readonly DocumentConventions _conventions;
-                private readonly string _indexName;
-
-                public GetIndexStalenessCommand(DocumentConventions conventions, string indexName)
-                {
-                    _conventions = conventions;
-                    _indexName = indexName;
-                }
-
-                public override bool IsReadRequest => true;
-                
-
-                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-                {
-                    url = $"{node.Url}/databases/{node.Database}/indexes/staleness?name={_indexName}";
-
-                    return new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Get
-                    };
-                }
-
-                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-                {
-                    Result = (IndexStaleness)_conventions.DeserializeEntityFromBlittable(typeof(IndexStaleness), response);
-                }
-            }
-        }
-
-        private class IndexStaleness
-        {
-            public bool IsStale { get; set; }
-
-            public List<string> StalenessReasons { get; set; }
         }
     }
 }

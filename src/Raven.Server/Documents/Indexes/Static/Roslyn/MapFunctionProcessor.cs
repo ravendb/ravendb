@@ -7,18 +7,16 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
     public class MapFunctionProcessor : CSharpSyntaxRewriter
     {
-        private readonly CollectionNameRetriever _collectionRetriever;
+        public readonly CSharpSyntaxRewriter CollectionRetriever;
         private readonly ReferencedCollectionsRetriever _refCollectionsRetriever;
         private readonly SelectManyRewriter _selectManyRewriter;
 
-        public MapFunctionProcessor(CollectionNameRetriever collectionRetriever, SelectManyRewriter selectManyRewriter)
+        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter)
         {
             _selectManyRewriter = selectManyRewriter;
-            _collectionRetriever = collectionRetriever;
+            CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
         }
-
-        public string[] CollectionNames => _collectionRetriever.CollectionNames;
 
         public HashSet<string> ReferencedCollections => _refCollectionsRetriever.ReferencedCollections;
 
@@ -26,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         {
             foreach (var rewriter in new CSharpSyntaxRewriter[]
             {
-                _collectionRetriever,
+                CollectionRetriever,
                 _refCollectionsRetriever,
                 _selectManyRewriter,
                 SelectManyRewriter.SelectMethodOnProperties,

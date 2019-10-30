@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -112,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-        public static StaticIndexBase Compile(IndexDefinition definition)
+        public static AbstractStaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
@@ -121,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, extensions: definition.AdditionalSources);
             var type = compilationResult.Type;
 
-            var index = (StaticIndexBase)Activator.CreateInstance(type);
+            var index = (AbstractStaticIndexBase)Activator.CreateInstance(type);
             index.Source = compilationResult.Code;
 
             return index;
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
-            
+
             var res = GetUsingDirectiveAndSyntaxTreesAndReferences(extensions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
@@ -160,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 : SyntaxFactory.ParseSyntaxTree(formattedCompilationUnit.ToFullString());
 
             res.SyntaxTrees.Add(st);
-            
+
             var compilation = CSharpCompilation.Create(
                 assemblyName: name,
                 syntaxTrees: res.SyntaxTrees,
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) 
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References)
             GetUsingDirectiveAndSyntaxTreesAndReferences(Dictionary<string, string> extensions)
         {
             if (extensions == null)
@@ -310,7 +311,7 @@ namespace Raven.Server.Documents.Indexes.Static
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(map, fieldNamesValidator, methodDetector, ref members));
+                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, ref members));
             }
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
@@ -321,7 +322,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     groupByFields,
                     (builder, field) => field.WriteTo(builder));
 
-                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
@@ -330,22 +331,36 @@ namespace Raven.Server.Documents.Indexes.Static
                 fields,
                 (builder, field) => builder.Append("\"").Append(field.Name).Append("\""));
 
-            statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
+            statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
 
             var methods = methodDetector.Methods;
 
             if (methods.HasCreateField)
-                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             if (methods.HasBoost)
-                statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
+                statements.Add(RoslynHelper.This(nameof(AbstractStaticIndexBase.HasBoostedFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             var ctor = RoslynHelper.PublicCtor(name)
                 .AddBodyStatements(statements.ToArray());
 
+            var @class = RoslynHelper.PublicClass(name);
 
-            return RoslynHelper.PublicClass(name)
-                .WithBaseClass<StaticIndexBase>()
+            switch (definition.SourceType)
+            {
+                case IndexSourceType.Documents:
+                    @class = @class
+                        .WithBaseClass<StaticIndexBase>();
+                    break;
+                case IndexSourceType.TimeSeries:
+                    @class = @class
+                        .WithBaseClass<StaticTimeSeriesIndexBase>();
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
+            }
+
+            return @class
                 .WithMembers(members.Add(ctor));
         }
 
@@ -373,7 +388,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return fields;
         }
 
-        private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,
+        private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,
             ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
@@ -386,10 +401,31 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                {
+                    switch (type)
+                    {
+                        case IndexSourceType.Documents:
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                        case IndexSourceType.TimeSeries:
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                        default:
+                            throw new NotSupportedException($"Not supported source type '{type}'.");
+                    }
+                }
+
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                {
+                    switch (type)
+                    {
+                        case IndexSourceType.Documents:
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                        case IndexSourceType.TimeSeries:
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                        default:
+                            throw new NotSupportedException($"Not supported source type '{type}'.");
+                    }
+                }
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -463,9 +499,77 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        private static List<StatementSyntax> HandleSyntaxInTimeSeriesMap(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
+            ref SyntaxList<MemberDeclarationSyntax> members)
+        {
+            var (results, mapExpression) = HandleSyntaxInMapBase(fieldValidator, mapRewriter, expression, ref members, identifier: "timeSeries");
+
+            var collectionRetriever = (TimeSeriesCollectionNameRetriever)mapRewriter.CollectionRetriever;
+
+            // TODO ppekrol: handle @all_docs
+
+            foreach (var c in collectionRetriever.Collections)
+            {
+                var collectionName = c.CollectionName;
+                if (string.IsNullOrWhiteSpace(collectionName))
+                    throw new InvalidOperationException("Collection name cannot be null or whitespace.");
+
+                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
+
+                var timeSeriesName = c.TimeSeriesName;
+                if (string.IsNullOrWhiteSpace(timeSeriesName))
+                    throw new InvalidOperationException("TimeSeries name cannot be null or whitespace.");
+
+                var timeSeries = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(timeSeriesName));
+
+                results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddMap)).Invoke(collection, timeSeries, mapExpression).AsExpressionStatement()); // this.AddMap("Users", "HeartBeat", timeSeries => from ts in timeSeries ... )
+
+                if (mapRewriter.ReferencedCollections != null)
+                {
+                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                    {
+                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                        results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                    }
+                }
+            }
+
+            return results;
+        }
 
         private static List<StatementSyntax> HandleSyntaxInMap(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
             ref SyntaxList<MemberDeclarationSyntax> members)
+        {
+            var (results, mapExpression) = HandleSyntaxInMapBase(fieldValidator, mapRewriter, expression, ref members, identifier: "docs");
+
+            var collectionRetriever = (CollectionNameRetriever)mapRewriter.CollectionRetriever;
+            var collectionNames = collectionRetriever.CollectionNames ?? new[] { Constants.Documents.Collections.AllDocumentsCollection };
+
+            foreach (var cName in collectionNames)
+            {
+                var collectionName = string.IsNullOrWhiteSpace(cName)
+                    ? Constants.Documents.Collections.AllDocumentsCollection
+                    : cName;
+
+                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
+
+                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+
+                if (mapRewriter.ReferencedCollections != null)
+                {
+                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                    {
+                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                        results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        private static (List<StatementSyntax> Results, ExpressionSyntax MapExpression) HandleSyntaxInMapBase(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
+            ref SyntaxList<MemberDeclarationSyntax> members, string identifier)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
@@ -489,7 +593,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var method = SyntaxFactory.MethodDeclaration(SyntaxFactory.IdentifierName("IEnumerable"), SyntaxFactory.Identifier("Map_" + members.Count))
                     .WithParameterList(
                         SyntaxFactory.ParameterList(SyntaxFactory.SingletonSeparatedList(
-                            SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs"))
+                            SyntaxFactory.Parameter(SyntaxFactory.Identifier(identifier))
                                 .WithType(
                                     SyntaxFactory.GenericName("IEnumerable")
                                     .WithTypeArgumentList(
@@ -508,32 +612,10 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             else
             {
-                mapExpression = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
+                mapExpression = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(identifier)), rewrittenExpression);
             }
 
-            var collectionNames = mapRewriter.CollectionNames ?? new[] { Constants.Documents.Collections.AllDocumentsCollection };
-
-            foreach (var cName in collectionNames)
-            {
-                var collectionName = string.IsNullOrWhiteSpace(cName) 
-                    ? Constants.Documents.Collections.AllDocumentsCollection 
-                    : cName;
-
-                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
-
-                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
-
-                if (mapRewriter.ReferencedCollections != null)
-                {
-                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
-                    {
-                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
-                        results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
-                    }
-                }
-            }
-
-            return results;
+            return (results, mapExpression);
         }
 
         private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,

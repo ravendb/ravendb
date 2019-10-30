@@ -25,6 +25,19 @@ namespace Sparrow.Json
                     return null;
                 }
 
+                var createFromBlittableJsonAttribute = type.GetCustomAttribute(typeof(CreateFromBlittableJsonAttribute), inherit: false);
+                if (createFromBlittableJsonAttribute != null)
+                {
+                    var methodToCall = type.GetMethod("CreateFromBlittableJson", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                    if (methodToCall == null)
+                        throw new InvalidOperationException($"Could not find 'CreateFromBlittableJson' method in '{type.Name}' type.");
+
+                    var expression = Expression.Call(methodToCall, json);
+
+                    var l = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(expression, json);
+                    return l.Compile();
+                }
+
                 var ctor = type
                     .GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                     .FirstOrDefault(x => x.GetParameters().Length == 0);
@@ -241,6 +254,17 @@ namespace Sparrow.Json
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
             }
 
+            var createFromBlittableJsonAttribute = propertyType.GetCustomAttribute(typeof(CreateFromBlittableJsonAttribute), inherit: false);
+            if (createFromBlittableJsonAttribute != null)
+            {
+                var createFromBlittableJsonMethod = propertyType.GetMethod("CreateFromBlittableJson", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                if (createFromBlittableJsonMethod == null)
+                    throw new InvalidOperationException($"Could not find 'CreateFromBlittableJson' method in '{propertyType.Name}' type.");
+
+                var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(CreateFromBlittableJson), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName), Expression.Constant(createFromBlittableJsonMethod));
+            }
+
             // ToObject
             {
                 var converterExpression = Expression.Constant(GetConverterFromCache(propertyType));
@@ -354,6 +378,14 @@ namespace Sparrow.Json
         private static void ThrowNotSupportedBlittableArray(string propertyName)
         {
             throw new ArgumentException($"Not supported BlittableJsonReaderArray, property name: {propertyName}");
+        }
+
+        private static T CreateFromBlittableJson<T>(BlittableJsonReaderObject json, string name, MethodInfo methodToCall)
+        {
+            if (json.TryGet(name, out BlittableJsonReaderObject obj) == false || obj == null)
+                return default;
+
+            return (T)methodToCall.Invoke(null, new[] { obj });
         }
 
         private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name)

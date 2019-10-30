@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Static
         //private HandleSuggestions _handleSuggestions;
 
         protected MapIndex(MapIndexDefinition definition, StaticIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
 
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool HasBoostedFields => _compiled.HasBoostedFields;
 
-        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1);
+        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Any(y => y.Value.Count > 1));
 
         public override void ResetIsSideBySideAfterReplacement()
         {
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, Configuration));
 
@@ -156,9 +156,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return _compiled.ReferencedCollections;
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, type);
+            return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, _compiled.Maps[collection], collection, stats, type);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MapIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
