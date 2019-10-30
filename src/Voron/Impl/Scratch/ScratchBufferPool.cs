@@ -500,6 +500,10 @@ namespace Voron.Impl.Scratch
                 {
 
                 }
+                catch (DiskFullException)
+                {
+
+                }
             }
             finally
             {
