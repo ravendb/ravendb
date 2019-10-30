@@ -41,26 +41,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var raftRequestId = GetRaftRequestIdFromQuery();
                 foreach (BlittableJsonReaderObject indexToAdd in indexes)
                 {
-                    IndexSourceType indexSourceType;
-                    if (indexToAdd.TryGet(nameof(IndexDefinitionBase.SourceType), out string sourceTypeAsString) == false)
-                        indexSourceType = IndexSourceType.Documents; // backward compatibility
-
-                    if (Enum.TryParse(sourceTypeAsString, ignoreCase: true, out indexSourceType) == false)
-                        throw new InvalidOperationException("TODO ppekrol");
-
-                    IndexDefinitionBase indexDefinition;
-                    switch (indexSourceType)
-                    {
-                        case IndexSourceType.Documents:
-                            indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
-                            break;
-                        case IndexSourceType.TimeSeries:
-                            indexDefinition = JsonDeserializationServer.TimeSeriesIndexDefinition(indexToAdd);
-                            break;
-                        default:
-                            throw new InvalidOperationException("TODO ppekrol");
-                    }
-
+                    var indexDefinition = IndexDefinitionBase.CreateFromBlittableJson(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
                     var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();

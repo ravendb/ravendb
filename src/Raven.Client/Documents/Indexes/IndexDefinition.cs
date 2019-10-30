@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Indexes
     [CreateFromBlittableJson]
     public abstract class IndexDefinitionBase
     {
-        private static IndexDefinitionBase CreateFromBlittableJson(BlittableJsonReaderObject json)
+        internal static IndexDefinitionBase CreateFromBlittableJson(BlittableJsonReaderObject json)
         {
             if (json == null)
                 return null;
