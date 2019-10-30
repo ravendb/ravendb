@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using System.Text;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
 
@@ -10,7 +12,7 @@ namespace Sparrow.Server.Platform
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42011; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42013; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -99,9 +101,25 @@ namespace Sparrow.Server.Platform
 
         private const string LIBRVNPAL = "librvnpal";
 
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_write_header(
+        public static PalFlags.FailCodes rvn_write_header(
             string filename,
+            void* header,
+            Int32 size,
+            out Int32 errorCode)
+        {
+            using (var convert = new Converter(filename))
+            {
+                return rvn_write_header(
+                    convert.Pointer,
+                    header,
+                    size,
+                    out errorCode);
+            }
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_write_header(
+            byte *filename,
             void* header,
             Int32 size,
             out Int32 errorCode);
@@ -113,9 +131,31 @@ namespace Sparrow.Server.Platform
             Int32 capacity,
             out Int32 specialErrnoCodes);
 
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
+        public static PalFlags.FailCodes rvn_create_and_mmap64_file(
             string filename,
+            Int64 initialFileSize,
+            PalFlags.MmapOptions flags,
+            out SafeMmapHandle handle,
+            out void* baseAddress,
+            out Int64 actualFileSize,
+            out Int32 errorCode)
+        {
+            using (var convert = new Converter(filename))
+            {
+                return rvn_create_and_mmap64_file(
+                    convert.Pointer,
+                    initialFileSize,
+                    flags,
+                    out handle,
+                    out baseAddress,
+                    out actualFileSize,
+                    out errorCode);
+            }
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_create_and_mmap64_file(
+            byte *filename,
             Int64 initialFileSize,
             PalFlags.MmapOptions flags,
             out SafeMmapHandle handle,
@@ -172,9 +212,31 @@ namespace Sparrow.Server.Platform
             out void* newAddress,
             out Int32 errorCode);
 
+        public static PalFlags.FailCodes rvn_open_journal_for_writes(
+            string filename,
+            PalFlags.JournalMode mode,
+            Int64 requiredSize,
+            PalFlags.DurabilityMode supportDurability,
+            out SafeJournalHandle handle,
+            out Int64 actualSize,
+            out Int32 errorCode)
+        {
+            using (var convert = new Converter(filename))
+            {
+                return rvn_open_journal_for_writes(
+                    convert.Pointer,
+                    mode,
+                    requiredSize,
+                    supportDurability,
+                    out handle,
+                    out actualSize,
+                    out errorCode);
+            }
+        }
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_open_journal_for_writes(
-            string fileName,
+        private static extern PalFlags.FailCodes rvn_open_journal_for_writes(
+            byte *fileName,
             PalFlags.JournalMode mode,
             Int64 requiredSize,
             PalFlags.DurabilityMode supportDurability,
@@ -215,17 +277,51 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode
             );
 
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_get_path_disk_space(
+        public static PalFlags.FailCodes rvn_get_path_disk_space(
             string path,
             out UInt64 totalFreeSizeInBytes,
             out UInt64 totalSizeInBytes,
             out Int32 errorCode
-            );
+        )
+        {
+            using (var convert = new Converter(path))
+            {
+                return rvn_get_path_disk_space(
+                    convert.Pointer,
+                    out totalFreeSizeInBytes,
+                    out totalSizeInBytes,
+                    out errorCode
+                );
+            }
+        }
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_open_journal_for_reads(
+        private static extern PalFlags.FailCodes rvn_get_path_disk_space(
+            byte* path,
+            out UInt64 totalFreeSizeInBytes,
+            out UInt64 totalSizeInBytes,
+            out Int32 errorCode
+        );
+
+        public static PalFlags.FailCodes rvn_open_journal_for_reads(
             string fileNameFullPath,
+            out SafeJournalHandle handle,
+            out Int32 errorCode
+        )
+        {
+            using (var convert = new Converter(fileNameFullPath))
+            {
+                return rvn_open_journal_for_reads(
+                    convert.Pointer,
+                    out handle,
+                    out errorCode
+                );
+            }
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_open_journal_for_reads(
+            byte *fileNameFullPath,
             out SafeJournalHandle handle,
             out Int32 errorCode
         );
@@ -236,16 +332,31 @@ namespace Sparrow.Server.Platform
             Int64 size,
             out Int32 errorCode);
 
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_test_storage_durability(
+        public static PalFlags.FailCodes rvn_test_storage_durability(
             string tempFilename,
+            out Int32 errorCode)
+        {
+            using (var convert = new Converter(tempFilename))
+            {
+                return rvn_test_storage_durability(
+                    convert.Pointer,
+                    out errorCode
+                    );
+            }
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        private static extern PalFlags.FailCodes rvn_test_storage_durability(
+            byte *tempFilename,
             out Int32 errorCode);
+
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int32 rvn_get_pal_ver();
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int64 rvn_get_current_thread_id();
+
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_spawn_process(
@@ -267,5 +378,29 @@ namespace Sparrow.Server.Platform
         public static extern PalFlags.FailCodes rvn_kill_process(
             IntPtr pid,
             out Int32 errorCode);
+
+        private struct Converter : IDisposable
+        {
+            private byte[] _buffer;
+            public byte* Pointer => (byte*)PinnedHandle.AddrOfPinnedObject();
+            private static readonly Encoding CurrentEncoding = PlatformDetails.RunningOnPosix ? Encoding.UTF8 : Encoding.Unicode;
+            private GCHandle PinnedHandle;
+
+            public Converter(string s)
+            {
+                var size = CurrentEncoding.GetMaxByteCount(s.Length) +1;
+                _buffer = ArrayPool<byte>.Shared.Rent(size);
+                int length = CurrentEncoding.GetBytes(s, 0, s.Length, _buffer, 0);
+                _buffer[length] = 0;
+                PinnedHandle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
+            }
+
+            public void Dispose()
+            {
+                PinnedHandle.Free();
+                ArrayPool<byte>.Shared.Return(_buffer);
+                _buffer = null;
+            }
+        }
     }
 }

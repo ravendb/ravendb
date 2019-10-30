@@ -27,7 +27,7 @@ PRIVATE char**
 _parse_cmd_line(char* line, char *filename)
 {
     int argc = 2;
-    har** argv = malloc(sizeof(long) * argc);
+    char** argv = malloc(sizeof(long) * argc);
     if (argv == NULL)
         return NULL;
     argv[0] = filename;

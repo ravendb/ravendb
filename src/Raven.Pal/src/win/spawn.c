@@ -22,7 +22,7 @@ rvn_kill_process(void* pid, int32_t* detailed_error_code) {
 
 EXPORT int32_t
 rvn_wait_for_close_process(void* pid, int32_t closewait_timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code) {
-    DWORD rc = WaitForSingleObject(pid, timeout_seconds * 1000);
+    DWORD rc = WaitForSingleObject(pid, closewait_timeout_seconds * 1000);
     
     if (rc == WAIT_TIMEOUT)
     {
@@ -58,7 +58,7 @@ rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** standa
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));    
     ZeroMemory(&sa, sizeof(SECURITY_ATTRIBUTES));
 
-    pi.hThread = FAIL_INVALID_HANDLE;
+    pi.hThread = NULL;
 
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = NULL;
@@ -140,7 +140,7 @@ success:
 
     if(line != NULL)
         free(line);
-    if (pi.hThread != INVALID_HANDLE_VALUE)
+    if (pi.hThread != NULL && pi.hThread != INVALID_HANDLE_VALUE)
         CloseHandle(pi.hThread);
 
     return rc;
