@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -687,7 +688,13 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
 
                     return true;
-               
+                case NodeIsPassiveException e:
+                    {
+                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // redirect us to the current node
+                        _redirectNode = null;
+                        return true;
+                    }
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
                 case SubscriptionInUseException _:
