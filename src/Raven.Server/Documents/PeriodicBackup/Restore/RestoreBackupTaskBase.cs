@@ -443,7 +443,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             // we do have at least one smuggler backup, we'll take the indexes from the last file
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
-            databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
+            databaseRecord.Indexes = new Dictionary<string, IndexDefinitionBase>();
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide

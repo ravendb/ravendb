@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
         }
 
-        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinition definition)
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinitionBase definition)
             : this(e, configuration, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
         {
         }

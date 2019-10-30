@@ -11,14 +11,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public class PutIndexCommand : UpdateDatabaseCommand
     {
-        public IndexDefinition Definition;
+        public IndexDefinitionBase Definition;
 
         public PutIndexCommand()
         {
             // for deserialization
         }
 
-        public PutIndexCommand(IndexDefinition definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId)
+        public PutIndexCommand(IndexDefinitionBase definition, string databaseName, string source, DateTime createdAt, string uniqueRequestId)
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;

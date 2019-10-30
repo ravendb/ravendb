@@ -945,12 +945,16 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
+        public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinitionBase indexDefinition, bool removeAnalyzers = false)
         {
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(indexDefinition.Name));
             writer.WriteString(indexDefinition.Name);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(indexDefinition.SourceType));
+            writer.WriteString(indexDefinition.SourceType.ToString());
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Type));

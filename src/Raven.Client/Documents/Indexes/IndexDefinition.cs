@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Indexes
             set => _configuration = value;
         }
 
-        public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
+        public IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
         {
             if (other == null)
                 throw new ArgumentNullException(nameof(other));

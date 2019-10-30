@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
+        public static void ValidateReduceResultsCollectionName(IndexDefinitionBase definition, StaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
         {
             var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
