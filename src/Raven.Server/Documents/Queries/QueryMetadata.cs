@@ -709,9 +709,9 @@ namespace Raven.Server.Documents.Queries
             counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
 
-        private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeseriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
+        private void AddToTimeSeriesIncludes(TimeSeriesIncludesField timeSeriesIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
         {
-            string sourcePath = null;
+            string alias = null;
             var start = 0;
             if (expression.Arguments.Count > 0 &&
                 expression.Arguments[0] is FieldExpression fe)
@@ -722,14 +722,14 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
                     {
-                        sourcePath = value.PropertyPath;
+                        alias = value.PropertyPath;
                     }
 
                     else if (fe.FieldValue != null)
                     {
                         if (Query.From.Alias?.Value == null)
                         {
-                            sourcePath = fe.FieldValue;
+                            alias = fe.FieldValue;
                         }
                         else
                         {
@@ -737,7 +737,7 @@ namespace Raven.Server.Documents.Queries
                             if (split.Length >= 2 &&
                                 split[0] == Query.From.Alias.Value)
                             {
-                                sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                                alias = fe.FieldValue.Substring(split[0].Length + 1);
                             }
                         }
                     }
@@ -746,7 +746,7 @@ namespace Raven.Server.Documents.Queries
 
             if (start == expression.Arguments.Count)
             {
-                timeseriesIncludes.TimeSeries[sourcePath ?? string.Empty] = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
+                timeSeriesIncludes.TimeSeries[alias ?? string.Empty] = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
                 return;
             }
 
@@ -770,7 +770,7 @@ namespace Raven.Server.Documents.Queries
 
             }
 
-            timeseriesIncludes.AddTimeSeries(args[0], args[1], args[2], sourcePath);
+            timeSeriesIncludes.AddTimeSeries(args[0], args[1], args[2], alias);
         }
 
 

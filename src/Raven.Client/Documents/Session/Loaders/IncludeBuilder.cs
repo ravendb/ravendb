@@ -66,10 +66,10 @@ namespace Raven.Client.Documents.Session.Loaders
         {
             get
             {
-                if (TimeSeriesToIncludeBySourcePath == null)
+                if (TimeSeriesToIncludeBySourceAlias == null)
                     return null;
 
-                TimeSeriesToIncludeBySourcePath.TryGetValue(string.Empty, out var value);
+                TimeSeriesToIncludeBySourceAlias.TryGetValue(string.Empty, out var value);
                 return value;
             }
         }
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
 
-        internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourcePath;
+        internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
 
     }
 
@@ -376,19 +376,19 @@ namespace Raven.Client.Documents.Session.Loaders
                 Alias = path.Parameters[0].Name;
         }
 
-        private void IncludeTimeSeries(string path, string name, DateTime from, DateTime to)
+        private void IncludeTimeSeries(string alias, string name, DateTime from, DateTime to)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
-            if (TimeSeriesToIncludeBySourcePath == null)
+            if (TimeSeriesToIncludeBySourceAlias == null)
             {
-                TimeSeriesToIncludeBySourcePath = new Dictionary<string, HashSet<TimeSeriesRange>>();
+                TimeSeriesToIncludeBySourceAlias = new Dictionary<string, HashSet<TimeSeriesRange>>();
             }
 
-            if (TimeSeriesToIncludeBySourcePath.TryGetValue(path, out var hashSet) == false)
+            if (TimeSeriesToIncludeBySourceAlias.TryGetValue(alias, out var hashSet) == false)
             {
-                TimeSeriesToIncludeBySourcePath[path] = hashSet = new HashSet<TimeSeriesRange>(comparer: TimeSeriesRangeComparer.Instance);
+                TimeSeriesToIncludeBySourceAlias[alias] = hashSet = new HashSet<TimeSeriesRange>(comparer: TimeSeriesRangeComparer.Instance);
             }
 
             hashSet.Add(new TimeSeriesRange
