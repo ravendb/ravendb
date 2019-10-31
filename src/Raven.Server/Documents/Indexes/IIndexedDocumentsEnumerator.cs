@@ -3,12 +3,12 @@ using System.Collections;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public interface IIndexedDocumentsEnumerator : IDisposable
+    public interface IIndexedItemEnumerator : IDisposable
     {
         bool MoveNext(out IEnumerable resultsOfCurrentDocument);
 
         void OnError();
 
-        Document Current { get; }
+        IndexingItem Current { get; }
     }
 }

@@ -19,12 +19,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _compiled = compiled;
         }
 
+        internal override IEnumerable<IIndexingCollection> GetCollectionsForIndexing()
+        {
+            return _compiled.Maps.Keys;
+        }
+
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
         {
             throw new NotImplementedException();
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexingItem> items, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             throw new NotImplementedException();
         }

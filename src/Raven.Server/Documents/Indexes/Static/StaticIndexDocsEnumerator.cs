@@ -5,20 +5,20 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class StaticIndexDocsEnumerator : IIndexedDocumentsEnumerator
+    public class StaticIndexDocsEnumerator : IIndexedItemEnumerator
     {
         private readonly IndexingStatsScope _documentReadStats;
-        private readonly IEnumerator<Document> _docsEnumerator;
+        private readonly IEnumerator<IndexingItem> _itemsEnumerator;
         private readonly IEnumerable _resultsOfCurrentDocument;
         private readonly MultipleIndexingFunctionsEnumerator _multipleIndexingFunctionsEnumerator;
 
-        protected StaticIndexDocsEnumerator(IEnumerable<Document> docs)
+        protected StaticIndexDocsEnumerator(IEnumerable<IndexingItem> items)
         {
-            _docsEnumerator = docs.GetEnumerator();
+            _itemsEnumerator = items.GetEnumerator();
         }
 
-        public StaticIndexDocsEnumerator(IEnumerable<Document> docs, List<IndexingFunc> funcs, string collection, IndexingStatsScope stats, IndexType type)
-            : this(docs)
+        public StaticIndexDocsEnumerator(IEnumerable<IndexingItem> items, List<IndexingFunc> funcs, string collection, IndexingStatsScope stats, IndexType type)
+            : this(items)
         {
             _documentReadStats = stats?.For(IndexingOperation.Map.DocumentRead, start: false);
 
@@ -44,17 +44,18 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             using (_documentReadStats?.Start())
             {
-                Current?.Data.Dispose();
+                if (Current.Item is Document document)
+                    document.Data.Dispose();
 
-                if (_docsEnumerator.MoveNext() == false)
+                if (_itemsEnumerator.MoveNext() == false)
                 {
-                    Current = null;
+                    Current = default;
                     resultsOfCurrentDocument = null;
 
                     return false;
                 }
 
-                Current = _docsEnumerator.Current;
+                Current = _itemsEnumerator.Current;
                 resultsOfCurrentDocument = _resultsOfCurrentDocument;
 
                 return true;
@@ -66,12 +67,14 @@ namespace Raven.Server.Documents.Indexes.Static
             _multipleIndexingFunctionsEnumerator?.Reset();
         }
 
-        public Document Current { get; private set; }
+        public IndexingItem Current { get; private set; }
 
         public void Dispose()
         {
-            _docsEnumerator.Dispose();
-            Current?.Data?.Dispose();
+            _itemsEnumerator.Dispose();
+
+            if (Current.Item is Document document)
+                document.Data.Dispose();
         }
 
         protected class DynamicIteratorOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
@@ -98,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 private DynamicBlittableJson _dynamicDocument;
                 private readonly StaticIndexDocsEnumerator _inner;
-                private Document _seen;
+                private object _seen;
 
                 public Enumerator(StaticIndexDocsEnumerator indexingEnumerator)
                 {
@@ -107,15 +110,15 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 public bool MoveNext()
                 {
-                    if (_seen == _inner.Current) // already iterated
+                    if (_seen == _inner.Current.Item) // already iterated
                         return false;
 
-                    _seen = _inner.Current;
+                    _seen = _inner.Current.Item;
 
                     if (_dynamicDocument == null)
-                        _dynamicDocument = new DynamicBlittableJson(_seen);
+                        _dynamicDocument = new DynamicBlittableJson((Document)_seen);
                     else
-                        _dynamicDocument.Set(_seen);
+                        _dynamicDocument.Set((Document)_seen);
 
                     Current = _dynamicDocument;
 

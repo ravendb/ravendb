@@ -8,28 +8,86 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
-    public sealed class MapDocuments : IIndexingWork
+    public sealed class MapDocuments : MapItems
+    {
+        private readonly DocumentsStorage _documentsStorage;
+
+        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
+            : base(index, indexStorage, mapReduceContext, configuration)
+        {
+            _documentsStorage = documentsStorage;
+        }
+
+        protected override IEnumerable<IndexingItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexingCollection collection, long lastEtag, int pageSize)
+        {
+            foreach (var document in GetDocumentsEnumerator(databaseContext, collection.CollectionName, lastEtag, pageSize))
+            {
+                yield return new IndexingItem(document.Id, document.LowerId, document.Etag, document.Data.Size, document);
+            }
+        }
+
+        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        {
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+                return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
+            return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
+        }
+    }
+
+    public sealed class MapTimeSeries : MapItems
+    {
+        private readonly TimeSeriesStorage _timeSeriesStorage;
+
+        public MapTimeSeries(Index index, TimeSeriesStorage timeSeriesStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
+            : base(index, indexStorage, mapReduceContext, configuration)
+        {
+            _timeSeriesStorage = timeSeriesStorage;
+        }
+
+        protected override IEnumerable<IndexingItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexingCollection collection, long lastEtag, int pageSize)
+        {
+            var timeSeriesCollection = (TimeSeriesCollection)collection;
+
+            foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, timeSeriesCollection.CollectionName, timeSeriesCollection.TimeSeriesName, lastEtag, pageSize))
+            {
+                yield return new IndexingItem();
+            }
+        }
+
+        private IEnumerable<TimeSeriesItem> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, string timeSeries, long lastEtag, int pageSize)
+        {
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+            {
+                //return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
+                throw new NotImplementedException("TODO ppekrol");
+            }
+
+            return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, lastEtag + 1); // TODO ppekrol : more parameters
+        }
+    }
+
+    public abstract class MapItems : IIndexingWork
     {
         private readonly Logger _logger;
         private readonly Index _index;
         private readonly MapReduceIndexingContext _mapReduceContext;
         private readonly IndexingConfiguration _configuration;
-        private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
 
-        public MapDocuments(Index index, DocumentsStorage documentsStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
+        protected MapItems(Index index, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
         {
             _index = index;
             _mapReduceContext = mapReduceContext;
             _configuration = configuration;
-            _documentsStorage = documentsStorage;
             _indexStorage = indexStorage;
             _logger = LoggingSource.Instance
                 .GetLogger<MapDocuments>(indexStorage.DocumentDatabase.Name);
@@ -73,13 +131,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (lastCollectionEtag == -1)
                                 lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, collection);
 
-                            var documents = GetDocumentsEnumerator(databaseContext, collection.CollectionName, lastEtag, pageSize);
+                            var items = GetItemsEnumerator(databaseContext, collection, lastEtag, pageSize);
 
-                            using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
+                            using (var itemEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                             {
                                 while (true)
                                 {
-                                    if (docsEnumerator.MoveNext(out IEnumerable mapResults) == false)
+                                    if (itemEnumerator.MoveNext(out IEnumerable mapResults) == false)
                                     {
                                         collectionStats.RecordMapCompletedReason("No more documents to index");
                                         keepRunning = false;
@@ -91,11 +149,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     if (indexWriter == null)
                                         indexWriter = writeOperation.Value;
 
-                                    var current = docsEnumerator.Current;
+                                    var current = itemEnumerator.Current;
 
                                     count++;
                                     collectionStats.RecordMapAttempt();
-                                    stats.RecordDocumentSize(current.Data.Size);
+                                    stats.RecordDocumentSize(current.Size);
                                     if (_logger.IsInfoEnabled && count % 8192 == 0)
                                         _logger.Info($"Executing map for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag:#,#;;0}.");
 
@@ -114,7 +172,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     }
                                     catch (Exception e) when (e.IsIndexError())
                                     {
-                                        docsEnumerator.OnError();
+                                        itemEnumerator.OnError();
                                         _index.ErrorIndexIfCriticalException(e);
 
                                         collectionStats.RecordMapError();
@@ -255,11 +313,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        private IEnumerable<Document> GetDocumentsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
-        {
-            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
-            return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
-        }
+        protected abstract IEnumerable<IndexingItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexingCollection collection, long lastEtag, int pageSize);
     }
 }

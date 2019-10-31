@@ -71,9 +71,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             };
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexingItem> items, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new AutoIndexDocsEnumerator(documents, stats);
+            return new AutoIndexDocsEnumerator(items, stats);
         }
 
         public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)

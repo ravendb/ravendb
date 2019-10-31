@@ -156,9 +156,9 @@ namespace Raven.Server.Documents.Indexes.Static
             return _compiled.ReferencedCollections;
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexingItem> items, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection.CollectionName, stats, type);
+            return new StaticIndexDocsEnumerator(items, _compiled.Maps[collection], collection.CollectionName, stats, type);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()

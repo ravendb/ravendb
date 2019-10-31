@@ -1756,7 +1756,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext,
+        public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexingItem> items, IIndexingCollection collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
@@ -3998,6 +3998,28 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
+    public struct IndexingItem
+    {
+        public readonly LazyStringValue Id;
+
+        public readonly LazyStringValue LowerId;
+
+        public readonly long Etag;
+
+        public readonly int Size;
+
+        public readonly object Item;
+
+        public IndexingItem(LazyStringValue id, LazyStringValue lowerId, long etag, int size, object item) : this()
+        {
+            Id = id;
+            LowerId = lowerId;
+            Etag = etag;
+            Size = size;
+            Item = item;
+        }
+    }
+
     public class TimeSeriesCollection : IIndexingCollection
     {
         public TimeSeriesCollection(string collectionName, string timeSeriesName)
@@ -4022,6 +4044,11 @@ namespace Raven.Server.Documents.Indexes
         {
             return HashCode.Combine(CollectionName, TimeSeriesName);
         }
+
+        public override string ToString()
+        {
+            return StorageKey;
+        }
     }
 
     public class DocumentsCollection : IIndexingCollection
@@ -4044,6 +4071,11 @@ namespace Raven.Server.Documents.Indexes
         public override int GetHashCode()
         {
             return CollectionName.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return StorageKey;
         }
     }
 
