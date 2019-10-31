@@ -169,7 +169,25 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 case QueryType.Select:
                     if (Scanner.TryScan("SELECT"))
-                        query.Select = SelectClause("SELECT", query);
+                    {
+                        if (Scanner.TryScan("timeseries") == false)
+                        {
+                            query.Select = SelectClause("SELECT", query);
+                            break;
+                        }
+
+                        var func = SelectTimeSeries();
+
+                        if (query.TryAddFunction(func) == false)
+                        {
+                            message = $"{func.Name} function was declared multiple times";
+                            return false;
+                        }
+
+                        break;
+
+                    }
+
                     if (Scanner.TryScan("INCLUDE"))
                         query.Include = IncludeClause();
                     break;
@@ -220,6 +238,36 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             return true;
+        }
+
+        private DeclaredFunction SelectTimeSeries()
+        {
+            var start = Scanner.Position;
+
+            Scanner.TimeSeriesFunctionBody();
+
+            var functionText = Scanner.Input.Substring(start, Scanner.Position - start);
+
+            if (_timeSeriesParser == null)
+                _timeSeriesParser = new QueryParser();
+
+            _timeSeriesParser.Init(functionText);
+
+            if (_timeSeriesParser.Scanner.TryScan('(') == false)
+                ThrowParseException("Failed to find open parentheses ( for time series select function");
+
+            var ts = _timeSeriesParser.ParseTimeSeriesBody("time series select function");
+
+            if (_timeSeriesParser.Scanner.TryScan(')') == false)
+                ThrowParseException("Failed to find closing parentheses ) for time series select function");
+
+            return new DeclaredFunction
+            {
+                Type = AST.DeclaredFunction.FunctionType.TimeSeries, 
+                Name = "timeseries", 
+                FunctionText = functionText, 
+                TimeSeries = ts
+            };
         }
 
 
@@ -1276,21 +1324,20 @@ namespace Raven.Server.Documents.Queries.Parser
                     return null;
                 }
             }
-            else
-            {
-                if (_timeSeriesParser == null)
-                    _timeSeriesParser = new QueryParser();
-                _timeSeriesParser.Init(functionText);
-                var ts = _timeSeriesParser.ParseTimeSeries(name.Value);
 
-                return new DeclaredFunction
-                {
-                    Type = AST.DeclaredFunction.FunctionType.TimeSeries,
-                    Name = name.Value,
-                    FunctionText = functionText,
-                    TimeSeries = ts
-                };
-            }
+
+            if (_timeSeriesParser == null)
+                _timeSeriesParser = new QueryParser();
+            _timeSeriesParser.Init(functionText);
+            var ts = _timeSeriesParser.ParseTimeSeries(name.Value);
+
+            return new DeclaredFunction
+            {
+                Type = AST.DeclaredFunction.FunctionType.TimeSeries,
+                Name = name.Value,
+                FunctionText = functionText,
+                TimeSeries = ts
+            };
         }
 
         private TimeSeriesFunction ParseTimeSeries(string name)
@@ -1316,6 +1363,16 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('{') == false)
                 ThrowParseException($"Failed to find opening parentheses {{ for {name}");
 
+            var func = ParseTimeSeriesBody(name, rootSource);
+
+            if (Scanner.TryScan('}') == false)
+                ThrowParseException($"Failed to find opening parentheses }} for {name}");
+
+            return func;
+        }
+
+        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
+        {
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
 
@@ -1359,8 +1416,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 select = SelectClauseExpressions("SELECT", false);
             }
 
-            if (Scanner.TryScan('}') == false)
-                ThrowParseException($"Failed to find opening parentheses }} for {name}");
+/*            if (Scanner.TryScan('}') == false)
+                ThrowParseException($"Failed to find opening parentheses }} for {name}");*/
 
             return new TimeSeriesFunction
             {

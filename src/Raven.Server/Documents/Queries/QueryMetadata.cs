@@ -361,6 +361,13 @@ namespace Raven.Server.Documents.Queries
         {
             foreach (var function in Query.DeclaredFunctions)
             {
+                if (function.Value.Type == DeclaredFunction.FunctionType.TimeSeries &&
+                    SelectFields == null)
+                {
+                    SelectFields = new[] { SelectField.CreateMethodCall(function.Key, null, new SelectField[0]) };
+                    continue;
+                }
+
                 if (function.Value.JavaScript == null)
                     continue;
 
