@@ -26,7 +26,21 @@ namespace Tests.Infrastructure.Utils
             _context = context;
         }
 
-        public Exception Exception => _context.TestException;
+        public Exception Exception
+        {
+            get
+            {
+                try
+                {
+                    //the TestException getter sometimes throws exceptions itself
+                    return _context.TestException;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+            }
+        }
 
         public bool Failed => Exception != null;
 
