@@ -856,15 +856,15 @@ namespace Raven.Server.Documents.Indexes
             if (Type == IndexType.Faulty)
                 return true;
 
-            foreach (var collection in Collections)
+            foreach (var collection in GetCollectionsForIndexing())
             {
-                var lastDocEtag = GetLastDocumentEtagInCollection(databaseContext, collection);
+                var lastDocEtag = GetLastItemEtagInCollection(databaseContext, collection);
 
-                var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection.StorageKey);
                 var lastProcessedTombstoneEtag =
-                    _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
+                    _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection.StorageKey);
 
-                _inMemoryIndexProgress.TryGetValue(collection, out var stats);
+                _inMemoryIndexProgress.TryGetValue(collection.StorageKey, out var stats);
 
                 if (cutoff == null)
                 {
@@ -929,7 +929,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext,
-                        collection,
+                        collection.CollectionName, // TODO ppekrol
                         lastProcessedTombstoneEtag,
                         cutoff.Value);
                     if (hasTombstones)
@@ -1756,7 +1756,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext,
+        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
@@ -3128,7 +3128,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (q == null)
                 return;
-            
+
             if (q.HasIncludeOrLoad)
             {
                 Debug.Assert(length > sizeof(long) * 4);
@@ -3172,7 +3172,7 @@ namespace Raven.Server.Documents.Indexes
                             .GetLastCompareExchangeIndexForDatabase(transactionContext, documentsContext.DocumentDatabase.Name);
                 }
             }
-        }   
+        }
 
         protected int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
         {
@@ -3192,7 +3192,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (q.HasCmpXchg || q.HasCmpXchgSelect)           
                 length += sizeof(long); //last cmpxchg etag
-            
+
             return length;
         }
 
@@ -3803,18 +3803,18 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-        public long GetLastDocumentEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        public virtual long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
         {
-            return collection == Constants.Documents.Collections.AllDocumentsCollection
+            return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
-                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
+                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection.CollectionName);
         }
 
-        public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
         {
-            return collection == Constants.Documents.Collections.AllDocumentsCollection
+            return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
-                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
+                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection.CollectionName);
         }
 
         public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
@@ -3990,5 +3990,67 @@ namespace Raven.Server.Documents.Indexes
             if (_disposeOne.Disposed)
                 ThrowObjectDisposed();
         }
+
+        internal virtual IEnumerable<IIndexingCollection> GetCollectionsForIndexing()
+        {
+            foreach (var collection in Collections)
+                yield return new DocumentsCollection(collection);
+        }
+    }
+
+    public class TimeSeriesCollection : IIndexingCollection
+    {
+        public TimeSeriesCollection(string collectionName, string timeSeriesName)
+        {
+            CollectionName = collectionName;
+            TimeSeriesName = timeSeriesName;
+            StorageKey = $"{collectionName}|{timeSeriesName}";
+        }
+
+        public string StorageKey { get; }
+        public string CollectionName { get; }
+        public string TimeSeriesName { get; }
+
+        public override bool Equals(object obj)
+        {
+            return obj is TimeSeriesCollection collection &&
+                   string.Equals(CollectionName, collection.CollectionName, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(TimeSeriesName, collection.TimeSeriesName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(CollectionName, TimeSeriesName);
+        }
+    }
+
+    public class DocumentsCollection : IIndexingCollection
+    {
+        public DocumentsCollection(string collectionName)
+        {
+            CollectionName = collectionName;
+            StorageKey = collectionName;
+        }
+
+        public string StorageKey { get; }
+        public string CollectionName { get; }
+
+        public override bool Equals(object obj)
+        {
+            return obj is DocumentsCollection collection &&
+                   string.Equals(CollectionName, collection.CollectionName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public override int GetHashCode()
+        {
+            return CollectionName.GetHashCode();
+        }
+    }
+
+    public interface IIndexingCollection
+    {
+        public string CollectionName { get; }
+
+        public string StorageKey { get; }
     }
 }

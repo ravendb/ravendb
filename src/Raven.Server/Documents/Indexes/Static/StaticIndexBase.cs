@@ -18,50 +18,19 @@ namespace Raven.Server.Documents.Indexes.Static
 
     public abstract class StaticTimeSeriesIndexBase : AbstractStaticIndexBase
     {
-        public readonly Dictionary<MapKey, List<IndexingFunc>> Maps = new Dictionary<MapKey, List<IndexingFunc>>();
-
-        internal override HashSet<string> GetCollections()
+        internal override HashSet<string> GetDocumentsCollections()
         {
-            return Maps.Keys.Select(x => x.Collection).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return Maps.Keys.Select(x => x.CollectionName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         public void AddMap(string collection, string name, IndexingFunc map)
         {
-            var key = new MapKey(collection, name);
+            var key = new TimeSeriesCollection(collection, name);
 
             if (Maps.TryGetValue(key, out List<IndexingFunc> funcs) == false)
                 Maps[key] = funcs = new List<IndexingFunc>();
 
             funcs.Add(map);
-        }
-
-        public struct MapKey
-        {
-            public readonly string Collection;
-
-            public readonly string Name;
-
-            public readonly string StorageKey;
-
-            public MapKey(string collection, string name)
-            {
-                Collection = collection ?? throw new ArgumentNullException(nameof(collection));
-                Name = name ?? throw new ArgumentNullException(nameof(name));
-
-                StorageKey = $"{Collection}|{Name}".ToLower();
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is MapKey key &&
-                       string.Equals(Collection, key.Collection, StringComparison.OrdinalIgnoreCase) &&
-                       string.Equals(Name, key.Name, StringComparison.OrdinalIgnoreCase);
-            }
-
-            public override int GetHashCode()
-            {
-                return StorageKey.GetHashCode();
-            }
         }
     }
 
@@ -69,19 +38,20 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
-        public readonly Dictionary<string, List<IndexingFunc>> Maps = new Dictionary<string, List<IndexingFunc>>(StringComparer.OrdinalIgnoreCase);
 
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
 
-        internal override HashSet<string> GetCollections()
+        internal override HashSet<string> GetDocumentsCollections()
         {
-            return Maps.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return Maps.Keys.Select(x => x.CollectionName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
 
         public void AddMap(string collection, IndexingFunc map)
         {
-            if (Maps.TryGetValue(collection, out List<IndexingFunc> funcs) == false)
-                Maps[collection] = funcs = new List<IndexingFunc>();
+            var key = new DocumentsCollection(collection);
+
+            if (Maps.TryGetValue(key, out List<IndexingFunc> funcs) == false)
+                Maps[key] = funcs = new List<IndexingFunc>();
 
             funcs.Add(map);
         }
@@ -363,6 +333,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
     public abstract class AbstractStaticIndexBase
     {
+        public readonly Dictionary<IIndexingCollection, List<IndexingFunc>> Maps = new Dictionary<IIndexingCollection, List<IndexingFunc>>();
+
         public bool HasDynamicFields { get; set; }
 
         public bool HasBoostedFields { get; set; }
@@ -375,6 +347,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public CompiledIndexField[] GroupByFields;
 
-        internal abstract HashSet<string> GetCollections();
+        internal abstract HashSet<string> GetDocumentsCollections();
     }
 }

@@ -46,17 +46,17 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             var moreWorkFound = false;
 
-            foreach (var collection in _index.Collections)
+            foreach (var collection in _index.GetCollectionsForIndexing())
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
+                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection.StorageKey);
+                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection.StorageKey);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
 
-                    var inMemoryStats = _index.GetStats(collection);
+                    var inMemoryStats = _index.GetStats(collection.StorageKey);
                     var lastEtag = lastTombstoneEtag;
                     var count = 0;
 
@@ -75,9 +75,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (lastCollectionEtag == -1)
                                 lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
 
-                            var tombstones = collection == Constants.Documents.Collections.AllDocumentsCollection
+                            var tombstones = collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
                                 ? _documentsStorage.GetTombstonesFrom(databaseContext, lastEtag + 1, 0, pageSize)
-                                : _documentsStorage.GetTombstonesFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
+                                : _documentsStorage.GetTombstonesFrom(databaseContext, collection.CollectionName, lastEtag + 1, 0, pageSize);
 
                             foreach (var tombstone in tombstones)
                             {
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
-                                _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
+                                _index.HandleDelete(tombstone, collection.CollectionName, indexWriter, indexContext, collectionStats);
 
                                 if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                 {
@@ -122,11 +122,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     if (_index.Type.IsMap())
                     {
-                        _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
+                        _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection.StorageKey, lastEtag);
                     }
                     else
                     {
-                        _mapReduceContext.ProcessedTombstoneEtags[collection] = lastEtag;
+                        _mapReduceContext.ProcessedTombstoneEtags[collection.StorageKey] = lastEtag;
                     }
 
                     moreWorkFound = true;

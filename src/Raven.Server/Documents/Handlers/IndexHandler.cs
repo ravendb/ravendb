@@ -939,7 +939,7 @@ namespace Raven.Server.Documents.Handlers
                 var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration);
 
                 var inputSize = GetIntValueQueryString("inputSize", false) ?? defaultInputSizeForTestingJavaScriptIndex;
-                var collections = new HashSet<string>(compiledIndex.Maps.Keys);
+                var collections = new HashSet<string>(compiledIndex.GetDocumentsCollections());
                 var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
                 using (context.OpenReadTransaction())
                 {
@@ -974,12 +974,12 @@ namespace Raven.Server.Documents.Handlers
 
                     var mapRes = new List<ObjectInstance>();
                     //all maps
-                    foreach (var ListOfFunctions in compiledIndex.Maps)
+                    foreach (var listOfFunctions in compiledIndex.Maps)
                     {
                         //multi maps per collection
-                        foreach (var mapFunc in ListOfFunctions.Value)
+                        foreach (var mapFunc in listOfFunctions.Value)
                         {
-                            if (docsPerCollection.TryGetValue(ListOfFunctions.Key, out var docs))
+                            if (docsPerCollection.TryGetValue(listOfFunctions.Key.CollectionName, out var docs))
                             {
                                 foreach (var res in mapFunc(docs))
                                 {

@@ -19,16 +19,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _compiled = compiled;
         }
 
-        public MapTimeSeriesIndex(IndexType type, MapIndexDefinition definition) : base(type, definition)
-        {
-        }
-
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
         {
             throw new NotImplementedException();
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             throw new NotImplementedException();
         }
@@ -47,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.GetCollections(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }

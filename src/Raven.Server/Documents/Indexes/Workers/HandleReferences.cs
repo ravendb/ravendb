@@ -72,8 +72,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
 
-            foreach (var collection in _index.Collections)
+            foreach (var c in _index.GetCollectionsForIndexing())
             {
+                var collection = c.CollectionName;
+
                 if (_referencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
 
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 {
                                     case ActionType.Document:
                                         if (lastCollectionEtag == -1)
-                                            lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
+                                            lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, c);
 
                                         references = _documentsStorage
                                             .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, 
@@ -148,7 +150,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                     case ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
-                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
+                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, c);
 
                                         references = _documentsStorage
                                             .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
@@ -190,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                     }
 
-                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
+                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, c, indexContext, collectionStats, _index.Type))
                                     {
                                         while (docsEnumerator.MoveNext(out IEnumerable mapResults))
                                         {

@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
                 return;
 
-            var collections = index.GetCollections();
+            var collections = index.GetDocumentsCollections();
             if (collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
                 throw new IndexInvalidException($"It is forbidden to create the '{definition.Name}' index " +
                                                 $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
@@ -290,7 +290,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var staticMapIndex = (MapReduceIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
+            var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
             var instance = new MapReduceIndex(staticMapIndexDefinition, staticIndex);
 
@@ -329,9 +329,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection, stats, type);
+            return new StaticIndexDocsEnumerator(documents, _compiled.Maps[collection], collection.CollectionName, stats, type);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()

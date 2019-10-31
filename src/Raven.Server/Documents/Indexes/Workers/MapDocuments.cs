@@ -45,16 +45,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                             : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
-            foreach (var collection in _index.Collections)
+            foreach (var collection in _index.GetCollectionsForIndexing())
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection.StorageKey);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag:#,#;;0}.");
 
-                    var inMemoryStats = _index.GetStats(collection);
+                    var inMemoryStats = _index.GetStats(collection.StorageKey);
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
@@ -71,9 +71,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                             sw.Restart();
 
                             if (lastCollectionEtag == -1)
-                                lastCollectionEtag = _index.GetLastDocumentEtagInCollection(databaseContext, collection);
+                                lastCollectionEtag = _index.GetLastItemEtagInCollection(databaseContext, collection);
 
-                            var documents = GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize);
+                            var documents = GetDocumentsEnumerator(databaseContext, collection.CollectionName, lastEtag, pageSize);
 
                             using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
                             {
@@ -164,11 +164,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_index.Type.IsMap())
                     {
                         _index.SaveLastState();
-                        _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, collection, lastEtag);
+                        _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, collection.StorageKey, lastEtag);
                     }
                     else
                     {
-                        _mapReduceContext.ProcessedDocEtags[collection] = lastEtag;
+                        _mapReduceContext.ProcessedDocEtags[collection.StorageKey] = lastEtag;
                     }
                 }
             }
