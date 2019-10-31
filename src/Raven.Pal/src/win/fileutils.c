@@ -94,8 +94,8 @@ _write_file(void* handle, const void* buffer, int64_t size, int64_t offset, int3
 PRIVATE int32_t
 _open_file_to_read(const char *file_name, HANDLE *handle, int32_t *detailed_error_code)
 {
-    *handle = CreateFileW(
-        (LPCWSTR)file_name,
+    *handle = CreateFile(
+        file_name,
         GENERIC_READ,
         FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
         0,
