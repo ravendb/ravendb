@@ -531,6 +531,78 @@ namespace Raven.Server.Documents.Queries.Parser
 
         }
 
+        public bool TimeSeriesFunctionBody()
+        {
+            var original = _pos;
+            if (TryScan('(') == false)
+                return false;
+
+            // now we need to find the matching )
+
+            int nested = 1;
+            for (; _pos < _q.Length; _pos++)
+            {
+                switch (_q[_pos])
+                {
+                    case '"':
+                    case '\'':
+                        if (String(out _) == false)
+                            goto Failed;
+                        // we are now positioned at the _next_character, but we'll increment it
+                        // need to go back to stay in the same place :-)
+                        _pos--;
+                        break;
+                    case '/':
+                        // Detect // from the second /, we know that there is at least the ( before us,
+                        // so no need to do range check
+                        if (_q[_pos - 1] == '/')
+                        {
+                            for (; _pos < _q.Length; _pos++)
+                            {
+                                if (_q[_pos] == '\r' || _q[_pos] == '\n')
+                                    break;
+                            }
+                        }
+
+                        break;
+                    case '*':
+                        // Detect /* from the second *, we know that there is at least the { before us,
+                        // so no need to do range check
+                        if (_q[_pos - 1] == '/')
+                        {
+                            for (; _pos < _q.Length; _pos++)
+                            {
+                                if (_q[_pos] == '*' && _pos + 1 < _q.Length && _q[_pos + 1] == '/')
+                                {
+                                    _pos++;
+                                    break;
+                                }
+                            }
+                        }
+
+                        break;
+                    case '(':
+                        nested++;
+                        break;
+                    case ')':
+                        if (--nested == 0)
+                        {
+                            _pos += 1;
+                            _tokenStart = original;
+                            _tokenLength = _pos - original;
+                            return true;
+                        }
+
+                        break;
+                }
+            }
+
+            Failed:
+            _pos = original;
+            return false;
+
+        }
+
         public void GoBack(int matchLength)
         {
             _pos -= matchLength;

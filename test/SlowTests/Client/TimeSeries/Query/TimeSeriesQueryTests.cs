@@ -2,9 +2,11 @@
 using System.Linq;
 using System.Text;
 using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,6 +32,27 @@ namespace SlowTests.Client.TimeSeries.Query
         {
             public long Count { get; set; }
             public TimeSeriesRangeAggregation[] Results { get; set; }
+        }
+
+        private class PeopleIndex : AbstractIndexCreationTask<Person>
+        {
+            public PeopleIndex()
+            {
+                Map = people => from person in people
+                                select new
+                                {
+                                    person.Age
+                                };
+            }
+
+            public override string IndexName => "People";
+        }
+
+        private class Person
+        {
+            public string Name { get; set; }
+
+            public int Age { get; set; }
         }
 
         [Fact]
@@ -114,6 +137,75 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(baseline.AddMinutes(60), val.From);
                     Assert.Equal(baseline.AddMinutes(120), val.To);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_StaticIndex_SelectSyntax()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                new PeopleIndex().Execute(store);
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+from index 'People'
+where Age > 49
+select timeseries(
+    from HeartRate between $start and $end 
+    group by 1h 
+    select min(), max())
+")
+                        .AddParameter("start", DateTime.MinValue)
+                        .AddParameter("end", DateTime.MaxValue);
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+                        Assert.Equal(3, agg.Count);
+
+                        Assert.Equal(1, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(59, val.Min);
+                        Assert.Equal(79, val.Max);
+
+                        Assert.Equal(baseline.AddMinutes(60), val.From);
+                        Assert.Equal(baseline.AddMinutes(120), val.To);
+                    }
                 }
             }
         }
