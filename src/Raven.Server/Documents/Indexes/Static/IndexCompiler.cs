@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -310,7 +311,7 @@ namespace Raven.Server.Documents.Indexes.Static
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(map, fieldNamesValidator, methodDetector, ref members));
+                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, ref members));
             }
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
@@ -387,7 +388,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return fields;
         }
 
-        private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,
+        private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,
             ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
@@ -400,10 +401,31 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 var queryExpression = expression as QueryExpressionSyntax;
                 if (queryExpression != null)
-                    return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                {
+                    switch (type)
+                    {
+                        case IndexSourceType.Documents:
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                        case IndexSourceType.TimeSeries:
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                        default:
+                            throw new InvalidOperationException("TODO ppekrol");
+                    }
+                }
+
                 var invocationExpression = expression as InvocationExpressionSyntax;
                 if (invocationExpression != null)
-                    return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                {
+                    switch (type)
+                    {
+                        case IndexSourceType.Documents:
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                        case IndexSourceType.TimeSeries:
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                        default:
+                            throw new InvalidOperationException("TODO ppekrol");
+                    }
+                }
 
                 throw new InvalidOperationException("Not supported expression type.");
             }
@@ -477,9 +499,68 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        private static List<StatementSyntax> HandleSyntaxInTimeSeriesMap(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
+            ref SyntaxList<MemberDeclarationSyntax> members)
+        {
+            var (results, mapExpression) = HandleSyntaxInMapBase(fieldValidator, mapRewriter, expression, ref members, identifier: "timeSeries");
+
+            var collectionRetriever = (TimeSeriesCollectionNameRetriever)mapRewriter.CollectionRetriever;
+
+            // TODO ppekrol: handle @all_docs
+
+            foreach (var c in collectionRetriever.Collections)
+            {
+                var collectionName = c.CollectionName;
+                if (string.IsNullOrWhiteSpace(collectionName))
+                    throw new InvalidOperationException("TODO ppekrol");
+
+                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
+
+                var timeSeriesName = c.TimeSeriesName;
+                if (string.IsNullOrWhiteSpace(timeSeriesName))
+                    throw new InvalidOperationException("TODO ppekrol");
+
+                var timeSeries = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(timeSeriesName));
+
+                results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddMap)).Invoke(collection, timeSeries, mapExpression).AsExpressionStatement()); // this.AddMap("Users", "HeartBeat", timeSeries => from ts in timeSeries ... )
+            }
+
+            return results;
+        }
 
         private static List<StatementSyntax> HandleSyntaxInMap(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
             ref SyntaxList<MemberDeclarationSyntax> members)
+        {
+            var (results, mapExpression) = HandleSyntaxInMapBase(fieldValidator, mapRewriter, expression, ref members, identifier: "docs");
+
+            var collectionRetriever = (CollectionNameRetriever)mapRewriter.CollectionRetriever;
+            var collectionNames = collectionRetriever.CollectionNames ?? new[] { Constants.Documents.Collections.AllDocumentsCollection };
+
+            foreach (var cName in collectionNames)
+            {
+                var collectionName = string.IsNullOrWhiteSpace(cName)
+                    ? Constants.Documents.Collections.AllDocumentsCollection
+                    : cName;
+
+                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
+
+                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+
+                if (mapRewriter.ReferencedCollections != null)
+                {
+                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                    {
+                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                        results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        private static (List<StatementSyntax> Results, ExpressionSyntax MapExpression) HandleSyntaxInMapBase(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
+            ref SyntaxList<MemberDeclarationSyntax> members, string identifier)
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
@@ -503,7 +584,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 var method = SyntaxFactory.MethodDeclaration(SyntaxFactory.IdentifierName("IEnumerable"), SyntaxFactory.Identifier("Map_" + members.Count))
                     .WithParameterList(
                         SyntaxFactory.ParameterList(SyntaxFactory.SingletonSeparatedList(
-                            SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs"))
+                            SyntaxFactory.Parameter(SyntaxFactory.Identifier(identifier))
                                 .WithType(
                                     SyntaxFactory.GenericName("IEnumerable")
                                     .WithTypeArgumentList(
@@ -522,32 +603,10 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             else
             {
-                mapExpression = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
+                mapExpression = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier(identifier)), rewrittenExpression);
             }
 
-            var collectionNames = mapRewriter.CollectionNames ?? new[] { Constants.Documents.Collections.AllDocumentsCollection };
-
-            foreach (var cName in collectionNames)
-            {
-                var collectionName = string.IsNullOrWhiteSpace(cName)
-                    ? Constants.Documents.Collections.AllDocumentsCollection
-                    : cName;
-
-                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
-
-                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
-
-                if (mapRewriter.ReferencedCollections != null)
-                {
-                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
-                    {
-                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
-                        results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
-                    }
-                }
-            }
-
-            return results;
+            return (results, mapExpression);
         }
 
         private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,
