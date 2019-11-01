@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         }
 
         private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBase definition)
-            : base(IndexType.Faulty, definition)
+            : base(IndexType.Faulty, definition, hasOutputReduceToCollection: false)
         {
             _e = e;
             _createdAt = DateTime.UtcNow;
