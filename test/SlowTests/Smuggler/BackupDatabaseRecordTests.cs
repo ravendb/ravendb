@@ -1332,6 +1332,124 @@ namespace SlowTests.Smuggler
                 await ValidateSubscriptions(store);
             }
         }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                // etl
+                store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = store.Database, TopologyDiscoveryUrls = new[] {"http://127.0.0.1:8080"}, Database = "Northwind",
+                }));
+
+                var etlConfiguration = new RavenEtlConfiguration
+                {
+                    ConnectionStringName = store.Database,
+                    Transforms = {new Transformation() {Name = "loadAll", Collections = {"Users"}, Script = "loadToUsers(this)"}}
+                };
+                await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
+
+                // external replication
+                var connectionString = new RavenConnectionString
+                {
+                    Name = store.Database, Database = store.Database, TopologyDiscoveryUrls = new[] {"http://127.0.0.1:12345"}
+                };
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(store.Database, store.Database)));
+
+                // pull replication sink
+                var sink = new PullReplicationAsSink {HubDefinitionName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name};
+                await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
+
+                // pull replication hub
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("test"));
+
+                // backup
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}, IncrementalBackupFrequency = "* * * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+
+                var value = WaitForValue(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag;
+                }, 0);
+                Assert.Equal(0, value);
+
+                // restore the database with a different name
+                var restoredDatabaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store,
+                    new RestoreBackupConfiguration
+                    {
+                        BackupLocation = Directory.GetDirectories(backupPath).First(),
+                        DatabaseName = restoredDatabaseName,
+                        DisableOngoingTasks = disableOngoingTasks
+                    }))
+                {
+                    using (var restoredStore = new DocumentStore
+                    {
+                        Urls = store.Urls,
+                        Database = restoredDatabaseName
+                    }.Initialize())
+                    {
+                        var databaseRecord = await restoredStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredStore.Database));
+
+                        var tasksCount = 0;
+                        foreach (var task in databaseRecord.ExternalReplications)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.RavenEtls)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.PeriodicBackups)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.ExternalReplications)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.HubPullReplications)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        foreach (var task in databaseRecord.SinkPullReplications)
+                        {
+                            Assert.Equal(disableOngoingTasks, task.Disabled);
+                            tasksCount++;
+                        }
+
+                        Assert.Equal(6, tasksCount);
+                    }
+                }
+            }
+        }
+
         private async Task ValidateSubscriptions(DocumentStore restoredStore)
         {
             var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
