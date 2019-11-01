@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int mSize = m.Count;
 
             double o1 = nSize + mSize;
-            double o2 = nSize * Math.Log(mSize, 2);
+            double o2 = mSize * Math.Log(nSize, 2);
 
             var result = new IntersectDocs();
             if (needToApplyAggregation)
