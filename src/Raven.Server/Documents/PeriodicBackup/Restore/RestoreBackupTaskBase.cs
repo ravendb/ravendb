@@ -598,6 +598,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     task.Disabled = true;
                 }
             }
+
+            if (databaseRecord.ExternalReplications != null)
+            {
+                foreach (var task in databaseRecord.ExternalReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.HubPullReplications != null)
+            {
+                foreach (var task in databaseRecord.HubPullReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.SinkPullReplications != null)
+            {
+                foreach (var task in databaseRecord.SinkPullReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
         }
 
         private async Task ImportSingleBackupFile(DocumentDatabase database,
