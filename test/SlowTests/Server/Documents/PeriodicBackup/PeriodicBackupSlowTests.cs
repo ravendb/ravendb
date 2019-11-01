@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -517,8 +517,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore_snapshot()
+        [Theory, Trait("Category", "Smuggler")]
+        [InlineData(CompressionLevel.Optimal)]
+        [InlineData(CompressionLevel.Fastest)]
+        [InlineData(CompressionLevel.NoCompression)]
+        public async Task can_backup_and_restore_snapshot(CompressionLevel compressionLevel)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
@@ -548,6 +551,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
+                    Snapshot = new Snapshot
+                    {
+                        CompressionLevel = compressionLevel
+                    },
                     LocalSettings = new LocalSettings
                     {
                         FolderPath = backupPath
