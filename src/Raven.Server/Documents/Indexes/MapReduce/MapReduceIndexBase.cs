@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly MapPhaseStats _stats = new MapPhaseStats();
 
 
-        protected MapReduceIndexBase(IndexType type, T definition) : base(type, definition)
+        protected MapReduceIndexBase(IndexType type, T definition, bool hasOutputReduceToCollection) : base(type, definition, hasOutputReduceToCollection)
         {
         }
 
