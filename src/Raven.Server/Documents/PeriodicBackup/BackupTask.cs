@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -604,7 +605,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
-                        var smugglerResult = _database.FullBackupTo(tempBackupFilePath,
+                        var compressionLevel = _configuration.Snapshot?.CompressionLevel ?? CompressionLevel.Optimal;
+                        var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionLevel,
                             info =>
                             {
                                 AddInfo(info.Message);
