@@ -107,6 +107,7 @@ namespace Raven.Client.Documents.Operations.ETL
             var result = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
+                [nameof(TaskId)] = TaskId,
                 [nameof(ConnectionStringName)] = ConnectionStringName,
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(AllowEtlOnNonEncryptedChannel)] = AllowEtlOnNonEncryptedChannel,
