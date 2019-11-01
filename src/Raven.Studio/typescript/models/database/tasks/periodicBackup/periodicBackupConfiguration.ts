@@ -10,6 +10,7 @@ import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOp
 import jsonUtil = require("common/jsonUtil");
 import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import snapshot = require("models/database/tasks/periodicBackup/snapshot");
 import retentionPolicy = require("models/database/tasks/periodicBackup/retentionPolicy");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
 import googleCloudSettings = require("models/database/tasks/periodicBackup/googleCloudSettings");
@@ -24,7 +25,8 @@ class periodicBackupConfiguration {
     disabled = ko.observable<boolean>();
     name = ko.observable<string>();
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
-    
+    isSnapshot = ko.pureComputed(() => this.backupType() === "Snapshot");
+
     isServerWide = ko.observable<boolean>();
 
     manualChooseMentor = ko.observable<boolean>(false);
@@ -36,6 +38,7 @@ class periodicBackupConfiguration {
     incrementalBackupEnabled = ko.observable<boolean>(false);
     incrementalBackupFrequency = ko.observable<string>();
 
+    snapshot = ko.observable<snapshot>();
     retentionPolicy = ko.observable<retentionPolicy>();
     encryptionSettings = ko.observable<encryptionSettings>();
     
@@ -90,6 +93,7 @@ class periodicBackupConfiguration {
 
         this.updateFolderPathOptions(folderPath);
 
+        this.snapshot(!dto.Snapshot ? snapshot.empty() : new snapshot(dto.Snapshot));
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
         this.encryptionSettings(new encryptionSettings(this.databaseName, encryptedDatabase, this.backupType, dto.BackupEncryptionSettings, this.isServerWide()));
 
@@ -240,6 +244,7 @@ class periodicBackupConfiguration {
             FtpSettings: this.ftpSettings().toDto(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             BackupEncryptionSettings: this.encryptionSettings().toDto(),
+            Snapshot: this.snapshot().toDto(),
             RetentionPolicy: this.retentionPolicy().toDto()
         };
     }
@@ -263,7 +268,9 @@ class periodicBackupConfiguration {
                 Key: "",
                 EncryptionMode: null
             },
-            RetentionPolicy: null
+            Snapshot: null,
+            RetentionPolicy: null,
+            
         }, serverLimits, encryptedDatabase, isServerWide);
     }
 }

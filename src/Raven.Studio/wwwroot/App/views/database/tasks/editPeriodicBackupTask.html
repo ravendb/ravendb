@@ -13,7 +13,7 @@
             <div class="row margin-bottom" data-bind="validationElement: name">
                 <label class="control-label col-sm-4 col-lg-2">Task Name</label>
                 <div class="col-sm-4">
-                    <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the Backup Task"/>
+                    <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the Backup Task" />
                 </div>
             </div>
             <div class="row margin-bottom" data-bind="validationElement: backupType">
@@ -31,6 +31,20 @@
                     <span class="help-block" data-bind="validationMessage: backupType"></span>
                 </div>
             </div>
+            <div class="row margin-bottom" data-bind="visible: isSnapshot, with: snapshot">
+                <label class="control-label col-sm-4 col-lg-2">Compression</label>
+                <div class="col-sm-4">
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                            <span data-bind="text: compressionLevel"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: compressionLevelOptions">
+                            <li><a href="#" data-bind="text: $data, click: $parent.useCompression.bind($parent, $data)"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="row margin-bottom">
                 <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
                     <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
@@ -39,7 +53,7 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor"> 
+            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
                 <div class="row margin-bottom">
                     <label class="control-label col-sm-4 col-lg-2">Preferred mentor</label>
                     <div class="col-sm-4">
