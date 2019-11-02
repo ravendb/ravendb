@@ -84,8 +84,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly MapReduceIndex _index;
             private readonly List<string> _reduceKeyHashesToDelete = new List<string>();
 
-            private readonly Dictionary<string, List<BlittableJsonReaderObject>> _reduceDocuments =
-                new Dictionary<string, List<BlittableJsonReaderObject>>();
+            private readonly Dictionary<string, List<object>> _reduceDocuments = new Dictionary<string, List<object>>();
+            private readonly Dictionary<string, List<BlittableJsonReaderObject>> _reduceDocumentsForReplayTransaction;
             private readonly JsonOperationContext _indexContext;
 
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex, MapReduceIndex index, JsonOperationContext context)
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             internal OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex, Dictionary<string, List<BlittableJsonReaderObject>> reduceDocuments)
                 : this(database, outputReduceToCollection, reduceOutputIndex)
             {
-                _reduceDocuments = reduceDocuments;
+                _reduceDocumentsForReplayTransaction = reduceDocuments;
             }
 
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex)
@@ -126,45 +126,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
                 }
 
+                if (_reduceDocumentsForReplayTransaction != null)
+                {
+                    ProcessReduceDocumentsForReplayTransaction(context);
+                    return _reduceDocumentsForReplayTransaction.Count;
+                }
+
                 foreach (var output in _reduceDocuments)
                 {
                     for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
                     {
                         var key = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
-                        var doc = output.Value[i];
+                        var obj = output.Value[i];
 
-                        _database.DocumentsStorage.Put(context, key, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-
-                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, doc.Size);
+                        using (var doc = GenerateReduceOutput(obj))
+                        {
+                            _database.DocumentsStorage.Put(context, key, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                            context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, doc.Size);
+                        }
                     }
                 }
 
                 return _reduceDocuments.Count;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            private BlittableJsonReaderObject GenerateReduceOutput(object obj)
             {
-                return new OutputReduceToCollectionCommandDto
-                {
-                    OutputReduceToCollection = _outputReduceToCollection,
-                    ReduceOutputIndex = _reduceOutputIndex,
-                    ReduceDocuments = _reduceDocuments
-                };
-            }
-
-            public void AddReduce(string reduceKeyHash, object reduceObject)
-            {
-                if (_reduceDocuments.TryGetValue(reduceKeyHash, out var outputs) == false)
-                {
-                    outputs = new List<BlittableJsonReaderObject>(1);
-                    _reduceDocuments.Add(reduceKeyHash, outputs);
-                }
-                
                 var djv = new DynamicJsonValue();
 
-                if (_index.OutputReduceToCollectionPropertyAccessor == null)
-                    _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
-                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
+                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(obj))
                 {
                     var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
@@ -174,22 +164,55 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     [Constants.Documents.Metadata.Collection] = _outputReduceToCollection
                 };
 
-                var doc = _indexContext.ReadObject(djv, "output-of-reduce-doc", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                return _indexContext.ReadObject(djv, "output-of-reduce-doc", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
 
-                outputs.Add(doc);
+            private void ProcessReduceDocumentsForReplayTransaction(DocumentsOperationContext context)
+            {
+                foreach (var output in _reduceDocumentsForReplayTransaction)
+                {
+                    for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
+                    {
+                        var key = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
+                        var doc = output.Value[i];
+
+                        using (doc)
+                        {
+                            _database.DocumentsStorage.Put(context, key, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                            context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, doc.Size);
+                        }
+                    }
+                }
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new OutputReduceToCollectionCommandDto
+                {
+                    OutputReduceToCollection = _outputReduceToCollection,
+                    ReduceOutputIndex = _reduceOutputIndex,
+                    ReduceDocuments = _reduceDocuments.ToDictionary(x => x.Key, y => y.Value.Select(GenerateReduceOutput).ToList())
+            };
+            }
+
+            public void AddReduce(string reduceKeyHash, object reduceObject)
+            {
+                if (_reduceDocuments.TryGetValue(reduceKeyHash, out var outputs) == false)
+                {
+                    outputs = new List<object>(1);
+                    _reduceDocuments.Add(reduceKeyHash, outputs);
+                }
+
+                if (_index.OutputReduceToCollectionPropertyAccessor == null)
+                    _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
+
+                outputs.Add(reduceObject);
             }
 
             public void DeleteReduce(string reduceKeyHash)
             {
                 _reduceKeyHashesToDelete.Add(reduceKeyHash);
-
-                if (_reduceDocuments.Remove(reduceKeyHash, out var outputs))
-                {
-                    foreach (var bjro in outputs)
-                    {
-                        bjro.Dispose();
-                    }
-                }
+                _reduceDocuments.Remove(reduceKeyHash, out _);
             }
 
             public static bool IsOutputDocumentPrefix(string prefix)
@@ -232,13 +255,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void Dispose()
             {
-                foreach (var r in _reduceDocuments)
-                {
-                    foreach (var doc in r.Value)
-                    {
-                        doc.Dispose();
-                    }
-                }
             }
         }
     }
