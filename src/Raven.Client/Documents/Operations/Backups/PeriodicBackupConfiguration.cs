@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public BackupType BackupType { get; set; }
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
         public RetentionPolicy RetentionPolicy { get; set; }
-        public Snapshot Snapshot { get; set; }
+        public SnapshotSettings SnapshotSettings { get; set; }
 
         public LocalSettings LocalSettings { get; set; }
         public S3Settings S3Settings { get; set; }
@@ -141,7 +141,7 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(BackupType)] = BackupType,
                 [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
                 [nameof(RetentionPolicy)] = RetentionPolicy?.ToJson(),
-                [nameof(Snapshot)] = Snapshot?.ToJson(),
+                [nameof(SnapshotSettings)] = SnapshotSettings?.ToJson(),
                 [nameof(FullBackupFrequency)] = FullBackupFrequency,
                 [nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency,
                 [nameof(LocalSettings)] = LocalSettings?.ToJson(),
