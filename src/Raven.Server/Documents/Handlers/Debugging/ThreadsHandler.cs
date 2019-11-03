@@ -6,11 +6,11 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Session;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator)]
-        public Task StackTrace()
+        [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task StackTrace()
         {
             if (PlatformDetails.RunningOnMacOsx)
                 throw new NotSupportedException("Capturing live stack traces is not supported by RavenDB on MacOSX");
@@ -43,20 +43,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (wait > 0)
                 {
                     // I expect this to be _rare_, but we need to wait to get a correct measure of the cpu
-                    Thread.Sleep((int)wait);
+                    await Task.Delay((int)wait);
                 }
 
                 var threadStats = threadsUsage.Calculate();
                 result["Threads"] = JArray.FromObject(threadStats.List);
 
-                using (var writer = new StreamWriter(ResponseBodyStream()))
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    result.WriteTo(new JsonTextWriter(writer) { Indentation = 4 });
-                    writer.Flush();
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, EntityToBlittable.ConvertCommandToBlittable(result, context));
+                    }
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
