@@ -783,9 +783,8 @@ namespace Raven.Server.Rachis
         
         public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
-        public void NotifyAboutException(string nodeTag, string message, Exception e)
+        public void NotifyAboutException(string node, string title, string message, Exception e)
         {
-            var title = $"Node {nodeTag} encountered an error";
             var alert = AlertRaised.Create(
                 null,
                 title,
@@ -799,7 +798,7 @@ namespace Raven.Server.Rachis
 
             if (ErrorsList.Any(err => err.error.Id == alert.Id) == false)
             {
-                ErrorsList.Enqueue((nodeTag, alert));
+                ErrorsList.Enqueue((node, alert));
                 ErrorsList.Reduce(25);
             }
         }

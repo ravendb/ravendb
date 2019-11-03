@@ -59,7 +59,7 @@ namespace Raven.Server.Rachis
 
         public override void Notify(Notification notification)
         {
-            _serverStore.NotificationCenter.Add(notification);
+            _serverStore.NotificationCenter.Add(notification, updateExisting: false);
         }
 
         protected override void InitializeState(TransactionOperationContext context)
