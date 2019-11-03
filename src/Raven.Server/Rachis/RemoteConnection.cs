@@ -337,7 +337,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                using(_disposerLock.EnsureNotDisposed())
+                using (_disposerLock.EnsureNotDisposed())
                 using (
                     var json = context.ParseToMemory(_stream, "rachis-item",
                         BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
