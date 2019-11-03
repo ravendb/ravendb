@@ -140,7 +140,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private readonly Dictionary<string, long> _lastLogs = new Dictionary<string, long>();
 
-        private void LogMessage(string message, Exception e = null, bool info = true, string database = null)
+        private void LogMessage(string message, Exception e = null, string database = null)
         {
             if (_iteration % 10_000 == 0)
                 _lastLogs.Clear();
@@ -154,15 +154,9 @@ namespace Raven.Server.ServerWide.Maintenance
             _lastLogs[message] = _iteration;
             AddToDecisionLog(database, message);
 
-            if (_logger.IsInfoEnabled && info)
+            if (_logger.IsInfoEnabled)
             {
                 _logger.Info(message, e);
-                return;
-            }
-
-            if (_logger.IsOperationsEnabled)
-            {
-                _logger.Operations(message, e);
             }
         }
 
@@ -522,7 +516,7 @@ namespace Raven.Server.ServerWide.Maintenance
             );
 
             NotificationCenter.Add(alert, updateExisting: false);
-            LogMessage(alertMsg, info: false, database: dbName);
+            LogMessage(alertMsg, database: dbName);
         }
 
         private void RaiseNodeNotFoundAlert(string alertMsg, string node)
@@ -536,7 +530,7 @@ namespace Raven.Server.ServerWide.Maintenance
             );
 
             NotificationCenter.Add(alert, updateExisting: false);
-            LogMessage(alertMsg, info: false);
+            LogMessage(alertMsg);
         }
 
         private string UpdateDatabaseTopology(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
@@ -592,7 +586,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 // Give one minute of grace before we move the node to a rehab
-                if (DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime) < current[member]?.LastSuccessfulUpdateDateTime)
+                if (DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime) < nodeStats.LastSuccessfulUpdateDateTime)
                 {
                     continue;
                 }
@@ -771,7 +765,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var tryPromote = TryPromote(dbName, databaseTopology, current, previous, mentorNode, rehab);
                         if (tryPromote.Promote)
                         {
-                            LogMessage($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.", info: false, database: dbName);
+                            LogMessage($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.", database: dbName);
 
                             databaseTopology.Members.Add(rehab);
                             databaseTopology.Rehabs.Remove(rehab);
@@ -872,7 +866,7 @@ namespace Raven.Server.ServerWide.Maintenance
             topology.PromotablesStatus[member] = nodeStats?.ServerReport.OutOfCpuCredits == true ?
                 DatabasePromotionStatus.OutOfCpuCredits : DatabasePromotionStatus.NotResponding;
 
-            LogMessage($"Node {member} of database '{dbName}': {reason}", info: false, database: dbName);
+            LogMessage($"Node {member} of database '{dbName}': {reason}", database: dbName);
 
             return true;
         }
@@ -971,7 +965,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (indexesCatchedUp)
             {
-                LogMessage($"We try to promoted the database '{dbName}' on {promotable} to be a full member", info: false, database: dbName);
+                LogMessage($"We try to promoted the database '{dbName}' on {promotable} to be a full member", database: dbName);
 
                 topology.PromotablesStatus.Remove(promotable);
                 topology.DemotionReasons.Remove(promotable);
@@ -1027,8 +1021,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (nodesToDelete.Count == 0)
                 return;
 
-            LogMessage($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.",
-                info: false, database: dbName);
+            LogMessage($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.", database: dbName);
 
             var deletionCmd = new DeleteDatabaseCommand(dbName, RaftIdGenerator.NewId())
             {
@@ -1124,10 +1117,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (bestNode == null)
             {
-                LogMessage($"The database '{db}' on {badNode} has not responded for a long time, but there is no free node to reassign it.", info: false, database: db);
+                LogMessage($"The database '{db}' on {badNode} has not responded for a long time, but there is no free node to reassign it.", database: db);
                 return false;
             }
-            LogMessage($"The database '{db}' on {badNode} has not responded for a long time, so we reassign it to {bestNode}.", info: false, database: db);
+            LogMessage($"The database '{db}' on {badNode} has not responded for a long time, so we reassign it to {bestNode}.", database: db);
 
             return true;
         }
