@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Queries.Results
                         args[i] = Tuple.Create(document, luceneDoc, state, indexFields, anyDynamicIndexFields);
                     }
                 }
-                value = GetFunctionValue(fieldToFetch, document?.Id, args);
+                value = GetFunctionValue(fieldToFetch, document, args);
                 return true;
             }
 
@@ -632,7 +632,7 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
-        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, string documentId, object[] args)
+        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, object[] args)
         {
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
@@ -641,7 +641,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
-                    documentId,
+                    document,
                     args);
 
                 return value;
@@ -714,18 +714,18 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
+        public object InvokeFunction(string methodName, Query query, Document document, object[] args)
         {
             if (query.DeclaredFunctions != null && 
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) && 
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
-                return InvokeTimeSeriesFunction(func.TimeSeries, query, documentId, args);
+                return InvokeTimeSeriesFunction(func.TimeSeries, query, document, args);
 
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
-                _includeDocumentsCommand?.AddRange(run.Includes, documentId);
+                _includeDocumentsCommand?.AddRange(run.Includes, document?.Id);
 
                 if (result.IsNull)
                     return null;
@@ -734,10 +734,25 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, Query query, string documentId, object[] args)
+        private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, Query query, Document document, object[] args)
         {
+            string documentId = document?.Id;
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
-            var source = ((FieldExpression)func.Between.Source).FieldValue;
+
+            var compound = ((FieldExpression)func.Between.Source).Compound;
+            string source;
+
+            if (compound.Count > 1)
+            {
+                // operate on timeseries of a loaded document
+
+                source = ((FieldExpression)func.Between.Source).FieldValueWithoutAlias;
+                documentId = GetSourceId(query, compound[0], document);
+            }
+            else
+            {
+                source = ((FieldExpression)func.Between.Source).FieldValue;
+            }
 
             var min = GetDateValue(func.Between.Min);
             var max = GetDateValue(func.Between.Max);
@@ -841,6 +856,18 @@ namespace Raven.Server.Documents.Queries.Results
                     aggStates[i].Init();
                 }
             }
+        }
+
+        private string GetSourceId(Query query, StringSegment sourceAlias, Document document)
+        {
+            var loadExpression = query.Load?.FirstOrDefault(x => x.Alias == sourceAlias);
+            if (loadExpression.HasValue == false)
+                throw new ArgumentException($"Unable to invoke time series function, unknown alias '{sourceAlias}'.");
+
+            BlittableJsonTraverser.Default.TryRead(document.Data, 
+                ((FieldExpression)loadExpression.Value.Expression).FieldValueWithoutAlias, out var sourceId, out _);
+
+            return sourceId.ToString();
         }
 
         private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
