@@ -198,7 +198,7 @@ namespace Raven.Server.Web.System
                 {
                     // the node was added successfully, but failed to start 
                     // in this case we don't want the request executor of the client to fail-over (so we wouldn't create an additional node)
-                    throw new InvalidOperationException(e.Message);
+                    throw new InvalidOperationException(e.Message, e);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
