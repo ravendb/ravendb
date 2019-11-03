@@ -1397,9 +1397,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 select = SelectClauseExpressions("SELECT", false);
             }
 
-/*            if (Scanner.TryScan('}') == false)
-                ThrowParseException($"Failed to find opening parentheses }} for {name}");*/
-
             return new TimeSeriesFunction
             {
                 Between = between,
