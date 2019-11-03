@@ -513,7 +513,21 @@ namespace Raven.Server.Documents
                 if (awaiter.IsCompleted == false)
                 {
                     cts.Cancel();
-                    ThrowServerIsBeingDisposed(databaseName);
+                    try
+                    {
+                        ThrowServerIsBeingDisposed(databaseName);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            awaiter.GetResult()?.Dispose();
+                        }
+                        catch
+                        {
+                            // nothing to do here
+                        }
+                    }
                 }
 
                 return awaiter.GetResult();

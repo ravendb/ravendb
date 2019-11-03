@@ -790,7 +790,24 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var db in _engine.StateMachine.GetDatabaseNames(context))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged).Wait(ServerShutdown);
+                    Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            }
+                            catch (Exception e)
+                            {
+                                if (ServerShutdown.IsCancellationRequested)
+                                    return;
+
+                                if (Logger.IsInfoEnabled)
+                                {
+                                    Logger.Info($"Failed to trigger database {db}.", e);
+                                }
+                            }
+                        },
+                        ServerShutdown);
                 }
 
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
