@@ -551,7 +551,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
-                    Snapshot = new Snapshot
+                    SnapshotSettings = new SnapshotSettings
                     {
                         CompressionLevel = compressionLevel
                     },

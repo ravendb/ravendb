@@ -93,7 +93,7 @@ class periodicBackupConfiguration {
 
         this.updateFolderPathOptions(folderPath);
 
-        this.snapshot(!dto.Snapshot ? snapshot.empty() : new snapshot(dto.Snapshot));
+        this.snapshot(!dto.SnapshotSettings ? snapshot.empty() : new snapshot(dto.SnapshotSettings));
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
         this.encryptionSettings(new encryptionSettings(this.databaseName, encryptedDatabase, this.backupType, dto.BackupEncryptionSettings, this.isServerWide()));
 
@@ -244,7 +244,7 @@ class periodicBackupConfiguration {
             FtpSettings: this.ftpSettings().toDto(),
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             BackupEncryptionSettings: this.encryptionSettings().toDto(),
-            Snapshot: this.snapshot().toDto(),
+            SnapshotSettings: this.snapshot().toDto(),
             RetentionPolicy: this.retentionPolicy().toDto()
         };
     }
@@ -268,7 +268,7 @@ class periodicBackupConfiguration {
                 Key: "",
                 EncryptionMode: null
             },
-            Snapshot: null,
+            SnapshotSettings: null,
             RetentionPolicy: null,
             
         }, serverLimits, encryptedDatabase, isServerWide);

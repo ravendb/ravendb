@@ -14,7 +14,7 @@ class snapshot {
 
     compressionLevel = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.Snapshot) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.SnapshotSettings) {
         const compressionLevel = snapshot.compressionLevelDictionary.find(x => x.fullName === dto.CompressionLevel);
         this.compressionLevel(compressionLevel.name);
     }
@@ -23,7 +23,7 @@ class snapshot {
         this.compressionLevel(option);
     }
 
-    toDto(): Raven.Client.Documents.Operations.Backups.Snapshot {
+    toDto(): Raven.Client.Documents.Operations.Backups.SnapshotSettings {
         const compressionLevel = snapshot.compressionLevelDictionary.find(x => x.name === this.compressionLevel());
 
         return {

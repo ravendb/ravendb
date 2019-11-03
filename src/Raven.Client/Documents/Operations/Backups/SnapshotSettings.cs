@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class Snapshot : IDynamicJson
+    public class SnapshotSettings : IDynamicJson
     {
         public CompressionLevel CompressionLevel { get; set; }
 
