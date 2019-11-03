@@ -266,6 +266,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                     catch (Exception e)
                     {
+                        if (_token.IsCancellationRequested)
+                            return; 
+
                         if (_log.IsInfoEnabled)
                         {
                             _log.Info($"Exception was thrown while collecting info from {ClusterTag}", e);

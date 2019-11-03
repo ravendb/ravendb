@@ -230,6 +230,8 @@ namespace Raven.Server.Rachis
                         }
 
                         obtainConnectionFailure = false;
+                        // TODO: Dismiss notification
+
                         _debugRecorder.Record("Connection obtained");
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected with {_tag}";
@@ -374,6 +376,7 @@ namespace Raven.Server.Rachis
                                 break;
 
                             connectionBroken = false;
+                            // TODO: Dismiss notification
 
                             var task = _leader.WaitForNewEntries();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -469,7 +472,7 @@ namespace Raven.Server.Rachis
                     _engine.Log.Info(message, e);
                 }
 
-                _leader?.NotifyAboutException(Tag, message, e);
+                _leader?.NotifyAboutException(_tag, $"Node {_tag} encountered an error", message, e);
             }
 
             if (isGracefulError)
