@@ -87,6 +87,16 @@ namespace Raven.Server.Documents.Queries.AST
 
             GraphQuery.WithEdgePredicates.Add(alias, expr);
         }
+
+        public bool TryAddTimeSeriesFunction(DeclaredFunction func)
+        {
+            if (DeclaredFunctions == null)
+                DeclaredFunctions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase);
+
+            func.Name = "__timeSeriesAggregationFunction" + DeclaredFunctions.Count;
+
+            return DeclaredFunctions.TryAdd(func.Name, func);
+        }
     }
 
     public class DeclaredFunction
