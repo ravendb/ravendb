@@ -169,25 +169,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 case QueryType.Select:
                     if (Scanner.TryScan("SELECT"))
-                    {
-                        if (Scanner.TryScan("timeseries") == false)
-                        {
-                            query.Select = SelectClause("SELECT", query);
-                            break;
-                        }
-
-                        var func = SelectTimeSeries();
-
-                        if (query.TryAddFunction(func) == false)
-                        {
-                            message = $"{func.Name} function was declared multiple times";
-                            return false;
-                        }
-
-                        break;
-
-                    }
-
+                        query.Select = SelectClause("SELECT", query);
                     if (Scanner.TryScan("INCLUDE"))
                         query.Include = IncludeClause();
                     break;
@@ -240,7 +222,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        private DeclaredFunction SelectTimeSeries()
+        private DeclaredFunction SelectTimeSeries(StringSegment? rootSource = default)
         {
             var start = Scanner.Position;
 
@@ -256,7 +238,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (_timeSeriesParser.Scanner.TryScan('(') == false)
                 ThrowParseException("Failed to find open parentheses ( for time series select function");
 
-            var ts = _timeSeriesParser.ParseTimeSeriesBody("time series select function");
+            var ts = _timeSeriesParser.ParseTimeSeriesBody("time series select function", rootSource?.Value);
 
             if (_timeSeriesParser.Scanner.TryScan(')') == false)
                 ThrowParseException("Failed to find closing parentheses ) for time series select function");
@@ -264,7 +246,6 @@ namespace Raven.Server.Documents.Queries.Parser
             return new DeclaredFunction
             {
                 Type = AST.DeclaredFunction.FunctionType.TimeSeries, 
-                Name = "timeseries", 
                 FunctionText = functionText, 
                 TimeSeries = ts
             };
@@ -1371,7 +1352,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return func;
         }
 
-        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
+        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource)
         {
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
@@ -1532,16 +1513,17 @@ namespace Raven.Server.Documents.Queries.Parser
                 return null;
 
             var functionStart = Scanner.Position;
+
             if (Scanner.FunctionBody())
             {
                 query.SelectFunctionBody.FunctionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
                 return new List<(QueryExpression, StringSegment?)>();
             }
 
-            return SelectClauseExpressions(clause, true);
+            return SelectClauseExpressions(clause, aliasAsRequired: true, query : query);
         }
 
-        private List<(QueryExpression, StringSegment?)> SelectClauseExpressions(string clause, bool aliasAsRequired)
+        private List<(QueryExpression, StringSegment?)> SelectClauseExpressions(string clause, bool aliasAsRequired, Query query = null)
         {
             var select = new List<(QueryExpression Expr, StringSegment? Alias)>();
 
@@ -1550,7 +1532,16 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryExpression expr;
                 if (Field(out var field))
                 {
-                    if (Scanner.TryScan('('))
+                    if (field.FieldValue == "timeseries")
+                    {
+                        var func = SelectTimeSeries(query?.From.Alias);
+
+                        if (query?.TryAddTimeSeriesFunction(func) == false)
+                            ThrowParseException($"{func.Name} time series function was declared multiple times");
+
+                        expr = new MethodExpression(func.Name, new List<QueryExpression>());
+                    }
+                    else if (Scanner.TryScan('('))
                     {
                         if (Method(field, out var method) == false)
                             ThrowParseException("Expected method call in " + clause);
