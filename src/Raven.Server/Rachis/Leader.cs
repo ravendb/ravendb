@@ -783,17 +783,17 @@ namespace Raven.Server.Rachis
         
         public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
-        public void NotifyAboutException(string nodeTag, Exception e)
+        public void NotifyAboutException(string nodeTag, string message, Exception e)
         {
             var title = $"Node {nodeTag} encountered an error";
             var alert = AlertRaised.Create(
                 null,
                 title,
-                e.Message,
+                message,
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 key: title,
-                details: new ExceptionDetails(e.InnerException));
+                details: new ExceptionDetails(e));
 
             _engine.Notify(alert);
 
