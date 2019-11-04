@@ -222,46 +222,34 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H:mm:ss}.txt";
 
+            var isInfoEnabled = LoggingSource.Instance.IsInfoEnabled;
+            var isOperationsEnabled = LoggingSource.Instance.IsOperationsEnabled;
             try
             {
-                var ms = new MemoryStream();
-                var isInfoEnabled = LoggingSource.Instance.IsInfoEnabled;
-                var isOperationsEnabled = LoggingSource.Instance.IsOperationsEnabled;
-
-                if (isInfoEnabled == false)
-                    LoggingSource.Instance.IsInfoEnabled = true;
-                if (isOperationsEnabled == false)
-                    LoggingSource.Instance.IsOperationsEnabled = true;
-
-                LoggingSource.Instance.AttachPipeSink(ms);
-                var sp = Stopwatch.StartNew();
-
-                while (sp.ElapsedMilliseconds < 15000)
-                {
-                    await Task.Delay(3000);
-                }
-
-                LoggingSource.Instance.DetachPipeSink();
-
-                if (isInfoEnabled == false)
-                    LoggingSource.Instance.IsInfoEnabled = false;
-                if (isOperationsEnabled == false)
-                    LoggingSource.Instance.IsOperationsEnabled = false;
-
-                ms.Position = 0;
+                LoggingSource.Instance.IsInfoEnabled = true;
+                LoggingSource.Instance.IsOperationsEnabled = true;
 
                 var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
                 using (var entryStream = entry.Open())
                 {
-                    await ms.CopyToAsync(entryStream);
+                    LoggingSource.Instance.AttachPipeSink(entryStream);
+
+                    await Task.Delay(15000);
+                    LoggingSource.Instance.DetachPipeSink();
+
                     await entryStream.FlushAsync();
                 }
             }
             catch (Exception e)
             {
                 DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, prefix);
+            }
+            finally
+            {
+                LoggingSource.Instance.IsInfoEnabled = isInfoEnabled;
+                LoggingSource.Instance.IsOperationsEnabled = isOperationsEnabled;
             }
         }
 
