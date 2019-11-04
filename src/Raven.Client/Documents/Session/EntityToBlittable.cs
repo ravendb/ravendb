@@ -452,12 +452,34 @@ namespace Raven.Client.Documents.Session
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
 
-        private static Type GetPropertyType(string propertyName, Type rootType)
+        internal static Type GetPropertyType(string propertyName, Type rootType)
         {
             if (rootType == null)
                 return null;
 
-            var memberInfo = ReflectionUtil.GetPropertyOrFieldFor(rootType, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, propertyName);
+            MemberInfo memberInfo = null;
+            try
+            {
+                memberInfo = ReflectionUtil.GetPropertyOrFieldFor(rootType, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic, propertyName);
+            }
+            catch (AmbiguousMatchException)
+            {
+                var memberInfos = ReflectionUtil.GetPropertiesAndFieldsFor(rootType, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Where(x => x.Name == propertyName)
+                    .ToList();
+
+                while (typeof(object) != rootType)
+                {
+                    memberInfo = memberInfos.FirstOrDefault(x => x.DeclaringType == rootType);
+                    if (memberInfo != null)
+                        break;
+
+                    if (rootType.BaseType == null)
+                        break;
+
+                    rootType = rootType.BaseType;
+                }
+            }
 
             switch (memberInfo)
             {
