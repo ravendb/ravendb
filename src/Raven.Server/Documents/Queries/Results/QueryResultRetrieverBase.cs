@@ -736,11 +736,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, Query query, Document document, object[] args)
         {
-            string documentId = document?.Id;
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
-
             var compound = ((FieldExpression)func.Between.Source).Compound;
+
             string source;
+            string documentId;
 
             if (compound.Count > 1)
             {
@@ -751,6 +751,16 @@ namespace Raven.Server.Documents.Queries.Results
             }
             else
             {
+                if (args?.Length > 0 && args[0] is Document documentArgument)
+                {
+                    // take the id from argument 
+                    documentId = documentArgument.Id;
+                }
+                else
+                {
+                    documentId = document?.Id;
+                }
+
                 source = ((FieldExpression)func.Between.Source).FieldValue;
             }
 
