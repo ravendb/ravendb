@@ -70,8 +70,8 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(IndexType type, TIndexDefinition definition, bool hasOutputReduceToCollection)
-            : base(type, definition, hasOutputReduceToCollection)
+        protected Index(IndexType type, TIndexDefinition definition)
+            : base(type, definition)
         {
         }
     }
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly double _txAllocationsRatio;
 
-        protected Index(IndexType type, IndexDefinitionBase definition, bool hasOutputReduceToCollection)
+        protected Index(IndexType type, IndexDefinitionBase definition)
         {
             Type = type;
             Definition = definition;
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (type.IsMapReduce())
             {
-                _txAllocationsRatio = hasOutputReduceToCollection ? 4 : 3;
+                _txAllocationsRatio = (definition is MapReduceIndexDefinition mpd && mpd.OutputReduceToCollection != null) ? 4 : 3;
             }
             else
             {
