@@ -102,6 +102,7 @@ namespace Raven.Server.ServerWide
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _clusterRequestExecutor;
+        private long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
         private readonly RavenServer _server;
@@ -445,15 +446,9 @@ namespace Raven.Server.ServerWide
                 return GetClusterTopology(context);
             }
         }
-
         public bool HasTopologyChanged(long topologyEtag)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var currentTopologyEtag = _engine.GetTopologyEtag(context);
-                return topologyEtag != currentTopologyEtag;
-            }
+            return _lastClusterTopologyIndex != topologyEtag;
         }
 
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
@@ -955,6 +950,9 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
         {
+            if (_lastClusterTopologyIndex < topology.Etag)
+                _lastClusterTopologyIndex = topology.Etag;
+
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 
