@@ -84,6 +84,30 @@ namespace SlowTests.Issues
             Assert.Equal(typeof(RefDerived1), type0);
         }
 
+        [Fact]
+        public void ShouldAssignTheTypeOfDerivedPropertiesWithInterface()
+        {
+            var entity4 = new IDocumentWithPropertyTypeOverride4();
+            var type4 = EntityToBlittable.GetPropertyType(nameof(entity4.Reference), entity4.GetType());
+            Assert.Equal(typeof(IRefDerived3), type4);
+
+            var entity3 = new IDocumentWithPropertyTypeOverride3();
+            var type3 = EntityToBlittable.GetPropertyType(nameof(entity3.Reference), entity3.GetType());
+            Assert.Equal(typeof(IRefDerived3), type3);
+
+            var entity2 = new IDocumentWithPropertyTypeOverride2();
+            var type2 = EntityToBlittable.GetPropertyType(nameof(entity2.Reference), entity2.GetType());
+            Assert.Equal(typeof(IRefDerived2), type2);
+
+            var entity1 = new IDocumentWithPropertyTypeOverride1();
+            var type1 = EntityToBlittable.GetPropertyType(nameof(entity1.Reference), entity1.GetType());
+            Assert.Equal(typeof(IRefDerived2), type1);
+
+            var entity0 = new IDocumentWithPropertyTypeOverrideBase();
+            var type0 = EntityToBlittable.GetPropertyType(nameof(entity0.Reference), entity0.GetType());
+            Assert.Equal(typeof(IRefBase), type0);
+        }
+
         private class RefBase
         {
         }
@@ -121,6 +145,45 @@ namespace SlowTests.Issues
         }
 
         private class DocumentWithPropertyTypeOverride4 : DocumentWithPropertyTypeOverride3
+        {
+        }
+
+        private interface IDocumentBase
+        {
+            IRefBase Reference { get; set; }
+        }
+
+        private interface IRefBase
+        {
+        }
+
+        private class IRefDerived2 : IRefBase
+        {
+        }
+        private class IRefDerived3 : IRefBase
+        {
+        }
+
+        private class IDocumentWithPropertyTypeOverrideBase : IDocumentBase
+        {
+            public IRefBase Reference { get; set; }
+        }
+
+        private class IDocumentWithPropertyTypeOverride1 : IDocumentWithPropertyTypeOverrideBase
+        {
+            public new IRefDerived2 Reference { get; set; }
+        }
+
+        private class IDocumentWithPropertyTypeOverride2 : IDocumentWithPropertyTypeOverride1
+        {
+        }
+
+        private class IDocumentWithPropertyTypeOverride3 : IDocumentWithPropertyTypeOverride2
+        {
+            public new IRefDerived3 Reference { get; set; }
+        }
+
+        private class IDocumentWithPropertyTypeOverride4 : IDocumentWithPropertyTypeOverride3
         {
         }
     }
