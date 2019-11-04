@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private int _statePos;
 
+        public const string TimeSeries = "timeseries";
+
         public QueryScanner Scanner = new QueryScanner();
         private Dictionary<StringSegment, SynteticWithQuery> _synteticWithQueries;
         private struct SynteticWithQuery
@@ -1261,7 +1263,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (isFunc == false)
             {
-                if (Scanner.TryScan("timeseries") == false)
+                if (Scanner.TryScan(TimeSeries) == false)
                     ThrowParseException("DECLARE clause found but missing 'function' keyword");
             }
 
@@ -1323,7 +1325,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private TimeSeriesFunction ParseTimeSeries(string name)
         {
-            if (Scanner.TryScan("timeseries") == false)// should never happen
+            if (Scanner.TryScan(TimeSeries) == false)// should never happen
                 ThrowParseException($"Expected to find timeseries token for {name}, but couldn't get it");
 
             if (Scanner.Identifier() == false) // should never happen
@@ -1529,7 +1531,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryExpression expr;
                 if (Field(out var field))
                 {
-                    if (field.FieldValue == "timeseries")
+                    if (field.FieldValue == TimeSeries)
                     {
                         var func = SelectTimeSeries(query?.From.Alias);
 
