@@ -1612,7 +1612,8 @@ namespace Raven.Client.Documents.Indexes
                     else if (isDictionaryObject)
                     {
                         Visit(expression);
-                        Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
+                        if(node.Method.Name != "get_Item")
+                            Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
                     }
                     else
                     {
@@ -1716,6 +1717,15 @@ namespace Raven.Client.Documents.Indexes
                     _isSelectMany = node.Method.Name == "SelectMany";
                     if (node.Method.Name == "Select" || _isSelectMany)
                         _avoidDuplicatedParameters = true;
+
+                    if(node.Arguments[num2].NodeType == ExpressionType.MemberAccess)
+                    {
+                        if (node.Arguments[num2].Type.IsPrimitive ||
+                            node.Arguments[num2].Type == typeof(string))
+                        {
+                            Out("(" + node.Arguments[num2].Type.FullName + ")");
+                        }
+                    }
 
                     Visit(node.Arguments[num2]);
 
