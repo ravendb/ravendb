@@ -7,11 +7,16 @@ using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
     public class AttachmentsStreamTests : RavenTestBase
     {
+        public AttachmentsStreamTests(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(1024)]
         [InlineData(32 * 1024)]

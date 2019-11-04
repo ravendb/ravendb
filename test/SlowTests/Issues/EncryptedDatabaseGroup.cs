@@ -3,6 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Graph;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
@@ -32,9 +34,10 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(options))
             {
-                var res = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(15));
-                var notInDbGroupServer = Servers.Single(s => res.Topology.Members.Contains(s.ServerStore.NodeTag) == false);
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var notInDbGroupServer = Servers.Single(s => record.Topology.Members.Contains(s.ServerStore.NodeTag) == false);
+                await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));
+                
                 var dbName = store.Database;
                 using (var notInDbGroupStore = GetDocumentStore(new Options
                 {
@@ -45,7 +48,7 @@ namespace SlowTests.Issues
                     ModifyDatabaseName = _ => dbName
                 }))
                 {
-                    await Assert.ThrowsAsync<Raven.Client.Exceptions.Database.DatabaseLoadFailureException>(async ()=> await TrySavingDocument(notInDbGroupStore));
+                    await Assert.ThrowsAsync<DatabaseLoadFailureException>(async ()=> await TrySavingDocument(notInDbGroupStore));
                     PutSecrectKeyForDatabaseInServersStore(dbName, notInDbGroupServer);
                     await notInDbGroupServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName, ignoreDisabledDatabase: true);
                     await TrySavingDocument(notInDbGroupStore);

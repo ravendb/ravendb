@@ -8,16 +8,21 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
     public class AttachmentsStreamStress : RavenTestBase
     {
+        public AttachmentsStreamStress(ITestOutputHelper output) : base(output)
+        {
+        }
+
         [Theory]
         [InlineData(1024 * 1024 * 1024)]
         public void CanGetOneAttachment(int size)
         {
-            using (var test = new AttachmentsStreamTests())
+            using (var test = new AttachmentsStreamTests(Output))
             {
                 test.CanGetOneAttachment(size);
             }
@@ -28,7 +33,7 @@ namespace StressTests.Client.Attachments
         [InlineData(1_000_000, 1)]
         public void CanGetListOfAttachmentsAndSkip(int count, int size)
         {
-            using (var test = new AttachmentsStreamTests())
+            using (var test = new AttachmentsStreamTests(Output))
             {
                 test.CanGetListOfAttachmentsAndSkip(count, size);
             }
@@ -39,7 +44,7 @@ namespace StressTests.Client.Attachments
         [InlineData(1_000_000, 1)]
         public void CanGetListOfAttachmentsAndReadOrdered(int count, int size)
         {
-            using (var test = new AttachmentsStreamTests())
+            using (var test = new AttachmentsStreamTests(Output))
             {
                 test.CanGetListOfAttachmentsAndReadOrdered(count, size);
             }
@@ -51,7 +56,7 @@ namespace StressTests.Client.Attachments
         [InlineData(1_000_000, 1)]
         public async Task CanGetListOfAttachmentsAndReadOrderedAsync(int count, int size)
         {
-            using (var test = new AttachmentsStreamTests())
+            using (var test = new AttachmentsStreamTests(Output))
             {
                 await test.CanGetListOfAttachmentsAndReadOrderedAsync(count, size);
             }

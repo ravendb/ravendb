@@ -15,6 +15,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data;
@@ -157,7 +158,8 @@ namespace Raven.Server.Rachis
                     }
                 }
 
-                var hadConnectionFailure = false;
+                var connectionBroken = false;
+                var obtainConnectionFailure = false;
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
                 {
@@ -218,7 +220,7 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            NotifyOnException(ref hadConnectionFailure, new Exception($"Failed to create a connection to node {_tag} at {_url}", e));
+                            NotifyOnException(ref obtainConnectionFailure, $"Failed to create a connection to node {_tag} at {_url}", e);
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
@@ -226,6 +228,9 @@ namespace Raven.Server.Rachis
                         {
                             needNewConnection = true;
                         }
+
+                        obtainConnectionFailure = false;
+                        // TODO: Dismiss notification
 
                         _debugRecorder.Record("Connection obtained");
                         Status = AmbassadorStatus.Connected;
@@ -370,7 +375,8 @@ namespace Raven.Server.Rachis
                             if (_running == false)
                                 break;
 
-                            hadConnectionFailure = false;
+                            connectionBroken = false;
+                            // TODO: Dismiss notification
 
                             var task = _leader.WaitForNewEntries();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -404,7 +410,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        NotifyOnException(ref hadConnectionFailure, new Exception($"The connection with node {_tag} was suddenly broken.", e));
+                        NotifyOnException(ref connectionBroken,$"The connection with node {_tag} was suddenly broken.", e);
 
                         if (e is TopologyMismatchException)
                         {
@@ -452,24 +458,44 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void NotifyOnException(ref bool hadConnectionFailure, Exception e)
+        private void NotifyOnException(ref bool hadConnectionFailure, string message, Exception e)
         {
             // It could be that due to election or leader change, the follower has forcefully closed the connection.
             // In any case we don't want to raise a notification due to a one-time connection failure.
-            if (hadConnectionFailure || e.InnerException is IOException == false)
+            var isGracefulError = IsGracefulError(e);
+            if (hadConnectionFailure || isGracefulError == false)
             {
                 Status = AmbassadorStatus.FailedToConnect;
-                StatusMessage = $"{e.Message}.{Environment.NewLine}" + e.InnerException;
+                StatusMessage = $"{message}.{Environment.NewLine}" + e;
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info(e.Message, e.InnerException);
+                    _engine.Log.Info(message, e);
                 }
-                _leader?.NotifyAboutException(Tag, e);
+
+                _leader?.NotifyAboutException(_tag, $"Node {_tag} encountered an error", message, e);
             }
-            if (e.InnerException is IOException)
+
+            if (isGracefulError)
             {
                 hadConnectionFailure = true;
             }
+        }
+
+        private bool IsGracefulError(Exception e)
+        {
+            if (e is AggregateException)
+                return IsGracefulError(e.InnerException);
+
+            if (e is LockAlreadyDisposedException)
+                return true;
+
+            if (e is TaskCanceledException)
+                return true;
+
+            if (e is IOException)
+                return true;
+
+            return false;
         }
 
         private void SendSnapshot(Stream stream)

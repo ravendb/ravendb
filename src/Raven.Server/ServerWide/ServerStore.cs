@@ -790,7 +790,24 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var db in _engine.StateMachine.GetDatabaseNames(context))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                    Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            }
+                            catch (Exception e)
+                            {
+                                if (ServerShutdown.IsCancellationRequested)
+                                    return;
+
+                                if (Logger.IsInfoEnabled)
+                                {
+                                    Logger.Info($"Failed to trigger database {db}.", e);
+                                }
+                            }
+                        },
+                        ServerShutdown);
                 }
 
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
@@ -969,42 +986,44 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType _) t)
+        private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _)
         {
-            switch (t.Type)
+            switch (type)
             {
                 case nameof(DeleteDatabaseCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Delete));
+                    NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Delete));
                     break;
                 case nameof(AddDatabaseCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Put));
+                    NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Put));
                     break;
                 case nameof(UpdateTopologyCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.Update));
+                    NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Update));
                     break;
                 case nameof(RemoveNodeFromDatabaseCommand):
-                    NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.RemoveNode));
+                    NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.RemoveNode));
                     break;
             }
+
+            return Task.CompletedTask;
         }
 
-        private void OnValueChanged(object sender, (long Index, string Type) t)
+        private async Task OnValueChanged(long index, string type)
         {
-            switch (t.Type)
+            switch (type)
             {
                 case nameof(RecheckStatusOfServerCertificateCommand):
                 case nameof(ConfirmReceiptServerCertificateCommand):
-                    ConfirmCertificateReceiptValueChanged(t).Wait(ServerShutdown);
+                    await ConfirmCertificateReceiptValueChanged(index, type);
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
-                    InstallUpdatedCertificateValueChanged(t).Wait(ServerShutdown);
+                    await InstallUpdatedCertificateValueChanged(index, type);
                     break;
                 case nameof(RecheckStatusOfServerCertificateReplacementCommand):
                 case nameof(ConfirmServerCertificateReplacedCommand):
-                    ConfirmCertificateReplacedValueChanged(t);
+                    ConfirmCertificateReplacedValueChanged(index, type);
                     break;
                 case nameof(PutClientConfigurationCommand):
-                    LastClientConfigurationIndex = t.Index;
+                    LastClientConfigurationIndex = index;
                     break;
                 case nameof(PutLicenseCommand):
                     LicenseManager.ReloadLicense();
@@ -1015,7 +1034,7 @@ namespace Raven.Server.ServerWide
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
                 case nameof(PutServerWideBackupConfigurationCommand):
-                    RescheduleTimerForIdleDatabases(t.Index);
+                    RescheduleTimerForIdleDatabases(index);
                     break;
             }
         }
@@ -1048,7 +1067,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ConfirmCertificateReplacedValueChanged((long Index, string Type) t)
+        private void ConfirmCertificateReplacedValueChanged(long index, string type)
         {
             try
             {
@@ -1120,19 +1139,19 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to process {t.Type}.", e);
+                    Logger.Operations($"Failed to process {type}.", e);
 
                 NotificationCenter.Add(AlertRaised.Create(
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
-                    $"Failed to process {t.Type}.",
+                    $"Failed to process {type}.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
         }
 
-        private async Task InstallUpdatedCertificateValueChanged((long Index, string Type) t)
+        private async Task InstallUpdatedCertificateValueChanged(long index, string type)
         {
             try
             {
@@ -1175,19 +1194,19 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to process {t.Type}.", e);
+                    Logger.Operations($"Failed to process {type}.", e);
 
                 NotificationCenter.Add(AlertRaised.Create(
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
-                    $"Failed to process {t.Type}.",
+                    $"Failed to process {type}.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
         }
 
-        private async Task ConfirmCertificateReceiptValueChanged((long Index, string Type) t)
+        private async Task ConfirmCertificateReceiptValueChanged(long index, string type)
         {
             try
             {
@@ -1345,12 +1364,12 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to process {t.Type}.", e);
+                    Logger.Operations($"Failed to process {type}.", e);
 
                 NotificationCenter.Add(AlertRaised.Create(
                     null,
                     CertificateReplacement.CertReplaceAlertTitle,
-                    $"Failed to process {t.Type}.",
+                    $"Failed to process {type}.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
@@ -2303,7 +2322,7 @@ namespace Raven.Server.ServerWide
 
         public NodeInfo GetNodeInfo()
         {
-            var memoryInformation = MemoryInformation.GetMemoryInfo();
+            var memoryInformation = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
             return new NodeInfo
             {
                 NodeTag = NodeTag,

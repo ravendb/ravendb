@@ -1,6 +1,7 @@
 using System;
 using Lextm.SharpSnmpLib;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Server.Utils;
 
@@ -22,7 +23,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             if (_store.Configuration.Core.RunInMemory)
                 return Empty;
 
-            var result = DiskSpaceChecker.GetDiskSpaceInfo(_store.Configuration.Core.DataDirectory.FullPath);
+            var result = _store.Server.MetricCacher.GetValue<DiskSpaceResult>(MetricCacher.Keys.Server.DiskSpaceInfo);
             if (result == null)
                 return Empty;
 

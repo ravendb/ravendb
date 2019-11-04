@@ -1,5 +1,6 @@
 using System;
 using Lextm.SharpSnmpLib;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -9,28 +10,17 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
     public class ServerTotalMemory : ScalarObjectBase<Gauge32>
     {
-        private readonly Lazy<SmapsReader> _smapsReader;
+        private readonly MetricCacher _metricCacher;
 
-        public ServerTotalMemory()
+        public ServerTotalMemory(MetricCacher metricCacher)
             : base(SnmpOids.Server.TotalMemory)
         {
-            if (PlatformDetails.RunningOnLinux)
-            {
-                _smapsReader = new Lazy<SmapsReader>(() =>
-                {
-                    return new SmapsReader(new[] { new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize] });
-                });
-            }
+            _metricCacher = metricCacher;
         }
 
         protected override Gauge32 GetData()
         {
-            lock (this)
-            {
-                var memoryInfo = MemoryInformation.GetMemoryInfo(_smapsReader?.Value, extended: true);
-
-                return new Gauge32(memoryInfo.WorkingSet.GetValue(SizeUnit.Megabytes));
-            }
+            return new Gauge32(_metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended).WorkingSet.GetValue(SizeUnit.Megabytes));
         }
     }
 }

@@ -29,15 +29,17 @@ namespace SlowTests.Issues
 
             var mre = new ManualResetEventSlim();
 
-            Server.ServerStore.Cluster.DatabaseChanged += (sender, tuple) =>
+            Server.ServerStore.Cluster.DatabaseChanged += (arg1,arg2,arg3,arg4) =>
             {
-                if (tuple.Type != nameof(RemoveNodeFromDatabaseCommand))
-                    return;
+                if (arg3 != nameof(RemoveNodeFromDatabaseCommand))
+                    return Task.CompletedTask;
 
                 var value = Interlocked.Increment(ref _numberOfDatabasesRemoved);
 
                 if (value == 3)
                     mre.Set();
+
+                return Task.CompletedTask;
             };
 
             var path = NewDataPath(forceCreateDir: true);

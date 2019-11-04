@@ -142,6 +142,7 @@ namespace Raven.Server.Documents
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricCounters();
+                MetricCacher = new DatabaseMetricCacher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
@@ -281,6 +282,9 @@ namespace Raven.Server.Documents
                     return;
 
                 _addToInitLog("Loading Database");
+
+                MetricCacher.Initialize();
+
                 long index;
                 DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -415,6 +419,7 @@ namespace Raven.Server.Documents
         }
 
         private readonly AsyncManualResetEvent _hasClusterTransaction;
+        public readonly DatabaseMetricCacher MetricCacher;
 
         public void NotifyOnPendingClusterTransaction(long index, DatabasesLandlord.ClusterDatabaseChangeType changeType)
         {
