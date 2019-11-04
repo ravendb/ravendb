@@ -17,11 +17,9 @@ namespace Raven.Server.Config.Categories
                 return;
             }
 
-            var memoryInfo = MemoryInformation.GetMemoryInfo();
-
             MaxTxSize = Size.Min(
                 new Size(512, SizeUnit.Megabytes),
-                memoryInfo.TotalPhysicalMemory / 10);
+                MemoryInformation.TotalPhysicalMemory / 10);
         }
 
         [Description("EXPERT: Time to wait after the previous async commit is completed before checking for the tx size")]

@@ -175,7 +175,7 @@ namespace Sparrow.Server.Utils
             }
         }
 
-        public static unsafe string GetWindowsRealPathByHandle(IntPtr handle)
+        private static unsafe string GetWindowsRealPathByHandle(IntPtr handle)
         {
             bool GetPath(uint bufferSize, out string outputPath)
             {

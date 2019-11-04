@@ -841,6 +841,7 @@ namespace Raven.Client.Util
 
 
                 if (!(context.Node is MemberExpression memberExpression) || 
+                    memberExpression.Expression == null || 
                     memberExpression.Expression.Type.IsNullableType() == false)
                     return;
 

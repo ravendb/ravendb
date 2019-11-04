@@ -59,7 +59,7 @@ namespace Raven.Server.Rachis
 
         public override void Notify(Notification notification)
         {
-            _serverStore.NotificationCenter.Add(notification);
+            _serverStore.NotificationCenter.Add(notification, updateExisting: false);
         }
 
         protected override void InitializeState(TransactionOperationContext context)
@@ -2115,7 +2115,8 @@ namespace Raven.Server.Rachis
             if (e is AggregateException)
                 return IsExpectedException(e.InnerException);
 
-            return e is OperationCanceledException || e is ObjectDisposedException;
+            return e is OperationCanceledException ||
+                   e is ObjectDisposedException;
         }
     }
 

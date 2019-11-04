@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents
     public class DatabasesLandlord : IDisposable
     {
         public const string DoNotRemove = "DoNotRemove";
-        private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
+        private readonly AsyncReaderWriterLock _disposing = new AsyncReaderWriterLock();
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
@@ -52,140 +53,113 @@ namespace Raven.Server.Documents
 
         public CatastrophicFailureHandler CatastrophicFailureHandler { get; }
 
-        public void ClusterOnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, ClusterDatabaseChangeType ChangeType) t)
+        public Task ClusterOnDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
-            HandleClusterDatabaseChanged(t.DatabaseName, t.Index, t.Type, t.ChangeType);
+            return HandleClusterDatabaseChanged(databaseName, index, type, changeType);
         }
 
-        private void HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
+        private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
         {
             if (PreventWakeUpIdleDatabase(databaseName, type))
                 return;
 
-            _disposing.EnterReadLock();
-            try
+            using (await _disposing.ReaderLockAsync(_serverStore.ServerShutdown))
             {
-                if (_serverStore.Disposed)
-                    return;
-
-                // response to changed database.
-                // if disabled, unload
-                DatabaseTopology topology;
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                try
                 {
-                    if (rawRecord == null)
-                    {
-                        // was removed, need to make sure that it isn't loaded
-                        UnloadDatabase(databaseName, dbRecordIsNull: true);
+                    if (_serverStore.Disposed)
                         return;
+
+                    // response to changed database.
+                    // if disabled, unload
+                    DatabaseTopology topology;
+                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                    {
+                        if (rawRecord == null)
+                        {
+                            // was removed, need to make sure that it isn't loaded
+                            UnloadDatabase(databaseName, dbRecordIsNull: true);
+                            return;
+                        }
+
+                        if (ShouldDeleteDatabase(context, databaseName, rawRecord))
+                            return;
+
+                        topology = rawRecord.GetTopology();
+                        if (topology.RelevantFor(_serverStore.NodeTag) == false)
+                            return;
+
+                        if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+                        {
+                            UnloadDatabase(databaseName);
+                            return;
+                        }
                     }
 
-                    if (ShouldDeleteDatabase(context, databaseName, rawRecord))
-                        return;
-
-                    topology = rawRecord.GetTopology();
-                    if (topology.RelevantFor(_serverStore.NodeTag) == false)
-                        return;
-
-                    if (rawRecord.IsDisabled() || rawRecord.GetDatabaseStateStatus() == DatabaseStateStatus.RestoreInProgress)
+                    if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
                     {
-                        UnloadDatabase(databaseName);
-                        return;
+                        // if the database isn't loaded, but it is relevant for this node, we need to create
+                        // it. This is important so things like replication will start pumping, and that 
+                        // configuration changes such as running periodic backup will get a chance to run, which
+                        // they wouldn't unless the database is loaded / will have a request on it.          
+                        task = TryGetOrCreateResourceStore(databaseName);
                     }
-                }
 
-                if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
-                {
-                    // if the database isn't loaded, but it is relevant for this node, we need to create
-                    // it. This is important so things like replication will start pumping, and that 
-                    // configuration changes such as running periodic backup will get a chance to run, which
-                    // they wouldn't unless the database is loaded / will have a request on it.          
-                    task = TryGetOrCreateResourceStore(databaseName);
-                }
+                    if (task.IsCanceled || task.IsFaulted)
+                        return;
 
-                if (task.IsCanceled || task.IsFaulted)
-                    return;
+                    var database = await task;
 
-                switch (changeType)
-                {
-                    case ClusterDatabaseChangeType.RecordChanged:
-                        if (task.IsCompleted)
-                        {
-                            NotifyDatabaseAboutStateChange(databaseName, task, index);
+                    switch (changeType)
+                    {
+                        case ClusterDatabaseChangeType.RecordChanged:
+                            database.StateChanged(index);
                             if (type == ClusterStateMachine.SnapshotInstalled)
                             {
-                                NotifyPendingClusterTransaction(databaseName, task, index, changeType);
+                                database.NotifyOnPendingClusterTransaction(index, changeType);
                             }
+                            break;
 
-                            return;
-                        }
+                        case ClusterDatabaseChangeType.ValueChanged:
+                            database.ValueChanged(index);
+                            break;
 
-                        task.ContinueWith(done =>
-                        {
-                            NotifyDatabaseAboutStateChange(databaseName, done, index);
-                            if (type == ClusterStateMachine.SnapshotInstalled)
-                            {
-                                NotifyPendingClusterTransaction(databaseName, done, index, changeType);
-                            }
-                        });
-                        break;
-                    case ClusterDatabaseChangeType.ValueChanged:
-                        if (task.IsCompleted)
-                        {
-                            NotifyDatabaseAboutValueChange(databaseName, task, index);
-                            return;
-                        }
+                        case ClusterDatabaseChangeType.PendingClusterTransactions:
+                        case ClusterDatabaseChangeType.ClusterTransactionCompleted:
+                            database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
+                            database.NotifyOnPendingClusterTransaction(index, changeType);
+                            break;
 
-                        task.ContinueWith(done => { NotifyDatabaseAboutValueChange(databaseName, done, index); });
-                        break;
-                    case ClusterDatabaseChangeType.PendingClusterTransactions:
-                    case ClusterDatabaseChangeType.ClusterTransactionCompleted:
-                        if (task.IsCompleted)
-                        {
-                            task.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, task, index, changeType);
-                            return;
-                        }
+                        default:
+                            ThrowUnknownClusterDatabaseChangeType(changeType);
+                            break;
+                    }
 
-                        task.ContinueWith(done =>
-                        {
-                            done.Result.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                            NotifyPendingClusterTransaction(databaseName, done, index, changeType);
-                        });
-
-                        break;
-                    default:
-                        ThrowUnknownClusterDatabaseChangeType(changeType);
-                        break;
+                    // if deleted, unload / deleted and then notify leader that we removed it
                 }
-
-                // if deleted, unload / deleted and then notify leader that we removed it
-            }
-            catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
-            {
-                // in the process of being deleted
-            }
-            catch (AggregateException ae) when (ae.InnerException is DatabaseDisabledException)
-            {
-                // the db is already disabled when we try to disable it
-            }
-            catch (DatabaseDisabledException)
-            {
-                // the database was disabled while we were trying to execute an action (e.g. PendingClusterTransactions)
-            }
-            catch (Exception e)
-            {
-                var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}'";
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(title, e);
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
-                    details: new ExceptionDetails(e)));
-            }
-            finally
-            {
-                _disposing.ExitReadLock();
+                catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+                {
+                    // in the process of being deleted
+                }
+                catch (AggregateException ae) when (ae.InnerException is DatabaseDisabledException)
+                {
+                    // the db is already disabled when we try to disable it
+                }
+                catch (DatabaseDisabledException)
+                {
+                    // the database was disabled while we were trying to execute an action (e.g. PendingClusterTransactions)
+                }
+                catch (Exception e)
+                {
+                    var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}' at index {index}";
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(title, e);
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
+                        details: new ExceptionDetails(e)));
+                    throw;
+                }
             }
         }
 
@@ -197,7 +171,6 @@ namespace Raven.Server.Documents
             switch (type)
             {
                 case nameof(PutServerWideBackupConfigurationCommand):
-                    return true;
                 case nameof(UpdatePeriodicBackupStatusCommand):
                     return true;
                 default:
@@ -265,21 +238,6 @@ namespace Raven.Server.Documents
         private void UnloadDatabaseInternal(string databaseName)
         {
             DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _).Dispose();
-        }
-
-        public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task, long index, ClusterDatabaseChangeType changeType)
-        {
-            try
-            {
-                task.Result.NotifyOnPendingClusterTransaction(index, changeType);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to notify the database '{name}' about new cluster transactions.", e);
-                }
-            }
         }
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
@@ -378,59 +336,38 @@ namespace Raven.Server.Documents
             _serverStore.SendToLeaderAsync(cmd)
                 .ContinueWith(async t =>
                 {
-                    var ex = t.Exception.ExtractSingleInnerException();
-                    if (ex is DatabaseDoesNotExistException)
-                        return;
-
                     var message = $"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}', will retry again in 15 seconds.";
-                    if (_logger.IsInfoEnabled)
+                    if (t.IsFaulted)
                     {
-                        _logger.Info(message, t.Exception);
+                        var ex = t.Exception.ExtractSingleInnerException();
+                        if (ex is DatabaseDoesNotExistException)
+                            return;
+
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info(message, t.Exception);
+                        }
+                    }
+
+                    if (t.IsCanceled)
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info(message, t.Exception);
+                        }
                     }
 
                     await Task.Delay(TimeSpan.FromSeconds(15));
 
                     NotifyLeaderAboutRemoval(dbName, databaseId);
-                }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
-        private void NotifyDatabaseAboutStateChange(string changedDatabase, Task<DocumentDatabase> done, long index)
-        {
-            try
-            {
-                done.Result.StateChanged(index);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to update database {changedDatabase} about new state", e);
-                }
-                // nothing to do here
-            }
-        }
-
-        private void NotifyDatabaseAboutValueChange(string changedDatabase, Task<DocumentDatabase> done, long index)
-        {
-            try
-            {
-                done.Result.ValueChanged(index);
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed to update database {changedDatabase} about new value", e);
-                }
-                // nothing to do here
-            }
+                }, TaskContinuationOptions.NotOnRanToCompletion);
         }
 
         public TimeSpan DatabaseLoadTimeout => _serverStore.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad.AsTimeSpan;
 
         public void Dispose()
         {
-            _disposing.EnterWriteLock();
+            var release = _disposing.WriterLock();
             try
             {
                 var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
@@ -510,7 +447,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _disposing.ExitWriteLock();
+                release.Dispose();
             }
         }
 
@@ -526,15 +463,14 @@ namespace Raven.Server.Documents
 
         public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false)
         {
+            IDisposable release = null;
             try
             {
                 if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
                 {
                     timer.Dispose();
                 }
-
-                if (_disposing.TryEnterReadLock(0) == false)
-                    ThrowServerIsBeingDisposed(databaseName);
+                release = EnterReadLockImmediately(databaseName);
 
                 if (DatabasesCache.TryGetValue(databaseName, out var database))
                 {
@@ -565,8 +501,36 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                if (_disposing.IsReadLockHeld)
-                    _disposing.ExitReadLock();
+                release?.Dispose();
+            }
+        }
+
+        private IDisposable EnterReadLockImmediately(StringSegment databaseName)
+        {
+            using (var cts = new CancellationTokenSource())
+            {
+                var awaiter = _disposing.ReaderLockAsync(cts.Token).GetAwaiter();
+                if (awaiter.IsCompleted == false)
+                {
+                    cts.Cancel();
+                    try
+                    {
+                        ThrowServerIsBeingDisposed(databaseName);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            awaiter.GetResult()?.Dispose();
+                        }
+                        catch
+                        {
+                            // nothing to do here
+                        }
+                    }
+                }
+
+                return awaiter.GetResult();
             }
         }
 
@@ -621,14 +585,14 @@ namespace Raven.Server.Documents
 
         private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null)
         {
+            IDisposable release = null;
             try
             {
                 if (_serverStore.Disposed)
                     ThrowServerIsBeingDisposed(databaseName);
 
                 //if false, this means we have started disposing, so we shouldn't create a database now
-                if (_disposing.TryEnterReadLock(0) == false)
-                    ThrowServerIsBeingDisposed(databaseName);
+                release = EnterReadLockImmediately(databaseName);
 
                 var db = CreateDocumentsStorage(databaseName, config, wakeup);
                 _serverStore.NotificationCenter.Add(
@@ -664,9 +628,7 @@ namespace Raven.Server.Documents
                     // nothing to do
                 }
 
-                if (_disposing.IsReadLockHeld)
-                    _disposing.ExitReadLock();
-
+                release?.Dispose();
             }
         }
 
@@ -917,21 +879,12 @@ namespace Raven.Server.Documents
         {
             try
             {
-                _disposing.EnterReadLock();
-                try
+                using (_disposing.ReaderLock(_serverStore.ServerShutdown))
                 {
                     if (_serverStore.ServerShutdown.IsCancellationRequested)
                         return;
 
                     TryGetOrCreateResourceStore(name, wakeup);
-                }
-                catch (ObjectDisposedException)
-                {
-                    // expected 
-                }
-                finally
-                {
-                    _disposing.ExitReadLock();
                 }
             }
             catch

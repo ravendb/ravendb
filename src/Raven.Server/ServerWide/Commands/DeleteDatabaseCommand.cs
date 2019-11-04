@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public DeleteDatabaseCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
-            ErrorOnDatabaseDoesNotExists = true;
+            ErrorOnDatabaseDoesNotExists = false;
         }
 
         public override void Initialize(ServerStore serverStore, TransactionOperationContext context)
@@ -37,6 +37,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
             }
+
             if (FromNodes != null && FromNodes.Length > 0) 
             {
                 foreach (var node in FromNodes)
@@ -75,8 +76,10 @@ namespace Raven.Server.ServerWide.Commands
                     Stamp = record.Topology.Stamp,
                     ReplicationFactor = 0
                 };
-
             }
+
+            record.Topology.Stamp.Index = etag;
+
             return null;
         }
 

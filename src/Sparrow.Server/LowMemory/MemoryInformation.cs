@@ -40,10 +40,14 @@ namespace Sparrow.LowMemory
 
         private static readonly int ProcessId;
 
+        public static readonly Size TotalPhysicalMemory;
+
         static MemoryInformation()
         {
             using (var process = Process.GetCurrentProcess())
                 ProcessId = process.Id;
+
+            TotalPhysicalMemory = GetMemoryInfo().TotalPhysicalMemory;
         }
 
         private static bool _failedToGetAvailablePhysicalMemory;

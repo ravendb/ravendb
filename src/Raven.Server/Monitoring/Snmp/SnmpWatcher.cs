@@ -310,8 +310,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerTotalRequests(server.Metrics));
             store.Add(new ServerRequestsPerSecond(server.Metrics));
 
-            store.Add(new ProcessCpu(server.CpuUsageCalculator));
-            store.Add(new MachineCpu(server.CpuUsageCalculator));
+            store.Add(new ProcessCpu(server.MetricCacher, server.CpuUsageCalculator));
+            store.Add(new MachineCpu(server.MetricCacher, server.CpuUsageCalculator));
 
             store.Add(new CpuCreditsBase(server.CpuCreditsBalance));
             store.Add(new CpuCreditsMax(server.CpuCreditsBalance));
@@ -321,7 +321,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new CpuCreditsFailoverAlertRaised(server.CpuCreditsBalance));
             store.Add(new CpuCreditsAlertRaised(server.CpuCreditsBalance));
 
-            store.Add(new ServerTotalMemory());
+            store.Add(new ServerTotalMemory(server.MetricCacher));
             store.Add(new ServerLowMemoryFlag());
 
             store.Add(new ServerLastRequestTime(server.Statistics));
