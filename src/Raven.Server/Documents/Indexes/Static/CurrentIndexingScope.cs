@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly Index Index;
 
-        public DynamicBlittableJson Source;
+        public AbstractDynamicObject Source;
 
         public string SourceCollection;
 
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyLazy == null && keyString == null)
                     return DynamicNullObject.Null;
 
-                var source = Source;
+                var source = Source as DynamicBlittableJson;
                 if (source == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source is not set.");
 

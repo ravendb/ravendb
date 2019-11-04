@@ -3810,7 +3810,7 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection.CollectionName);
         }
 
-        public long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
+        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
         {
             return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)

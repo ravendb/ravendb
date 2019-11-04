@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Dynamic;
 using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class StaticIndexDocsEnumerator : IIndexedItemEnumerator
+    public class StaticIndexDocsEnumerator<TType> : IIndexedItemEnumerator where TType : AbstractDynamicObject, new()
     {
         private readonly IndexingStatsScope _documentReadStats;
         private readonly IEnumerator<IndexingItem> _itemsEnumerator;
         private readonly IEnumerable _resultsOfCurrentDocument;
-        private readonly MultipleIndexingFunctionsEnumerator _multipleIndexingFunctionsEnumerator;
+        private readonly MultipleIndexingFunctionsEnumerator<TType> _multipleIndexingFunctionsEnumerator;
 
         protected StaticIndexDocsEnumerator(IEnumerable<IndexingItem> items)
         {
@@ -24,16 +25,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var indexingFunctionType = type.IsJavaScript() ? IndexingOperation.Map.Jint : IndexingOperation.Map.Linq;
 
-            var mapFuncStats = stats?.For(indexingFunctionType , start: false);
+            var mapFuncStats = stats?.For(indexingFunctionType, start: false);
 
             if (funcs.Count == 1)
             {
                 _resultsOfCurrentDocument =
-                    new TimeCountingEnumerable(funcs[0](new DynamicIteratorOfCurrentDocumentWrapper(this)), mapFuncStats);
+                    new TimeCountingEnumerable(funcs[0](new DynamicIteratorOfCurrentDocumentWrapper<TType>(this)), mapFuncStats);
             }
             else
             {
-                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratorOfCurrentDocumentWrapper(this));
+                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator<TType>(funcs, new DynamicIteratorOfCurrentDocumentWrapper<TType>(this));
                 _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
             }
 
@@ -44,8 +45,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             using (_documentReadStats?.Start())
             {
-                if (Current.Item is Document document)
-                    document.Data.Dispose();
+                if (Current.Item is IDisposable disposable)
+                    disposable.Dispose();
 
                 if (_itemsEnumerator.MoveNext() == false)
                 {
@@ -73,23 +74,23 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _itemsEnumerator.Dispose();
 
-            if (Current.Item is Document document)
-                document.Data.Dispose();
+            if (Current.Item is IDisposable disposable)
+                disposable.Dispose();
         }
 
-        protected class DynamicIteratorOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
+        protected class DynamicIteratorOfCurrentDocumentWrapper<TType> : IEnumerable<TType> where TType : AbstractDynamicObject, new()
         {
-            private readonly StaticIndexDocsEnumerator _indexingEnumerator;
-            private Enumerator _enumerator;
+            private readonly StaticIndexDocsEnumerator<TType> _indexingEnumerator;
+            private Enumerator<TType> _enumerator;
 
-            public DynamicIteratorOfCurrentDocumentWrapper(StaticIndexDocsEnumerator indexingEnumerator)
+            public DynamicIteratorOfCurrentDocumentWrapper(StaticIndexDocsEnumerator<TType> indexingEnumerator)
             {
                 _indexingEnumerator = indexingEnumerator;
             }
 
-            public IEnumerator<DynamicBlittableJson> GetEnumerator()
+            public IEnumerator<TType> GetEnumerator()
             {
-                return _enumerator ?? (_enumerator = new Enumerator(_indexingEnumerator));
+                return _enumerator ?? (_enumerator = new Enumerator<TType>(_indexingEnumerator));
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -97,13 +98,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 return GetEnumerator();
             }
 
-            private class Enumerator : IEnumerator<DynamicBlittableJson>
+            private class Enumerator<TType> : IEnumerator<TType> where TType : AbstractDynamicObject, new()
             {
-                private DynamicBlittableJson _dynamicDocument;
-                private readonly StaticIndexDocsEnumerator _inner;
+                private TType _dynamicDocument;
+                private readonly StaticIndexDocsEnumerator<TType> _inner;
                 private object _seen;
 
-                public Enumerator(StaticIndexDocsEnumerator indexingEnumerator)
+                public Enumerator(StaticIndexDocsEnumerator<TType> indexingEnumerator)
                 {
                     _inner = indexingEnumerator;
                 }
@@ -116,9 +117,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     _seen = _inner.Current.Item;
 
                     if (_dynamicDocument == null)
-                        _dynamicDocument = new DynamicBlittableJson((Document)_seen);
-                    else
-                        _dynamicDocument.Set((Document)_seen);
+                        _dynamicDocument = new TType();
+
+
+                    _dynamicDocument.Set(_seen);
 
                     Current = _dynamicDocument;
 
@@ -132,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     throw new NotSupportedException();
                 }
 
-                public DynamicBlittableJson Current { get; private set; }
+                public TType Current { get; private set; }
 
                 object IEnumerator.Current => Current;
 
@@ -142,13 +144,13 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private class MultipleIndexingFunctionsEnumerator : IEnumerable
+        private class MultipleIndexingFunctionsEnumerator<TType> : IEnumerable where TType : AbstractDynamicObject, new()
         {
-            private readonly Enumerator _enumerator;
+            private readonly Enumerator<TType> _enumerator;
 
-            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratorOfCurrentDocumentWrapper iterationOfCurrentDocument)
+            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratorOfCurrentDocumentWrapper<TType> iterationOfCurrentDocument)
             {
-                _enumerator = new Enumerator(funcs, iterationOfCurrentDocument.GetEnumerator());
+                _enumerator = new Enumerator<TType>(funcs, iterationOfCurrentDocument.GetEnumerator());
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -161,16 +163,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 _enumerator.Reset();
             }
 
-            private class Enumerator : IEnumerator
+            private class Enumerator<TType> : IEnumerator where TType : AbstractDynamicObject
             {
                 private readonly List<IndexingFunc> _funcs;
-                private readonly IEnumerator<DynamicBlittableJson> _docEnumerator;
-                private readonly DynamicBlittableJson[] _currentDoc = new DynamicBlittableJson[1];
+                private readonly IEnumerator<TType> _docEnumerator;
+                private readonly TType[] _currentDoc = new TType[1];
                 private int _index;
                 private bool _moveNextDoc = true;
                 private IEnumerator _currentFuncEnumerator;
 
-                public Enumerator(List<IndexingFunc> funcs, IEnumerator<DynamicBlittableJson> docEnumerator)
+                public Enumerator(List<IndexingFunc> funcs, IEnumerator<TType> docEnumerator)
                 {
                     _funcs = funcs;
                     _docEnumerator = docEnumerator;

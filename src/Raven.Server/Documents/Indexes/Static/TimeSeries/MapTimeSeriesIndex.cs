@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
@@ -19,9 +21,40 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _compiled = compiled;
         }
 
+        protected override IIndexingWork[] CreateIndexWorkExecutors()
+        {
+            var workers = new List<IIndexingWork>
+            {
+                //new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
+            };
+
+
+            workers.Add(new MapTimeSeries(this, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, _indexStorage, null, Configuration));
+
+            return workers.ToArray();
+        }
+
         internal override IEnumerable<IIndexingCollection> GetCollectionsForIndexing()
         {
             return _compiled.Maps.Keys;
+        }
+
+        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
+        {
+            if (collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            var timeSeriesCollection = (TimeSeriesCollection)collection;
+
+            // TODO [ppekrol] implement this properly
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(databaseContext, 0)
+                .Where(x => string.Equals(timeSeriesCollection.CollectionName, x.Collection, StringComparison.OrdinalIgnoreCase) && string.Equals(timeSeriesCollection.TimeSeriesName, x.Name, StringComparison.OrdinalIgnoreCase))
+                .LastOrDefault();
+
+            if (timeSeries == null)
+                return 0;
+
+            return timeSeries.Etag;
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()

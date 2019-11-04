@@ -10,7 +10,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class DynamicBlittableJson : DynamicObject, IEnumerable<object>, IBlittableJsonContainer
+    public abstract class AbstractDynamicObject : DynamicObject
+    {
+        public abstract void Set(object item);
+    }
+
+    public class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IBlittableJsonContainer
     {
         private const int DocumentIdFieldNameIndex = 0;
         private const int MetadataIdPropertyIndex = 1;
@@ -48,6 +53,10 @@ namespace Raven.Server.Documents.Indexes.Static
             _doc?.EnsureMetadata();
         }
 
+        public DynamicBlittableJson()
+        {
+        }
+
         public DynamicBlittableJson(Document document)
         {
             Set(document);
@@ -62,6 +71,11 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _doc = document;
             BlittableJson = document.Data;
+        }
+
+        public override void Set(object item)
+        {
+            Set((Document)item);
         }
 
         public bool TryGetDocument(out Document doc)
