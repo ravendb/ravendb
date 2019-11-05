@@ -10,6 +10,8 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
+using System.Threading;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Utils.Cpu
 {
@@ -39,13 +41,15 @@ namespace Raven.Server.Utils.Cpu
         internal static ExtensionPointCpuUsageCalculator GetExtensionPointCpuUsageCalculator(
             JsonContextPool contextPool,
             MonitoringConfiguration configuration,
-            NotificationCenter.NotificationCenter notificationCenter)
+            NotificationCenter.NotificationCenter notificationCenter, 
+            CancellationToken serverStoreServerShutdown)
         {
             var extensionPoint = new ExtensionPointCpuUsageCalculator(
                 contextPool,
                 configuration.CpuUsageMonitorExec,
                 configuration.CpuUsageMonitorExecArguments,
-                notificationCenter);
+                notificationCenter,
+                serverStoreServerShutdown);
 
             
 
