@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
         {
-            if (value.Length <= Transformation.AttachmentMarker.Length)
+            if (value.Length <= AttachmentTransformation.Instance.MarkerString.Length)
             {
                 attachmentName = null;
                 return false;
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 return false;
             }
 
-            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
+            attachmentName = value.Substring(AttachmentTransformation.Instance.MarkerString.Length);
 
             return true;
         }

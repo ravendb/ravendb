@@ -6,36 +6,81 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
+    public abstract class AbstractTransformation
+    {
+        protected AbstractTransformation(
+            string loadString,
+            string addString,
+            string markerString)
+        {
+            LoadString = loadString;
+            AddString = addString;
+            MarkerString = markerString;
+            LoadMethodRegex = new Regex(LoadString, RegexOptions.Compiled);
+            AddMethodRegex = new Regex(AddString, RegexOptions.Compiled);
+        }
+
+        internal string LoadString { get; }
+
+        internal string AddString { get; }
+        internal string MarkerString { get; }
+
+        internal Regex LoadMethodRegex { get; }
+        internal Regex AddMethodRegex { get; }
+        
+    }
+
+    public abstract class AbstractTransformationWithBehaviour : AbstractTransformation
+    {
+        internal Regex LoadBehaviorMethodRegex { get; }
+        internal Regex LoadBehaviorMethodNameRegex { get; }
+        protected AbstractTransformationWithBehaviour(string loadString, string addString, string markerString, Regex loadBehaviorMethodRegex, Regex loadBehaviorMethodNameRegex) : base(loadString, addString, markerString)
+        {
+            LoadBehaviorMethodRegex = loadBehaviorMethodRegex;
+            LoadBehaviorMethodNameRegex = loadBehaviorMethodNameRegex;
+        }
+    }
+
+    internal class CounterTransformation : AbstractTransformationWithBehaviour
+    {
+        public static CounterTransformation Instance;
+
+        static CounterTransformation()
+        {
+            Instance = new CounterTransformation("loadCounter", "addCounter", "$counter/",
+                new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\)", RegexOptions.Compiled),
+                new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Compiled));
+        }
+
+        private CounterTransformation(string loadString, string addString, string markerString, Regex loadBehaviorMethodRegex, Regex loadBehaviorMethodNameRegex) :
+            base(loadString, addString, markerString, loadBehaviorMethodRegex, loadBehaviorMethodNameRegex)
+        {
+        }
+    }
+
+    internal class AttachmentTransformation : AbstractTransformation
+    {
+        public static AttachmentTransformation Instance;
+
+        static AttachmentTransformation()
+        {
+            Instance = new AttachmentTransformation("loadAttachment", "addAttachment", "$attachment/");
+        }
+
+        public AttachmentTransformation(string loadString, string addString, string markerString) : base(loadString, addString, markerString)
+        {
+        }
+    }
+
     public class Transformation
     {
         internal const string LoadTo = "loadTo";
-
-        internal const string LoadAttachment = "loadAttachment";
-
-        internal const string AddAttachment = "addAttachment";
-        
-        internal const string AttachmentMarker = "$attachment/";
-
-        internal const string LoadCounter = "loadCounter";
-
-        internal const string AddCounter = "addCounter";
-
-        internal const string CounterMarker = "$counter/";
 
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
         
         internal const string GenericDeleteDocumentsBehaviorFunctionName = "deleteDocumentsBehavior";
 
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
-
-        private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
-        private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
-
-        private static readonly Regex LoadCounterMethodRegex = new Regex(LoadCounter, RegexOptions.Compiled);
-        private static readonly Regex AddCounterMethodRegex = new Regex(AddCounter, RegexOptions.Compiled);
-
-        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\)", RegexOptions.Compiled);
-        internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Compiled);
 
         private const string ParametersAndFunctionBodyRegex = @"\s*\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\)\s*\{(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*\})*\})*\}"; // https://stackoverflow.com/questions/4204136/does-anyone-have-regular-expression-match-javascript-function
 
@@ -97,15 +142,15 @@ namespace Raven.Client.Documents.Operations.ETL
                                "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>()` instead.");
                 }
 
-                IsAddingAttachments = AddAttachmentMethodRegex.Matches(Script).Count > 0;
-                IsLoadingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
+                IsAddingAttachments = AttachmentTransformation.Instance.AddMethodRegex.Matches(Script).Count > 0;
+                IsLoadingAttachments = AttachmentTransformation.Instance.LoadMethodRegex.Matches(Script).Count > 0;
 
-                IsAddingCounters = AddCounterMethodRegex.Matches(Script).Count > 0;
+                IsAddingCounters = CounterTransformation.Instance.AddMethodRegex.Matches(Script).Count > 0;
 
                 if (IsAddingCounters && type == EtlType.Sql)
                     errors.Add("Adding counters isn't supported by SQL ETL");
 
-                var counterBehaviors = LoadCountersBehaviorMethodRegex.Matches(Script);
+                var counterBehaviors = CounterTransformation.Instance.LoadBehaviorMethodRegex.Matches(Script);
 
                 if (counterBehaviors.Count > 0)
                 {
@@ -131,8 +176,7 @@ namespace Raven.Client.Documents.Operations.ETL
                             var functionSignature = counterBehaviorFunction.Groups[0].Value;
                             var collection = counterBehaviorFunction.Groups[1].Value;
 
-                            var functionName = LoadCountersBehaviorMethodNameRegex.Match(functionSignature);
-
+                            var functionName = CounterTransformation.Instance.LoadBehaviorMethodNameRegex.Match(functionSignature);
                             if (Collections.Contains(collection) == false)
                             {
                                 var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));

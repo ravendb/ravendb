@@ -64,9 +64,9 @@ namespace Raven.Server.Documents.ETL
                 DocumentScript.ScriptEngine.SetValue(name, clrFunctionInstance);
             }
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
+            DocumentScript.ScriptEngine.SetValue(AttachmentTransformation.Instance.LoadString, new ClrFunctionInstance(DocumentScript.ScriptEngine, AttachmentTransformation.Instance.LoadString, LoadAttachment));
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadCounter, LoadCounter));
+            DocumentScript.ScriptEngine.SetValue(CounterTransformation.Instance.LoadString, new ClrFunctionInstance(DocumentScript.ScriptEngine, CounterTransformation.Instance.LoadString, LoadCounter));
 
             DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
 
@@ -117,10 +117,10 @@ namespace Raven.Server.Documents.ETL
         private JsValue LoadAttachment(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
-                ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
+                ThrowInvalidScriptMethodCall($"{AttachmentTransformation.Instance.LoadString}(name) must have a single string argument");
 
             var attachmentName = args[0].AsString();
-            JsValue loadAttachmentReference = (JsValue)Transformation.AttachmentMarker + attachmentName;
+            JsValue loadAttachmentReference = (JsValue)AttachmentTransformation.Instance.MarkerString + attachmentName;
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
@@ -142,10 +142,10 @@ namespace Raven.Server.Documents.ETL
         private JsValue LoadCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
-                ThrowInvalidScriptMethodCall($"{Transformation.LoadCounter}(name) must have a single string argument");
+                ThrowInvalidScriptMethodCall($"{CounterTransformation.Instance.LoadString}(name) must have a single string argument");
 
             var counterName = args[0].AsString();
-            JsValue loadCounterReference = (JsValue)Transformation.CounterMarker + counterName;
+            JsValue loadCounterReference = (JsValue)CounterTransformation.Instance.MarkerString + counterName;
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {

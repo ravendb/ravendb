@@ -96,14 +96,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefineOwnProperty(Transformation.AddAttachment, _addAttachmentMethod, throwOnError: true);
+                docInstance.DefineOwnProperty(AttachmentTransformation.Instance.AddString, _addAttachmentMethod, throwOnError: true);
             }
 
             if (_transformation.IsAddingCounters)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefineOwnProperty(Transformation.AddCounter, _addCounterMethod, throwOnError: true);
+                docInstance.DefineOwnProperty(CounterTransformation.Instance.AddString, _addCounterMethod, throwOnError: true);
             }
         }
 
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 case 2:
                     if (args[0].IsString() == false)
-                        ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
+                        ThrowInvalidScriptMethodCall($"First argument of {AttachmentTransformation.Instance.AddString}(name, attachment) must be string");
 
                     name = args[0].AsString();
                     attachmentReference = args[1];
@@ -125,17 +125,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     attachmentReference = args[0];
                     break;
                 default:
-                    ThrowInvalidScriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
+                    ThrowInvalidScriptMethodCall($"{AttachmentTransformation.Instance.AddString} must have one or two arguments");
                     break;
             }
 
             if (attachmentReference.IsNull())
                 return self;
 
-            if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
+            if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(AttachmentTransformation.Instance.MarkerString) == false)
             {
                 var message =
-                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Type}' type";
+                    $"{AttachmentTransformation.Instance.AddString}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Type}' type";
 
                 if (attachmentReference.IsString())
                     message += $" (value: '{attachmentReference.AsString()}')";
@@ -151,17 +151,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private JsValue AddCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1)
-                ThrowInvalidScriptMethodCall($"{Transformation.AddCounter} must have one arguments");
+                ThrowInvalidScriptMethodCall($"{CounterTransformation.Instance.AddString} must have one arguments");
 
             var counterReference = args[0];
 
             if (counterReference.IsNull())
                 return self;
 
-            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
+            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(CounterTransformation.Instance.MarkerString) == false)
             {
                 var message =
-                    $"{Transformation.AddCounter}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
+                    $"{CounterTransformation.Instance.AddString}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
 
                 if (counterReference.IsString())
                     message += $" (value: '{counterReference.AsString()}')";
