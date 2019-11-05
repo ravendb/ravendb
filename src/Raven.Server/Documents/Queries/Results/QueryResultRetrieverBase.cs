@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Queries.Results
                         args[i] = Tuple.Create(document, luceneDoc, state, indexFields, anyDynamicIndexFields);
                     }
                 }
-                value = GetFunctionValue(fieldToFetch, document, args);
+                value = GetFunctionValue(fieldToFetch, document.Id, args);
                 return true;
             }
 
@@ -632,7 +632,7 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
-        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, object[] args)
+        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, string documentId, object[] args)
         {
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
@@ -641,7 +641,7 @@ namespace Raven.Server.Documents.Queries.Results
                 var value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
-                    document,
+                    documentId,
                     args);
 
                 return value;
@@ -714,18 +714,18 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public object InvokeFunction(string methodName, Query query, Document document, object[] args)
+        public object InvokeFunction(string methodName, Query query, string documentId, object[] args)
         {
             if (query.DeclaredFunctions != null && 
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) && 
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
-                return InvokeTimeSeriesFunction(func.TimeSeries, query, document, args);
+                return InvokeTimeSeriesFunction(func.TimeSeries, documentId, args);
 
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
             {
-                _includeDocumentsCommand?.AddRange(run.Includes, document?.Id);
+                _includeDocumentsCommand?.AddRange(run.Includes, documentId);
 
                 if (result.IsNull)
                     return null;
@@ -734,34 +734,27 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, Query query, Document document, object[] args)
+        private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, string documentId, object[] args)
         {
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var compound = ((FieldExpression)func.Between.Source).Compound;
 
-            string source;
-            string documentId;
+            var source = ((FieldExpression)func.Between.Source).FieldValue;
 
-            if (compound.Count > 1)
+            if (args?.Length > 0 && args[0] is Document documentArgument)
             {
-                // operate on timeseries of a loaded document
+                // take the id from argument 
+                documentId = documentArgument.Id;
 
-                source = ((FieldExpression)func.Between.Source).FieldValueWithoutAlias;
-                documentId = GetSourceId(query, compound[0], document);
+                if (compound.Count > 1)
+                {
+                    source = ((FieldExpression)func.Between.Source).FieldValueWithoutAlias;
+                }
             }
-            else
+            else if (compound.Count > 1)
             {
-                if (args?.Length > 0 && args[0] is Document documentArgument)
-                {
-                    // take the id from argument 
-                    documentId = documentArgument.Id;
-                }
-                else
-                {
-                    documentId = document?.Id;
-                }
-
-                source = ((FieldExpression)func.Between.Source).FieldValue;
+                throw new ArgumentException($"Unable to operate on time series '{((FieldExpression)func.Between.Source).FieldValue}'. '{compound[0]}' is unknown." +
+                                            "Time series aggregations should either be implicit (no aliases defined in the query) or explicit (the document to operate on is passed as an argument).");
             }
 
             var min = GetDateValue(func.Between.Min);
@@ -866,18 +859,6 @@ namespace Raven.Server.Documents.Queries.Results
                     aggStates[i].Init();
                 }
             }
-        }
-
-        private string GetSourceId(Query query, StringSegment sourceAlias, Document document)
-        {
-            var loadExpression = query.Load?.FirstOrDefault(x => x.Alias == sourceAlias);
-            if (loadExpression.HasValue == false)
-                throw new ArgumentException($"Unable to invoke time series function, unknown alias '{sourceAlias}'.");
-
-            BlittableJsonTraverser.Default.TryRead(document.Data, 
-                ((FieldExpression)loadExpression.Value.Expression).FieldValueWithoutAlias, out var sourceId, out _);
-
-            return sourceId.ToString();
         }
 
         private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)

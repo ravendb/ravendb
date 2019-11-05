@@ -335,7 +335,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact(Skip = "waiting for commit https://github.com/ravendb/ravendb/pull/9856/commits/c83be5834fa1a2e9bd9f155c8a352404401017ac to be merged into 5.0")]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_DeclareSyntax_WithOtherFields()
         {
             using (var store = GetDocumentStore())
@@ -413,7 +413,7 @@ select out(p) as HeartRate, p.Name
             }
         }
 
-        [Fact(Skip = "waiting for commit https://github.com/ravendb/ravendb/pull/9856/commits/c83be5834fa1a2e9bd9f155c8a352404401017ac to be merged into 5.0")]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_DeclareSyntax_MultipleSeries()
         {
             using (var store = GetDocumentStore())
@@ -523,83 +523,6 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
         [Fact]
         public void CanQueryTimeSeriesAggregation_DeclareSyntax_FromLoadedDocument()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var baseline = DateTime.Today;
-
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 1; i <= 3; i++)
-                    {
-                        var id = $"people/{i}";
-                        var company = $"companies/{i}";
-
-                        session.Store(new Person
-                        {
-                            Name = "Oren",
-                            Age = i * 30,
-                            WorksAt = company
-                        }, id);
-
-                        session.Store(new Company(), company);
-
-                        var tsf = session.TimeSeriesFor(company);
-
-                        tsf.Append("Stocks", baseline.AddMinutes(61), "tag", new[] { 1259.51d });
-                        tsf.Append("Stocks", baseline.AddMinutes(62), "tag", new[] { 1279.62d });
-                        tsf.Append("Stocks", baseline.AddMinutes(63), "tag", new[] { 1269.73d });
-                    }
-
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
-declare timeseries out() 
-{
-    from Company.Stocks between $start and $end
-    group by 1h 
-    select min(), max(), avg()
-}
-from People as p
-where p.Age > 49
-load p.WorksAt as Company
-select out()
-")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddDays(1));
-
-                    var result = query.ToList();
-
-                    Assert.Equal(2, result.Count);
-
-                    for (int i = 0; i < 2; i++)
-                    {
-                        var agg = result[i];
-
-                        Assert.Equal(3, agg.Count);
-
-                        Assert.Equal(1, agg.Results.Length);
-
-                        var val = agg.Results[0];
-
-                        Assert.Equal(1259.51d, val.Min);
-                        Assert.Equal(1279.62d, val.Max);
-
-                        double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
-                        Assert.Equal(expectedAvg, val.Avg);
-
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_DeclareSyntax_FromLoadedDocument2()
         {
             using (var store = GetDocumentStore())
             {
