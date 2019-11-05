@@ -1364,7 +1364,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
             {
-                source.Compound.RemoveAt(0);
+                    source.Compound.RemoveAt(0);
             }
 
             if (Scanner.TryScan("BETWEEN") == false)
@@ -1538,7 +1538,15 @@ namespace Raven.Server.Documents.Queries.Parser
                         if (query?.TryAddTimeSeriesFunction(func) == false)
                             ThrowParseException($"{func.Name} time series function was declared multiple times");
 
-                        expr = new MethodExpression(func.Name, new List<QueryExpression>());
+                        var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
+                        var args = new List<QueryExpression>();
+
+                        if (compound.Count > 1)
+                        {
+                            args.Add(new FieldExpression(new List<StringSegment>{ compound[0] }));
+                        }
+
+                        expr = new MethodExpression(func.Name, args);
                     }
                     else if (Scanner.TryScan('('))
                     {
