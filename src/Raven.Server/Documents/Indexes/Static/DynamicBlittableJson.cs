@@ -13,6 +13,19 @@ namespace Raven.Server.Documents.Indexes.Static
     public abstract class AbstractDynamicObject : DynamicObject
     {
         public abstract void Set(object item);
+
+        protected abstract bool TryGetByName(string name, out object result);
+
+        public override bool TryGetMember(GetMemberBinder binder, out object result)
+        {
+            var name = binder.Name;
+            return TryGetByName(name, out result);
+        }
+
+        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
+        {
+            return TryGetByName((string)indexes[0], out result);
+        }
     }
 
     public class DynamicBlittableJson : AbstractDynamicObject, IEnumerable<object>, IBlittableJsonContainer
@@ -97,18 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return BlittableJson.GetPropertyNames().Contains(key);
         }
 
-        public override bool TryGetMember(GetMemberBinder binder, out object result)
-        {
-            var name = binder.Name;
-            return TryGetByName(name, out result);
-        }
-
-        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
-        {
-            return TryGetByName((string)indexes[0], out result);
-        }
-
-        private bool TryGetByName(string name, out object result)
+        protected override bool TryGetByName(string name, out object result)
         {
             // Using ordinal ignore case versions to avoid the cast of calling String.Equals with non interned values.
             if (FastCompare(name, DocumentIdFieldNameIndex) ||

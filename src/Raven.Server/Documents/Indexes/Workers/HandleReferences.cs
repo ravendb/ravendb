@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     batchCount++;
 
-                                    var documents = new List<IndexingItem>();
+                                    var documents = new List<IndexItem>();
                                     foreach (var key in _indexStorage
                                         .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
 
                                             if (doc != null && doc.Etag <= lastIndexedEtag)
-                                                documents.Add(new IndexingItem(doc.Id, doc.LowerId, doc.Etag, doc.Data.Size, doc));
+                                                documents.Add(new IndexItem(doc.Id, doc.LowerId, doc.Etag, doc.Data.Size, doc));
                                         }
                                     }
 

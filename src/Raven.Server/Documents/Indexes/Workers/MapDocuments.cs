@@ -12,6 +12,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
+using Sparrow.Extensions;
 using Sparrow.Logging;
 using Voron;
 
@@ -27,11 +28,11 @@ namespace Raven.Server.Documents.Indexes.Workers
             _documentsStorage = documentsStorage;
         }
 
-        protected override IEnumerable<IndexingItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexingCollection collection, long lastEtag, int pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize)
         {
             foreach (var document in GetDocumentsEnumerator(databaseContext, collection.CollectionName, lastEtag, pageSize))
             {
-                yield return new IndexingItem(document.Id, document.LowerId, document.Etag, document.Data.Size, document);
+                yield return new IndexItem(document.Id, document.LowerId, document.Etag, document.Data.Size, document);
             }
         }
 
@@ -53,13 +54,14 @@ namespace Raven.Server.Documents.Indexes.Workers
             _timeSeriesStorage = timeSeriesStorage;
         }
 
-        protected override IEnumerable<IndexingItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexingCollection collection, long lastEtag, int pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize)
         {
             var timeSeriesCollection = (TimeSeriesCollection)collection;
 
             foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, timeSeriesCollection.CollectionName, timeSeriesCollection.TimeSeriesName, lastEtag, pageSize))
             {
-                yield return new IndexingItem();
+                var id = databaseContext.GetLazyString(timeSeries.Baseline.GetDefaultRavenFormat());
+                yield return new IndexItem(id, id, timeSeries.Etag, timeSeries.SegmentSize, timeSeries);
             }
         }
 
@@ -313,6 +315,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        protected abstract IEnumerable<IndexingItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexingCollection collection, long lastEtag, int pageSize);
+        protected abstract IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize);
     }
 }

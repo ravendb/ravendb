@@ -34,12 +34,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return workers.ToArray();
         }
 
-        internal override IEnumerable<IIndexingCollection> GetCollectionsForIndexing()
+        internal override IEnumerable<IIndexCollection> GetCollectionsForIndexing()
         {
             return _compiled.Maps.Keys;
         }
 
-        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
+        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)
         {
             if (collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
                 throw new InvalidOperationException("TODO ppekrol");
@@ -62,9 +62,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             throw new NotImplementedException();
         }
 
-        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexingItem> items, IIndexingCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, IIndexCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
-            throw new NotImplementedException();
+            return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
         }
 
         public static Index CreateNew(TimeSeriesIndexDefinition definition, DocumentDatabase documentDatabase)

@@ -1324,6 +1324,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Name = name,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
+                SegmentSize = segmentSize,
                 Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
                 Baseline = baseline,
                 Etag = Bits.SwapBytes(etag),

@@ -1756,7 +1756,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexingItem> items, IIndexingCollection collection, TransactionOperationContext indexContext,
+        public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, IIndexCollection collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
@@ -3803,14 +3803,14 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-        public virtual long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
+        public virtual long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)
         {
             return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
                 : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection.CollectionName);
         }
 
-        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexingCollection collection)
+        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)
         {
             return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
@@ -3991,14 +3991,14 @@ namespace Raven.Server.Documents.Indexes
                 ThrowObjectDisposed();
         }
 
-        internal virtual IEnumerable<IIndexingCollection> GetCollectionsForIndexing()
+        internal virtual IEnumerable<IIndexCollection> GetCollectionsForIndexing()
         {
             foreach (var collection in Collections)
                 yield return new DocumentsCollection(collection);
         }
     }
 
-    public struct IndexingItem
+    public struct IndexItem
     {
         public readonly LazyStringValue Id;
 
@@ -4010,7 +4010,7 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly object Item;
 
-        public IndexingItem(LazyStringValue id, LazyStringValue lowerId, long etag, int size, object item) : this()
+        public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, int size, object item) : this()
         {
             Id = id;
             LowerId = lowerId;
@@ -4020,7 +4020,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class TimeSeriesCollection : IIndexingCollection
+    public class TimeSeriesCollection : IIndexCollection
     {
         public TimeSeriesCollection(string collectionName, string timeSeriesName)
         {
@@ -4051,7 +4051,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class DocumentsCollection : IIndexingCollection
+    public class DocumentsCollection : IIndexCollection
     {
         public DocumentsCollection(string collectionName)
         {
@@ -4079,7 +4079,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public interface IIndexingCollection
+    public interface IIndexCollection
     {
         public string CollectionName { get; }
 

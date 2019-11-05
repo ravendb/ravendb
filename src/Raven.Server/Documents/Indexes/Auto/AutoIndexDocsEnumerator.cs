@@ -7,10 +7,10 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoIndexDocsEnumerator : IIndexedItemEnumerator
     {
         private readonly IndexingStatsScope _documentReadStats;
-        private readonly IEnumerator<IndexingItem> _itemsEnumerator;
+        private readonly IEnumerator<IndexItem> _itemsEnumerator;
         private readonly Document[] _results = new Document[1];
 
-        public AutoIndexDocsEnumerator(IEnumerable<IndexingItem> items, IndexingStatsScope stats)
+        public AutoIndexDocsEnumerator(IEnumerable<IndexItem> items, IndexingStatsScope stats)
         {
             _documentReadStats = stats.For(IndexingOperation.Map.DocumentRead, start: false);
             _itemsEnumerator = items.GetEnumerator();
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
         }
 
-        public IndexingItem Current => _itemsEnumerator.Current;
+        public IndexItem Current => _itemsEnumerator.Current;
 
         public void Dispose()
         {

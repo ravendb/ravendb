@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
     public abstract class AbstractStaticIndexBase
     {
-        public readonly Dictionary<IIndexingCollection, List<IndexingFunc>> Maps = new Dictionary<IIndexingCollection, List<IndexingFunc>>();
+        public readonly Dictionary<IIndexCollection, List<IndexingFunc>> Maps = new Dictionary<IIndexCollection, List<IndexingFunc>>();
 
         public bool HasDynamicFields { get; set; }
 

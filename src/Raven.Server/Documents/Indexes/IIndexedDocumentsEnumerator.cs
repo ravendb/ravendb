@@ -9,6 +9,6 @@ namespace Raven.Server.Documents.Indexes
 
         void OnError();
 
-        IndexingItem Current { get; }
+        IndexItem Current { get; }
     }
 }

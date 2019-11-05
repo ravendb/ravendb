@@ -1,24 +1,23 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public class StaticIndexDocsEnumerator<TType> : IIndexedItemEnumerator where TType : AbstractDynamicObject, new()
+    public class StaticIndexItemEnumerator<TType> : IIndexedItemEnumerator where TType : AbstractDynamicObject, new()
     {
         private readonly IndexingStatsScope _documentReadStats;
-        private readonly IEnumerator<IndexingItem> _itemsEnumerator;
+        private readonly IEnumerator<IndexItem> _itemsEnumerator;
         private readonly IEnumerable _resultsOfCurrentDocument;
         private readonly MultipleIndexingFunctionsEnumerator<TType> _multipleIndexingFunctionsEnumerator;
 
-        protected StaticIndexDocsEnumerator(IEnumerable<IndexingItem> items)
+        protected StaticIndexItemEnumerator(IEnumerable<IndexItem> items)
         {
             _itemsEnumerator = items.GetEnumerator();
         }
 
-        public StaticIndexDocsEnumerator(IEnumerable<IndexingItem> items, List<IndexingFunc> funcs, string collection, IndexingStatsScope stats, IndexType type)
+        public StaticIndexItemEnumerator(IEnumerable<IndexItem> items, List<IndexingFunc> funcs, IIndexCollection collection, IndexingStatsScope stats, IndexType type)
             : this(items)
         {
             _documentReadStats = stats?.For(IndexingOperation.Map.DocumentRead, start: false);
@@ -30,15 +29,15 @@ namespace Raven.Server.Documents.Indexes.Static
             if (funcs.Count == 1)
             {
                 _resultsOfCurrentDocument =
-                    new TimeCountingEnumerable(funcs[0](new DynamicIteratorOfCurrentDocumentWrapper<TType>(this)), mapFuncStats);
+                    new TimeCountingEnumerable(funcs[0](new DynamicIteratorOfCurrentItemWrapper<TType>(this)), mapFuncStats);
             }
             else
             {
-                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator<TType>(funcs, new DynamicIteratorOfCurrentDocumentWrapper<TType>(this));
+                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator<TType>(funcs, new DynamicIteratorOfCurrentItemWrapper<TType>(this));
                 _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
             }
 
-            CurrentIndexingScope.Current.SetSourceCollection(collection, mapFuncStats);
+            CurrentIndexingScope.Current.SetSourceCollection(collection.CollectionName, mapFuncStats);
         }
 
         public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
@@ -68,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _multipleIndexingFunctionsEnumerator?.Reset();
         }
 
-        public IndexingItem Current { get; private set; }
+        public IndexItem Current { get; private set; }
 
         public void Dispose()
         {
@@ -78,12 +77,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 disposable.Dispose();
         }
 
-        protected class DynamicIteratorOfCurrentDocumentWrapper<TType> : IEnumerable<TType> where TType : AbstractDynamicObject, new()
+        protected class DynamicIteratorOfCurrentItemWrapper<TType> : IEnumerable<TType> where TType : AbstractDynamicObject, new()
         {
-            private readonly StaticIndexDocsEnumerator<TType> _indexingEnumerator;
+            private readonly StaticIndexItemEnumerator<TType> _indexingEnumerator;
             private Enumerator<TType> _enumerator;
 
-            public DynamicIteratorOfCurrentDocumentWrapper(StaticIndexDocsEnumerator<TType> indexingEnumerator)
+            public DynamicIteratorOfCurrentItemWrapper(StaticIndexItemEnumerator<TType> indexingEnumerator)
             {
                 _indexingEnumerator = indexingEnumerator;
             }
@@ -101,10 +100,10 @@ namespace Raven.Server.Documents.Indexes.Static
             private class Enumerator<TType> : IEnumerator<TType> where TType : AbstractDynamicObject, new()
             {
                 private TType _dynamicDocument;
-                private readonly StaticIndexDocsEnumerator<TType> _inner;
+                private readonly StaticIndexItemEnumerator<TType> _inner;
                 private object _seen;
 
-                public Enumerator(StaticIndexDocsEnumerator<TType> indexingEnumerator)
+                public Enumerator(StaticIndexItemEnumerator<TType> indexingEnumerator)
                 {
                     _inner = indexingEnumerator;
                 }
@@ -118,7 +117,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     if (_dynamicDocument == null)
                         _dynamicDocument = new TType();
-
 
                     _dynamicDocument.Set(_seen);
 
@@ -148,7 +146,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             private readonly Enumerator<TType> _enumerator;
 
-            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratorOfCurrentDocumentWrapper<TType> iterationOfCurrentDocument)
+            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratorOfCurrentItemWrapper<TType> iterationOfCurrentDocument)
             {
                 _enumerator = new Enumerator<TType>(funcs, iterationOfCurrentDocument.GetEnumerator());
             }
