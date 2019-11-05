@@ -318,12 +318,12 @@ namespace Sparrow.LowMemory
                 using (var process = extended ? Process.GetCurrentProcess() : null)
                 {
                     if (PlatformDetails.RunningOnPosix == false)
-                        return GetMemoryInfoWindows(process);
+                        return GetMemoryInfoWindows(process, extended);
 
                     if (PlatformDetails.RunningOnMacOsx)
-                        return GetMemoryInfoMacOs(process);
+                        return GetMemoryInfoMacOs(process, extended);
 
-                    return GetMemoryInfoLinux(smapsReader);
+                    return GetMemoryInfoLinux(smapsReader, extended);
                 }
             }
             catch (Exception e)
@@ -335,7 +335,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader)
+        private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader, bool extended)
         {
             var fromProcMemInfo = new ProcMemInfoResults();
             GetFromProcMemInfo(smapsReader, ref fromProcMemInfo);
@@ -383,13 +383,14 @@ namespace Sparrow.LowMemory
                 fromProcMemInfo.CommitLimit,
                 fromProcMemInfo.AvailableWithoutTotalCleanMemory,
                 fromProcMemInfo.SharedCleanMemory,
-                workingSet);
+                workingSet,
+                extended);
         }
 
         private static MemoryInfoResult BuildPosixMemoryInfoResult(
             Size availableRam, Size totalPhysicalMemory, Size commitedMemory,
             Size commitLimit, Size availableWithoutTotalCleanMemory,
-            Size sharedCleanMemory, Size workingSet)
+            Size sharedCleanMemory, Size workingSet, bool extended)
         {
             SetMemoryRecords(availableRam.GetValue(SizeUnit.Bytes));
 
@@ -403,11 +404,12 @@ namespace Sparrow.LowMemory
                 SharedCleanMemory = sharedCleanMemory,
                 TotalPhysicalMemory = totalPhysicalMemory,
                 InstalledMemory = totalPhysicalMemory,
-                WorkingSet = workingSet
+                WorkingSet = workingSet,
+                IsExtended = extended
             };
         }
 
-        private static unsafe MemoryInfoResult GetMemoryInfoMacOs(Process process = null)
+        private static unsafe MemoryInfoResult GetMemoryInfoMacOs(Process process, bool extended)
         {
             var mib = new[] { (int)TopLevelIdentifiers.CTL_HW, (int)CtkHwIdentifiers.HW_MEMSIZE };
             ulong physicalMemory = 0;
@@ -464,10 +466,10 @@ namespace Sparrow.LowMemory
             var availableWithoutTotalCleanMemory = availableRamInBytes; // mac (unlike other linux distros) does calculate accurate available memory
             var workingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes);
 
-            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, availableWithoutTotalCleanMemory, Size.Zero, workingSet);
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, availableWithoutTotalCleanMemory, Size.Zero, workingSet, extended);
         }
 
-        private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process = null)
+        private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process, bool extended)
         {
             // windows
             var memoryStatus = new MemoryStatusEx
@@ -502,7 +504,8 @@ namespace Sparrow.LowMemory
                 InstalledMemory = fetchedInstalledMemory ?
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
                     new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                WorkingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes)
+                WorkingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes),
+                IsExtended = extended
             };
         }
 

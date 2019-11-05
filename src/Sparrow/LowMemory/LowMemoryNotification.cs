@@ -320,7 +320,7 @@ namespace Sparrow.LowMemory
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
             var isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
-            if (isLowMemory && PlatformDetails.RunningOnMacOsx == false)
+            if (isLowMemory && memInfo.IsExtended == false && PlatformDetails.RunningOnMacOsx == false)
             {
                 // getting extendedInfo (for windows: Process.GetCurrentProcess) or using the smaps might be expensive
                 // we'll do it if we suspect low memory

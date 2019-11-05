@@ -8,6 +8,7 @@
             public Size LastFiveMinutes;
             public Size SinceStartup;
         }
+
         public class MemoryUsageLowHigh
         {
             public MemoryUsageIntervals High;
@@ -23,5 +24,7 @@
         public Size AvailableMemory;
         public Size AvailableWithoutTotalCleanMemory;
         public Size SharedCleanMemory;
+
+        public bool IsExtended;
     }
 }

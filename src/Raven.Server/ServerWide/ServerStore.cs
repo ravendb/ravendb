@@ -499,7 +499,7 @@ namespace Raven.Server.ServerWide
         {
             Configuration.CheckDirectoryPermissions();
 
-            LowMemoryNotification.Instance.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.UseTotalDirtyMemInsteadOfMemUsage, LowMemoryMonitor.Instance, ServerShutdown);
+            LowMemoryNotification.Instance.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.UseTotalDirtyMemInsteadOfMemUsage, new LowMemoryMonitor(), ServerShutdown);
 
             MemoryInformation.SetFreeCommittedMemory(
                 Configuration.Memory.MinimumFreeCommittedMemoryPercentage,
