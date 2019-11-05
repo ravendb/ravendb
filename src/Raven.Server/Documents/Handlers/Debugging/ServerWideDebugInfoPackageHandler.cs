@@ -244,6 +244,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
             catch (Exception e)
             {
+                LoggingSource.Instance.DetachPipeSink();
                 DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, prefix);
             }
             finally
