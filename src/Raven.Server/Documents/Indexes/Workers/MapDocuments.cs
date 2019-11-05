@@ -155,6 +155,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                         moreWorkFound = true;
                     }
 
+                    if (lastMappedEtag == lastEtag)
+                    {
+                        // the last etag hasn't changed
+                        continue;
+                    }
+
                     if (_index.Type.IsMap())
                     {
                         _index.SaveLastState();
