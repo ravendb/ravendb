@@ -1612,7 +1612,7 @@ namespace Raven.Client.Documents.Indexes
                     else if (isDictionaryObject)
                     {
                         Visit(expression);
-                        if(node.Method.Name != "get_Item")
+                        if (node.Method.Name != "get_Item")
                             Out(".ToDictionary(e1 => e1.Key, e1 => e1.Value)");
                     }
                     else
@@ -1718,12 +1718,16 @@ namespace Raven.Client.Documents.Indexes
                     if (node.Method.Name == "Select" || _isSelectMany)
                         _avoidDuplicatedParameters = true;
 
-                    if(node.Arguments[num2].NodeType == ExpressionType.MemberAccess)
+                    if (node.Arguments[num2].NodeType == ExpressionType.MemberAccess)
                     {
-                        if (node.Arguments[num2].Type.IsPrimitive ||
-                            node.Arguments[num2].Type == typeof(string))
+                        var methodArgType = node.Method.GetParameters()[num2].ParameterType;
+                        if (methodArgType.IsPrimitive || methodArgType == typeof(string))
                         {
-                            Out("(" + node.Arguments[num2].Type.FullName + ")");
+                            // now we need to figure out if this method has overloads, 
+                            // for example, we may call Convert.ToInt64(Int64), but we want to 
+                            // compile on the server to Convert.ToInt64(object);
+                            if (node.Method.DeclaringType.GetMethods().Count(m => node.Method.Name == m.Name) == 1)
+                                Out("(" + methodArgType.FullName + ")");
                         }
                     }
 
