@@ -56,7 +56,7 @@ while($TRUE){{
                 args,
                 Server.ServerStore.NotificationCenter))
             {
-                extensionPoint.Start();
+                extensionPoint.Start(Server.ServerStore.ServerShutdown);
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
@@ -111,7 +111,7 @@ while($TRUE){{
                 args,
                 Server.ServerStore.NotificationCenter))
             {
-                extensionPoint.Start();
+                extensionPoint.Start(Server.ServerStore.ServerShutdown);
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
@@ -159,7 +159,7 @@ while($TRUE){{
                 args,
                 Server.ServerStore.NotificationCenter))
             {
-                extensionPoint.Start();
+                extensionPoint.Start(Server.ServerStore.ServerShutdown);
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData{ ProcessCpuUsage = 0, MachineCpuUsage = 0};
@@ -214,7 +214,7 @@ while($TRUE){{
                 args,
                 Server.ServerStore.NotificationCenter))
             {
-                extensionPoint.Start();
+                extensionPoint.Start(Server.ServerStore.ServerShutdown);
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
@@ -273,7 +273,7 @@ while($TRUE){{
                 args,
                 Server.ServerStore.NotificationCenter))
             {
-                extensionPoint.Start();
+                extensionPoint.Start(Server.ServerStore.ServerShutdown);
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
@@ -330,7 +330,7 @@ while($TRUE){{
                 args,
                 Server.ServerStore.NotificationCenter))
             {
-                extensionPoint.Start();
+                extensionPoint.Start(Server.ServerStore.ServerShutdown);
 
                 var startTime = DateTime.Now;
                 var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };

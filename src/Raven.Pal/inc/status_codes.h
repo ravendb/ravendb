@@ -41,6 +41,15 @@
 #define FAIL_GET_REAL_PATH              32
 #define FAIL_GET_MODULE_HANDLE          33
 #define FAIL_DISCARD_VIRTUAL_MEMORY     34
+#define FAIL_CREATE_PIPE                35
+#define FAIL_VFORK                      36
+#define FAIL_FCNTL                      37
+#define FAIL_CREATE_PROCESS             38
+#define FAIL_WAIT_PID                   39
+#define FAIL_TIMEOUT                    40
+#define FAIL_KILL                       41
+#define FAIL_EXEC_ACCESS                42
+#define FAIL_CHILD_PROCESS_FAILURE      43
 
 #define ERRNO_SPECIAL_CODES_NONE        0
 #define ERRNO_SPECIAL_CODES_ENOMEM      (1 << 0)
