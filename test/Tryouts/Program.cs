@@ -5,7 +5,6 @@ using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
 using SlowTests.Voron;
-using StressTests.Cluster;
 using Tests.Infrastructure;
 using Xunit.Sdk;
 

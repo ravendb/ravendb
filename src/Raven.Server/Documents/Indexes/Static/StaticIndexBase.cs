@@ -91,7 +91,8 @@ namespace Raven.Server.Documents.Indexes.Static
             if (keyOrEnumerable is string keyString)
                 return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
 
-            if (keyOrEnumerable is DynamicNullObject)
+            if (keyOrEnumerable is DynamicNullObject ||
+                keyOrEnumerable == null)
                 return DynamicNullObject.Null;
 
             if (keyOrEnumerable is IEnumerable enumerable)
