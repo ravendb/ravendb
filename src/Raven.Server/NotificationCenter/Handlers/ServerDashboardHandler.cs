@@ -24,7 +24,6 @@ namespace Raven.Server.NotificationCenter.Handlers
                     ServerStore.ServerShutdown))
                 {
                     var isValidFor = GetDatabaseAccessValidationFunc();
-                    byte[][] buffers = null;
                     try
                     {
                         using (var lowMemoryMonitor = new LowMemoryMonitor())
@@ -46,14 +45,6 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         if (Logger.IsInfoEnabled)
                             Logger.Info("Failed to send the initial server dashboard data", e);
-                    }
-                    finally
-                    {
-                        if (buffers != null)
-                        {
-                            ArrayPool<byte>.Shared.Return(buffers[0]);
-                            ArrayPool<byte>.Shared.Return(buffers[1]);
-                        }
                     }
 
                     await writer.WriteNotifications(isValidFor);
