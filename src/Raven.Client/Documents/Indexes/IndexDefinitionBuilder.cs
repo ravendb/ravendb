@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
         /// </summary>
-        public Expression<Func<TReduceResult, string>> PatternOfReduceOutputReferences { get; set; }
+        public Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences{ get; set; }
 
         /// <summary>
         /// Add additional sources to be compiled with the index on the server.
@@ -167,8 +167,8 @@ namespace Raven.Client.Documents.Indexes
                     OutputReduceToCollection = OutputReduceToCollection
                 };
 
-                if (PatternOfReduceOutputReferences != null)
-                    indexDefinition.PatternOfReduceOutputReferences = ConvertPatternOfReduceOutputReferencesToString(PatternOfReduceOutputReferences);
+                if (PatternForOutputReduceToCollectionReferences!= null)
+                    indexDefinition.PatternForOutputReduceToCollectionReferences= ConvertPatternForOutputReduceToCollectionReferencesToString(PatternForOutputReduceToCollectionReferences);
 
                 var indexes = ConvertToStringDictionary(Indexes);
                 var stores = ConvertToStringDictionary(Stores);
@@ -248,7 +248,7 @@ namespace Raven.Client.Documents.Indexes
             }
         }
 
-        private string ConvertPatternOfReduceOutputReferencesToString(Expression<Func<TReduceResult, string>> reduceOutputReferencesPattern)
+        private string ConvertPatternForOutputReduceToCollectionReferencesToString(Expression<Func<TReduceResult, string>> reduceOutputReferencesPattern)
         {
             if (reduceOutputReferencesPattern.Body is MethodCallExpression methodCall)
             {
@@ -257,10 +257,10 @@ namespace Raven.Client.Documents.Indexes
 
                 if (methodCall.Arguments.Count < 1)
                     throw new InvalidOperationException(
-                        $"{nameof(MethodCallExpression)} of {nameof(PatternOfReduceOutputReferences)} expression must have at least 1 argument");
+                        $"{nameof(MethodCallExpression)} of {nameof(PatternForOutputReduceToCollectionReferences)} expression must have at least 1 argument");
 
                 if (!(methodCall.Arguments[0] is ConstantExpression stringConstant))
-                    throw new InvalidOperationException($"First argument of {nameof(MethodCallExpression)} of {nameof(PatternOfReduceOutputReferences)} expression must be {nameof(ConstantExpression)}");
+                    throw new InvalidOperationException($"First argument of {nameof(MethodCallExpression)} of {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(ConstantExpression)}");
 
 
                 string pattern = stringConstant.Value.ToString();
@@ -272,7 +272,7 @@ namespace Raven.Client.Documents.Indexes
                     if (expression is UnaryExpression unaryExpression)
                     {
                         if (!(unaryExpression.Operand is MemberExpression memberExpression))
-                            throw new InvalidOperationException($"Properties provided in {nameof(PatternOfReduceOutputReferences)} expression must be {nameof(MemberAccessException)}");
+                            throw new InvalidOperationException($"Properties provided in {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MemberAccessException)}");
 
                         pattern = pattern.Replace((i - 1).ToString(), memberExpression.Member.Name);
                     }
@@ -282,7 +282,7 @@ namespace Raven.Client.Documents.Indexes
                     }
                     else
                     {
-                        throw new NotSupportedException($"Unsupported expression in {nameof(PatternOfReduceOutputReferences)}: '{expression}'");
+                        throw new NotSupportedException($"Unsupported expression in {nameof(PatternForOutputReduceToCollectionReferences)}: '{expression}'");
                     }
                 }
 
@@ -320,7 +320,7 @@ namespace Raven.Client.Documents.Indexes
                     if (expr is UnaryExpression unaryExpression)
                     {
                         if (!(unaryExpression.Operand is MemberExpression memberExpression))
-                            throw new InvalidOperationException($"Properties provided in {nameof(PatternOfReduceOutputReferences)} expression must be {nameof(MemberAccessException)}");
+                            throw new InvalidOperationException($"Properties provided in {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MemberAccessException)}");
 
                         return $"{{{memberExpression.Member.Name}}}";
                     }
@@ -330,13 +330,13 @@ namespace Raven.Client.Documents.Indexes
                         return $"{{{memeExpr.Member.Name}}}";
                     }
 
-                    throw new NotSupportedException($"Unsupported expression in {nameof(PatternOfReduceOutputReferences)}: '{expr}'");
+                    throw new NotSupportedException($"Unsupported expression in {nameof(PatternForOutputReduceToCollectionReferences)}: '{expr}'");
                 }
 
                 return pattern;
             }
 
-            throw new InvalidOperationException($"Body of {nameof(PatternOfReduceOutputReferences)} expression must be {nameof(MethodCallExpression)}");
+            throw new InvalidOperationException($"Body of {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MethodCallExpression)}");
 
         }
 

@@ -99,7 +99,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
         /// </summary>
-        protected Expression<Func<TReduceResult, string>> PatternOfReduceOutputReferences { get; set; }
+        protected Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences{ get; set; }
 
         /// <summary>
         /// Register a field to be indexed

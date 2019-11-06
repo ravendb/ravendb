@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Indexes.MapReduce
 {
-    public class ReduceOutputIdsReference
+    public class OutputReduceToCollectionReference
     {
         public string Id { get; set; }
 

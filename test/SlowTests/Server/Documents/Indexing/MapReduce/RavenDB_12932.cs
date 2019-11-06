@@ -22,30 +22,30 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
             using (var store = GetDocumentStore())
             {
-                AbstractIndexCreationTask<Order, DifferentApproachesToDefinePatternOfReduceOutputReferences.Result> index;
+                AbstractIndexCreationTask<Order, DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.Result> index;
 
-                index = new DifferentApproachesToDefinePatternOfReduceOutputReferences.One_A("One_A");
-                Assert.Equal("reports/daily/{OrderedAt:yyyy-MM-dd}", index.CreateIndexDefinition().PatternOfReduceOutputReferences);
+                index = new DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.One_A("One_A");
+                Assert.Equal("reports/daily/{OrderedAt:yyyy-MM-dd}", index.CreateIndexDefinition().PatternForOutputReduceToCollectionReferences);
                 index.Execute(store);
 
-                index = new DifferentApproachesToDefinePatternOfReduceOutputReferences.One_B("One_B");
-                Assert.Equal("{OrderedAt:yyyy-MM-dd}reports/daily/{Profit:C}", index.CreateIndexDefinition().PatternOfReduceOutputReferences);
+                index = new DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.One_B("One_B");
+                Assert.Equal("{OrderedAt:yyyy-MM-dd}reports/daily/{Profit:C}", index.CreateIndexDefinition().PatternForOutputReduceToCollectionReferences);
                 index.Execute(store);
                 
-                index = new DifferentApproachesToDefinePatternOfReduceOutputReferences.Two_A("Two_A");
-                Assert.Equal("reports/daily/{OrderedAt}", index.CreateIndexDefinition().PatternOfReduceOutputReferences);
+                index = new DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.Two_A("Two_A");
+                Assert.Equal("reports/daily/{OrderedAt}", index.CreateIndexDefinition().PatternForOutputReduceToCollectionReferences);
                 index.Execute(store);
 
-                index = new DifferentApproachesToDefinePatternOfReduceOutputReferences.Two_B("Two_B");
-                Assert.Equal("reports/daily/{OrderedAt}/product/{Product}", index.CreateIndexDefinition().PatternOfReduceOutputReferences);
+                index = new DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.Two_B("Two_B");
+                Assert.Equal("reports/daily/{OrderedAt}/product/{Product}", index.CreateIndexDefinition().PatternForOutputReduceToCollectionReferences);
                 index.Execute(store);
 
-                index = new DifferentApproachesToDefinePatternOfReduceOutputReferences.Three_A("Three_A");
-                Assert.Equal("reports/daily/{OrderedAt:MM/dd/yyyy}", index.CreateIndexDefinition().PatternOfReduceOutputReferences);
+                index = new DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.Three_A("Three_A");
+                Assert.Equal("reports/daily/{OrderedAt:MM/dd/yyyy}", index.CreateIndexDefinition().PatternForOutputReduceToCollectionReferences);
                 index.Execute(store);
 
-                index = new DifferentApproachesToDefinePatternOfReduceOutputReferences.Three_B("Three_B");
-                Assert.Equal("reports/daily/{OrderedAt:MM/dd/yyyy}/{Product}", index.CreateIndexDefinition().PatternOfReduceOutputReferences);
+                index = new DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences.Three_B("Three_B");
+                Assert.Equal("reports/daily/{OrderedAt:MM/dd/yyyy}/{Product}", index.CreateIndexDefinition().PatternForOutputReduceToCollectionReferences);
                 index.Execute(store);
             }
         }
@@ -107,7 +107,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 using (var session = store.OpenSession())
                 {
                     // 2019-10-26
-                    var doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(2, doc.ReduceOutputs.Count);
 
@@ -122,7 +122,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     // 2019-10-24
 
-                    doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-24", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-24", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(1, doc.ReduceOutputs.Count);
 
@@ -132,7 +132,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     // 2019-10-25
 
-                    doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-25", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-25", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(1, doc.ReduceOutputs.Count);
 
@@ -151,9 +151,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     WaitForIndexing(store);
 
-                    Assert.Null(session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-24"));
-                    Assert.Null(session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-25"));
-                    Assert.Null(session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-26"));
+                    Assert.Null(session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-24"));
+                    Assert.Null(session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-25"));
+                    Assert.Null(session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26"));
                 }
             }
         }
@@ -192,7 +192,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 using (var session = store.OpenSession())
                 {
-                    var doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(numberOfOutputs, doc.ReduceOutputs.Count);
 
@@ -217,7 +217,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 using (var session = store.OpenSession())
                 {
-                    var doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(numberOfOutputs - 1, doc.ReduceOutputs.Count);
 
@@ -242,7 +242,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 using (var session = store.OpenSession())
                 {
-                    var doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(numberOfOutputs - 4, doc.ReduceOutputs.Count);
 
@@ -257,7 +257,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         }
 
         [Fact]
-        public async void CanUpdateIndexWithPatternOfReduceOutputReferences()
+        public async void CanUpdateIndexWithPatternForOutputReduceToCollectionReferences()
         {
             using (var store = GetDocumentStore())
             {
@@ -321,7 +321,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 using (var session = store.OpenSession())
                 {
                     // 2019-10-26
-                    var doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(2, doc.ReduceOutputs.Count);
 
@@ -336,7 +336,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     // 2019-10-24
 
-                    doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-24", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-24", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(1, doc.ReduceOutputs.Count);
 
@@ -346,7 +346,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     // 2019-10-25
 
-                    doc = session.Load<ReduceOutputIdsReference>("reports/daily/2019-10-25", x => x.IncludeDocuments(y => y.ReduceOutputs));
+                    doc = session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-25", x => x.IncludeDocuments(y => y.ReduceOutputs));
 
                     Assert.Equal(1, doc.ReduceOutputs.Count);
 
@@ -402,7 +402,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 OutputReduceToCollection = "Profits";
 
-                PatternOfReduceOutputReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+                PatternForOutputReduceToCollectionReferences= x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
             }
         }
 
@@ -433,13 +433,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = "Profits";
 
-                    PatternOfReduceOutputReferences = x => string.Format("reports/daily/{0:yyyy-MM-dd}", x.OrderedAt);
+                    PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:yyyy-MM-dd}", x.OrderedAt);
 
                 }
             }
         }
 
-        private static class DifferentApproachesToDefinePatternOfReduceOutputReferences
+        private static class DifferentApproachesToDefinePatternForOutputReduceToCollectionReferences
         {
             public class Result
             {
@@ -463,7 +463,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternOfReduceOutputReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+                    PatternForOutputReduceToCollectionReferences= x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
                 }
             }
 
@@ -482,7 +482,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternOfReduceOutputReferences = x => $"{x.OrderedAt:yyyy-MM-dd}reports/daily/{x.Profit:C}";
+                    PatternForOutputReduceToCollectionReferences= x => $"{x.OrderedAt:yyyy-MM-dd}reports/daily/{x.Profit:C}";
                 }
             }
 
@@ -501,7 +501,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternOfReduceOutputReferences = x => "reports/daily/" + x.OrderedAt;
+                    PatternForOutputReduceToCollectionReferences= x => "reports/daily/" + x.OrderedAt;
                 }
             }
 
@@ -520,7 +520,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternOfReduceOutputReferences = x => "reports/daily/" + x.OrderedAt + "/product/" + x.Product;
+                    PatternForOutputReduceToCollectionReferences= x => "reports/daily/" + x.OrderedAt + "/product/" + x.Product;
                 }
             }
 
@@ -539,7 +539,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternOfReduceOutputReferences = x => string.Format("reports/daily/{0:MM/dd/yyyy}", x.OrderedAt);
+                    PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:MM/dd/yyyy}", x.OrderedAt);
                 }
             }
 
@@ -558,7 +558,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternOfReduceOutputReferences = x => string.Format("reports/daily/{0:MM/dd/yyyy}/{1}", x.OrderedAt, x.Product);
+                    PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:MM/dd/yyyy}/{1}", x.OrderedAt, x.Product);
                 }
             }
         }
