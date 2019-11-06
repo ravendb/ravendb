@@ -994,7 +994,10 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _contextPool.SetMostWorkInGoingToHappenOnThisThread();
 
-                    SubscribeToChanges(storageEnvironment, DocumentDatabase);
+                    if (storageEnvironment != null)
+                        storageEnvironment.OnLogsApplied += HandleLogsApplied;
+
+                    SubscribeToChanges(DocumentDatabase);
 
                     while (true)
                     {
@@ -1295,7 +1298,10 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _inMemoryIndexProgress.Clear();
 
-                    UnsubscribeFromChanges(storageEnvironment, DocumentDatabase);
+                    if (storageEnvironment != null)
+                        storageEnvironment.OnLogsApplied -= HandleLogsApplied;
+
+                    UnsubscribeFromChanges(DocumentDatabase);
                 }
             }
         }
@@ -1771,20 +1777,14 @@ namespace Raven.Server.Documents.Indexes
                 Stop();
         }
 
-        protected virtual void SubscribeToChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        protected virtual void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
-            if (environment != null)
-                environment.OnLogsApplied += HandleLogsApplied;
-
             if (documentDatabase != null)
                 documentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
         }
 
-        protected virtual void UnsubscribeFromChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        protected virtual void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
-            if (environment != null)
-                environment.OnLogsApplied -= HandleLogsApplied;
-
             if (documentDatabase != null)
                 documentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
         }

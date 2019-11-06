@@ -23,18 +23,14 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _compiled = compiled;
         }
 
-        protected override void SubscribeToChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
-            base.SubscribeToChanges(environment, documentDatabase);
-
             if (DocumentDatabase != null)
                 DocumentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
         }
 
-        protected override void UnsubscribeFromChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        protected override void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
-            base.UnsubscribeFromChanges(environment, documentDatabase);
-
             if (DocumentDatabase != null)
                 DocumentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
         }
