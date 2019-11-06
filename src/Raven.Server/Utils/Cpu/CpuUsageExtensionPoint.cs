@@ -2,10 +2,8 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Platform;
@@ -27,9 +25,7 @@ namespace Raven.Server.Utils.Cpu
             MachineCpuUsage = -1
         };
 
-        private long _isDataValid = 0;
-        public ExtensionPointData Data => Interlocked.Read(ref _isDataValid) == 0 ? BadData : _data;
-
+        public ExtensionPointData Data => _data;
 
         public CpuUsageExtensionPoint(
             JsonContextPool contextPool,
@@ -50,7 +46,7 @@ namespace Raven.Server.Utils.Cpu
         {
             Task.Run(() =>
             {
-                this.StartInternal(serverShutdown);
+                StartInternal(serverShutdown);
             }, serverShutdown);
         }
 
@@ -70,13 +66,11 @@ namespace Raven.Server.Utils.Cpu
                     {
                         var lineOutHandler = new Action<object, string>((p, l) =>
                         {
-                            Interlocked.Exchange(ref _isDataValid, 1);
-
                             if (l == null)
                             {
                                 if (DateTime.UtcNow - lastReceivedLine > TimeSpan.FromSeconds(60))
                                 {
-                                    Interlocked.Exchange(ref _isDataValid, 0);
+                                    _data = BadData;
                                     NotifyWarning("Cpu usage process hanged (no output for 60 seconds), killing the process",
                                         new TimeoutException("no output from process for 60 seconds"));
                                     cts.Cancel();
@@ -89,7 +83,7 @@ namespace Raven.Server.Utils.Cpu
                             var errString = TryHandleInfoReceived(l);
                             if (errString != null)
                             {
-                                Interlocked.Exchange(ref _isDataValid, 0);
+                                _data = BadData;
                                 NotifyWarning(errString);
                                 cts.Cancel();
                             }
@@ -102,8 +96,6 @@ namespace Raven.Server.Utils.Cpu
                             null,
                             lineOutHandler,
                             linkedCts.Token);
-
-                        Interlocked.Exchange(ref _isDataValid, 0);
 
                         if (ctk.IsCancellationRequested)
                             return;
