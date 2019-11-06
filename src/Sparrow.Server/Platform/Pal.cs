@@ -357,7 +357,13 @@ namespace Sparrow.Server.Platform
                 var size = CurrentEncoding.GetMaxByteCount(s.Length) + sizeof(char);
                 _buffer = ArrayPool<byte>.Shared.Rent(size);
                 int length = CurrentEncoding.GetBytes(s, 0, s.Length, _buffer, 0);
-                for (int i = length; i < size; i++)
+                if (length > size - sizeof(char))
+                {
+                    throw new InvalidOperationException(
+                        $"Invalid length of GetBytes while converting string : '{s}' using '{CurrentEncoding.EncodingName}' Encoder. Got length of {length} bytes while max size for the string using this encoder is {CurrentEncoding.GetMaxByteCount(s.Length)}");
+                }
+
+                for (int i = length; i < length + sizeof(char); i++)
                 {
                     _buffer[i] = 0;
                 }
