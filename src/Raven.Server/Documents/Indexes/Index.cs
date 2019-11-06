@@ -994,8 +994,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _contextPool.SetMostWorkInGoingToHappenOnThisThread();
 
-                    DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
-                    storageEnvironment.OnLogsApplied += HandleLogsApplied;
+                    SubscribeToChanges(storageEnvironment, DocumentDatabase);
 
                     while (true)
                     {
@@ -1296,9 +1295,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _inMemoryIndexProgress.Clear();
 
-                    storageEnvironment.OnLogsApplied -= HandleLogsApplied;
-                    if (DocumentDatabase != null)
-                        DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+                    UnsubscribeFromChanges(storageEnvironment, DocumentDatabase);
                 }
             }
         }
@@ -1772,6 +1769,24 @@ namespace Raven.Server.Documents.Indexes
 
             if (change.Type == IndexChangeTypes.IndexMarkedAsErrored)
                 Stop();
+        }
+
+        protected virtual void SubscribeToChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            if (environment != null)
+                environment.OnLogsApplied += HandleLogsApplied;
+
+            if (documentDatabase != null)
+                documentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
+        }
+
+        protected virtual void UnsubscribeFromChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            if (environment != null)
+                environment.OnLogsApplied -= HandleLogsApplied;
+
+            if (documentDatabase != null)
+                documentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
         }
 
         protected virtual void HandleDocumentChange(DocumentChange change)
@@ -4022,14 +4037,25 @@ namespace Raven.Server.Documents.Indexes
 
     public class TimeSeriesCollection : IIndexCollection
     {
+        private string _storageKey;
+
         public TimeSeriesCollection(string collectionName, string timeSeriesName)
         {
             CollectionName = collectionName;
             TimeSeriesName = timeSeriesName;
-            StorageKey = $"{collectionName}|{timeSeriesName}";
         }
 
-        public string StorageKey { get; }
+        public string StorageKey
+        {
+            get
+            {
+                if (_storageKey == null)
+                    _storageKey = $"{CollectionName}|{TimeSeriesName}";
+
+                return _storageKey;
+            }
+        }
+
         public string CollectionName { get; }
         public string TimeSeriesName { get; }
 

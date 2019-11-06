@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -19,6 +21,22 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             : base(definition.IndexDefinition.Type, definition)
         {
             _compiled = compiled;
+        }
+
+        protected override void SubscribeToChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            base.SubscribeToChanges(environment, documentDatabase);
+
+            if (DocumentDatabase != null)
+                DocumentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
+        }
+
+        protected override void UnsubscribeFromChanges(StorageEnvironment environment, DocumentDatabase documentDatabase)
+        {
+            base.UnsubscribeFromChanges(environment, documentDatabase);
+
+            if (DocumentDatabase != null)
+                DocumentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
@@ -84,6 +102,19 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);
             return instance;
+        }
+
+        private void HandleTimeSeriesChange(TimeSeriesChange change)
+        {
+            if (HandleAllDocs)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            var collection = new TimeSeriesCollection(change.CollectionName, change.Name);
+
+            if (_compiled.Maps.ContainsKey(collection) == false)
+                return;
+
+            _mre.Set();
         }
     }
 }

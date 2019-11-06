@@ -13,6 +13,8 @@ namespace Raven.Server.Documents
 
         public event Action<CounterChange> OnCounterChange;
 
+        public event Action<TimeSeriesChange> OnTimeSeriesChange;
+
         public event Action<IndexChange> OnIndexChange;
 
         public event Action<OperationStatusChange> OnOperationStatusChange;
@@ -54,6 +56,17 @@ namespace Raven.Server.Documents
             {
                 if (!connection.Value.IsDisposed)
                     connection.Value.SendCounterChanges(counterChange);
+            }
+        }
+
+        public void RaiseNotifications(TimeSeriesChange timeSeriesChange)
+        {
+            OnTimeSeriesChange?.Invoke(timeSeriesChange);
+
+            foreach (var connection in Connections)
+            {
+                if (!connection.Value.IsDisposed)
+                    connection.Value.SendTimeSeriesChanges(timeSeriesChange);
             }
         }
 

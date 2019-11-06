@@ -21,7 +21,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = new Company();
-                    session.Store(company);
+                    session.Store(company, "companies/1");
                     session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, "tag", new double[] { 7 });
 
                     session.SaveChanges();
@@ -34,6 +34,18 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }));
 
                 WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company).Append("HeartRate", DateTime.Now, "tag", new double[] { 3 });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 2));
             }
         }
     }

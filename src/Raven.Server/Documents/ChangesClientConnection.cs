@@ -252,6 +252,14 @@ namespace Raven.Server.Documents
             }
         }
 
+        public void SendTimeSeriesChanges(TimeSeriesChange change)
+        {
+            if (IsDisposed)
+                return;
+
+            // TODO [ppekrol]
+        }
+
         public void SendDocumentChanges(DocumentChange change)
         {
             // this is a precaution, in order to overcome an observed race condition between change client disconnection and raising changes

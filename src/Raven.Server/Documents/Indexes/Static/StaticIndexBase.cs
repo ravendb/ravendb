@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
-
         public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
 
         internal override HashSet<string> GetDocumentsCollections()
