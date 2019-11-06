@@ -19,50 +19,6 @@ namespace StressTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(1024 * 1024 * 1024)]
-        public void CanGetOneAttachment(int size)
-        {
-            using (var test = new AttachmentsStreamTests(Output))
-            {
-                test.CanGetOneAttachment(size);
-            }
-        }
-
-        [Theory]
-        [InlineData(1000, 32768)]
-        [InlineData(1_000_000, 1)]
-        public void CanGetListOfAttachmentsAndSkip(int count, int size)
-        {
-            using (var test = new AttachmentsStreamTests(Output))
-            {
-                test.CanGetListOfAttachmentsAndSkip(count, size);
-            }
-        }
-
-        [Theory]
-        [InlineData(1000, 32768)]
-        [InlineData(1_000_000, 1)]
-        public void CanGetListOfAttachmentsAndReadOrdered(int count, int size)
-        {
-            using (var test = new AttachmentsStreamTests(Output))
-            {
-                test.CanGetListOfAttachmentsAndReadOrdered(count, size);
-            }
-        }
-
-
-        [Theory]
-        [InlineData(1000, 32768)]
-        [InlineData(1_000_000, 1)]
-        public async Task CanGetListOfAttachmentsAndReadOrderedAsync(int count, int size)
-        {
-            using (var test = new AttachmentsStreamTests(Output))
-            {
-                await test.CanGetListOfAttachmentsAndReadOrderedAsync(count, size);
-            }
-        }
-
-        [Theory]
         [InlineData(3, (long)int.MaxValue + short.MaxValue)]
         public void CanGetListOfHugeAttachmentsAndReadOrdered(int count, int size)
         {
