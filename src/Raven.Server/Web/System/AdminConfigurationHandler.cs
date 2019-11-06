@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminConfigurationHandler : RequestHandler
+    public class AdminConfigurationHandler : ServerRequestHandler
     {
         [RavenAction("/admin/configuration/studio", "PUT", AuthorizationStatus.Operator)]
         public async Task PutStudioConfiguration()

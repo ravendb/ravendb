@@ -70,8 +70,8 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(IndexType type, TIndexDefinition definition)
-            : base(type, definition)
+        protected Index(IndexType type, TIndexDefinition definition, bool hasOutputReduceToCollection)
+            : base(type, definition, hasOutputReduceToCollection)
         {
         }
     }
@@ -206,7 +206,9 @@ namespace Raven.Server.Documents.Indexes
 
         internal bool IsLowMemory => _lowMemoryFlag.IsRaised();
 
-        protected Index(IndexType type, IndexDefinitionBase definition)
+        private readonly double _txAllocationsRatio;
+
+        protected Index(IndexType type, IndexDefinitionBase definition, bool hasOutputReduceToCollection)
         {
             Type = type;
             Definition = definition;
@@ -221,7 +223,14 @@ namespace Raven.Server.Documents.Indexes
                 GetRegexFactory = GetOrAddRegex
             };
 
-            _txAllocationsRatio = type.IsMapReduce() ? 2.5 : 2;
+            if (type.IsMapReduce())
+            {
+                _txAllocationsRatio = hasOutputReduceToCollection ? 4 : 3;
+            }
+            else
+            {
+                _txAllocationsRatio = 2;
+            }
 
             _disposeOne = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -393,8 +402,6 @@ namespace Raven.Server.Documents.Indexes
         public string Name => Definition?.Name;
 
         public int MaxNumberOfOutputsPerDocument { get; private set; }
-
-        private readonly double _txAllocationsRatio;
 
         public virtual IndexRunningStatus Status
         {

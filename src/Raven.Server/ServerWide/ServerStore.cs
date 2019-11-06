@@ -102,6 +102,7 @@ namespace Raven.Server.ServerWide
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _clusterRequestExecutor;
+        private long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
         private readonly RavenServer _server;
@@ -445,6 +446,10 @@ namespace Raven.Server.ServerWide
                 return GetClusterTopology(context);
             }
         }
+        public bool HasTopologyChanged(long topologyEtag)
+        {
+            return _lastClusterTopologyIndex != topologyEtag;
+        }
 
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
@@ -494,7 +499,7 @@ namespace Raven.Server.ServerWide
         {
             Configuration.CheckDirectoryPermissions();
 
-            LowMemoryNotification.Instance.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.UseTotalDirtyMemInsteadOfMemUsage, LowMemoryMonitor.Instance, ServerShutdown);
+            LowMemoryNotification.Instance.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.UseTotalDirtyMemInsteadOfMemUsage, new LowMemoryMonitor(), ServerShutdown);
 
             MemoryInformation.SetFreeCommittedMemory(
                 Configuration.Memory.MinimumFreeCommittedMemoryPercentage,
@@ -699,7 +704,7 @@ namespace Raven.Server.ServerWide
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
-            _engine.Initialize(_env, Configuration, myUrl);
+            _engine.Initialize(_env, Configuration, myUrl, out _lastClusterTopologyIndex);
 
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
@@ -962,6 +967,9 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChangeInternal(ClusterTopology topology, Dictionary<string, NodeStatus> status = null)
         {
+            if (_lastClusterTopologyIndex < topology.Etag)
+                _lastClusterTopologyIndex = topology.Etag;
+
             NotificationCenter.Add(ClusterTopologyChanged.Create(topology, LeaderTag,
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, status ?? GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
 

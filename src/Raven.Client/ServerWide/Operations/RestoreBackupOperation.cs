@@ -13,7 +13,7 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
-  private readonly RestoreBackupConfigurationBase _restoreConfiguration;
+        private readonly RestoreBackupConfigurationBase _restoreConfiguration;
         public string NodeTag;
 
         public RestoreBackupOperation(RestoreBackupConfigurationBase restoreConfiguration)

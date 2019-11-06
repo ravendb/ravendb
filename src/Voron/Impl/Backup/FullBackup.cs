@@ -59,7 +59,7 @@ namespace Voron.Impl.Backup
         /// </summary>
         public void ToFile(IEnumerable<StorageEnvironmentInformation> envs,
             ZipArchive archive,
-            CompressionLevel compression = CompressionLevel.Optimal,
+            CompressionLevel compressionLevel,
             Action<(string Message, int FilesCount)> infoNotify = null,
             CancellationToken cancellationToken = default)
         {
@@ -74,14 +74,14 @@ namespace Voron.Impl.Backup
                 var env = e.Env;
                 var dataPager = env.Options.DataPager;
                 var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                Backup(env, compression, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
+                Backup(env, compressionLevel, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
             }
 
             infoNotify(("Voron backup db finished", 0));
         }
 
         private static void Backup(
-            StorageEnvironment env, CompressionLevel compression, AbstractPager dataPager,
+            StorageEnvironment env, CompressionLevel compressionLevel, AbstractPager dataPager,
             ZipArchive package, string basePath, DataCopier copier,
             Action<(string Message, int FilesCount)> infoNotify,
             CancellationToken cancellationToken = default)
@@ -104,7 +104,7 @@ namespace Voron.Impl.Backup
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
                     infoNotify(($"Voron copy headers for {basePath}", 2));
-                    VoronBackupUtil.CopyHeaders(compression, package, copier, env.Options, basePath);
+                    VoronBackupUtil.CopyHeaders(compressionLevel, package, copier, env.Options, basePath);
 
                     // journal files snapshot
                     var files = env.Journal.Files; // thread safety copy
@@ -151,7 +151,7 @@ namespace Voron.Impl.Backup
                 }
 
                 // data file backup
-                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compression);
+                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compressionLevel);
                 Debug.Assert(dataPart != null);
 
                 if (allocatedPages > 0) //only true if dataPager is still empty at backup start
@@ -172,7 +172,7 @@ namespace Voron.Impl.Backup
                         cancellationToken.ThrowIfCancellationRequested();
 
                         var entryName = StorageEnvironmentOptions.JournalName(journalFile.Number);
-                        var journalPart = package.CreateEntry(Path.Combine(basePath, entryName), compression);
+                        var journalPart = package.CreateEntry(Path.Combine(basePath, entryName), compressionLevel);
 
                         Debug.Assert(journalPart != null);
 

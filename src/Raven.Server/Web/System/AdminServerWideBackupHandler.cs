@@ -25,7 +25,7 @@ using Raven.Server.Config.Settings;
 
 namespace Raven.Server.Web.System
 {
-    public class AdminServerWideBackupHandler : RequestHandler
+    public class AdminServerWideBackupHandler : ServerRequestHandler
     {
         [RavenAction("/admin/configuration/server-wide", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task GetConfigurationServerWide()

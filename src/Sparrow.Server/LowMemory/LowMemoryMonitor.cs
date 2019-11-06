@@ -1,4 +1,5 @@
-﻿using Sparrow.LowMemory;
+﻿using System.Buffers;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 
@@ -6,13 +7,19 @@ namespace Sparrow.Server.LowMemory
 {
     public class LowMemoryMonitor : AbstractLowMemoryMonitor
     {
-        public static readonly LowMemoryMonitor Instance = new LowMemoryMonitor();
-
         private readonly SmapsReader _smapsReader;
 
-        private LowMemoryMonitor()
+        private byte[][] _buffers;
+
+        public LowMemoryMonitor()
         {
-            _smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
+            if (PlatformDetails.RunningOnLinux)
+            {
+                var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                _buffers = new[] { buffer1, buffer2 };
+                _smapsReader = new SmapsReader(_buffers);
+            }
         }
 
         public override MemoryInfoResult GetMemoryInfoOnce()
@@ -22,7 +29,7 @@ namespace Sparrow.Server.LowMemory
 
         public override MemoryInfoResult GetMemoryInfo(bool extended = false)
         {
-            return MemoryInformation.GetMemoryInfo(_smapsReader, extended: extended);
+            return MemoryInformation.GetMemoryInfo(extended ? _smapsReader : null, extended: extended);
         }
 
         public override bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
@@ -33,6 +40,17 @@ namespace Sparrow.Server.LowMemory
         public override void AssertNotAboutToRunOutOfMemory()
         {
             MemoryInformation.AssertNotAboutToRunOutOfMemory();
+        }
+
+        public override void Dispose()
+        {
+            if (_buffers != null)
+            {
+                ArrayPool<byte>.Shared.Return(_buffers[0]);
+                ArrayPool<byte>.Shared.Return(_buffers[1]);
+
+                _buffers = null;
+            }
         }
     }
 }

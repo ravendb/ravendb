@@ -3,7 +3,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public abstract class AbstractLowMemoryMonitor
+    public abstract class AbstractLowMemoryMonitor : IDisposable
     {
         public abstract MemoryInfoResult GetMemoryInfoOnce();
 
@@ -22,5 +22,7 @@ namespace Sparrow.LowMemory
         {
             return NativeMemory.TotalAllocatedMemory;
         }
+
+        public abstract void Dispose();
     }
 }
