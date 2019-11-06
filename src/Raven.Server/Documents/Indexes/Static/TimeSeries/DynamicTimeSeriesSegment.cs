@@ -31,6 +31,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return true;
             }
 
+            if (string.Equals("DocumentId", name))
+            {
+                result = TypeConverter.ToDynamicType(_item.DocId);
+                return true;
+            }
+
             if (string.Equals(nameof(_item.Baseline), name))
             {
                 result = TypeConverter.ToDynamicType(_item.Baseline);
