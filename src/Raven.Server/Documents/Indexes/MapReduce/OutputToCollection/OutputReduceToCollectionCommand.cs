@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
+using Object = System.Object;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
@@ -26,8 +27,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly MapReduceIndex _index;
         private readonly List<string> _reduceKeyHashesToDelete = new List<string>();
 
-        private readonly Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocumentId)>> _reduceDocuments =
-            new Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocumentId)>>();
+        private readonly Dictionary<string, List<object>> _reduceDocuments =
+            new Dictionary<string, List<object>>();
+
+        private readonly Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocumentId)>> _reduceDocumentsForReplayTransaction =
+            new Dictionary<string, List<(BlittableJsonReaderObject, string)>>();
 
         private readonly JsonOperationContext _indexContext;
         private readonly ReduceOutputReferencesSubCommand _outputReferences;
@@ -48,10 +52,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         ///This constructor should be used for replay transaction operations only
         /// </summary>
         internal OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex,
-            Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocumentId)>> reduceDocuments)
+            Dictionary<string, List<(BlittableJsonReaderObject, string)>> reduceDocuments)
             : this(database, outputReduceToCollection, reduceOutputIndex)
         {
-            _reduceDocuments = reduceDocuments;
+            _reduceDocumentsForReplayTransaction = reduceDocuments;
         }
 
         private OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex)
@@ -63,6 +67,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         protected override int ExecuteCmd(DocumentsOperationContext context)
         {
+            if (_reduceDocumentsForReplayTransaction != null && _reduceDocumentsForReplayTransaction.Count > 0)
+            {
+                ProcessReduceDocumentsForReplayTransaction(context);
+                return _reduceDocumentsForReplayTransaction.Count;
+            }
+
             foreach (var reduceKeyHash in _reduceKeyHashesToDelete)
             {
                 var id = GetOutputDocumentKey(reduceKeyHash);
@@ -86,7 +96,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         foreach (var doc in docs)
                         {
-                            _outputReferences.DeleteFromReferenceDocument(doc.Id);
+                            using (doc)
+                            {
+                                _outputReferences.DeleteFromReferenceDocument(doc.Id);
+                            }
                         }
                     }
 
@@ -99,14 +112,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
                 {
                     var id = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
-                    var doc = output.Value[i].Json;
-                    var referenceDocumentId = output.Value[i].ReferenceDocumentId;
+                    var obj = output.Value[i];
+                    string referenceDocumentId;
 
-                    _database.DocumentsStorage.Put(context, id, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-
-                    context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(id, doc.Size);
-
-                    _outputReferences?.Add(referenceDocumentId, id);
+                    using (var doc = GenerateReduceOutput(obj, out referenceDocumentId))
+                    {
+                        _database.DocumentsStorage.Put(context, id, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(id, doc.Size);
+                    }
+                    
+                    if (referenceDocumentId != null)
+                        _outputReferences?.Add(referenceDocumentId, id);
                 }
             }
 
@@ -115,68 +131,92 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             return _reduceDocuments.Count;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        private BlittableJsonReaderObject GenerateReduceOutput(object reduceObject, out string referenceDocumentId)
         {
-            return new OutputReduceToCollectionCommandDto
-            {
-                OutputReduceToCollection = _outputReduceToCollection, ReduceOutputIndex = _reduceOutputIndex, ReduceDocuments = _reduceDocuments
-            };
-        }
-
-        public void AddReduce(string reduceKeyHash, object reduceObject)
-        {
-            if (_reduceDocuments.TryGetValue(reduceKeyHash, out var outputs) == false)
-            {
-                outputs = new List<(BlittableJsonReaderObject Json, string ReferenceDocumentId)>(1);
-                _reduceDocuments.Add(reduceKeyHash, outputs);
-            }
-
             var djv = new DynamicJsonValue();
 
-            if (_index.OutputReduceToCollectionPropertyAccessor == null)
-                _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
+            OutputReferencesPattern.DocumentIdBuilder referenceDocIdBuilder = null;
 
-            string referenceDocumentId = null;
-
-            if (_patternForReduceOutputReferences != null)
+            using (_patternForReduceOutputReferences?.BuildReferenceDocumentId(out referenceDocIdBuilder))
             {
-                using (_patternForReduceOutputReferences.BuildReferenceDocumentId(out OutputReferencesPattern.DocumentIdBuilder referenceDocIdBuilder))
+                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
                 {
-                    foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
-                    {
-                        var value = property.Value;
-                        djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
+                    var value = property.Value;
+                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
 
-                        if (referenceDocIdBuilder.ContainsField(property.Key))
-                            referenceDocIdBuilder.Add(property.Key, property.Value);
-                    }
-
-                    referenceDocumentId = referenceDocIdBuilder.GetId();
+                    if (referenceDocIdBuilder?.ContainsField(property.Key) == true)
+                        referenceDocIdBuilder.Add(property.Key, property.Value);
                 }
+
+                if (referenceDocIdBuilder != null)
+                    referenceDocumentId = referenceDocIdBuilder.GetId();
+                else
+                    referenceDocumentId = null;
             }
-            
 
             djv[Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.Collection] = _outputReduceToCollection
             };
 
-            var doc = _indexContext.ReadObject(djv, "output-of-reduce-doc", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            return _indexContext.ReadObject(djv, "output-of-reduce-doc", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+        }
 
-            outputs.Add((doc, referenceDocumentId));
+        private void ProcessReduceDocumentsForReplayTransaction(DocumentsOperationContext context)
+        {
+            foreach (var output in _reduceDocumentsForReplayTransaction)
+            {
+                for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
+                {
+                    var key = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
+                    var item = output.Value[i];
+
+                    using (item.Json) // TODO arek item.ReferenceDocumentId
+                    {
+                        _database.DocumentsStorage.Put(context, key, null, item.Json, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, item.Json.Size);
+                    }
+                }
+            }
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            var dto = new OutputReduceToCollectionCommandDto
+            {
+                OutputReduceToCollection = _outputReduceToCollection, 
+                ReduceOutputIndex = _reduceOutputIndex
+            };
+
+            dto.ReduceDocuments = _reduceDocuments.ToDictionary(x => x.Key, y => y.Value.Select(i =>
+            {
+                var doc = GenerateReduceOutput(i, out var referenceDocumentId);
+
+                return (doc, referenceDocumentId);
+            }).ToList());
+
+            return dto;
+        }
+
+        public void AddReduce(string reduceKeyHash, object reduceObject)
+        {
+            if (_reduceDocuments.TryGetValue(reduceKeyHash, out var outputs) == false)
+            {
+                outputs = new List<object>(1);
+                _reduceDocuments.Add(reduceKeyHash, outputs);
+            }
+
+            if (_index.OutputReduceToCollectionPropertyAccessor == null)
+                _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
+
+            outputs.Add(reduceObject);
         }
 
         public void DeleteReduce(string reduceKeyHash)
         {
             _reduceKeyHashesToDelete.Add(reduceKeyHash);
 
-            if (_reduceDocuments.Remove(reduceKeyHash, out var outputs))
-            {
-                foreach (var item in outputs)
-                {
-                    item.Json.Dispose();
-                }
-            }
+            _reduceDocuments.Remove(reduceKeyHash, out _);
         }
 
         public static bool IsOutputDocumentPrefix(string prefix)
@@ -219,13 +259,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public void Dispose()
         {
-            foreach (var r in _reduceDocuments)
-            {
-                foreach (var doc in r.Value)
-                {
-                    doc.Json.Dispose();
-                }
-            }
         }
 
         private class ReduceOutputReferencesSubCommand
@@ -277,50 +310,52 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 foreach (var reduceReferenceIdToReduceOutputIds in _idsToDeleteByReferenceDocumentId)
                 {
-                    var referenceDocument = _database.DocumentsStorage.Get(context, reduceReferenceIdToReduceOutputIds.Key);
-                    
-                    if (referenceDocument == null)
-                        continue;
-
-                    if (referenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
-                        ThrowIdsPropertyNotFound(referenceDocument.Id);
-
-                    var idsToRemove = reduceReferenceIdToReduceOutputIds.Value;
-
-                    if (idsToRemove.Count >= ids.Length)
+                    using (var referenceDocument = _database.DocumentsStorage.Get(context, reduceReferenceIdToReduceOutputIds.Key))
                     {
-                        Debug.Assert(ids.All(x => idsToRemove.Contains(x.ToString())), $"Found ID in {nameof(idsToRemove)} that aren't in {nameof(ids)}");
+                        if (referenceDocument == null)
+                            continue;
 
-                        _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
-                        continue;
+                        if (referenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
+                            ThrowIdsPropertyNotFound(referenceDocument.Id);
+
+                        var idsToRemove = reduceReferenceIdToReduceOutputIds.Value;
+
+                        if (idsToRemove.Count >= ids.Length)
+                        {
+                            Debug.Assert(ids.All(x => idsToRemove.Contains(x.ToString())), $"Found ID in {nameof(idsToRemove)} that aren't in {nameof(ids)}");
+
+                            _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
+                            continue;
+                        }
+
+                        if (ids.Modifications == null)
+                            ids.Modifications = new DynamicJsonArray();
+
+                        var indexesToRemove = new List<int>();
+
+                        for (int i = ids.Length - 1; i >= 0; i--)
+                        {
+                            var id = ids[i].ToString();
+
+                            if (idsToRemove.Contains(id))
+                                indexesToRemove.Add(i);
+
+                            if (idsToRemove.Count == indexesToRemove.Count)
+                                break;
+                        }
+
+                        foreach (int toRemove in indexesToRemove)
+                        {
+                            ids.Modifications.RemoveAt(toRemove);
+                        }
+
+                        using (var doc = context.ReadObject(referenceDocument.Data, referenceDocument.Id))
+                        {
+                            _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
+
+                            _index.ReduceOutputs.DeletePatternGeneratedIdForReduceOutput(_indexWriteTransaction, referenceDocument.Id);
+                        }
                     }
-
-                    if (ids.Modifications == null)
-                        ids.Modifications = new DynamicJsonArray();
-
-                    var indexesToRemove = new List<int>();
-
-                    for (int i = ids.Length - 1; i >= 0; i--)
-                    {
-                        var id = ids[i].ToString();
-
-                        if (idsToRemove.Contains(id)) 
-                            indexesToRemove.Add(i);
-
-                        if (idsToRemove.Count == indexesToRemove.Count)
-                            break;
-                    }
-
-                    foreach (int toRemove in indexesToRemove)
-                    {
-                        ids.Modifications.RemoveAt(toRemove);
-                    }
-
-                    var doc = context.ReadObject(referenceDocument.Data, referenceDocument.Id);
-
-                    _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
-
-                    _index.ReduceOutputs.DeletePatternGeneratedIdForReduceOutput(_indexWriteTransaction, referenceDocument.Id);
                 }
 
                 // put
@@ -336,13 +371,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         }
                     };
 
-                    var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-                    _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-
-                    foreach (var reduceOutputId in referencesOfReduceOutput.Value)
+                    using (var referenceJson = context.ReadObject(referenceDoc, "reference-of-reduce-output", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {
-                        _index.ReduceOutputs.AddPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
+                        _database.DocumentsStorage.Put(context, referencesOfReduceOutput.Key, null, referenceJson,
+                            flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+
+                        foreach (var reduceOutputId in referencesOfReduceOutput.Value)
+                        {
+                            _index.ReduceOutputs.AddPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
+                        }
                     }
                 }
             }
