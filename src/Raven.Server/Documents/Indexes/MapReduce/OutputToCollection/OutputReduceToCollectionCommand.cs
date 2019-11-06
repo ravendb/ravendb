@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     if (referenceDocument == null)
                         continue;
 
-                    if (referenceDocument.Data.TryGet(nameof(ReduceOutputIdsReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
+                    if (referenceDocument.Data.TryGet(nameof(OutputReduceToCollectionReference.ReduceOutputs), out BlittableJsonReaderArray ids) == false)
                         ThrowIdsPropertyNotFound(referenceDocument.Id);
 
                     var idsToRemove = reduceReferenceIdToReduceOutputIds.Value;
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 {
                     var referenceDoc = new DynamicJsonValue
                     {
-                        [nameof(ReduceOutputIdsReference.ReduceOutputs)] = new DynamicJsonArray(referencesOfReduceOutput.Value),
+                        [nameof(OutputReduceToCollectionReference.ReduceOutputs)] = new DynamicJsonArray(referencesOfReduceOutput.Value),
                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
                             [Constants.Documents.Metadata.Collection] = $"{_outputReduceToCollection}/References"
@@ -349,7 +349,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             private static void ThrowIdsPropertyNotFound(string id)
             {
-                throw new InvalidOperationException($"Property {nameof(ReduceOutputIdsReference.ReduceOutputs)} was not found in document: {id}");
+                throw new InvalidOperationException($"Property {nameof(OutputReduceToCollectionReference.ReduceOutputs)} was not found in document: {id}");
             }
         }
     }

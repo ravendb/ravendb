@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private HashSet<string> _prefixesOfReduceOutputDocumentsToDelete;
         private readonly string _collectionOfReduceOutputs;
         private readonly long? _reduceOutputVersion;
-        private readonly OutputReferencesPattern _patternOfReduceOutputReferences;
+        private readonly OutputReferencesPattern _PatternForOutputReduceToCollectionReferences;
 
         static ReduceOutputDocumentActions()
         {
@@ -43,8 +43,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _collectionOfReduceOutputs = index.Definition.OutputReduceToCollection;
             _reduceOutputVersion = index.Definition.ReduceOutputIndex;
 
-            if (string.IsNullOrEmpty(index.Definition.PatternOfReduceOutputReferences) == false)
-                _patternOfReduceOutputReferences = new OutputReferencesPattern(index.Definition.PatternOfReduceOutputReferences);
+            if (string.IsNullOrEmpty(index.Definition.PatternForOutputReduceToCollectionReferences) == false)
+                _PatternForOutputReduceToCollectionReferences= new OutputReferencesPattern(index.Definition.PatternForOutputReduceToCollectionReferences);
         }
 
         public void Initialize(RavenTransaction tx)
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public OutputReduceToCollectionCommand CreateOutputReduceToCollectionCommand(JsonOperationContext indexContext, Transaction writeTransaction)
         {
-            return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternOfReduceOutputReferences, _index, indexContext, writeTransaction);
+            return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _PatternForOutputReduceToCollectionReferences, _index, indexContext, writeTransaction);
         }
 
         public void AddPrefixesOfDocumentsToDelete(HashSet<string> prefixes)
