@@ -17,8 +17,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
     {
         private readonly MapReduceIndex _index;
         private const string ReduceOutputsTreeName = "ReduceOutputsTree";
-        private const string ReduceOutputsIdsToPatternReferenceIdsTreeName = "ReduceOutputsIdsToPatternReferenceIdsTree";
         internal static Slice PrefixesOfReduceOutputDocumentsToDeleteKey;
+        internal static Slice ReduceOutputsIdsToPatternReferenceIdsTree;
 
         private HashSet<string> _prefixesOfReduceOutputDocumentsToDelete;
         private readonly string _collectionOfReduceOutputs;
@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, "__raven/map-reduce/#prefixes-of-reduce-output-documents-to-delete", ByteStringType.Immutable, out PrefixesOfReduceOutputDocumentsToDeleteKey);
+                Slice.From(ctx, "ReduceOutputsIdsToPatternReferenceIdsTree", ByteStringType.Immutable, out ReduceOutputsIdsToPatternReferenceIdsTree);
             }
         }
 
@@ -67,23 +68,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public void AddPatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId, string referenceDocumentId)
         {
-            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTreeName);
+            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTree);
 
             tree.Add(reduceResultId, referenceDocumentId);
         }
 
         public string GetPatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId)
         {
-            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTreeName);
+            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTree);
 
             var result = tree.Read(reduceResultId);
+
+            if (result == null)
+                ThrowCouldNotFindPatternGeneratedIdForReduceOutput(reduceResultId);
 
             return result.Reader.ReadString(result.Reader.Length);
         }
 
+        private void ThrowCouldNotFindPatternGeneratedIdForReduceOutput(string reduceResultId)
+        {
+            throw new InvalidOperationException($"Could not find pattern generated ID for reduce output: {reduceResultId}");
+        }
+
         public void DeletePatternGeneratedIdForReduceOutput(Transaction tx, string reduceResultId)
         {
-            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTreeName);
+            var tree = tx.CreateTree(ReduceOutputsIdsToPatternReferenceIdsTree);
 
             tree.Delete(reduceResultId);
         }

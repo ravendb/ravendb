@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Raven.Client;
@@ -135,24 +136,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             if (_index.OutputReduceToCollectionPropertyAccessor == null)
                 _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
 
-            OutputReferencesPattern.DocumentIdBuilder referenceDocIdBuilder = null;
-
             string referenceDocumentId = null;
 
-            using (_patternForReduceOutputReferences?.BuildReferenceDocumentId(out referenceDocIdBuilder))
+            if (_patternForReduceOutputReferences != null)
             {
-                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
+                using (_patternForReduceOutputReferences.BuildReferenceDocumentId(out OutputReferencesPattern.DocumentIdBuilder referenceDocIdBuilder))
                 {
-                    var value = property.Value;
-                    djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
+                    foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
+                    {
+                        var value = property.Value;
+                        djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
 
-                    if (referenceDocIdBuilder?.ContainsField(property.Key) == true)
-                        referenceDocIdBuilder.Add(property.Key, property.Value);
-                }
+                        if (referenceDocIdBuilder.ContainsField(property.Key))
+                            referenceDocIdBuilder.Add(property.Key, property.Value);
+                    }
 
-                if (referenceDocIdBuilder != null)
                     referenceDocumentId = referenceDocIdBuilder.GetId();
+                }
             }
+            
 
             djv[Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
@@ -232,8 +234,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             private readonly string _outputReduceToCollection;
             private readonly Transaction _indexWriteTransaction;
             private readonly DocumentDatabase _database;
-            readonly Dictionary<string, HashSet<string>> _referencesOfReduceOutputs = new Dictionary<string, HashSet<string>>();
-            readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>();
+            readonly Dictionary<string, HashSet<string>> _referencesOfReduceOutputs = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
             public ReduceOutputReferencesSubCommand(MapReduceIndex index, string outputReduceToCollection, Transaction indexWriteTransaction)
             {
@@ -247,7 +249,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 if (_referencesOfReduceOutputs.TryGetValue(referenceDocumentId, out var values) == false)
                 {
-                    values = new HashSet<string>(1);
+                    values = new HashSet<string>(1, StringComparer.OrdinalIgnoreCase);
 
                     _referencesOfReduceOutputs.Add(referenceDocumentId, values);
                 }
@@ -261,7 +263,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 if (_idsToDeleteByReferenceDocumentId.TryGetValue(referenceId, out var values) == false)
                 {
-                    values = new HashSet<string>(1);
+                    values = new HashSet<string>(1, StringComparer.OrdinalIgnoreCase);
 
                     _idsToDeleteByReferenceDocumentId.Add(referenceId, values);
                 }
@@ -287,6 +289,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                     if (idsToRemove.Count >= ids.Length)
                     {
+                        Debug.Assert(ids.All(x => idsToRemove.Contains(x.ToString())), $"Found ID in {nameof(idsToRemove)} that aren't in {nameof(ids)}");
+
                         _database.DocumentsStorage.Delete(context, referenceDocument.Id, null);
                         continue;
                     }
