@@ -292,7 +292,13 @@ namespace Sparrow.Platform.Posix
                             if (foundValue == false)
                                 ThrowNotContainsValidValue(term, currentProcess.Id);
                             if (foundK == false)
-                                ThrowNotContainsKbValue(term, currentProcess.Id);
+                            {
+                                var additionalInfo =
+                                    $"Additional Info: switchBuffer={switchBuffer}, foundK/B={foundK}/{foundValue}, valueSearchPosition={valueSearchPosition}, bytesSearched={bytesSearched}" +
+                                    $", posInTempBuf={posInTempBuf}, searchedBuffer={searchedBuffer}, _tempBufferBytes=<{Encoding.UTF8.GetString(_tempBufferBytes)}" +
+                                    $", buffer 0=<{Encoding.UTF8.GetString(_smapsBuffer[0])}>. buffer 1={Encoding.UTF8.GetString(_smapsBuffer[1])}End of Addtional Info.";
+                                ThrowNotContainsKbValue(term, currentProcess.Id, additionalInfo);
+                            }
                         }
                         
 
@@ -434,10 +440,10 @@ namespace Sparrow.Platform.Posix
             throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
         }
 
-        private void ThrowNotContainsKbValue(byte[] term, int processId)
+        private void ThrowNotContainsKbValue(byte[] term, int processId, string addtionalInfo)
         {
             throw new InvalidDataException(
-                $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, and value but not in kB - invalid format");
+                $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, and value but not in kB - invalid format. " + addtionalInfo);
         }
     }
 }

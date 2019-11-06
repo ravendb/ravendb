@@ -120,7 +120,7 @@ namespace FastTests.Server.Documents.Indexing
 
     internal class TestIndex : Index
     {
-        public TestIndex() : base(IndexType.None, new TestIndexDefinitions())
+        public TestIndex() : base(IndexType.None, new TestIndexDefinitions(), hasOutputReduceToCollection: false)
         {
         }
 

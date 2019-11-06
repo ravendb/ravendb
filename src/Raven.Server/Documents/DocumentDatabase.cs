@@ -957,9 +957,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public SmugglerResult FullBackupTo(string backupPath,
-            Action<(string Message, int FilesCount)> infoNotify = null,
-            CancellationToken cancellationToken = default)
+        public SmugglerResult FullBackupTo(string backupPath, CompressionLevel compressionLevel = CompressionLevel.Optimal, 
+            Action <(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
 
@@ -968,7 +967,7 @@ namespace Raven.Server.Documents
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
+                    var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, compressionLevel);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     {
@@ -996,7 +995,7 @@ namespace Raven.Server.Documents
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
 
-                    zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
+                    zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, compressionLevel);
                     using (var zipStream = zipArchiveEntry.Open())
                     using (var outputStream = GetOutputStream(zipStream))
                     using (var writer = new BlittableJsonTextWriter(serverContext, outputStream))
@@ -1047,7 +1046,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(), package,
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(), package, compressionLevel,
                     infoNotify: infoNotify, cancellationToken: cancellationToken);
 
                 file.Flush(true); // make sure that we fully flushed to disk

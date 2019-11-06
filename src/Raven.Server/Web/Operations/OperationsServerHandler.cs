@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations
 {
-    public class OperationsServerHandler : RequestHandler
+    public class OperationsServerHandler : ServerRequestHandler
     {
         [RavenAction("/admin/operations/next-operation-id", "GET", AuthorizationStatus.Operator)]
         public Task GetNextOperationId()

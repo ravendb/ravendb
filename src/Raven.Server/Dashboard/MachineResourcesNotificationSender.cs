@@ -20,30 +20,21 @@ namespace Raven.Server.Dashboard
         private readonly RavenServer _server;
         private readonly ConcurrentSet<ConnectedWatcher> _watchers;
         private readonly TimeSpan _notificationsThrottle;
-
+        private readonly LowMemoryMonitor _lowMemoryMonitor;
         private DateTime _lastSentNotification = DateTime.MinValue;
-        private readonly byte[][] _buffers;
-        private readonly SmapsReader _smapsReader;
 
         public MachineResourcesNotificationSender(
             string resourceName,
             RavenServer server,
-            ConcurrentSet<ConnectedWatcher> watchers, 
-            TimeSpan notificationsThrottle, 
+            ConcurrentSet<ConnectedWatcher> watchers,
+            TimeSpan notificationsThrottle,
             CancellationToken shutdown)
             : base(resourceName, shutdown)
         {
             _server = server;
             _watchers = watchers;
             _notificationsThrottle = notificationsThrottle;
-
-            if (PlatformDetails.RunningOnLinux)
-            {
-                var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
-                var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
-                _buffers = new[] { buffer1, buffer2 };
-                _smapsReader = new SmapsReader(new[] { buffer1, buffer2 });
-            }
+            _lowMemoryMonitor = new LowMemoryMonitor();
         }
 
         protected override async Task DoWork()
@@ -63,7 +54,7 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var machineResources = GetMachineResources(_smapsReader);
+                var machineResources = GetMachineResources();
                 foreach (var watcher in _watchers)
                 {
                     // serialize to avoid race conditions
@@ -77,12 +68,12 @@ namespace Raven.Server.Dashboard
             }
         }
 
-        internal MachineResources GetMachineResources(SmapsReader smapsReader)
+        internal MachineResources GetMachineResources()
         {
-            return GetMachineResources(smapsReader, _server.MetricCacher, _server.CpuUsageCalculator);
+            return GetMachineResources(_server.MetricCacher, _lowMemoryMonitor, _server.CpuUsageCalculator);
         }
 
-        internal static MachineResources GetMachineResources(SmapsReader smapsReader, MetricCacher metricCacher, ICpuUsageCalculator cpuUsageCalculator)
+        internal static MachineResources GetMachineResources(MetricCacher metricCacher, LowMemoryMonitor lowMemoryMonitor, ICpuUsageCalculator cpuUsageCalculator)
         {
             var memInfo = metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
             var cpuInfo = metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, cpuUsageCalculator.Calculate);
@@ -96,7 +87,7 @@ namespace Raven.Server.Dashboard
                 CommittedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                 ProcessMemoryUsage = memInfo.WorkingSet.GetValue(SizeUnit.Bytes),
                 IsWindows = PlatformDetails.RunningOnPosix == false,
-                IsLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, LowMemoryMonitor.Instance, out var commitChargeThreshold),
+                IsLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, lowMemoryMonitor, out var commitChargeThreshold),
                 LowMemoryThreshold = LowMemoryNotification.Instance.LowMemoryThreshold.GetValue(SizeUnit.Bytes),
                 CommitChargeThreshold = commitChargeThreshold.GetValue(SizeUnit.Bytes),
                 MachineCpuUsage = cpuInfo.MachineCpuUsage,
@@ -110,11 +101,7 @@ namespace Raven.Server.Dashboard
         {
             base.Dispose();
 
-            if (_buffers != null)
-            {
-                ArrayPool<byte>.Shared.Return(_buffers[0]);
-                ArrayPool<byte>.Shared.Return(_buffers[1]);
-            }
+            _lowMemoryMonitor?.Dispose();
         }
     }
 }

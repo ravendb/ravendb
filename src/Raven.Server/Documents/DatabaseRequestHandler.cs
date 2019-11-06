@@ -5,7 +5,6 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -21,7 +20,6 @@ namespace Raven.Server.Documents
     {
         protected DocumentsContextPool ContextPool;
         protected DocumentDatabase Database;
-        protected IndexStore IndexStore;
         protected Logger Logger;
 
         public override void Init(RequestHandlerContext context)
@@ -30,7 +28,6 @@ namespace Raven.Server.Documents
 
             Database = context.Database;
             ContextPool = Database.DocumentsStorage.ContextPool;
-            IndexStore = context.Database.IndexStore;
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
@@ -53,7 +50,7 @@ namespace Raven.Server.Documents
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-            
+
             if (TryGetAllowedDbs(Database.Name, out var _, requireAdmin: true) == false)
                 return;
 

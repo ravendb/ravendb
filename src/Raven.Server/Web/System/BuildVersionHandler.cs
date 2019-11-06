@@ -19,7 +19,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class BuildVersionHandler : RequestHandler
+    public class BuildVersionHandler : ServerRequestHandler
     {
         private static readonly Lazy<byte[]> VersionBuffer = new Lazy<byte[]>(GetVersionBuffer);
 

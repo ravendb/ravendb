@@ -230,8 +230,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId(), restoreSettings.DatabaseValues, isRestore: true);
                         await _serverStore.Cluster.WaitForIndexNotification(index);
 
-                        DisableOngoingTasksIfNeeded(databaseRecord);
-
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
                             if (snapshotRestore)
@@ -259,6 +257,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             {
                                 await SmugglerRestore(database, filesToRestore, context, databaseRecord, onProgress, result);
                             }
+
+                            DisableOngoingTasksIfNeeded(databaseRecord);
 
                             result.DatabaseRecord.Processed = true;
                             result.Documents.Processed = true;
@@ -594,6 +594,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (databaseRecord.PeriodicBackups != null)
             {
                 foreach (var task in databaseRecord.PeriodicBackups)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.ExternalReplications != null)
+            {
+                foreach (var task in databaseRecord.ExternalReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.HubPullReplications != null)
+            {
+                foreach (var task in databaseRecord.HubPullReplications)
+                {
+                    task.Disabled = true;
+                }
+            }
+
+            if (databaseRecord.SinkPullReplications != null)
+            {
+                foreach (var task in databaseRecord.SinkPullReplications)
                 {
                     task.Disabled = true;
                 }
