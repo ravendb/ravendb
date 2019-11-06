@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -323,6 +324,161 @@ namespace SlowTests.Server.Replication
                         Assert.Equal(valsB[i].Tag, valsA[i].Tag);
                         Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp);
                         
+                        Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
+                        for (int j = 0; j < valsA[i].Values.Length; j++)
+                        {
+                            Assert.Equal(valsB[i].Values[j], valsA[i].Values[j]);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanReplicateManyWithDeletions()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                // this is not thread-safe intentionally, to have duplicate values
+                var offset = 0;
+                var value = 0;
+
+                var t1 = Task.Run(() => Insert(storeA));
+                var t2 = Task.Run(() => Insert(storeB));
+
+                await Task.WhenAll(t1, t2);
+                void Insert(IDocumentStore store)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new { Name = "Oren" }, "users/ayende");
+                        session.SaveChanges();
+                    }
+
+                    for (int i = 0; i < 100; i++)
+                    {
+                        using (var session = store.OpenSession())
+                        {
+                            for (int j = 0; j < 100; j++)
+                            {
+                                session.TimeSeriesFor("users/ayende")
+                                    .Append("Heartrate", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { value++ });
+                            }
+
+                            session.TimeSeriesFor("users/ayende")
+                                .Remove("Heartrate", baseline.AddMinutes(i + 0.5), baseline.AddMinutes(i + 10.5));
+
+                            session.SaveChanges();
+                        }
+                    }
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                EnsureReplicating(storeA, storeB);
+                EnsureReplicating(storeB, storeA);
+
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var valsA = sessionA.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+
+                    var valsB = sessionB.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+
+                    Assert.Equal(valsB.Count, valsA.Count);
+
+                    for (int i = 0; i < valsA.Count; i++)
+                    {
+                        Assert.Equal(valsB[i].Tag, valsA[i].Tag);
+                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp);
+
+                        Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
+                        for (int j = 0; j < valsA[i].Values.Length; j++)
+                        {
+                            Assert.Equal(valsB[i].Values[j], valsA[i].Values[j]);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanReplicateDeletions()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(10), "watches/fitbit", new double[] { 1 });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(1), "watches/fitbit", new double[] { 1 });
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(2), "watches/fitbit", new double[] { 1 });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(3), "watches/fitbit", new double[] { 1 });
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeB, storeA);
+                EnsureReplicating(storeB, storeA);
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                var stats1 = await storeA.Maintenance.ForDatabase(storeA.Database).SendAsync(new GetStatisticsOperation("test"));
+                var stats2 = await storeB.Maintenance.ForDatabase(storeB.Database).SendAsync(new GetStatisticsOperation("test"));
+
+                Assert.Equal(1, stats1.CountOfTimeSeriesSegments);
+                Assert.Equal(2, stats2.CountOfTimeSeriesSegments);
+                
+                Console.WriteLine("Delete");
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende")
+                        .Remove("Heartrate", baseline.AddMinutes(10));
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+             //   await Task.Delay(1000);
+
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var valsA = sessionA.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+
+                    var valsB = sessionB.TimeSeriesFor("users/ayende")
+                        .Get("Heartrate", DateTime.MinValue, DateTime.MaxValue)
+                        .ToList();
+
+                    Assert.Equal(valsA.Count, valsB.Count);
+
+                    for (int i = 0; i < valsA.Count; i++)
+                    {
+                        Assert.Equal(valsB[i].Tag, valsA[i].Tag);
+                        Assert.Equal(valsB[i].Timestamp, valsA[i].Timestamp);
+
                         Assert.Equal(valsB[i].Values.Length, valsA[i].Values.Length);
                         for (int j = 0; j < valsA[i].Values.Length; j++)
                         {

@@ -96,12 +96,22 @@ namespace Raven.Server.Documents.TimeSeries
             Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
         }
 
-        public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag)
+        public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag, ulong status)
         {
-            return Append(allocator, deltaFromStart, new Span<double>(&val, 1), tag);
+            return Append(allocator, deltaFromStart, new Span<double>(&val, 1), tag, status);
         }
 
-        public bool Append(ByteStringContext allocator, int deltaFromStart, Span<double> vals, Span<byte> tag)
+        public const ulong Live = 0;
+        public const ulong Dead = 1;
+
+        public static void AssertValueStatus(ulong status)
+        {
+            if (status != Live && status != Dead)
+                throw new InvalidOperationException("Schrödinger's cat must be either 'Dead' or 'Alive'.");
+        }
+
+
+        public bool Append(ByteStringContext allocator, int deltaFromStart, Span<double> vals, Span<byte> tag, ulong status)
         {
             if (vals.Length != Header->NumberOfValues)
                 ThrowInvalidNumberOfValues(vals);
@@ -128,6 +138,9 @@ namespace Raven.Server.Documents.TimeSeries
                 Memory.Copy(tempHeader, Header, copiedHeaderSize);
 
                 var tempBitsBuffer = new BitsBuffer(tempBuffer.Ptr, maximumSize);
+
+                AssertValueStatus(status);
+                tempBitsBuffer.AddValue(status, 1);
 
                 var prevs = new Span<StatefulTimeStampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
@@ -386,7 +399,7 @@ namespace Raven.Server.Documents.TimeSeries
             var tagPointer = new TagPointer();
             using (var enumerator = GetEnumerator(allocator))
             {
-                while (enumerator.MoveNext(out int ts, values, states, ref tagPointer))
+                while (enumerator.MoveNext(out int ts, values, states, ref tagPointer, out var status))
                 {
                     var cur = baseline.AddMilliseconds(ts);
                     var tag = SetTimestampTag(context, tagPointer);
@@ -399,6 +412,7 @@ namespace Raven.Server.Documents.TimeSeries
                     result.TimeStamp = cur;
                     result.Tag = tag;
                     result.Values = new Memory<double>(values, 0, end);
+                    result.Status = status;
 
                     yield return result;
                 }
@@ -463,6 +477,80 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public bool MarkDeadRange(DocumentsOperationContext context, DateTime baseline, DateTime from, DateTime to)
+        {
+            var end = GetLastTimestamp(baseline);
+
+            if (from > end)
+                return false;
+/*
+
+            if (from <= baseline && to >= end)
+            {
+                // need to mark the entire segment
+                Header->NumberOfEntries = 0;
+                return true;
+            }*/
+
+            var changed = false;
+            for (int i = 0; i < NumberOfValues; i++)
+            {
+                SegmentValues.Span[i].Min = double.MaxValue;
+                SegmentValues.Span[i].Max = double.MinValue;
+            }
+
+            var lastValues = stackalloc double[NumberOfValues];
+
+            var first = true;
+            using (var enumerator = GetEnumerator(context.Allocator))
+            {
+                var valuesBuffer = stackalloc double[NumberOfValues];
+                var stateBuffer = stackalloc TimeStampState[NumberOfValues];
+                var values = new Span<double>(valuesBuffer, NumberOfValues);
+                var state = new Span<TimeStampState>(stateBuffer, NumberOfValues);
+                TagPointer tag = default;
+                while (enumerator.MoveNext(out int ts, values, state, ref tag, out _))
+                {
+                    var current = baseline.AddMilliseconds(ts);
+                    if (current >= from && current <= to)
+                    {
+                        enumerator.MarkCurrentAsDead();
+                        Header->NumberOfEntries--;
+
+                        for (int i = 0; i < NumberOfValues; i++)
+                        {
+                            SegmentValues.Span[i].Sum -= values[i];
+                            SegmentValues.Span[i].Count--;
+                        }
+
+                        changed = true;
+                    }
+
+                    for (int i = 0; i < NumberOfValues; i++)
+                    {
+                        SegmentValues.Span[i].Max = Math.Max(SegmentValues.Span[i].Max, values[i]);
+                        SegmentValues.Span[i].Min = Math.Min(SegmentValues.Span[i].Min, values[i]);
+
+                        if (first)
+                        {
+                            SegmentValues.Span[i].First = values[i];
+                        }
+
+                        lastValues[i] = values[i];
+                    }
+
+                    first = false;
+                }
+
+                for (int i = 0; i < NumberOfValues; i++)
+                {
+                    SegmentValues.Span[i].Last = lastValues[i];
+                }
+            }
+
+            return changed;
+        }
+
         public struct Enumerator : IDisposable
         {
             private readonly TimeSeriesValuesSegment _parent;
@@ -470,11 +558,13 @@ namespace Raven.Server.Documents.TimeSeries
             private int _previousTimeStamp, _previousTimeStampDelta;
             private BitsBuffer _bitsBuffer;
             private ByteStringContext.InternalScope _scope;
+            private int _startBitsPositionOfCurrent;
 
             public Enumerator(TimeSeriesValuesSegment parent, ByteStringContext allocator)
             {
                 _parent = parent;
                 _bitsPosisition = 0;
+                _startBitsPositionOfCurrent = 0;
                 _previousTimeStamp = _previousTimeStampDelta = -1;
                 _bitsBuffer = _parent.GetBitsBuffer(_parent.Header);
                 if (_bitsBuffer.IsCompressed)
@@ -487,7 +577,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public bool MoveNext(out int timestamp, Span<double> values, Span<TimeStampState> state, ref TagPointer tag)
+            public bool MoveNext(out int timestamp, Span<double> values, Span<TimeStampState> state, ref TagPointer tag, out ulong valueState)
             {
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
@@ -495,6 +585,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (_bitsPosisition >= _bitsBuffer.NumberOfBits)
                 {
+                    valueState = ulong.MaxValue; // invalid value
                     timestamp = default;
                     return false;
                 }
@@ -505,6 +596,10 @@ namespace Raven.Server.Documents.TimeSeries
                     state.Clear();
                     tag = default;
                 }
+
+                _startBitsPositionOfCurrent = _bitsPosisition;
+
+                valueState = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
 
                 timestamp = ReadTimeStamp(_bitsBuffer);
 
@@ -525,6 +620,11 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 return true;
+            }
+
+            public void MarkCurrentAsDead()
+            {
+                _bitsBuffer.SetBits(_startBitsPositionOfCurrent, Dead, 1);
             }
 
             private void ReadTagValueByIndex(ref TagPointer tag)
@@ -584,7 +684,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             private int ReadTimeStamp(BitsBuffer bitsBuffer)
             {
-                if (_bitsPosisition == 0)
+                if (_bitsPosisition == 1)
                 {
                     _previousTimeStamp = (int)bitsBuffer.ReadValue(ref _bitsPosisition, BitsForFirstTimestamp);
                     _previousTimeStampDelta = DefaultDelta;

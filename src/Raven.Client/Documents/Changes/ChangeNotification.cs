@@ -213,6 +213,83 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
+    [Flags]
+    public enum TimeSeriesChangeTypes
+    {
+        None = 0,
+        Put = 1,
+        Delete = 2,
+        Mixed = 3
+    }
+
+    public class TimeSeriesChange : DatabaseChange
+    {
+        /// <summary>
+        /// Time Series name.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Apply values of time series from date.
+        /// </summary>
+        public DateTime From { get; set; }
+
+        /// <summary>
+        /// Apply values of time series to date.
+        /// </summary>
+        public DateTime To { get; set; }
+
+        /// <summary>
+        /// Time series document identifier.
+        /// </summary>
+        public string DocumentId { get; set; }
+
+        /// <summary>
+        /// Time series change vector.
+        /// </summary>
+        public string ChangeVector { get; set; }
+
+        /// <summary>
+        /// Type of change that occurred on time series.
+        /// </summary>
+        public TimeSeriesChangeTypes Type { get; set; }
+
+        internal bool TriggeredByReplicationThread;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(From)] = From,
+                [nameof(To)] = To,
+                [nameof(DocumentId)] = DocumentId,
+                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(Type)] = Type.ToString()
+            };
+        }
+
+        internal static TimeSeriesChange FromJson(BlittableJsonReaderObject value)
+        {
+            value.TryGet(nameof(Name), out string name);
+            value.TryGet(nameof(From), out DateTime from);
+            value.TryGet(nameof(To), out DateTime to);
+            value.TryGet(nameof(DocumentId), out string documentId);
+            value.TryGet(nameof(ChangeVector), out string changeVector);
+            value.TryGet(nameof(Type), out string type);
+
+            return new TimeSeriesChange
+            {
+                Name = name,
+                From = from,
+                To = to,
+                DocumentId = documentId,
+                ChangeVector = changeVector,
+                Type = (TimeSeriesChangeTypes)Enum.Parse(typeof(TimeSeriesChangeTypes), type, ignoreCase: true)
+            };
+        }
+    }
+
     public class IndexChange : DatabaseChange
     {
         /// <summary>
