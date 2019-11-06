@@ -51,6 +51,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private IndexReader _lastReader;
         private readonly Logger _logger;
 
+        internal LuceneVoronDirectory LuceneDirectory => _directory;
+
         public LuceneIndexPersistence(Index index)
         {
             _index = index;
