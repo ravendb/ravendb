@@ -93,6 +93,7 @@ namespace Raven.Server.Documents.Replication
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
+            _database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -1034,6 +1035,11 @@ namespace Raven.Server.Documents.Replication
             OnChangeInternal(change.TriggeredByReplicationThread);
         }
 
+        private void OnTimeSeriesChange(TimeSeriesChange change)
+        {
+            OnChangeInternal(change.TriggeredByReplicationThread);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnChangeInternal(bool triggeredByReplicationThread)
         {
@@ -1058,6 +1064,7 @@ namespace Raven.Server.Documents.Replication
 
             _database.Changes.OnDocumentChange -= OnDocumentChange;
             _database.Changes.OnCounterChange -= OnCounterChange;
+            _database.Changes.OnTimeSeriesChange -= OnTimeSeriesChange;
 
             _cts.Cancel();
 

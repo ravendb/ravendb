@@ -960,6 +960,12 @@ namespace Raven.Server.Documents.Replication
                         operationsCount++;
                         var rcvdChangeVector = item.ChangeVector;
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
+                        Console.WriteLine($"{context.DocumentDatabase.Name} {item.TransactionMarker} ({item.GetType()})");
+
+                        if (context.DocumentDatabase.Name == "CanReplicateDeletions_2" && item.TransactionMarker == 8)
+                        {
+
+                        }
 
                         switch (item)
                         {
@@ -1005,7 +1011,8 @@ namespace Raven.Server.Documents.Replication
                                     continue;
                                 }
 
-                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, name, segment.Segment.YieldAllValues(context, context.Allocator, baseline), segment.ChangeVector);
+                                var values = segment.Segment.YieldAllValues(context, baseline);
+                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, name, values, segment.ChangeVector);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
