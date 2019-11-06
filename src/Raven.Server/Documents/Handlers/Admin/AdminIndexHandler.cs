@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -230,6 +234,101 @@ namespace Raven.Server.Documents.Handlers.Admin
             index.Disable();
 
             return NoContent();
+        }
+
+        [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task Dump()
+        {
+            var name = GetStringQueryString("name");
+            var path = GetStringQueryString("path");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+            {
+                IndexDoesNotExistException.ThrowFor(name);
+                return null;//never hit
+            }
+
+            var operationId = Database.Operations.GetNextOperationId();
+            var token = CreateTimeLimitedQueryOperationToken();
+            var details = new DumpIndexOperationDetails
+            {
+                Index = name,
+            };
+
+            Database.Operations.AddOperation(
+                Database,
+                "Dump index " + name + " to " + path,
+                Operations.Operations.OperationType.DumpRawIndexData,
+                onProgress =>
+                {
+                    var totalFiles = index.Dump(path, onProgress);
+                    return Task.FromResult((IOperationResult)new DumpIndexResult
+                    {
+                        Message = $"Dumping {totalFiles} from {name} in {details.Duration.Elapsed}",
+                        Duration = details.Duration.Elapsed
+                    });
+                }, operationId, details, token);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public class DumpIndexResult : IOperationResult
+        {
+            public string Message { get; set; }
+            public TimeSpan Duration { get; set; }
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Message)] = Message,
+                    [nameof(Duration)] = Duration
+                };
+            }
+
+            public bool ShouldPersist => false;
+        }
+
+        public class DumpIndexProgress : IOperationProgress
+        {
+            public int ProcessedFiles { get; set; }
+            public int TotalFiles { get; set; }
+            public long ProcessedBytes{ get; set; }
+            public long TotalBytes { get; set; }
+
+            public string Message { get; set; }
+
+            public virtual DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(ProcessedFiles)] = ProcessedFiles,
+                    [nameof(TotalFiles)] = TotalFiles,
+                    [nameof(ProcessedBytes)] = ProcessedBytes,
+                    [nameof(TotalBytes)] = TotalBytes,
+                    [nameof(Message)] = Message
+                };
+            }
+        }
+
+        public class DumpIndexOperationDetails : IOperationDetailedDescription
+        {
+            public string Index { get; set; }
+            public Stopwatch Duration = Stopwatch.StartNew();
+
+            DynamicJsonValue IOperationDetailedDescription.ToJson()
+            {
+                return new DynamicJsonValue(GetType())
+                {
+                    [nameof(Index)] = Index,
+                    [nameof(Duration)] = Duration.Elapsed
+                };
+            }
         }
     }
 }

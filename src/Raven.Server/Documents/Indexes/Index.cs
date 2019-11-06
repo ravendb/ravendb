@@ -19,6 +19,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -3123,12 +3124,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(DocumentsOperationContext documentsContext, 
+        protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(DocumentsOperationContext documentsContext,
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q == null)
                 return;
-            
+
             if (q.HasIncludeOrLoad)
             {
                 Debug.Assert(length > sizeof(long) * 4);
@@ -3144,7 +3145,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
-                var offset = length - sizeof(long) * 
+                var offset = length - sizeof(long) *
                                        (1 + (q.HasCmpXchg || q.HasCmpXchgSelect ? 1 : 0) +
                                         (q.HasTimeSeries ? 1 : 0));
 
@@ -3172,7 +3173,7 @@ namespace Raven.Server.Documents.Indexes
                             .GetLastCompareExchangeIndexForDatabase(transactionContext, documentsContext.DocumentDatabase.Name);
                 }
             }
-        }   
+        }
 
         protected int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
         {
@@ -3190,9 +3191,9 @@ namespace Raven.Server.Documents.Indexes
             if (q.HasTimeSeries)
                 length += sizeof(long); // last time series etag
 
-            if (q.HasCmpXchg || q.HasCmpXchgSelect)           
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)
                 length += sizeof(long); //last cmpxchg etag
-            
+
             return length;
         }
 
@@ -3989,6 +3990,64 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_disposeOne.Disposed)
                 ThrowObjectDisposed();
+        }
+
+        public int Dump(string path, Action<IOperationProgress> onProgress)
+        {
+            if (Directory.Exists(path) == false)
+                Directory.CreateDirectory(path);
+
+            using (CurrentlyInUse())
+            using (var tx = _environment.ReadTransaction())
+            {
+                var state = new Indexing.VoronState(tx);
+
+                var files = IndexPersistence.LuceneDirectory.ListAll(state);
+                var currentFile = 0;
+                var buffer = new byte[64 * 1024];
+                var sp = Stopwatch.StartNew();
+                foreach (var file in files)
+                {
+
+                    using (var input = IndexPersistence.LuceneDirectory.OpenInput(file, state))
+                    using (var output = File.Create(Path.Combine(path, file)))
+                    {
+                        var len = input.Length(state);
+                        string message = "Exporting file: " + file;
+                        onProgress(new AdminIndexHandler.DumpIndexProgress
+                        {
+                            Message = message,
+                            TotalFiles = files.Length,
+                            ProcessedFiles = currentFile,
+                            CurrentFileSize = len
+                        });
+                        long currentFileOverallReadBytes = 0;
+                        while (len > currentFileOverallReadBytes)
+                        {
+                            int read = (int)Math.Min(buffer.Length, len - currentFileOverallReadBytes);
+                            input.ReadBytes(buffer, 0, read, state);
+                            currentFileOverallReadBytes += read;
+                            output.Write(buffer, 0, read);
+                            if (sp.ElapsedMilliseconds > 1000)
+                            {
+                                onProgress(new AdminIndexHandler.DumpIndexProgress
+                                {
+                                    Message = message,
+                                    TotalFiles = files.Length,
+                                    ProcessedFiles = currentFile,
+                                    CurrentFileSize = len,
+                                    CurrentFileCopied = currentFileOverallReadBytes
+                                });
+                                sp.Restart();
+                            }
+                        }
+                    }
+                    currentFile++;
+
+                }
+
+                return files.Length;
+            }
         }
     }
 }
