@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             var formattedPattern = FieldsRegex.Replace(pattern, StringFormatEvaluator);
 
-            _builder = new DocumentIdBuilder(formattedPattern, fieldToFormatPosition);
+            _builder = new DocumentIdBuilder(pattern, formattedPattern, fieldToFormatPosition);
 
             string StringFormatEvaluator(Match m)
             {
@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public class DocumentIdBuilder : IDisposable
         {
+            private readonly string _pattern;
             private readonly string _formattedPattern;
             private readonly Dictionary<string, int> _fieldToFormatPosition;
             private readonly StringBuilder _id;
@@ -71,8 +72,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             private readonly int _countOfFields;
             private int _addedFields;
 
-            public DocumentIdBuilder(string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
+            public DocumentIdBuilder(string pattern, string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
             {
+                _pattern = pattern;
                 _formattedPattern = formattedPattern;
                 _fieldToFormatPosition = fieldToFormatPosition;
                 _countOfFields = _fieldToFormatPosition.Count;
@@ -88,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             public string GetId()
             {
                 if (_addedFields != _countOfFields)
-                    throw new InvalidOperationException($"Cannot create identifier for reference document of reduce outputs. Expected to process {_countOfFields} fields while it got {_addedFields}.");
+                    ThrowNumberOfProcessedFieldsMismatch();
 
                 return _id.AppendFormat(_formattedPattern, _values).ToString();
             }
@@ -107,26 +109,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 _addedFields++;
             }
-        }
 
-        public HashSet<string> FieldNames { get; }
-        
-        public List<PatternElement> Parts = new List<PatternElement>();
-
-        public class PatternElement
-        {
-            public ElementType Type;
-            public string StringValue;
-            public string FieldReplacementVariable;
-            public string FieldName;
-            public string FieldFormatting;
-        }
-
-        public enum ElementType
-        {
-            None = 0,
-            StringConst = 1,
-            Field = 2
+            private void ThrowNumberOfProcessedFieldsMismatch()
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create identifier for reference document of reduce outputs. Expected to process {_countOfFields} fields while it got {_addedFields}. Pattern: '{_pattern}'");
+            }
         }
     }
 }

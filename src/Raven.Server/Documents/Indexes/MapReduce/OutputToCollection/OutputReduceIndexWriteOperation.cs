@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public override void Commit(IndexingStatsScope stats)
         {
+            _outputReduceToCollectionCommand.SetIndexingStatsScope(stats);
+
             var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
             base.Commit(stats);
             try
