@@ -162,10 +162,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
 
                 operation.Analyze(_engine);
-                if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
+                var mapCollectionKey = new DocumentsCollection(mapCollection);
+                if (ReferencedCollections.TryGetValue(mapCollectionKey, out var collectionNames) == false)
                 {
                     collectionNames = new HashSet<CollectionName>();
-                    ReferencedCollections.Add(mapCollection, collectionNames);
+                    ReferencedCollections.Add(mapCollectionKey, collectionNames);
                 }
 
                 collectionNames.UnionWith(mapReferencedCollections[i]);

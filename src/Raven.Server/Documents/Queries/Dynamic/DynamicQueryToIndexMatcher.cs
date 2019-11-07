@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             long lastMappedEtagFor;
             try
             {
-                lastMappedEtagFor = index.GetLastMappedEtagFor(collection);
+                lastMappedEtagFor = index.GetLastMappedEtagFor(new DocumentsCollection(collection));
             }
             catch (OperationCanceledException)
             {

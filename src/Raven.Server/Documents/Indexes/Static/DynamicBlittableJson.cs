@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public abstract void Set(object item);
 
+        public abstract dynamic GetId();
+
         protected abstract bool TryGetByName(string name, out object result);
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return _doc != null;
         }
 
-        public dynamic GetId()
+        public override dynamic GetId()
         {
             if (_doc == null)
                 return DynamicNullObject.Null;

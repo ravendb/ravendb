@@ -22,8 +22,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         
         public FixedSizeTree ResultsStoreTypes;
         public Dictionary<ulong, MapReduceResultsStore> StoreByReduceKeyHash = new Dictionary<ulong, MapReduceResultsStore>(NumericEqualityComparer.BoxedInstanceUInt64);
-        public Dictionary<string, long> ProcessedDocEtags = new Dictionary<string, long>();
-        public Dictionary<string, long> ProcessedTombstoneEtags = new Dictionary<string, long>();
+        public Dictionary<IIndexCollection, long> ProcessedDocEtags = new Dictionary<IIndexCollection, long>();
+        public Dictionary<IIndexCollection, long> ProcessedTombstoneEtags = new Dictionary<IIndexCollection, long>();
         public readonly HashSet<long> FreedPages = new HashSet<long>();
 
         public long NextMapResultId;

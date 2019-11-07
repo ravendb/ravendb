@@ -5,12 +5,23 @@ using System.Diagnostics;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
+using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
     public class DynamicTimeSeriesSegment : AbstractDynamicObject
     {
         private TimeSeriesItem _item;
+
+        public override dynamic GetId()
+        {
+            if (_item == null)
+                return DynamicNullObject.Null;
+
+            Debug.Assert(_item.Key != null, "_item.Key != null");
+
+            return _item.Key;
+        }
 
         public override void Set(object item)
         {
@@ -103,6 +114,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
                 {
                     _entry = entry;
+                }
+
+                public override dynamic GetId()
+                {
+                    throw new NotSupportedException();
                 }
 
                 public override void Set(object item)

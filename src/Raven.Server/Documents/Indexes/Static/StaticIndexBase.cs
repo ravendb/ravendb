@@ -32,14 +32,23 @@ namespace Raven.Server.Documents.Indexes.Static
 
             funcs.Add(map);
         }
+
+        public void AddReferencedCollection(string collection, string name, string referencedCollection)
+        {
+            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
+                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
+
+            var key = new TimeSeriesCollection(collection, name);
+
+            if (ReferencedCollections.TryGetValue(key, out HashSet<CollectionName> set) == false)
+                ReferencedCollections[key] = set = new HashSet<CollectionName>();
+
+            set.Add(referencedCollectionName);
+        }
     }
 
     public abstract class StaticIndexBase : AbstractStaticIndexBase
     {
-        private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
-
-        public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>(StringComparer.OrdinalIgnoreCase);
-
         internal override HashSet<string> GetDocumentsCollections()
         {
             return Maps.Keys.Select(x => x.CollectionName).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -60,8 +69,10 @@ namespace Raven.Server.Documents.Indexes.Static
             if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
                 _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
 
-            if (ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> set) == false)
-                ReferencedCollections[collection] = set = new HashSet<CollectionName>();
+            var key = new DocumentsCollection(collection);
+
+            if (ReferencedCollections.TryGetValue(key, out HashSet<CollectionName> set) == false)
+                ReferencedCollections[key] = set = new HashSet<CollectionName>();
 
             set.Add(referencedCollectionName);
         }
@@ -83,48 +94,6 @@ namespace Raven.Server.Documents.Indexes.Static
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
         {
             return new RecursiveFunction(item, func).Execute();
-        }
-
-        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
-        {
-            return LoadDocument(keyOrEnumerable, collectionName);
-        }
-
-        public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
-        {
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException(
-                    "Indexing scope was not initialized. Key: " + keyOrEnumerable);
-
-            if (keyOrEnumerable is LazyStringValue keyLazy)
-                return CurrentIndexingScope.Current.LoadDocument(keyLazy, null, collectionName);
-
-            if (keyOrEnumerable is string keyString)
-                return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
-
-            if (keyOrEnumerable is DynamicNullObject)
-                return DynamicNullObject.Null;
-
-            if (keyOrEnumerable is IEnumerable enumerable)
-            {
-                var enumerator = enumerable.GetEnumerator();
-                using (enumerable as IDisposable)
-                {
-                    var items = new List<dynamic>();
-                    while (enumerator.MoveNext())
-                    {
-                        items.Add(LoadDocument(enumerator.Current, collectionName));
-                    }
-                    if (items.Count == 0)
-                        return DynamicNullObject.Null;
-
-                    return new DynamicArray(items);
-                }
-            }
-
-            throw new InvalidOperationException(
-                "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
-                keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
 
         protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
@@ -332,7 +301,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
     public abstract class AbstractStaticIndexBase
     {
+        protected readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+
         public readonly Dictionary<IIndexCollection, List<IndexingFunc>> Maps = new Dictionary<IIndexCollection, List<IndexingFunc>>();
+
+        public readonly Dictionary<IIndexCollection, HashSet<CollectionName>> ReferencedCollections = new Dictionary<IIndexCollection, HashSet<CollectionName>>();
 
         public bool HasDynamicFields { get; set; }
 
@@ -347,5 +320,47 @@ namespace Raven.Server.Documents.Indexes.Static
         public CompiledIndexField[] GroupByFields;
 
         internal abstract HashSet<string> GetDocumentsCollections();
+
+        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        {
+            return LoadDocument(keyOrEnumerable, collectionName);
+        }
+
+        public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException(
+                    "Indexing scope was not initialized. Key: " + keyOrEnumerable);
+
+            if (keyOrEnumerable is LazyStringValue keyLazy)
+                return CurrentIndexingScope.Current.LoadDocument(keyLazy, null, collectionName);
+
+            if (keyOrEnumerable is string keyString)
+                return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
+
+            if (keyOrEnumerable is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            if (keyOrEnumerable is IEnumerable enumerable)
+            {
+                var enumerator = enumerable.GetEnumerator();
+                using (enumerable as IDisposable)
+                {
+                    var items = new List<dynamic>();
+                    while (enumerator.MoveNext())
+                    {
+                        items.Add(LoadDocument(enumerator.Current, collectionName));
+                    }
+                    if (items.Count == 0)
+                        return DynamicNullObject.Null;
+
+                    return new DynamicArray(items);
+                }
+            }
+
+            throw new InvalidOperationException(
+                "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
+                keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
+        }
     }
 }

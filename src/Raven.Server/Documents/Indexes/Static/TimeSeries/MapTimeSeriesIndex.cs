@@ -7,20 +7,34 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
     public class MapTimeSeriesIndex : MapIndexBase<MapIndexDefinition, IndexField>
     {
+        private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         private readonly StaticTimeSeriesIndexBase _compiled;
+
+        private HandleReferences _handleReferences;
 
         protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition)
         {
             _compiled = compiled;
+
+            if (_compiled.ReferencedCollections == null)
+                return;
+
+            foreach (var collection in _compiled.ReferencedCollections)
+            {
+                foreach (var referencedCollection in collection.Value)
+                    _referencedCollections.Add(referencedCollection.Name);
+            }
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
@@ -42,15 +56,32 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 //new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
+            if (_referencedCollections.Count > 0)
+                workers.Add(_handleReferences = new HandleTimeSeriesReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapTimeSeries(this, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, _indexStorage, null, Configuration));
 
             return workers.ToArray();
         }
 
+        public override void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            throw new NotSupportedException();
+
+            //if (_referencedCollections.Count > 0)
+            //    _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+
+            //base.HandleDelete(tombstone, collection, writer, indexContext, stats);
+        }
+
         internal override IEnumerable<IIndexCollection> GetCollectionsForIndexing()
         {
             return _compiled.Maps.Keys;
+        }
+
+        public override Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
+        {
+            return _compiled.ReferencedCollections;
         }
 
         public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)

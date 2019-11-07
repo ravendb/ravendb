@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Func<string, SpatialField> _getSpatialField;
 
         /// [collection: [key: [referenceKeys]]]
-        public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
+        public Dictionary<IIndexCollection, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
 
         /// [collection: [collectionKey: etag]]
-        public Dictionary<string, Dictionary<string, long>> ReferenceEtagsByCollection;
+        public Dictionary<IIndexCollection, Dictionary<string, long>> ReferenceEtagsByCollection;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public AbstractDynamicObject Source;
 
-        public string SourceCollection;
+        public IIndexCollection SourceCollection;
 
         public readonly TransactionOperationContext IndexContext;
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _getSpatialField = getSpatialField;
         }
 
-        public void SetSourceCollection(string collection, IndexingStatsScope stats)
+        public void SetSourceCollection(IIndexCollection collection, IndexingStatsScope stats)
         {
             SourceCollection = collection;
             _stats = stats;
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyLazy == null && keyString == null)
                     return DynamicNullObject.Null;
 
-                var source = Source as DynamicBlittableJson;
+                var source = Source;
                 if (source == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source is not set.");
 
@@ -86,11 +86,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (id == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source does not have a key.");
 
-                if (keyLazy != null && id.Equals(keyLazy))
-                    return source;
+                if (source is DynamicBlittableJson)
+                {
+                    if (keyLazy != null && id.Equals(keyLazy))
+                        return source;
 
-                if (keyString != null && id.Equals(keyString))
-                    return source;
+                    if (keyString != null && id.Equals(keyString))
+                        return source;
+                }
 
                 Slice keySlice;
                 if (keyLazy != null)
@@ -115,7 +118,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 // it in case insensitive manner
                 _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
 
-                var references = GetReferencesForDocument(id);
+                Slice.From(_documentsContext.Allocator, id, out var idSlice);
+                var references = GetReferencesForItem(idSlice);
                 var referenceEtags = GetReferenceEtags();
 
                 references.Add(keySlice);
@@ -174,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private Dictionary<string, long> GetReferenceEtags()
         {
             if (ReferenceEtagsByCollection == null)
-                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+                ReferenceEtagsByCollection = new Dictionary<IIndexCollection, Dictionary<string, long>>();
 
             if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out Dictionary<string, long> referenceEtags) == false)
                 ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
@@ -182,13 +186,13 @@ namespace Raven.Server.Documents.Indexes.Static
             return referenceEtags;
         }
 
-        private HashSet<Slice> GetReferencesForDocument(string key)
+        private HashSet<Slice> GetReferencesForItem(Slice key)
         {
             if (ReferencesByCollection == null)
-                ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
+                ReferencesByCollection = new Dictionary<IIndexCollection, Dictionary<Slice, HashSet<Slice>>>();
 
-            if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<string, HashSet<Slice>> referencesByCollection) == false)
-                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<string, HashSet<Slice>>());
+            if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
+                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
 
             if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
                 referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));

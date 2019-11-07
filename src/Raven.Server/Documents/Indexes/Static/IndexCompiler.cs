@@ -523,6 +523,15 @@ namespace Raven.Server.Documents.Indexes.Static
                 var timeSeries = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(timeSeriesName));
 
                 results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddMap)).Invoke(collection, timeSeries, mapExpression).AsExpressionStatement()); // this.AddMap("Users", "HeartBeat", timeSeries => from ts in timeSeries ... )
+
+                if (mapRewriter.ReferencedCollections != null)
+                {
+                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                    {
+                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                        results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddReferencedCollection)).Invoke(collection, timeSeries, rc).AsExpressionStatement());
+                    }
+                }
             }
 
             return results;

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private HandleReferences _handleReferences;
 
-        private readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
+        private readonly Dictionary<IIndexCollection, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<IIndexCollection, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 
         public IPropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, MapReduceWorkContext, Configuration));
             workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return workers.ToArray();
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_referencedCollections.Count > 0)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -339,7 +339,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             using (CurrentlyInUse())
             {
                 return StaticIndexHelper.GetLastProcessedTombstonesPerCollection(
-                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+                    this, _referencedCollections, GetCollectionsForIndexing(), _compiled.ReferencedCollections, _indexStorage);
             }
         }
 
@@ -445,7 +445,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        public override Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
         }

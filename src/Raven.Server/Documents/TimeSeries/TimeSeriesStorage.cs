@@ -1291,6 +1291,16 @@ namespace Raven.Server.Documents.TimeSeries
             return item;
         }
 
+        public TimeSeriesItem GetTimeSeries(DocumentsOperationContext context, Slice key)
+        {
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+
+            if (table.ReadByKey(key, out var reader) == false)
+                return null;
+
+            return CreateTimeSeriesItem(context, ref reader);
+        }
+
         public IEnumerable<TimeSeriesItem> GetTimeSeriesFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
@@ -1325,10 +1335,13 @@ namespace Raven.Server.Documents.TimeSeries
             var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
 
+            var key = new LazyStringValue(null, keyPtr, keySize, context);
+
             TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, out var docId, out var name, out var baseline);
 
             return new TimeSeriesItem
             {
+                Key = key,
                 DocId = docId,
                 Name = name,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),

@@ -50,13 +50,13 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection.StorageKey);
-                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection.StorageKey);
+                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag:#,#;;0}. LastTombstoneEtag: {lastTombstoneEtag:#,#;;0}.");
 
-                    var inMemoryStats = _index.GetStats(collection.StorageKey);
+                    var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastTombstoneEtag;
                     var count = 0;
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
-                                _index.HandleDelete(tombstone, collection.CollectionName, indexWriter, indexContext, collectionStats);
+                                _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
                                 if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                 {
@@ -122,11 +122,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                     if (_index.Type.IsMap())
                     {
-                        _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection.StorageKey, lastEtag);
+                        _indexStorage.WriteLastTombstoneEtag(indexContext.Transaction, collection, lastEtag);
                     }
                     else
                     {
-                        _mapReduceContext.ProcessedTombstoneEtags[collection.StorageKey] = lastEtag;
+                        _mapReduceContext.ProcessedTombstoneEtags[collection] = lastEtag;
                     }
 
                     moreWorkFound = true;

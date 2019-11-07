@@ -34,7 +34,14 @@ namespace FastTests.Client.Indexing.TimeSeries
                 var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
                 {
                     Name = "MyTsIndex",
-                    Maps = { "from ts in timeSeries.Companies.HeartRate from entry in ts.Entries select new { HeartBeat = entry.Values[0], Date = entry.TimeStamp.Date, User = ts.DocumentId }" }
+                    Maps = {
+                    "from ts in timeSeries.Companies.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Values[0], " +
+                    "   Date = entry.TimeStamp.Date, " +
+                    "   User = ts.DocumentId " +
+                    "}" }
                 }));
 
                 WaitForIndexing(store);
@@ -63,6 +70,71 @@ namespace FastTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "User", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("companies/1", terms);
+            }
+        }
+
+        [Fact]
+        public void BasicIndexWithLoad()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var now1 = DateTime.Now;
+                var now2 = now1.AddSeconds(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var employee = new Employee
+                    {
+                        FirstName = "John"
+                    };
+                    session.Store(employee, "employees/1");
+
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+
+                    session.TimeSeriesFor(company).Append("HeartRate", now1, "employees/1", new double[] { 7 });
+
+                    session.SaveChanges();
+                }
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = "MyTsIndex",
+                    Maps = {
+                    "from ts in timeSeries.Companies.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "let employee = LoadDocument(entry.Tag, \"Employees\")" +
+                    "select new { " +
+                    "   HeartBeat = entry.Values[0], " +
+                    "   Date = entry.TimeStamp.Date, " +
+                    "   User = ts.DocumentId, " +
+                    "   Employee = employee.FirstName" +
+                    "}" }
+                }));
+
+                WaitForIndexing(store);
+
+                Assert.Equal(1, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 1));
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Employee", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("john", terms);
+
+                using (var session = store.OpenSession())
+                {
+                    var employee = session.Load<Employee>("employees/1");
+                    employee.FirstName = "Bob";
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                Assert.Equal(1, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 1));
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Employee", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("bob", terms);
             }
         }
     }

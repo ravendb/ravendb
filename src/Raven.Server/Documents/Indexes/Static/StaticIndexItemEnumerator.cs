@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
             }
 
-            CurrentIndexingScope.Current.SetSourceCollection(collection.CollectionName, mapFuncStats);
+            CurrentIndexingScope.Current.SetSourceCollection(collection, mapFuncStats);
         }
 
         public bool MoveNext(out IEnumerable resultsOfCurrentDocument)

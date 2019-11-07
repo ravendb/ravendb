@@ -66,14 +66,14 @@ namespace Raven.Server.Documents.Indexes.Static
             };
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, null, Configuration));
 
             return workers.ToArray();
         }
 
-        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_referencedCollections.Count > 0)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        public override Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
         }
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Static
             using (CurrentlyInUse())
             {
                 return StaticIndexHelper.GetLastProcessedTombstonesPerCollection(
-                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+                    this, _referencedCollections, GetCollectionsForIndexing(), _compiled.ReferencedCollections, _indexStorage);
             }
         }
 

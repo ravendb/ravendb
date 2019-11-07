@@ -839,7 +839,7 @@ namespace Raven.Server.Documents.Indexes
                 using (indexContext.OpenReadTransaction())
                 {
                     long lastEtag = 0;
-                    foreach (var collection in Collections)
+                    foreach (var collection in GetCollectionsForIndexing())
                     {
                         lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
                     }
@@ -860,9 +860,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 var lastDocEtag = GetLastItemEtagInCollection(databaseContext, collection);
 
-                var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection.StorageKey);
+                var lastProcessedDocEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                 var lastProcessedTombstoneEtag =
-                    _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection.StorageKey);
+                    _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                 _inMemoryIndexProgress.TryGetValue(collection.StorageKey, out var stats);
 
@@ -946,7 +946,7 @@ namespace Raven.Server.Documents.Indexes
             return stalenessReasons?.Count > 0;
         }
 
-        public long GetLastMappedEtagFor(string collection)
+        public long GetLastMappedEtagFor(IIndexCollection collection)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -967,9 +967,9 @@ namespace Raven.Server.Documents.Indexes
                 using (var tx = context.OpenReadTransaction())
                 {
                     var etags = new Dictionary<string, long>();
-                    foreach (var collection in Collections)
+                    foreach (var collection in GetCollectionsForIndexing())
                     {
-                        etags[collection] = _indexStorage.ReadLastIndexedEtag(tx, collection);
+                        etags[collection.StorageKey] = _indexStorage.ReadLastIndexedEtag(tx, collection);
                     }
 
                     return etags;
@@ -1762,7 +1762,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, IIndexCollection collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
-        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
+        public abstract void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public abstract int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer,
@@ -2175,9 +2175,9 @@ namespace Raven.Server.Documents.Indexes
             return Collections;
         }
 
-        public IndexProgress.CollectionStats GetStats(string collection)
+        public IndexProgress.CollectionStats GetStats(IIndexCollection collection)
         {
-            return _inMemoryIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
+            return _inMemoryIndexProgress.GetOrAdd(collection.StorageKey, _ => new IndexProgress.CollectionStats());
         }
 
         public IndexProgress.CollectionStats GetReferencesStats(string collection)
@@ -2253,14 +2253,14 @@ namespace Raven.Server.Documents.Indexes
 
                         if (calculateLag)
                         {
-                            foreach (var collection in Collections)
+                            foreach (var collection in GetCollectionsForIndexing())
                             {
-                                var collectionStats = stats.Collections[collection];
+                                var collectionStats = stats.Collections[collection.StorageKey];
 
                                 var lastDocumentEtag =
-                                    DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                                    DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection.CollectionName);
                                 var lastTombstoneEtag =
-                                    DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
+                                    DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection.CollectionName);
 
                                 collectionStats.DocumentLag = Math.Max(0,
                                     lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
@@ -3214,11 +3214,10 @@ namespace Raven.Server.Documents.Indexes
         protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale, IndexState indexState,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-
-            foreach (var collection in Collections)
+            foreach (var collection in GetCollectionsForIndexing())
             {
-                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
-                var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
+                var lastDocEtag = DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection.CollectionName);
+                var lastTombstoneEtag = DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection.CollectionName);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                 var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
@@ -3277,9 +3276,9 @@ namespace Raven.Server.Documents.Indexes
         internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
         {
             var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            foreach (var collection in Collections)
+            foreach (var collection in GetCollectionsForIndexing())
             {
-                etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
+                etags[collection.CollectionName] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
             }
 
             return etags;
@@ -3351,7 +3350,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.NotificationCenter.Add(hint);
         }
 
-        public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
+        public virtual Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
         {
             return null;
         }

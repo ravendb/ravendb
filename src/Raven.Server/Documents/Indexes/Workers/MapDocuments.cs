@@ -8,11 +8,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
 using Sparrow.Logging;
 using Voron;
 
@@ -41,39 +38,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
             return _documentsStorage.GetDocumentsFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
-        }
-    }
-
-    public sealed class MapTimeSeries : MapItems
-    {
-        private readonly TimeSeriesStorage _timeSeriesStorage;
-
-        public MapTimeSeries(Index index, TimeSeriesStorage timeSeriesStorage, IndexStorage indexStorage, MapReduceIndexingContext mapReduceContext, IndexingConfiguration configuration)
-            : base(index, indexStorage, mapReduceContext, configuration)
-        {
-            _timeSeriesStorage = timeSeriesStorage;
-        }
-
-        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize)
-        {
-            var timeSeriesCollection = (TimeSeriesCollection)collection;
-
-            foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, timeSeriesCollection.CollectionName, timeSeriesCollection.TimeSeriesName, lastEtag, pageSize))
-            {
-                var id = databaseContext.GetLazyString(timeSeries.Baseline.GetDefaultRavenFormat());
-                yield return new IndexItem(id, id, timeSeries.Etag, timeSeries.SegmentSize, timeSeries);
-            }
-        }
-
-        private IEnumerable<TimeSeriesItem> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, string timeSeries, long lastEtag, int pageSize)
-        {
-            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-            {
-                //return _documentsStorage.GetDocumentsFrom(databaseContext, lastEtag + 1, 0, pageSize);
-                throw new NotImplementedException("TODO ppekrol");
-            }
-
-            return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, lastEtag + 1); // TODO ppekrol : more parameters
         }
     }
 
@@ -109,12 +73,12 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection.StorageKey);
+                    var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag:#,#;;0}.");
 
-                    var inMemoryStats = _index.GetStats(collection.StorageKey);
+                    var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
@@ -224,11 +188,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_index.Type.IsMap())
                     {
                         _index.SaveLastState();
-                        _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, collection.StorageKey, lastEtag);
+                        _indexStorage.WriteLastIndexedEtag(indexContext.Transaction, collection, lastEtag);
                     }
                     else
                     {
-                        _mapReduceContext.ProcessedDocEtags[collection.StorageKey] = lastEtag;
+                        _mapReduceContext.ProcessedDocEtags[collection] = lastEtag;
                     }
                 }
             }

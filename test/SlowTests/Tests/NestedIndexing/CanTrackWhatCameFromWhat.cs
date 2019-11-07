@@ -15,6 +15,7 @@ using Raven.Server.ServerWide.Context;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;
+using Raven.Server.Documents.Indexes;
 
 namespace SlowTests.Tests.NestedIndexing
 {
@@ -69,10 +70,11 @@ select new
                 using (index._contextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/1"), tx));
+                    var itemsCollection = new DocumentsCollection("Items");
+                    var item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/1"), tx));
                     Assert.Equal("items/2", item.ToString());
 
-                    item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                    item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                     Assert.Equal("items/1", item.ToString());
                 }
             }
@@ -101,7 +103,8 @@ select new
                 {
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                        var itemsCollection = new DocumentsCollection("Items");
+                        var item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                         Assert.Equal("items/1", item);
                     }
 
@@ -115,7 +118,8 @@ select new
 
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                        var itemsCollection = new DocumentsCollection("Items");
+                        var item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                         Assert.Equal("items/1", item.ToString());
                     }
                 }
@@ -146,9 +150,10 @@ select new
                 {
                     using (var tx = context.OpenReadTransaction())
                     {
-                        var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                        var itemsCollection = new DocumentsCollection("Items");
+                        var item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                         Assert.Equal("items/1", item.ToString());
-                        Assert.Empty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/3"), tx));
+                        Assert.Empty(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/3"), tx));
                     }
 
                     using (var session = store.OpenSession())
@@ -161,9 +166,10 @@ select new
 
                     using (var tx = context.OpenReadTransaction())
                     {
-                        Assert.Empty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                        var itemsCollection = new DocumentsCollection("Items");
+                        Assert.Empty(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
 
-                        var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/3"), tx));
+                        var item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/3"), tx));
                         Assert.Equal("items/1", item.ToString());
                     }
                 }
@@ -205,7 +211,8 @@ select new
                 using (index._contextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    var item = SingleKey(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                    var itemsCollection = new DocumentsCollection("Items");
+                    var item = SingleKey(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                     Assert.Equal("items/1", item.ToString());
                 }
             }
@@ -232,7 +239,8 @@ select new
                 using (index._contextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    Assert.Empty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/1"), tx));
+                    var itemsCollection = new DocumentsCollection("Items");
+                    Assert.Empty(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/1"), tx));
                 }
             }
         }
@@ -258,7 +266,8 @@ select new
                 using (index._contextPool.AllocateOperationContext(out context))
                 using (var tx = context.OpenReadTransaction())
                 {
-                    Assert.Empty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/1"), tx));
+                    var itemsCollection = new DocumentsCollection("Items");
+                    Assert.Empty(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/1"), tx));
                 }
             }
         }
@@ -286,7 +295,8 @@ select new
                 {
                     using (var tx = context.OpenReadTransaction())
                     {
-                        Assert.NotEmpty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                        var itemsCollection = new DocumentsCollection("Items");
+                        Assert.NotEmpty(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                     }
 
                     using (var commands = store.Commands())
@@ -298,7 +308,8 @@ select new
 
                     using (var tx = context.OpenReadTransaction())
                     {
-                        Assert.Empty(index._indexStorage.GetDocumentKeysFromCollectionThatReference("Items", context.GetLazyString("items/2"), tx));
+                        var itemsCollection = new DocumentsCollection("Items");
+                        Assert.Empty(index._indexStorage.GetItemKeysFromCollectionThatReference(itemsCollection, context.GetLazyString("items/2"), tx));
                     }
                 }
             }
