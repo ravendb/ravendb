@@ -255,8 +255,6 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 WaitForIndexing(store);
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
                     // 2019-10-26
@@ -351,14 +349,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 WaitForIndexing(store);
 
-                WaitForUserToContinueTheTest(store);
-
-
                 await store.ExecuteIndexAsync(new Replacement_DifferentPattern.Orders_ProfitByProductAndOrderedAt());
 
                 WaitForIndexing(store);
-
-                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
