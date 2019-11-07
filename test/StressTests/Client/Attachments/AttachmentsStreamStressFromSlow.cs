@@ -23,8 +23,8 @@ namespace StressTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(1000, 32768)]
-        [InlineData(1_000_000, 1)]
+        [InlineData(1_000, 32768)]
+        [InlineData(10_000, 1)]
         public void CanGetListOfAttachmentsAndSkip(int count, int size)
         {
             using (var test = new AttachmentsStreamTests(Output))
@@ -34,8 +34,8 @@ namespace StressTests.Client.Attachments
         }
 
         [Theory]
-        [InlineData(1000, 32768)]
-        [InlineData(1_000_000, 1)]
+        [InlineData(1_000, 32768)]
+        [InlineData(10_000, 1)]
         public void CanGetListOfAttachmentsAndReadOrdered(int count, int size)
         {
             using (var test = new AttachmentsStreamTests(Output))
@@ -46,8 +46,8 @@ namespace StressTests.Client.Attachments
 
 
         [Theory]
-        [InlineData(1000, 32768)]
-        [InlineData(1_000_000, 1)]
+        [InlineData(1_000, 32768)]
+        [InlineData(10_000, 1)]
         public async Task CanGetListOfAttachmentsAndReadOrderedAsync(int count, int size)
         {
             using (var test = new AttachmentsStreamTests(Output))
