@@ -42,6 +42,9 @@ class indexDefinition {
     outputReduceToCollection = ko.observable<boolean>();
     reduceToCollectionName = ko.observable<string>();
 
+    patternForOutput = ko.observable<boolean>();
+    patternForOutputReduceToCollectionReferences = ko.observable<string>();
+
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
     numberOfAdditionalSources = ko.pureComputed(() => this.additionalSources() ? this.additionalSources().length : 0);
@@ -65,6 +68,8 @@ class indexDefinition {
         //this.isTestIndex(dto.IsTestIndex);
         this.outputReduceToCollection(!!dto.OutputReduceToCollection);
         this.reduceToCollectionName(dto.OutputReduceToCollection);
+        this.patternForOutput(!!dto.PatternForOutputReduceToCollectionReferences);
+        this.patternForOutputReduceToCollectionReferences(dto.PatternForOutputReduceToCollectionReferences);
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
@@ -125,10 +130,17 @@ class indexDefinition {
             }
         });
 
+        this.patternForOutputReduceToCollectionReferences.extend({
+            required: {
+                onlyIf: () => this.hasReduce() && this.patternForOutput()
+            }
+        })
+
         this.validationGroup = ko.validatedObservable({
             name: this.name,
             reduce: this.reduce,
-            reduceToCollectionName: this.reduceToCollectionName
+            reduceToCollectionName: this.reduceToCollectionName,
+            patternForOutputReduceToCollectionReferences: this.patternForOutputReduceToCollectionReferences
         });
     }
 
@@ -196,7 +208,7 @@ class indexDefinition {
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
-            PatternForOutputReduceToCollectionReferences: null, // TODO marcin
+            PatternForOutputReduceToCollectionReferences: this.patternForOutput() ? this.patternForOutputReduceToCollectionReferences() : null,
             AdditionalSources: this.additionalSourceToDto()
         }
     }
