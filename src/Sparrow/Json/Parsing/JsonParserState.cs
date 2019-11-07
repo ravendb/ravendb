@@ -45,7 +45,7 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public static int FindEscapePositionsMaxSize(StringSegment str)
+        public static int FindEscapePositionsMaxSize(StringSegment str, out int escapedCount)
         {
             var count = 0;
             var controlCount = 0;
@@ -77,6 +77,7 @@ namespace Sparrow.Json.Parsing
                 }
             }
 
+            escapedCount = controlCount;
             // we take 5 because that is the max number of bytes for variable size int
             // plus 1 for the actual number of positions
 
