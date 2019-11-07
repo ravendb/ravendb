@@ -229,6 +229,8 @@ class editIndex extends viewModelBase {
             indexDef.numberOfConfigurationFields,
             indexDef.outputReduceToCollection,
             indexDef.reduceToCollectionName,
+            indexDef.patternForOutputReduceToCollectionReferences,
+            indexDef.patternForOutput,
             indexDef.numberOfAdditionalSources,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
