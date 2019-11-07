@@ -1280,14 +1280,17 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('(') == false)
                 ThrowParseException("Unable to parse  " + name + " signature");
 
-            ReadMethodArguments();
+            var parameters = ReadMethodArguments();
+
+            var funcBodyStart = Scanner.Position;
 
             if (Scanner.FunctionBody() == false)
                 ThrowParseException("Unable to get body for " + name);
 
-            var functionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
             if (isFunc)
             {
+                var functionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
+
                 // validate this function
                 try
                 {
@@ -1308,53 +1311,33 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
             }
 
+            var functionBody = Scanner.Input.Substring(funcBodyStart, Scanner.Position - funcBodyStart);
 
             if (_timeSeriesParser == null)
                 _timeSeriesParser = new QueryParser();
-            _timeSeriesParser.Init(functionText);
-            var ts = _timeSeriesParser.ParseTimeSeries(name.Value);
+            _timeSeriesParser.Init(functionBody);
+
+            //var ts = _timeSeriesParser.ParseTimeSeries(name.Value);
+
+            if (_timeSeriesParser.Scanner.TryScan('{') == false)
+                ThrowParseException($"Failed to find opening parentheses {{ for {name.Value}");
+
+            var timeSeriesFunction = _timeSeriesParser.ParseTimeSeriesBody(name.Value, parameters?[0]?.ToString());
+
+            if (_timeSeriesParser.Scanner.TryScan('}') == false)
+                ThrowParseException($"Failed to find opening parentheses }} for {name.Value}");
 
             return new DeclaredFunction
             {
                 Type = AST.DeclaredFunction.FunctionType.TimeSeries,
                 Name = name.Value,
-                FunctionText = functionText,
-                TimeSeries = ts
+                FunctionText = functionBody,
+                TimeSeries = timeSeriesFunction,
+                Parameters = parameters
             };
         }
 
-        private TimeSeriesFunction ParseTimeSeries(string name)
-        {
-            if (Scanner.TryScan(TimeSeries) == false)// should never happen
-                ThrowParseException($"Expected to find timeseries token for {name}, but couldn't get it");
-
-            if (Scanner.Identifier() == false) // should never happen
-                ThrowParseException($"Couldn't get the identifier for the timeseries query for {name}");
-
-            StringSegment rootSource = default;
-
-            if (Scanner.TryScan('(')) // we allow to declare without params / empty params
-            {
-                if (Scanner.Identifier())
-                {
-                    rootSource = Scanner.Token;
-                }
-                if (Scanner.TryScan(')') == false)
-                    ThrowParseException($"Failed to find closing parentheses ) for {name}");
-            }
-
-            if (Scanner.TryScan('{') == false)
-                ThrowParseException($"Failed to find opening parentheses {{ for {name}");
-
-            var func = ParseTimeSeriesBody(name, rootSource);
-
-            if (Scanner.TryScan('}') == false)
-                ThrowParseException($"Failed to find opening parentheses }} for {name}");
-
-            return func;
-        }
-
-        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource)
+        private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
         {
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
@@ -1364,13 +1347,30 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
             {
-                    source.Compound.RemoveAt(0);
+                source.Compound.RemoveAt(0);
             }
 
-            if (Scanner.TryScan("BETWEEN") == false)
-                ThrowParseException($"Expected between expression after from cluase for {name}, but didn't find it");
+            var between = Scanner.TryScan("BETWEEN") 
+                ? ReadBetweenExpression(source) 
+                : new BetweenExpression(source, null, null);
 
-            var between = ReadBetweenExpression(source);
+
+            if (Scanner.TryScan("LOAD"))
+            {
+                if (Field(out var load) == false)
+                    ThrowInvalidQueryException($"Failed'"); //todo aviv 
+            }
+
+            QueryExpression filter = null;
+            if (Scanner.TryScan("WHERE"))
+            {
+                if (Expression(out filter) == false)
+                    ThrowInvalidQueryException($"Failed to parse filter expression after 'where' in time series function '{name}'");
+
+                //filter.ThrowIfInvalidMethodInvocationInWhere(null, Scanner.Input, collection.FieldValue);
+            }
+
+
             List<(QueryExpression, StringSegment?)> select = null;
             ValueExpression groupByExpr = null;
 
@@ -1402,6 +1402,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return new TimeSeriesFunction
             {
                 Between = between,
+                Where = filter,
                 GroupBy = groupByExpr,
                 Select = select
             };
@@ -1539,11 +1540,30 @@ namespace Raven.Server.Documents.Queries.Parser
                             ThrowParseException($"{func.Name} time series function was declared multiple times");
 
                         var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
-                        var args = new List<QueryExpression>();
+
+                        List<QueryExpression> args = new List<QueryExpression>();
 
                         if (compound.Count > 1)
                         {
-                            args.Add(new FieldExpression(new List<StringSegment>{ compound[0] }));
+                            var items = new List<StringSegment>();
+
+                            if (query?.From.Alias != null)
+                            {
+                                // todo aviv - is this really needed? 
+
+                                items.Add(query.From.Alias.Value);
+
+                                if (query.From.Alias.Value != compound[0])
+                                {
+                                    items.Add(compound[0]);
+                                }
+                            }
+                            else
+                            {
+                                items.Add(compound[0]);
+                            }
+
+                            args.Add(new FieldExpression(items));
                         }
 
                         expr = new MethodExpression(func.Name, args);
