@@ -1,10 +1,8 @@
 using System;
-using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Exceptions;
 using Sparrow;
-using Raven.Server.Utils;
 using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -106,6 +104,7 @@ namespace Raven.Server.Documents.Queries.AST
         public Esprima.Ast.Program JavaScript;
         public TimeSeriesFunction TimeSeries;
         public FunctionType Type;
+        public List<QueryExpression> Parameters;
 
         public enum FunctionType
         {
@@ -117,9 +116,9 @@ namespace Raven.Server.Documents.Queries.AST
     public unsafe class TimeSeriesFunction
     {
         public BetweenExpression Between;
+        public QueryExpression Where;
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
-
 
         public struct RangeGroup
         {
@@ -168,6 +167,7 @@ namespace Raven.Server.Documents.Queries.AST
                 return timestamp;
             }
         }
+
 
         public static RangeGroup ParseRangeFromString(string s)
         {

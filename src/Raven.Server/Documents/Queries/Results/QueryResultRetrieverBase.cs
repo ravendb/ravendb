@@ -22,9 +22,11 @@ using Raven.Server.Utils;
 using Sparrow;
 using System.Globalization;
 using System.Buffers.Text;
+using System.Linq.Expressions;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TimeSeries;
+using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -719,7 +721,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (query.DeclaredFunctions != null && 
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) && 
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
-                return InvokeTimeSeriesFunction(func.TimeSeries, documentId, args);
+                return InvokeTimeSeriesFunction(func, documentId, args);
 
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
@@ -734,32 +736,133 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private BlittableJsonReaderObject InvokeTimeSeriesFunction(TimeSeriesFunction func, string documentId, object[] args)
+        private BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args)
         {
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
-            var compound = ((FieldExpression)func.Between.Source).Compound;
+            var timeSeriesFunction = declaredFunction.TimeSeries;
+            var compound = ((FieldExpression)timeSeriesFunction.Between.Source).Compound;
 
-            var source = ((FieldExpression)func.Between.Source).FieldValue;
+            var source = ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
 
-            if (args?.Length > 0 && args[0] is Document documentArgument)
+            if (compound.Count > 1)
+            {
+                source = ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
+
+                if (args.Length < declaredFunction.Parameters.Count)
+                {
+                    throw new ArgumentException($"Failed"); //todo aviv
+                }
+
+                int index;
+                for (index = 0; index < declaredFunction.Parameters.Count; index++)
+                {
+                    var parameter = declaredFunction.Parameters[index];
+                    var str = ((FieldExpression)parameter).FieldValue;
+
+                    if (compound[0] == str)
+                    {
+                        break;
+                    }
+                }
+
+                if (index == declaredFunction.Parameters.Count) // not found
+                {
+                    throw new ArgumentException($"Failed"); //todo aviv
+                }
+
+                if (index == 0)
+                {
+                    if (args[0] is Document document)
+                    {
+                        documentId = document.Id;
+                    }
+
+/*                    else
+                    {
+                        Document arg = ((Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?>)args[0])?.Item1;
+                        documentId = arg?.Id;
+                    }*/
+
+
+                }
+
+                else
+                {
+                    if (!(args[index] is Document document))
+                    {
+                        throw new ArgumentException($"Failed"); //todo aviv
+                    }
+
+                    documentId = document.Id;
+
+                }
+
+
+
+
+            }
+
+/*            if (args?.Length > 0 && args[0] is Document documentArgument)
             {
                 // take the id from argument 
                 documentId = documentArgument.Id;
 
                 if (compound.Count > 1)
                 {
-                    source = ((FieldExpression)func.Between.Source).FieldValueWithoutAlias;
+                    source = ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
                 }
             }
             else if (compound.Count > 1)
             {
-                throw new ArgumentException($"Unable to operate on time series '{((FieldExpression)func.Between.Source).FieldValue}'. '{compound[0]}' is unknown." +
+                throw new ArgumentException($"Unable to operate on time series '{((FieldExpression)timeSeriesFunction.Between.Source).FieldValue}'. '{compound[0]}' is unknown." +
                                             "Time series aggregations should either be implicit (no aliases defined in the query) or explicit (the document to operate on is passed as an argument).");
+            }*/
+            
+            var min = GetDateValue(timeSeriesFunction.Between.Min) ?? DateTime.MinValue;
+            var max = GetDateValue(timeSeriesFunction.Between.Max) ?? DateTime.MaxValue;
+
+/*            BinaryExpression filter = default;
+
+            if (timeSeriesFunction.Where != null)
+            {
+                filter = (BinaryExpression)timeSeriesFunction.Where;
+            }*/
+
+            if (timeSeriesFunction.GroupBy == null)
+            {
+                var array2 = new DynamicJsonArray();
+                var reader2 = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
+                var count2 = 0;
+
+                foreach (var singleResult in reader2.AllValues())
+                {
+/*                    if (Filter(filter, singleResult))
+                        continue;*/
+
+                    var vals = new DynamicJsonArray();
+                    for (var index = 0; index < singleResult.Values.Span.Length; index++)
+                    {
+                        vals.Add(singleResult.Values.Span[index]);
+                    }
+
+                    array2.Add(new DynamicJsonValue
+                    {
+                        ["Tag"] = singleResult.Tag.ToString(),
+                        ["Timestamp"] = singleResult.TimeStamp,
+                        ["Values"] = vals
+                    });
+
+                    count2++;
+                }
+
+                return _context.ReadObject(new DynamicJsonValue
+                {
+                    //["Count"] = count2,
+                    ["Results"] = array2
+                }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
             }
 
-            var min = GetDateValue(func.Between.Min);
-            var max = GetDateValue(func.Between.Max);
-            var groupBy = func.GroupBy.GetValue(_query.QueryParameters)?.ToString();
+            var groupBy = timeSeriesFunction.GroupBy.GetValue(_query.QueryParameters)?.ToString();
             if (groupBy == null)
                 throw new ArgumentException("Unable to parse group by value, expected range specification, but got a null");
 
@@ -767,19 +870,19 @@ namespace Raven.Server.Documents.Queries.Results
 
             var array = new DynamicJsonArray();
 
-            var aggStates = new TimeSeriesAggregation[func.Select.Count];
-            for (int i = 0; i < func.Select.Count; i++)
+            var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
+            for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
             {
-                if (func.Select[i].Item1 is MethodExpression me)
+                if (timeSeriesFunction.Select[i].Item1 is MethodExpression me)
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out TimeSeriesAggregation.Type type))
                     {
                         aggStates[i] = new TimeSeriesAggregation(0, type);
                         continue;
                     }
-                    throw new ArgumentException("Uknown method in timeseries query: " + me);
+                    throw new ArgumentException("Unknown method in timeseries query: " + me);
                 }
-                throw new ArgumentException("Uknown method in timeseries query: " + func.Select[i].Item1);
+                throw new ArgumentException("Unknown method in timeseries query: " + timeSeriesFunction.Select[i].Item1);
             }
 
             var reader = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
@@ -818,7 +921,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (aggStates[0].Count > 0)
             {
-                array.Add(AddTimeSeriesResult(func, aggStates, start, next));
+                array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
             }
 
             return _context.ReadObject(new DynamicJsonValue
@@ -848,7 +951,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (aggStates[0].Count > 0)
                 {
-                    array.Add(AddTimeSeriesResult(func, aggStates, start, next));
+                    array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
                 }
 
                 start = rangeSpec.GetRangeStart(ts);
@@ -858,6 +961,90 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     aggStates[i].Init();
                 }
+            }
+        }
+
+        private bool Filter(BinaryExpression be, SingleResult singleResult)
+        {
+            if (be == null)
+                return false;
+
+            switch (be.Operator)
+            {
+                case OperatorType.And:
+                    return Filter((BinaryExpression)be.Left, singleResult) == false || 
+                           Filter((BinaryExpression)be.Right, singleResult);
+                case OperatorType.Or:
+                    return Filter((BinaryExpression)be.Left, singleResult) == false &&
+                           Filter((BinaryExpression)be.Right, singleResult) == false;
+            }
+
+            object left = default;
+            object right;
+
+            if (!(be.Left is FieldExpression fe))
+                throw new ArgumentException(""); // todo
+
+            if (fe.Compound.Count > 1)
+            {
+            }
+
+            else
+            {
+                switch (fe.FieldValue)
+                {
+                    case "Tag":
+                        left = singleResult.Tag.ToString();
+                        break;
+                    case "Values":
+                        left = singleResult.Values;
+                        break;
+                    case "Timestamp":
+                        left = singleResult.TimeStamp;
+                        break;
+                    default:
+                        throw new ArgumentException("Unknown where "); // todo
+                }
+            }
+
+
+            if (!(be.Right is ValueExpression ve))
+                throw new ArgumentException(""); // todo
+
+            if (ve.Value == ValueTokenType.String)
+            {
+                right = ve.Token.Value;
+            }
+            else
+            {
+                right = ve.GetValue(_query.QueryParameters);
+            }
+
+            switch (be.Operator)
+            {
+                case OperatorType.Equal:
+                    return Equals(left, right) == false;
+                case OperatorType.NotEqual:
+                    return Equals(left, right);
+
+/*                            case OperatorType.LessThan:
+                                result = left < right;
+                                break;
+                            case OperatorType.GreaterThan:
+                                result = left > right;
+                                break;
+                            case OperatorType.LessThanEqual:
+                                result = left <= right;
+                                break;
+                            case OperatorType.GreaterThanEqual:
+                                result = left >= right;
+                                break;*/
+                            case OperatorType.And:
+/*                                return (bool)left == false || (bool)right == false;
+                            case OperatorType.Or:
+                                return (bool)left == false && (bool)right == false;*/
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
@@ -877,8 +1064,11 @@ namespace Raven.Server.Documents.Queries.Results
             return result;
         }
 
-        private unsafe DateTime GetDateValue(ValueExpression ve)
+        private unsafe DateTime? GetDateValue(ValueExpression ve)
         {
+            if (ve == null)
+                return null;
+
             var val = ve.GetValue(_query.QueryParameters);
             if (val == null)
                 throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
