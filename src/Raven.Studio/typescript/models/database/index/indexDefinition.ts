@@ -196,6 +196,7 @@ class indexDefinition {
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
+            PatternForOutputReduceToCollectionReferences: null, // TODO marcin
             AdditionalSources: this.additionalSourceToDto()
         }
     }
@@ -250,7 +251,8 @@ class indexDefinition {
             //IsTestIndex: false,
             Type: "Map",
             OutputReduceToCollection: null,
-            AdditionalSources: null
+            AdditionalSources: null,
+            PatternForOutputReduceToCollectionReferences: null
         });
     }
 }
