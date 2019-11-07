@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -36,7 +35,7 @@ namespace Raven.Server.Documents
             var strLength = id.Length;
 
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
-            var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
+            var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id, out _);
 
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id);
@@ -178,11 +177,16 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);
 
-            int maxStrSize = Encoding.GetMaxByteCount(strLength);
-
             int idSize = JsonParserState.VariableSizeIntSize(strLength);
 
-            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str, out var escapedCount);
+
+            /*
+             *  add the size of all control characters
+             *  this is to treat case when we have 2+ control character in a row
+             *  GetMaxByteCount returns smaller size than the actual size with escaped control characters
+             */
+            var maxStrSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * escapedCount;
 
             var scope = context.Allocator.Allocate(maxStrSize // lower key
                                        + idSize // the size of var int for the len of the key

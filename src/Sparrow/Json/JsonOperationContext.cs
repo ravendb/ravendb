@@ -552,7 +552,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(field.Length);
 
-            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(field, out _);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
