@@ -19,8 +19,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             LuceneIndexPersistence persistence, JsonOperationContext indexContext)
             : base(index, directory, converter, writeTransaction, persistence)
         {
-            Debug.Assert(index.ReduceOutputs != null);
-            _outputReduceToCollectionCommand = index.ReduceOutputs.CreateOutputReduceToCollectionCommand(indexContext, writeTransaction);
+            Debug.Assert(index.OutputReduceToCollection != null);
+            _outputReduceToCollectionCommand = index.OutputReduceToCollection.CreateCommand(indexContext, writeTransaction);
         }
 
         public override void Commit(IndexingStatsScope stats)

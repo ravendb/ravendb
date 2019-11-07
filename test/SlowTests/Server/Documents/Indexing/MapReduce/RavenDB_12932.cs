@@ -351,6 +351,9 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 WaitForIndexing(store);
 
+                WaitForUserToContinueTheTest(store);
+
+
                 await store.ExecuteIndexAsync(new Replacement_DifferentPattern.Orders_ProfitByProductAndOrderedAt());
 
                 WaitForIndexing(store);

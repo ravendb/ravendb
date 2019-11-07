@@ -418,6 +418,7 @@ namespace Raven.Client.Documents.Indexes
 #endif
                 OutputReduceToCollection = OutputReduceToCollection,
                 ReduceOutputIndex = ReduceOutputIndex,
+                PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences
             };
 
             foreach (var kvp in _configuration)

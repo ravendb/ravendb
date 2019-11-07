@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Workers
         {
             var moreWorkFound = base.Execute(databaseContext, indexContext, writeOperation, stats, token);
 
-            if (_mapReduceIndex.ReduceOutputs?.HasDocumentsToDelete() == true)
+            if (_mapReduceIndex.OutputReduceToCollection?.HasDocumentsToDelete() == true)
             {
                 moreWorkFound = true;
 
@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Workers
                 {
                     // we can start deleting reduce output documents only if index becomes a regular one
 
-                    moreWorkFound |= _mapReduceIndex.ReduceOutputs.DeleteDocuments(stats, indexContext);
+                    moreWorkFound |= _mapReduceIndex.OutputReduceToCollection.DeleteDocuments(stats, indexContext);
                 }
             }
 
