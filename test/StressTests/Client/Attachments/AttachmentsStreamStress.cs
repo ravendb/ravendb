@@ -20,7 +20,7 @@ namespace StressTests.Client.Attachments
 
         [Theory]
         [InlineData(3, (long)int.MaxValue + short.MaxValue)]
-        public void CanGetListOfHugeAttachmentsAndReadOrdered(int count, int size)
+        public void CanGetListOfHugeAttachmentsAndReadOrdered(int count, long size)
         {
             var attachmentDictionary = new Dictionary<string, BigDummyStream>();
             const string id = "users/1";
