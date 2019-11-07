@@ -7,6 +7,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Xunit;
 using Xunit.Abstractions;
@@ -59,45 +60,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order()
-                    {
-                        OrderedAt = new DateTime(2019, 10, 26),
-                        Lines = new List<OrderLine>()
-                        {
-                            new OrderLine()
-                            {
-                                Product = "products/1",
-                            },
-                            new OrderLine()
-                            {
-                                Product = "products/2",
-                            }
-                        }
-                    }, "orders/1");
-
-                    session.Store(new Order()
-                    {
-                        OrderedAt = new DateTime(2019, 10, 25),
-                        Lines = new List<OrderLine>()
-                        {
-                            new OrderLine()
-                            {
-                                Product = "products/2",
-                            }
-                        }
-                    }, "orders/2");
-
-                    session.Store(new Order()
-                    {
-                        OrderedAt = new DateTime(2019, 10, 24),
-                        Lines = new List<OrderLine>()
-                        {
-                            new OrderLine()
-                            {
-                                Product = "products/1",
-                            }
-                        }
-                    }, "orders/3");
+                    PutOrders(session);
 
                     session.SaveChanges();
                 }
@@ -158,6 +121,20 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     Assert.Null(session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-26"));
                 }
             }
+        }
+
+        private static void PutOrders(IDocumentSession session)
+        {
+            session.Store(
+                new Order()
+                {
+                    OrderedAt = new DateTime(2019, 10, 26),
+                    Lines = new List<OrderLine>() {new OrderLine() {Product = "products/1",}, new OrderLine() {Product = "products/2",}}
+                }, "orders/1");
+
+            session.Store(new Order() {OrderedAt = new DateTime(2019, 10, 25), Lines = new List<OrderLine>() {new OrderLine() {Product = "products/2",}}}, "orders/2");
+
+            session.Store(new Order() {OrderedAt = new DateTime(2019, 10, 24), Lines = new List<OrderLine>() {new OrderLine() {Product = "products/1",}}}, "orders/3");
         }
 
 
@@ -265,45 +242,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Order()
-                    {
-                        OrderedAt = new DateTime(2019, 10, 26),
-                        Lines = new List<OrderLine>()
-                        {
-                            new OrderLine()
-                            {
-                                Product = "products/1",
-                            },
-                            new OrderLine()
-                            {
-                                Product = "products/2",
-                            }
-                        }
-                    }, "orders/1");
-
-                    session.Store(new Order()
-                    {
-                        OrderedAt = new DateTime(2019, 10, 25),
-                        Lines = new List<OrderLine>()
-                        {
-                            new OrderLine()
-                            {
-                                Product = "products/2",
-                            }
-                        }
-                    }, "orders/2");
-
-                    session.Store(new Order()
-                    {
-                        OrderedAt = new DateTime(2019, 10, 24),
-                        Lines = new List<OrderLine>()
-                        {
-                            new OrderLine()
-                            {
-                                Product = "products/1",
-                            }
-                        }
-                    }, "orders/3");
+                    PutOrders(session);
 
                     session.SaveChanges();
                 }
@@ -393,6 +332,44 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.Equal(1, errors.Length);
 
                 Assert.Equal(2, errors[0].Errors.Length);
+            }
+        }
+
+        [Fact]
+        public async Task CanUpdatePatternForOutputReduceToCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    PutOrders(session);
+
+                    session.SaveChanges();
+                }
+
+                new Orders_ProfitByProductAndOrderedAt().Execute(store);
+
+                WaitForIndexing(store);
+
+                await store.ExecuteIndexAsync(new Replacement_DifferentPattern.Orders_ProfitByProductAndOrderedAt());
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<OutputReduceToCollectionReference>("reports/monthly/2019-10", x => x.IncludeDocuments(y => y.ReduceOutputs));
+
+                    Assert.Equal(4, doc.ReduceOutputs.Count);
+
+                    foreach (var docReduceOutput in doc.ReduceOutputs)
+                    {
+                        Replacement.Orders_ProfitByProductAndOrderedAt.Result output = session.Load<Replacement.Orders_ProfitByProductAndOrderedAt.Result>(docReduceOutput);
+
+                        Assert.NotNull(output);
+                    }
+                }
             }
         }
 
@@ -497,6 +474,31 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:yyyy-MM-dd}", x.OrderedAt);
 
+                }
+            }
+        }
+
+        private static class Replacement_DifferentPattern
+        {
+            public class Orders_ProfitByProductAndOrderedAt : AbstractIndexCreationTask
+            {
+                public override IndexDefinition CreateIndexDefinition()
+                {
+                    return new IndexDefinition
+                    {
+                        Maps =
+                        {
+                            @"from order in docs.Orders
+                        from line in order.Lines
+                        select new { line.Product, order.OrderedAt, Profit = line.Quantity * line.PricePerUnit * (1 - line.Discount) };"
+                        },
+                        Reduce = @"from r in results
+                    group r by new { r.OrderedAt, r.Product }
+                    into g
+                    select new { g.Key.Product, g.Key.OrderedAt, Profit = g.Sum(r => r.Profit) };",
+                        OutputReduceToCollection = "Profits",
+                        PatternForOutputReduceToCollectionReferences = "reports/monthly/{OrderedAt:yyyy-MM}"
+                    };
                 }
             }
         }

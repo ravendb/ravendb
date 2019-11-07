@@ -123,6 +123,9 @@ namespace Raven.Client.Documents.Indexes
             if (string.Equals(OutputReduceToCollection, other.OutputReduceToCollection, StringComparison.OrdinalIgnoreCase) == false)
                 result |= IndexDefinitionCompareDifferences.Reduce;
 
+            if (string.Equals(PatternForOutputReduceToCollectionReferences, other.PatternForOutputReduceToCollectionReferences, StringComparison.OrdinalIgnoreCase) == false)
+                result |= IndexDefinitionCompareDifferences.Reduce;
+
             if (LockMode != other.LockMode)
             {
                 if ((LockMode == null && other.LockMode == IndexLockMode.Unlock) || (LockMode == IndexLockMode.Unlock && other.LockMode == null))
