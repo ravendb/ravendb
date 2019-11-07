@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -12,7 +11,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Impl;
-using Object = System.Object;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
@@ -35,6 +33,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         private readonly JsonOperationContext _indexContext;
         private readonly ReduceOutputReferencesSubCommand _outputReferences;
+
+        private IndexingStatsScope _stats;
 
         public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex,
             OutputReferencesPattern patternForReduceOutputReferences, MapReduceIndex index, JsonOperationContext context, Transaction indexWriteTransaction)
@@ -135,6 +135,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             var djv = new DynamicJsonValue();
 
+            referenceDocumentId = null;
+
             OutputReferencesPattern.DocumentIdBuilder referenceDocIdBuilder = null;
 
             using (_patternForReduceOutputReferences?.BuildReferenceDocumentId(out referenceDocIdBuilder))
@@ -149,9 +151,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 }
 
                 if (referenceDocIdBuilder != null)
-                    referenceDocumentId = referenceDocIdBuilder.GetId();
-                else
-                    referenceDocumentId = null;
+                {
+                    try
+                    {
+                        referenceDocumentId = referenceDocIdBuilder.GetId();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_stats != null) // should never be null
+                            _stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e.Message}");
+                    }
+                }
             }
 
             djv[Constants.Documents.Metadata.Key] = new DynamicJsonValue
@@ -388,6 +398,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 throw new InvalidOperationException($"Property {nameof(OutputReduceToCollectionReference.ReduceOutputs)} was not found in document: {id}");
             }
+        }
+
+        public void SetIndexingStatsScope(IndexingStatsScope stats)
+        {
+            _stats = stats;
         }
     }
 

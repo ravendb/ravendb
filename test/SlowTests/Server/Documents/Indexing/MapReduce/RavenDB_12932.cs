@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Xunit;
 using Xunit.Abstractions;
@@ -257,7 +259,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         }
 
         [Fact]
-        public async void CanUpdateIndexWithPatternForOutputReduceToCollectionReferences()
+        public async Task CanUpdateIndexWithPatternForOutputReduceToCollectionReferences()
         {
             using (var store = GetDocumentStore())
             {
@@ -309,8 +311,6 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 new Orders_ProfitByProductAndOrderedAt().Execute(store);
 
                 WaitForIndexing(store);
-                
-                WaitForUserToContinueTheTest(store);
 
                 await store.ExecuteIndexAsync(new Replacement.Orders_ProfitByProductAndOrderedAt());
 
@@ -354,6 +354,45 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     Assert.NotNull(output);
                 }
+            }
+        }
+
+        [Fact]
+        public void ShouldCreateIndexErrorIfPatternFormattingIsNotValid()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order()
+                    {
+                        OrderedAt = new DateTime(2019, 10, 26),
+                        Lines = new List<OrderLine>()
+                        {
+                            new OrderLine()
+                            {
+                                Product = "products/1",
+                            },
+                            new OrderLine()
+                            {
+                                Product = "products/2",
+                            }
+                        }
+                    }, "orders/1");
+
+                    session.SaveChanges();
+                }
+
+                var index = new Index_WithInvalidPropertyName();
+                index.Execute(store);
+
+                WaitForIndexing(store);
+
+                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {index.IndexName}));
+
+                Assert.Equal(1, errors.Length);
+
+                Assert.Equal(2, errors[0].Errors.Length);
             }
         }
 
@@ -403,6 +442,29 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 OutputReduceToCollection = "Profits";
 
                 PatternForOutputReduceToCollectionReferences= x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+            }
+        }
+
+        private class Index_WithInvalidPropertyName : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Maps =
+                    {
+                        @"from order in docs.Orders
+                        from line in order.Lines
+                        select new { line.Product, order.OrderedAt, Profit = line.Quantity * line.PricePerUnit * (1 - line.Discount) };"
+                    },
+                    Reduce = @"from r in results
+                    group r by new { r.OrderedAt, r.Product }
+                    into g
+                    select new { g.Key.Product, g.Key.OrderedAt, Profit = g.Sum(r => r.Profit) };",
+                    OutputReduceToCollection = "Profits",
+                    PatternForOutputReduceToCollectionReferences = "reports/daily/{InvalidPropertyName:yyyy-MM-dd}",
+                    Name = "Index/WithInvalidPropertyName"
+                };
             }
         }
 
