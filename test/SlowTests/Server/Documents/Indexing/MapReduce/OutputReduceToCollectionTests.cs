@@ -251,7 +251,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 var replacement = (MapReduceIndex)indexes.First(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
 
                 // new replacement needs to delete docs created by original index
-                Assert.Equal(2, replacement.ReduceOutputs.GetPrefixesOfDocumentsToDelete().Count);
+                Assert.Equal(2, replacement.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().Count);
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
@@ -407,8 +407,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 // original index needs to delete docs created by replacement index
 
-                Assert.Equal(1, originalIndex.ReduceOutputs.GetPrefixesOfDocumentsToDelete().Count);
-                Assert.Equal($"DailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.ReduceOutputs.GetPrefixesOfDocumentsToDelete().First());
+                Assert.Equal(1, originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().Count);
+                Assert.Equal($"DailyInvoices/{replacementIndexReduceOutputIndex}/", originalIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete().First());
 
 
                 using (var session = store.OpenAsyncSession())

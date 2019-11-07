@@ -13,7 +13,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
-    public class ReduceOutputDocumentActions
+    public class OutputReduceToCollectionActions
     {
         private readonly MapReduceIndex _index;
         private const string ReduceOutputsTreeName = "ReduceOutputsTree";
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly long? _reduceOutputVersion;
         private readonly OutputReferencesPattern _patternForOutputReduceToCollectionReferences;
 
-        static ReduceOutputDocumentActions()
+        static OutputReduceToCollectionActions()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public ReduceOutputDocumentActions(MapReduceIndex index)
+        public OutputReduceToCollectionActions(MapReduceIndex index)
         {
             _index = index;
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             tree.Delete(reduceResultId);
         }
 
-        public OutputReduceToCollectionCommand CreateOutputReduceToCollectionCommand(JsonOperationContext indexContext, Transaction writeTransaction)
+        public OutputReduceToCollectionCommand CreateCommand(JsonOperationContext indexContext, Transaction writeTransaction)
         {
             return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternForOutputReduceToCollectionReferences, _index, indexContext, writeTransaction);
         }

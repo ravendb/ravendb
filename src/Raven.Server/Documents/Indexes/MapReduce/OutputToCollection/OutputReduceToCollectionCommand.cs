@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             public void DeleteFromReferenceDocument(string reduceOutputId)
             {
-                var referenceId = _index.ReduceOutputs.GetPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId);
+                var referenceId = _index.OutputReduceToCollection.GetPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId);
 
                 if (_idsToDeleteByReferenceDocumentId.TryGetValue(referenceId, out var values) == false)
                 {
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         {
                             _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
 
-                            _index.ReduceOutputs.DeletePatternGeneratedIdForReduceOutput(_indexWriteTransaction, referenceDocument.Id);
+                            _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(_indexWriteTransaction, referenceDocument.Id);
                         }
                     }
                 }
@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         foreach (var reduceOutputId in referencesOfReduceOutput.Value)
                         {
-                            _index.ReduceOutputs.AddPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
+                            _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
                         }
                     }
                 }
