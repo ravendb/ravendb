@@ -34,7 +34,10 @@ namespace SlowTests.Issues
             for (int c = 0; c < 32; c++)
             {
                 if (c.In(_listOfNumsThatAreNulls))
+                {
+                    // id string created from 'only' those chars, will be identified as whitespace and will get replaced by guid.
                     continue;
+                }
 
                 for (int i = 0; i < size; i++)
                     chars[i] = (char)c;

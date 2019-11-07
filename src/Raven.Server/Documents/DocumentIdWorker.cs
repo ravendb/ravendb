@@ -185,6 +185,8 @@ namespace Raven.Server.Documents
              *  add the size of all control characters
              *  this is to treat case when we have 2+ control character in a row
              *  GetMaxByteCount returns smaller size than the actual size with escaped control characters
+             *  For example: string with two control characters such as '\0\0' will be converted to '\u0000\u0000' (another example: '\b\b' => '\u000b\u000b')
+             *  string size = 2, GetMaxByteCount = 9, converted string size = 12, maxStrSize = 19
              */
             var maxStrSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * escapedCount;
 
