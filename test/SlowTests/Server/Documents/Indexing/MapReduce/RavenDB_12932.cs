@@ -414,7 +414,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 OutputReduceToCollection = "Profits";
 
-                PatternForOutputReduceToCollectionReferences= x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+                PatternForOutputReduceToCollectionReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
             }
         }
 
@@ -468,7 +468,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:yyyy-MM-dd}", x.OrderedAt);
+                    PatternForOutputReduceToCollectionReferences = x => string.Format("reports/daily/{0:yyyy-MM-dd}", x.OrderedAt);
 
                 }
             }
@@ -523,7 +523,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+                    PatternForOutputReduceToCollectionReferences = x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
                 }
             }
 
@@ -542,7 +542,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => $"{x.OrderedAt:yyyy-MM-dd}reports/daily/{x.Profit:C}";
+                    PatternForOutputReduceToCollectionReferences = x => $"{x.OrderedAt:yyyy-MM-dd}reports/daily/{x.Profit:C}";
                 }
             }
 
@@ -561,7 +561,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => "reports/daily/" + x.OrderedAt;
+                    PatternForOutputReduceToCollectionReferences = x => "reports/daily/" + x.OrderedAt;
                 }
             }
 
@@ -580,7 +580,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => "reports/daily/" + x.OrderedAt + "/product/" + x.Product;
+                    PatternForOutputReduceToCollectionReferences = x => "reports/daily/" + x.OrderedAt + "/product/" + x.Product;
                 }
             }
 
@@ -599,7 +599,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:MM/dd/yyyy}", x.OrderedAt);
+                    PatternForOutputReduceToCollectionReferences = x => string.Format("reports/daily/{0:MM/dd/yyyy}", x.OrderedAt);
                 }
             }
 
@@ -618,7 +618,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     OutputReduceToCollection = outputReduceToCollection ?? "Profits";
 
-                    PatternForOutputReduceToCollectionReferences= x => string.Format("reports/daily/{0:MM/dd/yyyy}/{1}", x.OrderedAt, x.Product);
+                    PatternForOutputReduceToCollectionReferences = x => string.Format("reports/daily/{0:MM/dd/yyyy}/{1}", x.OrderedAt, x.Product);
                 }
             }
         }

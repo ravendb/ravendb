@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             GroupByFields = new HashSet<CompiledIndexField>(groupByFields);
             OutputReduceToCollection = definition.OutputReduceToCollection;
             ReduceOutputIndex = definition.ReduceOutputIndex;
-            PatternForOutputReduceToCollectionReferences= definition.PatternForOutputReduceToCollectionReferences;
+            PatternForOutputReduceToCollectionReferences = definition.PatternForOutputReduceToCollectionReferences;
         }
 
         public HashSet<CompiledIndexField> GroupByFields { get; }

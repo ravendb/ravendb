@@ -168,7 +168,7 @@ namespace Raven.Client.Documents.Indexes
                 };
 
                 if (PatternForOutputReduceToCollectionReferences!= null)
-                    indexDefinition.PatternForOutputReduceToCollectionReferences= ConvertPatternForOutputReduceToCollectionReferencesToString(PatternForOutputReduceToCollectionReferences);
+                    indexDefinition.PatternForOutputReduceToCollectionReferences = ConvertPatternForOutputReduceToCollectionReferencesToString(PatternForOutputReduceToCollectionReferences);
 
                 var indexes = ConvertToStringDictionary(Indexes);
                 var stores = ConvertToStringDictionary(Stores);
