@@ -208,7 +208,7 @@ class indexDefinition {
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
-            PatternForOutputReduceToCollectionReferences: this.patternForOutput() ? this.patternForOutputReduceToCollectionReferences() : null,
+            PatternForOutputReduceToCollectionReferences: this.outputReduceToCollection() && this.patternForOutput() ? this.patternForOutputReduceToCollectionReferences() : null,
             AdditionalSources: this.additionalSourceToDto()
         }
     }
