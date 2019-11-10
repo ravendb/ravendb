@@ -561,7 +561,13 @@ namespace RachisTests.DatabaseCluster
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
             var databaseName = GetDatabaseName();
-            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+            var settings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1"
+            };
+            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, customSettings: settings);
 
             using (var leaderStore = new DocumentStore
             {
@@ -618,17 +624,20 @@ namespace RachisTests.DatabaseCluster
                 var dataDirC = serverC.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
                 DisposeServerAndWaitForFinishOfDisposal(serverC);
 
+                settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = urlsA[0];
                 Servers[0] = GetNewServer(
                     new ServerCreationOptions
                     {
-                        CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsA[0] } },
+                        CustomSettings = settings,
                         RunInMemory = false,
                         DeletePrevious = false,
                         PartialPath = dataDirA
                     });
+
+                settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = urlsB[0];
                 Servers[1] = GetNewServer(new ServerCreationOptions
                 {
-                    CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsB[0] } },
+                    CustomSettings = settings,
                     RunInMemory = false,
                     DeletePrevious = false,
                     PartialPath = dataDirB
@@ -647,9 +656,10 @@ namespace RachisTests.DatabaseCluster
                     Members = new List<string> { "A", "B" }
                 }, databaseName, "users/3", null, TimeSpan.FromSeconds(10)));
 
+                settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = urlsC[0];
                 Servers[2] = GetNewServer(new ServerCreationOptions
                 {
-                    CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsC[0] } },
+                    CustomSettings = settings,
                     RunInMemory = false,
                     DeletePrevious = false,
                     PartialPath = dataDirC
@@ -957,6 +967,115 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                     Assert.Equal(1, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task WaitBreakdownTimeBeforeReplacing()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, true, 0, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "5"
+            });
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+            }.Initialize())
+            {
+                var name = GetDatabaseName();
+                var doc = new DatabaseRecord(name)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        Members = new List<string>
+                        {
+                            "A",
+                            "B"
+                        },
+                        ReplicationFactor = 2,
+                        DynamicNodesDistribution = true
+                    }
+                };
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, 2));
+                Assert.Equal(2, databaseResult.Topology.Members.Count);
+
+                var node = cluster.Nodes.Single(n => n.ServerStore.NodeTag == "B");
+                await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+
+                var rehab = await WaitForValueAsync(() => GetRehabCount(store, name), 1);
+                Assert.Equal(1, rehab);
+
+                cluster.Leader.ServerStore.Engine.CurrentLeader.StepDown();
+
+                await Task.Delay(3_000);
+
+                var members = await GetMembersCount(store, name);
+                Assert.Equal(1, members);
+
+                rehab = await GetRehabCount(store, name);
+                Assert.Equal(1, rehab);
+
+                await Task.Delay(7_000);
+
+                members = await GetMembersCount(store, name);
+                Assert.Equal(2, members);
+            }
+        }
+
+
+        [Fact]
+        public async Task WaitMoveToRehabGraceTime()
+        {
+            var clusterSize = 3;
+            var cluster = await CreateRaftCluster(clusterSize, true, 0, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "10",
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+            });
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+            }.Initialize())
+            {
+                var name = GetDatabaseName();
+                var doc = new DatabaseRecord(name)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        Members = new List<string>
+                        {
+                            "A",
+                            "B"
+                        },
+                        ReplicationFactor = 2,
+                    }
+                };
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, 2));
+                Assert.Equal(2, databaseResult.Topology.Members.Count);
+
+                var node = cluster.Nodes.Single(n => n.ServerStore.NodeTag == "B");
+                await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+
+                cluster.Leader.ServerStore.Engine.CurrentLeader.StepDown();
+
+                await Task.Delay(3_000);
+
+                var members = await GetMembersCount(store, name);
+                Assert.Equal(2, members);
+
+                var rehab = await GetRehabCount(store, name);
+                Assert.Equal(0, rehab);
+
+                await Task.Delay(10_000);
+
+                members = await GetMembersCount(store, name);
+                Assert.Equal(1, members);
+
+                rehab = await GetRehabCount(store, name);
+                Assert.Equal(1, rehab);
             }
         }
 

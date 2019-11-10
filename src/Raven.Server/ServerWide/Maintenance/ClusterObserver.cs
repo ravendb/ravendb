@@ -45,6 +45,8 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly TimeSpan _breakdownTimeout;
         private readonly bool _hardDeleteOnReplacement;
 
+        private readonly DateTime StartTime = DateTime.UtcNow;
+
         private NotificationCenter.NotificationCenter NotificationCenter => _server.NotificationCenter;
 
         public ClusterObserver(
@@ -586,7 +588,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 // Give one minute of grace before we move the node to a rehab
-                if (DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime) < nodeStats.LastSuccessfulUpdateDateTime)
+                var grace = DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime);
+                if (nodeStats.LastSuccessfulUpdateDateTime == default)
+                {
+                    if (grace < StartTime)
+                        continue;
+                }
+                if (grace < nodeStats.LastSuccessfulUpdateDateTime)
                 {
                     continue;
                 }
@@ -611,7 +619,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 foreach (var rehab in databaseTopology.Rehabs)
                 {
-                    if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) == DatabaseHealth.Good)
+                    if (FailedDatabaseInstanceOrNode(rehab, state) == DatabaseHealth.Good)
                         recoverable.Add(rehab);
                 }
 
@@ -620,7 +628,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     // as last resort we will promote a promotable
                     foreach (var promotable in databaseTopology.Promotables)
                     {
-                        if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Good)
+                        if (FailedDatabaseInstanceOrNode(promotable, state) == DatabaseHealth.Good)
                             recoverable.Add(promotable);
                     }
                 }
@@ -649,7 +657,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var promotable in databaseTopology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(promotable, state) == DatabaseHealth.Bad)
                 {
                     // database distribution is off and the node is down
                     if (databaseTopology.DynamicNodesDistribution == false)
@@ -664,7 +672,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    if (TryFindFitNode(promotable, dbName, databaseTopology, clusterTopology, current, out var node) == false)
+                    if (TryFindFitNode(promotable, state, out var node) == false)
                     {
                         if (databaseTopology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
                             || currentStatus != DatabasePromotionStatus.NotResponding)
@@ -718,11 +726,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            var goodMembers = GetNumberOfRespondingNodes(clusterTopology, dbName, databaseTopology, current);
+            var goodMembers = GetNumberOfRespondingNodes(state);
             var pendingDelete = GetPendingDeleteNodes(deletionInProgress);
             foreach (var rehab in databaseTopology.Rehabs)
             {
-                var health = FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current);
+                var health = FailedDatabaseInstanceOrNode(rehab, state);
                 switch (health)
                 {
                     case DatabaseHealth.Bad:
@@ -730,7 +738,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
 
                         if (goodMembers < databaseTopology.ReplicationFactor &&
-                            TryFindFitNode(rehab, dbName, databaseTopology, clusterTopology, current, out var node))
+                            TryFindFitNode(rehab, state, out var node))
                         {
                             if (_server.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out _) == false)
                                 continue;
@@ -792,17 +800,20 @@ namespace Raven.Server.ServerWide.Maintenance
             return null;
         }
 
-        private int GetNumberOfRespondingNodes(ClusterTopology clusterTopology, string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current)
+        private int GetNumberOfRespondingNodes(DatabaseObservationState state)
         {
+            var topology = state.DatabaseTopology;
+            var dbName = state.Name;
+
             var goodMembers = topology.Members.Count;
             foreach (var promotable in topology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(promotable, state) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             foreach (var rehab in topology.Rehabs)
             {
-                if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode( rehab, state) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             return goodMembers;
@@ -1051,11 +1062,13 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         private DatabaseHealth FailedDatabaseInstanceOrNode(
-            ClusterTopology clusterTopology,
             string node,
-            string db,
-            Dictionary<string, ClusterNodeStatusReport> current)
+            DatabaseObservationState state)
         {
+            var clusterTopology = state.ClusterTopology;
+            var current = state.Current;
+            var db = state.Name;
+
             if (clusterTopology.Contains(node) == false) // this node is no longer part of the *Cluster* databaseTopology and need to be replaced.
                 return DatabaseHealth.Bad;
 
@@ -1067,7 +1080,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
             // if server is down we should reassign
             if (DateTime.UtcNow - currentNodeStats.LastSuccessfulUpdateDateTime > _breakdownTimeout)
+            {
+                if (DateTime.UtcNow - StartTime < _breakdownTimeout)
+                    return DatabaseHealth.NotEnoughInfo;
+
                 return DatabaseHealth.Bad;
+            }
 
             if (currentNodeStats.LastGoodDatabaseStatus.TryGetValue(db, out var lastGoodTime) == false)
             {
@@ -1082,11 +1100,16 @@ namespace Raven.Server.ServerWide.Maintenance
             return DateTime.UtcNow - lastGoodTime > _breakdownTimeout ? DatabaseHealth.Bad : DatabaseHealth.Good;
         }
 
-        private bool TryFindFitNode(string badNode, string db, DatabaseTopology topology, ClusterTopology clusterTopology,
-            Dictionary<string, ClusterNodeStatusReport> current, out string bestNode)
+        private bool TryFindFitNode(string badNode, DatabaseObservationState state, out string bestNode)
         {
             bestNode = null;
             var dbCount = int.MaxValue;
+
+            var topology = state.DatabaseTopology;
+            var clusterTopology = state.ClusterTopology;
+            var current = state.Current;
+            var db = state.Name;
+
             var databaseNodes = topology.AllNodes.ToList();
 
             if (topology.Members.Count == 0) // no one can be used as mentor
@@ -1098,7 +1121,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (databaseNodes.Contains(node))
                     continue;
 
-                if (FailedDatabaseInstanceOrNode(clusterTopology, node, db, current) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(node, state) == DatabaseHealth.Bad)
                     continue;
 
                 if (current.TryGetValue(node, out var nodeReport) == false)
