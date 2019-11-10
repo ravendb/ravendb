@@ -301,15 +301,21 @@ namespace RachisTests
         {
             if (node.Disposed)
             {
+
+                var settings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "1",
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
+                };
+
                 var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
                 node = GetNewServer(new ServerCreationOptions()
                 {
                     DeletePrevious = false,
                     RunInMemory = false,
-                    CustomSettings = new Dictionary<string, string>
-                    {
-                        [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl
-                    },
+                    CustomSettings = settings,
                     PartialPath = dataDir
                 });
 
