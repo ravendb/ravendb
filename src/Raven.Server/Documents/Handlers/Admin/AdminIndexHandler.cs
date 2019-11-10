@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            await PutInternal(validatedAsAdmin:true);
+            await PutInternal(validatedAsAdmin: true);
         }
 
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
@@ -298,10 +298,9 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             public int ProcessedFiles { get; set; }
             public int TotalFiles { get; set; }
-            public long ProcessedBytes{ get; set; }
-            public long TotalBytes { get; set; }
-
             public string Message { get; set; }
+            public long CurrentFileSizeInBytes { get; internal set; }
+            public long CurrentFileCopiedBytes { get; internal set; }
 
             public virtual DynamicJsonValue ToJson()
             {
@@ -309,9 +308,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     [nameof(ProcessedFiles)] = ProcessedFiles,
                     [nameof(TotalFiles)] = TotalFiles,
-                    [nameof(ProcessedBytes)] = ProcessedBytes,
-                    [nameof(TotalBytes)] = TotalBytes,
-                    [nameof(Message)] = Message
+                    [nameof(Message)] = Message,
+                    [nameof(CurrentFileSizeInBytes)] = CurrentFileSizeInBytes,
+                    [nameof(CurrentFileCopiedBytes)] = CurrentFileCopiedBytes
                 };
             }
         }

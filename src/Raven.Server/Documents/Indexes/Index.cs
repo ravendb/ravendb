@@ -4008,23 +4008,22 @@ namespace Raven.Server.Documents.Indexes
                 var sp = Stopwatch.StartNew();
                 foreach (var file in files)
                 {
-
                     using (var input = IndexPersistence.LuceneDirectory.OpenInput(file, state))
                     using (var output = File.Create(Path.Combine(path, file)))
                     {
-                        var len = input.Length(state);
-                        string message = "Exporting file: " + file;
+                        var currentFileLength = input.Length(state);
+                        var message = "Exporting file: " + file;
                         onProgress(new AdminIndexHandler.DumpIndexProgress
                         {
                             Message = message,
                             TotalFiles = files.Length,
                             ProcessedFiles = currentFile,
-                            CurrentFileSize = len
+                            CurrentFileSizeInBytes = currentFileLength
                         });
                         long currentFileOverallReadBytes = 0;
-                        while (len > currentFileOverallReadBytes)
+                        while (currentFileLength > currentFileOverallReadBytes)
                         {
-                            int read = (int)Math.Min(buffer.Length, len - currentFileOverallReadBytes);
+                            int read = (int)Math.Min(buffer.Length, currentFileLength - currentFileOverallReadBytes);
                             input.ReadBytes(buffer, 0, read, state);
                             currentFileOverallReadBytes += read;
                             output.Write(buffer, 0, read);
@@ -4035,8 +4034,8 @@ namespace Raven.Server.Documents.Indexes
                                     Message = message,
                                     TotalFiles = files.Length,
                                     ProcessedFiles = currentFile,
-                                    CurrentFileSize = len,
-                                    CurrentFileCopied = currentFileOverallReadBytes
+                                    CurrentFileSizeInBytes = currentFileLength,
+                                    CurrentFileCopiedBytes = currentFileOverallReadBytes
                                 });
                                 sp.Restart();
                             }
