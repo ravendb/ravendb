@@ -177,8 +177,6 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);
 
-            int idSize = JsonParserState.VariableSizeIntSize(strLength);
-
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str, out var escapedCount);
 
             /*
@@ -189,6 +187,8 @@ namespace Raven.Server.Documents
              *  string size = 2, GetMaxByteCount = 9, converted string size = 12, maxStrSize = 19
              */
             var maxStrSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * escapedCount;
+
+            int idSize = JsonParserState.VariableSizeIntSize(maxStrSize);
 
             var scope = context.Allocator.Allocate(maxStrSize // lower key
                                        + idSize // the size of var int for the len of the key
@@ -236,11 +236,19 @@ namespace Raven.Server.Documents
 
             var writePos = ptr + maxStrSize;
 
+            var sizeDifference = idSize - JsonParserState.VariableSizeIntSize(strLength);
+            if (sizeDifference > 0)
+            {
+                // in case there were no control characters the idSize could be smaller
+                writePos += sizeDifference;
+                idSize -= sizeDifference;
+            }
+
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
             escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
             idSize = escapePositionsSize + strLength + idSize;
 
-            Slice.External(context.Allocator, ptr + maxStrSize, idSize, out idSlice);
+            Slice.External(context.Allocator, ptr + maxStrSize + sizeDifference, idSize, out idSlice);
             Slice.External(context.Allocator, ptr, strLength, out lowerIdSlice);
             return scope;
 

@@ -50,7 +50,9 @@ namespace SlowTests.Issues
                     {
                         await session.StoreAsync(new User { WeirdName = str }, str);
                         await session.SaveChangesAsync();
-
+                    }
+                    using (var session = store.OpenAsyncSession())
+                    {
                         var u = await session.LoadAsync<User>(str);
                         var id = session.Advanced.GetDocumentId(u);
 
@@ -65,6 +67,7 @@ namespace SlowTests.Issues
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(32)]
+        [InlineData(64)]
         [InlineData(128)]
         [InlineData(256)]
         public async Task CombiningEscapedCharactersAsId(int size)
@@ -96,7 +99,9 @@ namespace SlowTests.Issues
                     {
                         await session.StoreAsync(new User { WeirdName = str }, str);
                         await session.SaveChangesAsync();
-
+                    }
+                    using (var session = store.OpenAsyncSession())
+                    {
                         var u = await session.LoadAsync<User>(str);
                         var id = session.Advanced.GetDocumentId(u);
 
@@ -104,6 +109,53 @@ namespace SlowTests.Issues
                         Assert.Equal(str, id);
                     }
                 }
+            }
+        }
+
+        [InlineData(4)]
+        [InlineData(8)]
+        [InlineData(16)]
+        [InlineData(32)]
+        [InlineData(64)]
+        [InlineData(128)]
+        [InlineData(256)]
+        public async Task CombiningEscapedCharactersAsCollectionName(int size)
+        {
+            var partialSize = size / 4;
+            const string abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var magicNums = new List<int> { 92, 34, 8, 9, 10, 12, 13 };
+            char[] chars = new char[partialSize];
+
+            for (int c = 0; c < 32; c++)
+            {
+                for (int i = 0; i < partialSize; i++)
+                    chars[i] = (char)c;
+
+                var str = new string(chars);
+
+                var random = new Random();
+                str += new string(Enumerable.Repeat(abc, partialSize).Select(s => s[random.Next(s.Length)]).ToArray());
+
+                for (int i = 0; i < partialSize; i++)
+                    chars[i] = (char)magicNums[random.Next(0, magicNums.Count)];
+
+                str += new string(chars);
+                str += new string(Enumerable.Repeat(abc, partialSize).Select(s => s[random.Next(s.Length)]).ToArray());
+
+                using var store = GetDocumentStore();
+                store.Commands().Put(str, null, new { WeirdName = str }, new Dictionary<string, object>
+                {
+                    { "@collection", str }
+                });
+
+                using var session = store.OpenAsyncSession();
+                var u = await session.LoadAsync<User>(str);
+                var id = session.Advanced.GetDocumentId(u);
+                var collection = session.Advanced.GetMetadataFor(u)["@collection"];
+
+                Assert.Equal(str, u.WeirdName);
+                Assert.Equal(str, id);
+                Assert.Equal(str, collection);
             }
         }
 
