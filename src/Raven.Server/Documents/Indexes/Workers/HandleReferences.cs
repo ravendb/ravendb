@@ -180,25 +180,25 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     batchCount++;
 
-                                    var documents = new List<IndexItem>();
+                                    var items = new List<IndexItem>();
                                     foreach (var key in _indexStorage
                                         .GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
                                     {
                                         var item = GetItem(databaseContext, key);
 
                                         if (item.Item != null && item.Etag <= lastIndexedEtag)
-                                            documents.Add(item);
+                                            items.Add(item);
                                         else if (item.Item is IDisposable disposable)
                                             disposable.Dispose();
                                     }
 
-                                    using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
+                                    using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
-                                        while (docsEnumerator.MoveNext(out IEnumerable mapResults))
+                                        while (itemsEnumerator.MoveNext(out IEnumerable mapResults))
                                         {
                                             token.ThrowIfCancellationRequested();
 
-                                            var current = docsEnumerator.Current;
+                                            var current = itemsEnumerator.Current;
 
                                             if (indexWriter == null)
                                                 indexWriter = writeOperation.Value;
@@ -279,11 +279,11 @@ namespace Raven.Server.Documents.Indexes.Workers
         protected IEnumerable<Reference> GetTombstoneReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)
         {
             return _documentsStorage
-                .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize, DocumentFields.Id | DocumentFields.Etag)
-                .Select(document =>
+                .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
+                .Select(tombstone =>
                 {
-                    _reference.Key = document.Id;
-                    _reference.Etag = document.Etag;
+                    _reference.Key = tombstone.LowerId;
+                    _reference.Etag = tombstone.Etag;
 
                     return _reference;
                 });

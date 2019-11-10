@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -92,7 +93,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     var company = new Company();
                     session.Store(company, "companies/1");
 
-                    session.TimeSeriesFor(company).Append("HeartRate", now1, "employees/1", new double[] { 7 });
+                    session.TimeSeriesFor(company).Append("HeartRate", now1, employee.Id, new double[] { 7 });
 
                     session.SaveChanges();
                 }
@@ -129,6 +130,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }
 
                 WaitForIndexing(store);
+                Thread.Sleep(TimeSpan.FromSeconds(120));
 
                 Assert.Equal(1, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 1));
 

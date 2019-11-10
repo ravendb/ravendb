@@ -39,14 +39,28 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
+            if (_referencedCollections.Count > 0)
+                DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
+
             if (DocumentDatabase != null)
                 DocumentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
         }
 
         protected override void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
+            if (_referencedCollections.Count > 0)
+                DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+
             if (DocumentDatabase != null)
                 DocumentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
+        }
+
+        protected override void HandleDocumentChange(DocumentChange change)
+        {
+            if (_referencedCollections.Contains(change.CollectionName) == false)
+                return;
+
+            _mre.Set();
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
