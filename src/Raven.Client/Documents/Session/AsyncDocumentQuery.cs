@@ -1004,14 +1004,17 @@ namespace Raven.Client.Documents.Session
 
         private async Task ExecuteActualQueryAsync(CancellationToken token)
         {
-            using (QueryOperation.EnterQueryContext())
+            using (TheSession.AsyncTaskHolder())
             {
-                var command = QueryOperation.CreateRequest();
-                await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, TheSession.SessionInfo, token).ConfigureAwait(false);
-                QueryOperation.SetResult(command.Result);
-            }
+                using (QueryOperation.EnterQueryContext())
+                {
+                    var command = QueryOperation.CreateRequest();
+                    await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, TheSession.SessionInfo, token).ConfigureAwait(false);
+                    QueryOperation.SetResult(command.Result);
+                }
 
-            InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
+                InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
+            }
         }
 
         private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)

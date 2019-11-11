@@ -23,30 +23,42 @@ namespace Raven.Client.Documents.Session
 
         public async Task<bool> ExistsAsync(string documentId, string name, CancellationToken token = default)
         {
-            var command = new HeadAttachmentCommand(documentId, name, null);
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
-            return command.Result != null;
+            using (Session.AsyncTaskHolder())
+            {
+                var command = new HeadAttachmentCommand(documentId, name, null);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+                return command.Result != null;
+            }
         }
 
-        public Task<AttachmentResult> GetAsync(string documentId, string name, CancellationToken token = default)
+        public async Task<AttachmentResult> GetAsync(string documentId, string name, CancellationToken token = default)
         {
-            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
-            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
+            using (Session.AsyncTaskHolder())
+            {
+                var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Document, null);
+                return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+            }
         }
 
-        public Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default)
+        public async Task<AttachmentResult> GetAsync(object entity, string name, CancellationToken token = default)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                ThrowEntityNotInSessionOrMissingId(entity);
+            using (Session.AsyncTaskHolder())
+            {
+                if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                    ThrowEntityNotInSessionOrMissingId(entity);
 
-            var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
-            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
+                var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);
+                return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+            }
         }
 
-        public Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default)
+        public async Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default)
         {
-            var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
-            return Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token);
+            using (Session.AsyncTaskHolder())
+            {
+                var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
+                return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
+            }
         }
     }
 }

@@ -59,53 +59,56 @@ namespace Raven.Client.Documents.Session
 
         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default(CancellationToken))
         {
-            var requests = new List<GetRequest>();
-            for (int i = 0; i < PendingLazyOperations.Count; i++)
+            using (AsyncTaskHolder())
             {
-                var req = PendingLazyOperations[i].CreateRequest(Context);
-                if (req == null)
+                var requests = new List<GetRequest>();
+                for (int i = 0; i < PendingLazyOperations.Count; i++)
                 {
-                    PendingLazyOperations.RemoveAt(i);
-                    i--; // so we'll recheck this index
-                    continue;
-                }
-                requests.Add(req);
-            }
+                    var req = PendingLazyOperations[i].CreateRequest(Context);
+                    if (req == null)
+                    {
+                        PendingLazyOperations.RemoveAt(i);
+                        i--; // so we'll recheck this index
+                        continue;
+                    }
 
-
-            if (requests.Count == 0)
-                return new ResponseTimeInformation();
-
-            try
-            {
-                var sw = Stopwatch.StartNew();
-
-                IncrementRequestCount();
-
-                var responseTimeDuration = new ResponseTimeInformation();
-
-                while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, sw, token).ConfigureAwait(false))
-                {
-                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
+                    requests.Add(req);
                 }
 
-                responseTimeDuration.ComputeServerTotal();
+                if (requests.Count == 0)
+                    return new ResponseTimeInformation();
 
-
-                foreach (var pendingLazyOperation in PendingLazyOperations)
+                try
                 {
-                    Action<object> value;
-                    if (OnEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
-                        value(pendingLazyOperation.Result);
-                }
+                    var sw = Stopwatch.StartNew();
 
-                sw.Stop();
-                responseTimeDuration.TotalClientDuration = sw.Elapsed;
-                return responseTimeDuration;
-            }
-            finally
-            {
-                PendingLazyOperations.Clear();
+                    IncrementRequestCount();
+
+                    var responseTimeDuration = new ResponseTimeInformation();
+
+                    while (await ExecuteLazyOperationsSingleStep(responseTimeDuration, requests, sw, token).ConfigureAwait(false))
+                    {
+                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(100), token).ConfigureAwait(false);
+                    }
+
+                    responseTimeDuration.ComputeServerTotal();
+
+
+                    foreach (var pendingLazyOperation in PendingLazyOperations)
+                    {
+                        Action<object> value;
+                        if (OnEvaluateLazy.TryGetValue(pendingLazyOperation, out value))
+                            value(pendingLazyOperation.Result);
+                    }
+
+                    sw.Stop();
+                    responseTimeDuration.TotalClientDuration = sw.Elapsed;
+                    return responseTimeDuration;
+                }
+                finally
+                {
+                    PendingLazyOperations.Clear();
+                }
             }
         }
 

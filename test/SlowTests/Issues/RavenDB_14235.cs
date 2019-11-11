@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;
+#pragma warning disable 1998
+#pragma warning disable 4014
 
 namespace SlowTests.Issues
 {
@@ -157,6 +160,92 @@ namespace SlowTests.Issues
                 Assert.Equal(str, id);
                 Assert.Equal(str, collection);
             }
+        }
+
+        [Fact]
+        public async Task ShouldThrowOnNotAwaitedAsyncMethods()
+        {
+            const string name = "1";
+
+            var exceptionsCounter = 0;
+            var tryCounter = 0;
+            using var store = GetDocumentStore();
+            try
+            {
+                tryCounter++;
+                using var session = store.OpenAsyncSession();
+                session.LoadAsync<User>(name);
+            }
+            catch (Exception e)
+            {
+                Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                exceptionsCounter++;
+            }
+
+            try
+            {
+                tryCounter++;
+                using var session = store.OpenAsyncSession();
+                ;
+                await session.StoreAsync(new User());
+                session.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                exceptionsCounter++;
+            }
+
+            try
+            {
+                tryCounter++;
+                using var session = store.OpenAsyncSession();
+                session.Query<User>().ToListAsync();
+            }
+            catch (Exception e)
+            {
+                Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                exceptionsCounter++;
+            }
+
+            try
+            {
+                tryCounter++;
+                using var session = store.OpenAsyncSession();
+                session.Advanced.Attachments.GetAsync(name, name);
+            }
+            catch (Exception e)
+            {
+                Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                exceptionsCounter++;
+            }
+
+            try
+            {
+                tryCounter++;
+                using var session = store.OpenAsyncSession();
+                session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<object>(name);
+            }
+            catch (Exception e)
+            {
+                Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                exceptionsCounter++;
+            }
+
+            try
+            {
+                tryCounter++;
+                using var session = store.OpenAsyncSession();
+                var lazy = session.Advanced.Lazily.LoadAsync<User>(new[] { name, name, name, name });
+                lazy.Value.Start();
+            }
+            catch (Exception e)
+            {
+                Assert.Equal(typeof(InvalidOperationException), e.GetType());
+                exceptionsCounter++;
+            }
+
+            Assert.Equal(tryCounter, exceptionsCounter);
         }
 
         private class User
