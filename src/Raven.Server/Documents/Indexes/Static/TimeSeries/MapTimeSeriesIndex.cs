@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly StaticTimeSeriesIndexBase _compiled;
+        protected internal readonly StaticTimeSeriesIndexBase _compiled;
 
         private HandleReferences _handleReferences;
 
@@ -88,6 +89,43 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             //base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
+        public override long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection, bool isReference)
+        {
+            if (isReference)
+                return base.GetLastTombstoneEtagInCollection(databaseContext, collection, isReference);
+
+            // we do not process tombstones for timeseries, just for references
+            return 0;
+        }
+
+        protected override IndexItem GetItemByEtag(DocumentsOperationContext databaseContext, long etag)
+        {
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(databaseContext, etag);
+            if (timeSeries == null)
+                return default;
+
+            return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.SegmentSize, timeSeries);
+        }
+
+        protected override IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)
+        {
+            throw new NotSupportedException("We do not process tombstones for TimeSeries");
+        }
+
+        protected override bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, IIndexCollection collection, long start, long end)
+        {
+            throw new NotSupportedException("We do not process tombstones for TimeSeries");
+        }
+
+        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
+        {
+            var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
+            if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
+                return isStale;
+
+            return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
+        }
+
         internal override IEnumerable<IIndexCollection> GetCollectionsForIndexing()
         {
             return _compiled.Maps.Keys;
@@ -96,6 +134,26 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
+        }
+
+        protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
+            QueryMetadata query, bool isStale)
+        {
+            if (_referencedCollections.Count == 0)
+                return base.CalculateIndexEtag(documentsContext, indexContext, query, isStale);
+
+            var minLength = MinimumSizeForCalculateIndexEtagLength(query);
+            var length = minLength +
+                         sizeof(long) * 2 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags and last processed reference collection etags
+
+            var indexEtagBytes = stackalloc byte[length];
+
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
+            UseAllDocumentsCounterAndCmpXchgEtags(documentsContext, query, length, indexEtagBytes);
+
+            var writePos = indexEtagBytes + minLength;
+
+            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
         }
 
         public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)

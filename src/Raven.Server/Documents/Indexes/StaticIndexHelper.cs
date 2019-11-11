@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -13,6 +14,12 @@ namespace Raven.Server.Documents.Indexes
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsStaleDueToReferences(MapIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        {
+            return IsStaleDueToReferences(index, index._compiled, databaseContext, indexContext, referenceCutoff, stalenessReasons);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsStaleDueToReferences(MapTimeSeriesIndex index, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
             return IsStaleDueToReferences(index, index._compiled, databaseContext, indexContext, referenceCutoff, stalenessReasons);
         }
@@ -30,13 +37,19 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe long CalculateIndexEtag(MapTimeSeriesIndex index, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        {
+            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe long CalculateIndexEtag(MapReduceIndex index, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, documentsContext, indexContext);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool IsStaleDueToReferences(Index index, StaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
+        private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.GetCollectionsForIndexing())
             {
@@ -124,7 +137,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe long CalculateIndexEtag(Index index, StaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        private static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
             foreach (var collection in index.GetCollectionsForIndexing())
             {

@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
 
             foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, timeSeriesCollection.CollectionName, timeSeriesCollection.TimeSeriesName, lastEtag, pageSize))
             {
-                yield return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, timeSeries.SegmentSize, timeSeries);
+                yield return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.SegmentSize, timeSeries);
             }
         }
 

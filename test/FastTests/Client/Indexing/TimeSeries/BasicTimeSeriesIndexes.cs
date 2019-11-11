@@ -1,9 +1,10 @@
 ﻿using System;
-using System.Threading;
+using System.Linq;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Extensions;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,6 +33,8 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
+                store.Maintenance.Send(new StopIndexingOperation());
+
                 var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
                 {
                     Name = "MyTsIndex",
@@ -45,7 +48,19 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "}" }
                 }));
 
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
                 WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -55,7 +70,17 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
                 WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
 
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 2));
 
@@ -98,6 +123,8 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
+                store.Maintenance.Send(new StopIndexingOperation());
+
                 var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
                 {
                     Name = "MyTsIndex",
@@ -113,7 +140,19 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "}" }
                 }));
 
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
                 WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 Assert.Equal(1, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 1));
 
@@ -129,8 +168,19 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
                 WaitForIndexing(store);
-                Thread.Sleep(TimeSpan.FromSeconds(120));
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 Assert.Equal(1, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 1));
 

@@ -1301,6 +1301,17 @@ namespace Raven.Server.Documents.TimeSeries
             return CreateTimeSeriesItem(context, ref reader);
         }
 
+        public TimeSeriesItem GetTimeSeries(DocumentsOperationContext context, long etag)
+        {
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var index = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
+
+            if (table.Read(context.Allocator, index, etag, out var tvr) == false)
+                return null;
+
+            return CreateTimeSeriesItem(context, ref tvr);
+        }
+
         public IEnumerable<TimeSeriesItem> GetTimeSeriesFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
