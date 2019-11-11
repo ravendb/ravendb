@@ -71,7 +71,7 @@ namespace Raven.Client
                 
                 public static readonly int MaxPath = short.MaxValue;
                 
-                public static readonly string[] WindowsReservedFileNames = {
+                internal static readonly string[] ReservedFileNames = {
                     "con",
                     "prn",
                     "aux",
