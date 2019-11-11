@@ -793,13 +793,13 @@ namespace Raven.Server.Documents.Indexes
             if (isStatic && name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
 
-            if (isStatic && NameUtils.IsValidIndexName(name) == false)
+            if (isStatic && ResourceNameValidator.IsValidIndexName(name) == false)
             {
-                var allowedCharacters = $"('{string.Join("', '", NameUtils.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
+                var allowedCharacters = $"('{string.Join("', '", ResourceNameValidator.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
                 throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.", nameof(name));
             }
 
-            if (isStatic && name.Contains(".") && NameUtils.IsDotCharSurroundedByOtherChars(name) == false)
+            if (isStatic && name.Contains(".") && ResourceNameValidator.IsDotCharSurroundedByOtherChars(name) == false)
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
 

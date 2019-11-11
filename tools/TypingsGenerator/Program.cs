@@ -33,6 +33,7 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;

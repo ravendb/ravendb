@@ -18,7 +18,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public CreateDatabaseOperation(DatabaseRecord databaseRecord, int replicationFactor = 1)
         {
-            Helpers.AssertValidDatabaseName(databaseRecord.DatabaseName);
+            ResourceNameValidator.AssertValidDatabaseName(databaseRecord.DatabaseName);
             _databaseRecord = databaseRecord;
             _replicationFactor = replicationFactor;
         }
