@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         .WithBaseClass<StaticTimeSeriesIndexBase>();
                     break;
                 default:
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
 
             return @class
@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         case IndexSourceType.TimeSeries:
                             return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
                         default:
-                            throw new InvalidOperationException("TODO ppekrol");
+                            throw new NotSupportedException($"Not supported source type '{type}'.");
                     }
                 }
 
@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         case IndexSourceType.TimeSeries:
                             return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
                         default:
-                            throw new InvalidOperationException("TODO ppekrol");
+                            throw new NotSupportedException($"Not supported source type '{type}'.");
                     }
                 }
 

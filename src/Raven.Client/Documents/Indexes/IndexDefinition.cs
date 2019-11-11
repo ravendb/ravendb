@@ -33,9 +33,8 @@ namespace Raven.Client.Documents.Indexes
             IndexSourceType sourceType;
             if (json.TryGet(nameof(SourceType), out string sourceTypeString) == false)
                 sourceType = IndexSourceType.Documents; // backward compatibility
-
-            if (Enum.TryParse(sourceTypeString, ignoreCase: true, out sourceType) == false)
-                throw new InvalidOperationException("TODO ppekrol");
+            else if (Enum.TryParse(sourceTypeString, ignoreCase: true, out sourceType) == false)
+                throw new InvalidOperationException($"Could not recognize '{sourceTypeString}' as a valid index source type.");
 
             switch (sourceType)
             {
@@ -44,7 +43,7 @@ namespace Raven.Client.Documents.Indexes
                 case IndexSourceType.TimeSeries:
                     return JsonDeserializationClient.TimeSeriesIndexDefinition(json);
                 default:
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new NotSupportedException($"Not supported source type '{sourceType}'.");
             }
         }
 

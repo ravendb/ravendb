@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
-            UseAllDocumentsCounterAndCmpXchgEtags(documentsContext, query, length, indexEtagBytes);
+            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(documentsContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 

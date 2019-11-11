@@ -2281,10 +2281,8 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 var collectionStats = stats.Collections[collection.StorageKey];
 
-                                var lastDocumentEtag =
-                                    DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection.CollectionName);
-                                var lastTombstoneEtag =
-                                    DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection.CollectionName);
+                                var lastDocumentEtag = GetLastItemEtagInCollection(documentsContext, collection);
+                                var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection, isReference: false);
 
                                 collectionStats.DocumentLag = Math.Max(0,
                                     lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
@@ -3162,7 +3160,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(DocumentsOperationContext documentsContext, 
+        protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(DocumentsOperationContext documentsContext,
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q == null)
@@ -3183,7 +3181,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
 
-                var offset = length - sizeof(long) * 
+                var offset = length - sizeof(long) *
                                        (1 + (q.HasCmpXchg || q.HasCmpXchgSelect ? 1 : 0) +
                                         (q.HasTimeSeries ? 1 : 0));
 
@@ -3229,7 +3227,7 @@ namespace Raven.Server.Documents.Indexes
             if (q.HasTimeSeries)
                 length += sizeof(long); // last time series etag
 
-            if (q.HasCmpXchg || q.HasCmpXchgSelect)           
+            if (q.HasCmpXchg || q.HasCmpXchgSelect)
                 length += sizeof(long); //last cmpxchg etag
 
             return length;

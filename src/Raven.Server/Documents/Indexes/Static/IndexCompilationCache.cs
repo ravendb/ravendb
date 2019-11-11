@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexSourceType.TimeSeries:
                     return GetIndexInstance((TimeSeriesIndexDefinition)definition, configuration);
                 default:
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
 

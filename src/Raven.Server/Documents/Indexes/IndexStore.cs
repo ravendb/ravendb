@@ -433,7 +433,7 @@ namespace Raven.Server.Documents.Indexes
                         }
                         break;
                     default:
-                        throw new InvalidOperationException("TODO ppekrol");
+                        throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
                 }
 
                 CreateIndexInternal(index);
@@ -721,7 +721,7 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException("TODO ppekrol");
                     break;
                 default:
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
 

@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 case IndexSourceType.TimeSeries:
                     break;
                 default:
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
 
             if (collections.Contains(outputReduceToCollection))
