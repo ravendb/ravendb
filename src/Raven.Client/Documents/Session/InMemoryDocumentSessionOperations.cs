@@ -40,6 +40,8 @@ namespace Raven.Client.Documents.Session
         [ThreadStatic]
         private static int _clientSessionIdCounter;
 
+        internal long _asyncTasksCounter;
+
         protected readonly int _clientSessionId = ++_clientSessionIdCounter;
 
         protected readonly RequestExecutor _requestExecutor;
@@ -91,23 +93,26 @@ namespace Raven.Client.Documents.Session
 
         public async Task<ServerNode> GetCurrentSessionNode()
         {
-            (int Index, ServerNode Node) result;
-            switch (RequestExecutor.Conventions.ReadBalanceBehavior)
+            using (AsyncTaskHolder())
             {
-                case ReadBalanceBehavior.None:
-                    result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
-                    break;
-                case ReadBalanceBehavior.RoundRobin:
-                    result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
-                    break;
-                case ReadBalanceBehavior.FastestNode:
-                    result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(RequestExecutor.Conventions.ReadBalanceBehavior.ToString());
-            }
+                (int Index, ServerNode Node) result;
+                switch (RequestExecutor.Conventions.ReadBalanceBehavior)
+                {
+                    case ReadBalanceBehavior.None:
+                        result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
+                        break;
+                    case ReadBalanceBehavior.RoundRobin:
+                        result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
+                        break;
+                    case ReadBalanceBehavior.FastestNode:
+                        result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(RequestExecutor.Conventions.ReadBalanceBehavior.ToString());
+                }
 
-            return result.Node;
+                return result.Node;
+            }
         }
 
         /// <summary>
@@ -699,15 +704,24 @@ more responsive application.
         private async Task StoreAsyncInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck,
             CancellationToken token = default(CancellationToken))
         {
-            if (null == entity)
-                throw new ArgumentNullException(nameof(entity));
-
-            if (id == null)
+            using (AsyncTaskHolder())
             {
-                id = await GenerateDocumentIdForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
-            }
+                if (null == entity)
+                    throw new ArgumentNullException(nameof(entity));
 
-            StoreInternal(entity, changeVector, id, forceConcurrencyCheck);
+                if (id == null)
+                {
+                    id = await GenerateDocumentIdForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
+                }
+
+                StoreInternal(entity, changeVector, id, forceConcurrencyCheck);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IDisposable AsyncTaskHolder()
+        {
+            return new AsyncTaskHolder(this);
         }
 
         protected abstract string GenerateId(object entity);
@@ -1290,6 +1304,10 @@ more responsive application.
         {
             if (_isDisposed)
                 return;
+
+            var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
+            if (asyncTasksCounter != 0)
+                throw new InvalidOperationException($"Disposing session with active async task is forbidden. Number of active async tasks: {asyncTasksCounter}");
 
             _isDisposed = true;
 
@@ -1891,6 +1909,22 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
+        }
+    }
+
+    internal struct AsyncTaskHolder : IDisposable
+    {
+        private readonly InMemoryDocumentSessionOperations _session;
+
+        public AsyncTaskHolder(InMemoryDocumentSessionOperations session)
+        {
+            _session = session;
+            Interlocked.Increment(ref _session._asyncTasksCounter);
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Decrement(ref _session._asyncTasksCounter);
         }
     }
 }
