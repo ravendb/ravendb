@@ -82,6 +82,8 @@ namespace FastTests.Client.Indexing.TimeSeries
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.False(staleness.IsStale);
 
+                store.Maintenance.Send(new StopIndexingOperation());
+
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 2));
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
@@ -96,6 +98,26 @@ namespace FastTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "User", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("companies/1", terms);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
+
+                    session.SaveChanges();
+                }
+
+                // TODO [ppekrol] handle deletes
+                /*
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+                */
             }
         }
 
@@ -187,6 +209,27 @@ namespace FastTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Employee", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("bob", terms);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("employees/1");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                Assert.Equal(1, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation("MyTsIndex")).EntriesCount, 1));
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Employee", null));
+                Assert.Equal(0, terms.Length);
             }
         }
     }
