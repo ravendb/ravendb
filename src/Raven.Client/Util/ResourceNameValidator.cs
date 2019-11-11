@@ -64,7 +64,7 @@ namespace Raven.Client.Util
                 errorMessage = $"The name '{name}' contains characters that are forbidden for use!";
                 return false;
             }
-            if (Constants.Platform.Windows.WindowsReservedFileNames.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
+            if (Constants.Platform.Windows.ReservedFileNames.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
             {
                 errorMessage = $"The name '{name}' is forbidden for use!";
                 return false;
@@ -115,7 +115,7 @@ namespace Raven.Client.Util
         }
     }
     
-    public class NameValidation
+    internal class NameValidation
     {
         public bool IsValid { get; set; } 
         public string ErrorMessage { get; set; }
