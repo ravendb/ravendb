@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
             {
                 try
                 {
-                    if (_serverStore.Disposed)
+                    if (_serverStore.ServerShutdown.IsCancellationRequested)
                         return;
 
                     // response to changed database.
@@ -327,7 +327,7 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
         }
 
-        private void NotifyLeaderAboutRemoval(string dbName,string databaseId)
+        private void NotifyLeaderAboutRemoval(string dbName, string databaseId)
         {
             var cmd = new RemoveNodeFromDatabaseCommand(dbName, databaseId, RaftIdGenerator.NewId())
             {
@@ -639,14 +639,20 @@ namespace Raven.Server.Documents
                 // This is in case when an deletion request was issued prior to the actual loading of the database.
                 try
                 {
-                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
+                    using (_disposing.ReaderLock(_serverStore.ServerShutdown))
                     {
-                        if (rawRecord == null)
+                        if (_serverStore.ServerShutdown.IsCancellationRequested)
                             return;
 
-                        ShouldDeleteDatabase(context, databaseName.Value, rawRecord);
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value))
+                        {
+                            if (rawRecord == null)
+                                return;
+
+                            ShouldDeleteDatabase(context, databaseName.Value, rawRecord);
+                        }
                     }
                 }
                 catch
