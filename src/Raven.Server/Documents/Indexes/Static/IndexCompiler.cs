@@ -512,13 +512,13 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var collectionName = c.CollectionName;
                 if (string.IsNullOrWhiteSpace(collectionName))
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new InvalidOperationException("Collection name cannot be null or whitespace.");
 
                 var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
 
                 var timeSeriesName = c.TimeSeriesName;
                 if (string.IsNullOrWhiteSpace(timeSeriesName))
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new InvalidOperationException("TimeSeries name cannot be null or whitespace.");
 
                 var timeSeries = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(timeSeriesName));
 

@@ -30,7 +30,7 @@ namespace Sparrow.Json
                 {
                     var methodToCall = type.GetMethod("CreateFromBlittableJson", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
                     if (methodToCall == null)
-                        throw new InvalidOperationException("TODO ppekrol");
+                        throw new InvalidOperationException($"Could not find 'CreateFromBlittableJson' method in '{type.Name}' type.");
 
                     var expression = Expression.Call(methodToCall, json);
 
@@ -259,7 +259,7 @@ namespace Sparrow.Json
             {
                 var createFromBlittableJsonMethod = propertyType.GetMethod("CreateFromBlittableJson", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
                 if (createFromBlittableJsonMethod == null)
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new InvalidOperationException($"Could not find 'CreateFromBlittableJson' method in '{propertyType.Name}' type.");
 
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(CreateFromBlittableJson), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), Expression.Constant(createFromBlittableJsonMethod));
