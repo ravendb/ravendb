@@ -7,7 +7,7 @@ class validateNameCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Utils.NameValidation> {
+    execute(): JQueryPromise<Raven.Client.Util.NameValidation> {
         const args = {
             type: this.type,
             name: this.name,
@@ -16,7 +16,7 @@ class validateNameCommand extends commandBase {
         
         const url = endpoints.global.studioTasks.studioTasksIsValidName + this.urlEncodeArgs(args); 
         
-        return this.query<Raven.Server.Utils.NameValidation>(url, null)
+        return this.query<Raven.Client.Util.NameValidation>(url, null)
            .fail((response: JQueryXHR) => { 
                this.reportError(`Failed to validate the ${this.type.toLocaleLowerCase()} name`, response.responseText, response.statusText);
             });

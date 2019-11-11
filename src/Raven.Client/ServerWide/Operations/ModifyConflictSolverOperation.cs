@@ -19,7 +19,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public ModifyConflictSolverOperation(string database, Dictionary<string,ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
-            Helpers.AssertValidDatabaseName(database);
+            ResourceNameValidator.AssertValidDatabaseName(database);
             _database = database;
             CollectionByScript = collectionByScript;
             ResolveToLatest = resolveToLatest;
