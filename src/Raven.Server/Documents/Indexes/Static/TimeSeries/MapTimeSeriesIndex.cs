@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return workers.ToArray();
         }
 
-        public override void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotSupportedException();
 
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             //base.HandleDelete(tombstone, collection, writer, indexContext, stats);
         }
 
-        public override long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection, bool isReference)
+        public override long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection, bool isReference)
         {
             if (isReference)
                 return base.GetLastTombstoneEtagInCollection(databaseContext, collection, isReference);
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.SegmentSize, timeSeries);
+            return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         protected override IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             throw new NotSupportedException("We do not process tombstones for TimeSeries");
         }
 
-        protected override bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, IIndexCollection collection, long start, long end)
+        protected override bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, string collection, long start, long end)
         {
             throw new NotSupportedException("We do not process tombstones for TimeSeries");
         }
@@ -126,12 +126,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
         }
 
-        internal override IEnumerable<IIndexCollection> GetCollectionsForIndexing()
-        {
-            return _compiled.Maps.Keys;
-        }
-
-        public override Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
         }
@@ -156,16 +151,13 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, documentsContext, indexContext);
         }
 
-        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)
+        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            if (collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection)
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 throw new InvalidOperationException("TODO ppekrol");
 
-            var timeSeriesCollection = (TimeSeriesCollection)collection;
-
             // TODO [ppekrol] implement this properly
-            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(databaseContext, 0)
-                .Where(x => string.Equals(timeSeriesCollection.CollectionName, x.Collection, StringComparison.OrdinalIgnoreCase) && string.Equals(timeSeriesCollection.TimeSeriesName, x.Name, StringComparison.OrdinalIgnoreCase))
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, 0)
                 .LastOrDefault();
 
             if (timeSeries == null)
@@ -179,7 +171,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             throw new NotImplementedException();
         }
 
-        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, IIndexCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
         }
@@ -198,7 +190,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }
@@ -208,9 +200,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (HandleAllDocs)
                 throw new InvalidOperationException("TODO ppekrol");
 
-            var collection = new TimeSeriesCollection(change.CollectionName, change.Name);
-
-            if (_compiled.Maps.ContainsKey(collection) == false)
+            if (_compiled.Maps.ContainsKey(change.CollectionName) == false)
                 return;
 
             _mre.Set();

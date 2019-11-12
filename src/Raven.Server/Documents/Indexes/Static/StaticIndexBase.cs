@@ -18,63 +18,17 @@ namespace Raven.Server.Documents.Indexes.Static
 
     public abstract class StaticTimeSeriesIndexBase : AbstractStaticIndexBase
     {
-        internal override HashSet<string> GetDocumentsCollections()
-        {
-            return Maps.Keys.Select(x => x.CollectionName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        }
-
         public void AddMap(string collection, string name, IndexingFunc map)
         {
-            var key = new TimeSeriesCollection(collection, name);
-
-            if (Maps.TryGetValue(key, out List<IndexingFunc> funcs) == false)
-                Maps[key] = funcs = new List<IndexingFunc>();
-
-            funcs.Add(map);
-        }
-
-        public void AddReferencedCollection(string collection, string name, string referencedCollection)
-        {
-            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
-                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
-
-            var key = new TimeSeriesCollection(collection, name);
-
-            if (ReferencedCollections.TryGetValue(key, out HashSet<CollectionName> set) == false)
-                ReferencedCollections[key] = set = new HashSet<CollectionName>();
-
-            set.Add(referencedCollectionName);
+            AddMapInternal(collection, name, map);
         }
     }
 
     public abstract class StaticIndexBase : AbstractStaticIndexBase
     {
-        internal override HashSet<string> GetDocumentsCollections()
-        {
-            return Maps.Keys.Select(x => x.CollectionName).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        }
-
         public void AddMap(string collection, IndexingFunc map)
         {
-            var key = new DocumentsCollection(collection);
-
-            if (Maps.TryGetValue(key, out List<IndexingFunc> funcs) == false)
-                Maps[key] = funcs = new List<IndexingFunc>();
-
-            funcs.Add(map);
-        }
-
-        public void AddReferencedCollection(string collection, string referencedCollection)
-        {
-            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
-                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
-
-            var key = new DocumentsCollection(collection);
-
-            if (ReferencedCollections.TryGetValue(key, out HashSet<CollectionName> set) == false)
-                ReferencedCollections[key] = set = new HashSet<CollectionName>();
-
-            set.Add(referencedCollectionName);
+            AddMapInternal(collection, collection, map);
         }
 
         public dynamic Id(dynamic doc)
@@ -303,9 +257,9 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         protected readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
-        public readonly Dictionary<IIndexCollection, List<IndexingFunc>> Maps = new Dictionary<IIndexCollection, List<IndexingFunc>>();
+        public readonly Dictionary<string, Dictionary<string, List<IndexingFunc>>> Maps = new Dictionary<string, Dictionary<string, List<IndexingFunc>>>();
 
-        public readonly Dictionary<IIndexCollection, HashSet<CollectionName>> ReferencedCollections = new Dictionary<IIndexCollection, HashSet<CollectionName>>();
+        public readonly Dictionary<string, HashSet<CollectionName>> ReferencedCollections = new Dictionary<string, HashSet<CollectionName>>();
 
         public bool HasDynamicFields { get; set; }
 
@@ -319,7 +273,27 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public CompiledIndexField[] GroupByFields;
 
-        internal abstract HashSet<string> GetDocumentsCollections();
+        public void AddReferencedCollection(string collection, string referencedCollection)
+        {
+            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
+                _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
+
+            if (ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> set) == false)
+                ReferencedCollections[collection] = set = new HashSet<CollectionName>();
+
+            set.Add(referencedCollectionName);
+        }
+
+        protected void AddMapInternal(string collection, string subCollecction, IndexingFunc map)
+        {
+            if (Maps.TryGetValue(collection, out Dictionary<string, List<IndexingFunc>> collections) == false)
+                Maps[collection] = collections = new Dictionary<string, List<IndexingFunc>>();
+
+            if (collections.TryGetValue(subCollecction, out var funcs) == false)
+                collections[subCollecction] = funcs = new List<IndexingFunc>();
+
+            funcs.Add(map);
+        }
 
         public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
         {

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             var moreWorkFound = false;
 
-            foreach (var collection in _index.GetCollectionsForIndexing())
+            foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
@@ -75,9 +75,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                             if (lastCollectionEtag == -1)
                                 lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection, isReference: false);
 
-                            var tombstones = collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
+                            var tombstones = collection == Constants.Documents.Collections.AllDocumentsCollection
                                 ? _documentsStorage.GetTombstonesFrom(databaseContext, lastEtag + 1, 0, pageSize)
-                                : _documentsStorage.GetTombstonesFrom(databaseContext, collection.CollectionName, lastEtag + 1, 0, pageSize);
+                                : _documentsStorage.GetTombstonesFrom(databaseContext, collection, lastEtag + 1, 0, pageSize);
 
                             foreach (var tombstone in tombstones)
                             {

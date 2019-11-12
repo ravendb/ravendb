@@ -529,7 +529,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     foreach (var referencedCollection in mapRewriter.ReferencedCollections)
                     {
                         var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
-                        results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddReferencedCollection)).Invoke(collection, timeSeries, rc).AsExpressionStatement());
+                        results.Add(RoslynHelper.This(nameof(StaticTimeSeriesIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
                     }
                 }
             }

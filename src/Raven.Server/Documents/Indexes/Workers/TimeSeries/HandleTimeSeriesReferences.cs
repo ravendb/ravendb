@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
     {
         private readonly TimeSeriesStorage _timeSeriesStorage;
 
-        public HandleTimeSeriesReferences(Index index, Dictionary<IIndexCollection, HashSet<CollectionName>> referencedCollections, TimeSeriesStorage timeSeriesStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, Config.Categories.IndexingConfiguration configuration)
+        public HandleTimeSeriesReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, TimeSeriesStorage timeSeriesStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, Config.Categories.IndexingConfiguration configuration)
             : base(index, referencedCollections, documentsStorage, indexStorage, configuration)
         {
             _timeSeriesStorage = timeSeriesStorage;
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.SegmentSize, timeSeries);
+            return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
     }
 }

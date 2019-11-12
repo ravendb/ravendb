@@ -805,6 +805,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var collection in index.Collections)
                         {
+                            // TODO [ppekrol]
                             var etag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
                             var document = Database.DocumentsStorage.GetDocumentsFrom(context, collection, etag, 0, 1, DocumentFields.LastModified).FirstOrDefault();
                             if (document != null)
@@ -939,7 +940,7 @@ namespace Raven.Server.Documents.Handlers
                 var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration);
 
                 var inputSize = GetIntValueQueryString("inputSize", false) ?? defaultInputSizeForTestingJavaScriptIndex;
-                var collections = new HashSet<string>(compiledIndex.GetDocumentsCollections());
+                var collections = new HashSet<string>(compiledIndex.Maps.Keys);
                 var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
                 using (context.OpenReadTransaction())
                 {
@@ -977,13 +978,17 @@ namespace Raven.Server.Documents.Handlers
                     foreach (var listOfFunctions in compiledIndex.Maps)
                     {
                         //multi maps per collection
-                        foreach (var mapFunc in listOfFunctions.Value)
+                        foreach (var kvp in listOfFunctions.Value)
                         {
-                            if (docsPerCollection.TryGetValue(listOfFunctions.Key.CollectionName, out var docs))
+                            // TODO [ppekrol] check if this is correct
+                            foreach (var mapFunc in kvp.Value)
                             {
-                                foreach (var res in mapFunc(docs))
+                                if (docsPerCollection.TryGetValue(listOfFunctions.Key, out var docs))
                                 {
-                                    mapRes.Add((ObjectInstance)res);
+                                    foreach (var res in mapFunc(docs))
+                                    {
+                                        mapRes.Add((ObjectInstance)res);
+                                    }
                                 }
                             }
                         }

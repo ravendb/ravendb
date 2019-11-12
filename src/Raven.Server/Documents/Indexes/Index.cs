@@ -839,7 +839,7 @@ namespace Raven.Server.Documents.Indexes
                 using (indexContext.OpenReadTransaction())
                 {
                     long lastEtag = 0;
-                    foreach (var collection in GetCollectionsForIndexing())
+                    foreach (var collection in Collections)
                     {
                         lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
                     }
@@ -856,7 +856,7 @@ namespace Raven.Server.Documents.Indexes
             if (document == null)
                 return default;
 
-            return new IndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
+            return new IndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document);
         }
 
         protected virtual IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)
@@ -865,13 +865,13 @@ namespace Raven.Server.Documents.Indexes
             if (tombstone == null)
                 return default;
 
-            return new IndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, 0, tombstone);
+            return new IndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, null, 0, tombstone);
         }
 
-        protected virtual bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, IIndexCollection collection, long start, long end)
+        protected virtual bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, string collection, long start, long end)
         {
             return DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext,
-                        collection.CollectionName,
+                        collection,
                         start,
                         end);
         }
@@ -881,14 +881,14 @@ namespace Raven.Server.Documents.Indexes
             if (Type == IndexType.Faulty)
                 return true;
 
-            foreach (var collection in GetCollectionsForIndexing())
+            foreach (var collection in Collections)
             {
                 var lastItemEtag = GetLastItemEtagInCollection(databaseContext, collection);
 
                 var lastProcessedItemEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                 var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
-                _inMemoryIndexProgress.TryGetValue(collection.StorageKey, out var stats);
+                _inMemoryIndexProgress.TryGetValue(collection, out var stats);
 
                 if (cutoff == null)
                 {
@@ -970,7 +970,7 @@ namespace Raven.Server.Documents.Indexes
             return stalenessReasons?.Count > 0;
         }
 
-        public long GetLastMappedEtagFor(IIndexCollection collection)
+        public long GetLastMappedEtagFor(string collection)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -991,9 +991,9 @@ namespace Raven.Server.Documents.Indexes
                 using (var tx = context.OpenReadTransaction())
                 {
                     var etags = new Dictionary<string, long>();
-                    foreach (var collection in GetCollectionsForIndexing())
+                    foreach (var collection in Collections)
                     {
-                        etags[collection.StorageKey] = _indexStorage.ReadLastIndexedEtag(tx, collection);
+                        etags[collection] = _indexStorage.ReadLastIndexedEtag(tx, collection);
                     }
 
                     return etags;
@@ -1783,10 +1783,10 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, IIndexCollection collection, TransactionOperationContext indexContext,
+        public abstract IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext,
             IndexingStatsScope stats, IndexType type);
 
-        public abstract void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer,
+        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         public abstract int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer,
@@ -2199,9 +2199,9 @@ namespace Raven.Server.Documents.Indexes
             return Collections;
         }
 
-        public IndexProgress.CollectionStats GetStats(IIndexCollection collection)
+        public IndexProgress.CollectionStats GetStats(string collection)
         {
-            return _inMemoryIndexProgress.GetOrAdd(collection.StorageKey, _ => new IndexProgress.CollectionStats());
+            return _inMemoryIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
         }
 
         public IndexProgress.CollectionStats GetReferencesStats(string collection)
@@ -2277,9 +2277,9 @@ namespace Raven.Server.Documents.Indexes
 
                         if (calculateLag)
                         {
-                            foreach (var collection in GetCollectionsForIndexing())
+                            foreach (var collection in Collections)
                             {
-                                var collectionStats = stats.Collections[collection.StorageKey];
+                                var collectionStats = stats.Collections[collection];
 
                                 var lastDocumentEtag = GetLastItemEtagInCollection(documentsContext, collection);
                                 var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection, isReference: false);
@@ -3236,7 +3236,7 @@ namespace Raven.Server.Documents.Indexes
         protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale, IndexState indexState,
             DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            foreach (var collection in GetCollectionsForIndexing())
+            foreach (var collection in Collections)
             {
                 var lastDocEtag = GetLastItemEtagInCollection(documentsContext, collection);
                 var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection, isReference: false);
@@ -3298,9 +3298,9 @@ namespace Raven.Server.Documents.Indexes
         internal Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(RavenTransaction tx)
         {
             var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-            foreach (var collection in GetCollectionsForIndexing())
+            foreach (var collection in Collections)
             {
-                etags[collection.CollectionName] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
+                etags[collection] = _indexStorage.ReadLastProcessedTombstoneEtag(tx, collection);
             }
 
             return etags;
@@ -3372,7 +3372,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.NotificationCenter.Add(hint);
         }
 
-        public virtual Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
+        public virtual Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return null;
         }
@@ -3839,18 +3839,18 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-        public virtual long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection)
+        public virtual long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
-            return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
+            return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastDocumentEtag(databaseContext.Transaction.InnerTransaction)
-                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection.CollectionName);
+                : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
         }
 
-        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, IIndexCollection collection, bool isReference)
+        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection, bool isReference)
         {
-            return collection.CollectionName == Constants.Documents.Collections.AllDocumentsCollection
+            return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
-                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection.CollectionName);
+                : DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(databaseContext, collection);
         }
 
         public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
@@ -4026,15 +4026,9 @@ namespace Raven.Server.Documents.Indexes
             if (_disposeOne.Disposed)
                 ThrowObjectDisposed();
         }
-
-        internal virtual IEnumerable<IIndexCollection> GetCollectionsForIndexing()
-        {
-            foreach (var collection in Collections)
-                yield return new DocumentsCollection(collection);
-        }
     }
 
-    public struct IndexItem
+    public struct IndexItem : IDisposable
     {
         public readonly LazyStringValue Id;
 
@@ -4048,7 +4042,9 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly object Item;
 
-        public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, int size, object item) : this()
+        public readonly string IndexingKey;
+
+        public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, string indexingKey, int size, object item) : this()
         {
             Id = id;
             LowerId = lowerId;
@@ -4056,83 +4052,13 @@ namespace Raven.Server.Documents.Indexes
             LastModified = lastModified;
             Size = size;
             Item = item;
+            IndexingKey = indexingKey;
         }
-    }
 
-    public class TimeSeriesCollection : IIndexCollection
-    {
-        private string _storageKey;
-
-        public TimeSeriesCollection(string collectionName, string timeSeriesName)
+        public void Dispose()
         {
-            CollectionName = collectionName;
-            TimeSeriesName = timeSeriesName;
+            if (Item is IDisposable disposable)
+                disposable.Dispose();
         }
-
-        public string StorageKey
-        {
-            get
-            {
-                if (_storageKey == null)
-                    _storageKey = $"{CollectionName}|{TimeSeriesName}";
-
-                return _storageKey;
-            }
-        }
-
-        public string CollectionName { get; }
-        public string TimeSeriesName { get; }
-
-        public override bool Equals(object obj)
-        {
-            return obj is TimeSeriesCollection collection &&
-                   string.Equals(CollectionName, collection.CollectionName, StringComparison.OrdinalIgnoreCase) &&
-                   string.Equals(TimeSeriesName, collection.TimeSeriesName, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(CollectionName, TimeSeriesName);
-        }
-
-        public override string ToString()
-        {
-            return StorageKey;
-        }
-    }
-
-    public class DocumentsCollection : IIndexCollection
-    {
-        public DocumentsCollection(string collectionName)
-        {
-            CollectionName = collectionName;
-            StorageKey = collectionName;
-        }
-
-        public string StorageKey { get; }
-        public string CollectionName { get; }
-
-        public override bool Equals(object obj)
-        {
-            return obj is DocumentsCollection collection &&
-                   string.Equals(CollectionName, collection.CollectionName, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public override int GetHashCode()
-        {
-            return CollectionName.GetHashCode();
-        }
-
-        public override string ToString()
-        {
-            return StorageKey;
-        }
-    }
-
-    public interface IIndexCollection
-    {
-        public string CollectionName { get; }
-
-        public string StorageKey { get; }
     }
 }

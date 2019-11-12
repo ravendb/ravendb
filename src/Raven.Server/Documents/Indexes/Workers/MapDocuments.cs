@@ -25,11 +25,11 @@ namespace Raven.Server.Documents.Indexes.Workers
             _documentsStorage = documentsStorage;
         }
 
-        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
-            foreach (var document in GetDocumentsEnumerator(databaseContext, collection.CollectionName, lastEtag, pageSize))
+            foreach (var document in GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize))
             {
-                yield return new IndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
+                yield return new IndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document);
             }
         }
 
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
-            foreach (var collection in _index.GetCollectionsForIndexing())
+            foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
@@ -279,6 +279,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        protected abstract IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize);
+        protected abstract IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize);
     }
 }

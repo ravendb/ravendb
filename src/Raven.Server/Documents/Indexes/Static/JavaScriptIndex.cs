@@ -71,7 +71,11 @@ namespace Raven.Server.Documents.Indexes.Static
             HasDynamicFields = false;
             foreach (var (key, val) in collectionFunctions)
             {
-                Maps.Add(new DocumentsCollection(key), val.Select(x => (IndexingFunc)x.IndexingFunction).ToList());
+                var collections = new Dictionary<string, List<IndexingFunc>> 
+                {
+                     { key, val.Select(x => (IndexingFunc)x.IndexingFunction).ToList() }
+                };
+                Maps.Add(key, collections);
 
                 //TODO: Validation of matches fields between group by / collections / etc
                 foreach (var operation in val)
@@ -162,11 +166,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
 
                 operation.Analyze(_engine);
-                var mapCollectionKey = new DocumentsCollection(mapCollection);
-                if (ReferencedCollections.TryGetValue(mapCollectionKey, out var collectionNames) == false)
+                if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
                 {
                     collectionNames = new HashSet<CollectionName>();
-                    ReferencedCollections.Add(mapCollectionKey, collectionNames);
+                    ReferencedCollections.Add(mapCollection, collectionNames);
                 }
 
                 collectionNames.UnionWith(mapReferencedCollections[i]);

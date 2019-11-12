@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? referenceCutoff, List<string> stalenessReasons)
         {
-            foreach (var collection in index.GetCollectionsForIndexing())
+            foreach (var collection in index.Collections)
             {
                 if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
         {
-            foreach (var collection in index.GetCollectionsForIndexing())
+            foreach (var collection in index.Collections)
             {
                 if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
@@ -162,8 +162,8 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public static Dictionary<string, long> GetLastProcessedTombstonesPerCollection(
-            Index index, HashSet<string> referencedCollections, IEnumerable<IIndexCollection> collections,
-            Dictionary<IIndexCollection, HashSet<CollectionName>> compiledReferencedCollections,
+            Index index, HashSet<string> referencedCollections, IEnumerable<string> collections,
+            Dictionary<string, HashSet<CollectionName>> compiledReferencedCollections,
             IndexStorage indexStorage)
         {
             using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))

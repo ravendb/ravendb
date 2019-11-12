@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     try
                     {
-                        var etag = supersededIndex.GetLastMappedEtagFor(new DocumentsCollection(map.ForCollection));
+                        var etag = supersededIndex.GetLastMappedEtagFor(map.ForCollection);
                         maxSupersededEtag = Math.Max(etag, maxSupersededEtag);
                     }
                     catch (OperationCanceledException)
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 long currentEtag;
                 try
                 {
-                    currentEtag = index.GetLastMappedEtagFor(new DocumentsCollection(map.ForCollection));
+                    currentEtag = index.GetLastMappedEtagFor(map.ForCollection);
                 }
                 catch (OperationCanceledException)
                 {

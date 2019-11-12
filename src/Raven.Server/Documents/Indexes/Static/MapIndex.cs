@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return workers.ToArray();
         }
 
-        public override void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_referencedCollections.Count > 0)
                 _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
@@ -151,12 +151,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public override Dictionary<IIndexCollection, HashSet<CollectionName>> GetReferencedCollections()
+        public override Dictionary<string, HashSet<CollectionName>> GetReferencedCollections()
         {
             return _compiled.ReferencedCollections;
         }
 
-        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, IIndexCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicBlittableJson>(items, _compiled.Maps[collection], collection, stats, type);
         }
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Static
             using (CurrentlyInUse())
             {
                 return StaticIndexHelper.GetLastProcessedTombstonesPerCollection(
-                    this, _referencedCollections, GetCollectionsForIndexing(), _compiled.ReferencedCollections, _indexStorage);
+                    this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
             }
         }
 
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticMapIndex = (MapIndex)index;
             var staticIndex = staticMapIndex._compiled;
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
-            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.GetDocumentsCollections(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
+            var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }

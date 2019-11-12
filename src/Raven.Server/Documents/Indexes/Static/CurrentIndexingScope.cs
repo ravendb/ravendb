@@ -28,10 +28,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Func<string, SpatialField> _getSpatialField;
 
         /// [collection: [key: [referenceKeys]]]
-        public Dictionary<IIndexCollection, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
+        public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
 
         /// [collection: [collectionKey: etag]]
-        public Dictionary<IIndexCollection, Dictionary<string, long>> ReferenceEtagsByCollection;
+        public Dictionary<string, Dictionary<string, long>> ReferenceEtagsByCollection;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public AbstractDynamicObject Source;
 
-        public IIndexCollection SourceCollection;
+        public string SourceCollection;
 
         public readonly TransactionOperationContext IndexContext;
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Static
             _getSpatialField = getSpatialField;
         }
 
-        public void SetSourceCollection(IIndexCollection collection, IndexingStatsScope stats)
+        public void SetSourceCollection(string collection, IndexingStatsScope stats)
         {
             SourceCollection = collection;
             _stats = stats;
@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private Dictionary<string, long> GetReferenceEtags()
         {
             if (ReferenceEtagsByCollection == null)
-                ReferenceEtagsByCollection = new Dictionary<IIndexCollection, Dictionary<string, long>>();
+                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>();
 
             if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out Dictionary<string, long> referenceEtags) == false)
                 ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private HashSet<Slice> GetReferencesForItem(Slice key)
         {
             if (ReferencesByCollection == null)
-                ReferencesByCollection = new Dictionary<IIndexCollection, Dictionary<Slice, HashSet<Slice>>>();
+                ReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>();
 
             if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
                 ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());

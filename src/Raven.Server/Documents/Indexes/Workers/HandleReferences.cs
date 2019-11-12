@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public sealed class HandleDocumentReferences : HandleReferences
     {
-        public HandleDocumentReferences(Index index, Dictionary<IIndexCollection, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        public HandleDocumentReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
             : base(index, referencedCollections, documentsStorage, indexStorage, configuration)
         {
         }
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (doc == null)
                     return default;
 
-                return new IndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, doc.Data.Size, doc);
+                return new IndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, null, doc.Data.Size, doc);
             }
         }
     }
@@ -39,14 +39,14 @@ namespace Raven.Server.Documents.Indexes.Workers
         private readonly Logger _logger;
 
         private readonly Index _index;
-        private readonly Dictionary<IIndexCollection, HashSet<CollectionName>> _referencedCollections;
+        private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
         protected readonly DocumentsStorage _documentsStorage;
         private readonly IndexingConfiguration _configuration;
         private readonly IndexStorage _indexStorage;
 
         protected readonly Reference _reference = new Reference();
 
-        public HandleReferences(Index index, Dictionary<IIndexCollection, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
+        public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
         {
             _index = index;
             _referencedCollections = referencedCollections;
@@ -91,15 +91,15 @@ namespace Raven.Server.Documents.Indexes.Workers
         private unsafe bool HandleItems(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
-            Dictionary<IIndexCollection, long> lastIndexedEtagsByCollection = null;
+            Dictionary<string, long> lastIndexedEtagsByCollection = null;
 
-            foreach (var collection in _index.GetCollectionsForIndexing())
+            foreach (var collection in _index.Collections)
             {
                 if (_referencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
 
                 if (lastIndexedEtagsByCollection == null)
-                    lastIndexedEtagsByCollection = new Dictionary<IIndexCollection, long>();
+                    lastIndexedEtagsByCollection = new Dictionary<string, long>();
 
                 if (lastIndexedEtagsByCollection.TryGetValue(collection, out long lastIndexedEtag) == false)
                     lastIndexedEtagsByCollection[collection] = lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
@@ -188,8 +188,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                         if (item.Item != null && item.Etag <= lastIndexedEtag)
                                             items.Add(item);
-                                        else if (item.Item is IDisposable disposable)
-                                            disposable.Dispose();
+                                        else
+                                            item.Dispose();
                                     }
 
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
-        public unsafe void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LowerId;

@@ -44,7 +44,7 @@ namespace SlowTests.Tests.Indexes
             indexDefinition.Name = "Index1";
             var index = (StaticIndexBase)IndexCompiler.Compile(indexDefinition);
 
-            var map = index.Maps.Values.First().First();
+            var map = index.Maps.Values.First().First().Value.First();
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {

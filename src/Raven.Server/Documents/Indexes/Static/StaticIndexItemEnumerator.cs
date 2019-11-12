@@ -9,15 +9,17 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly IndexingStatsScope _documentReadStats;
         private readonly IEnumerator<IndexItem> _itemsEnumerator;
-        private readonly IEnumerable _resultsOfCurrentDocument;
-        private readonly MultipleIndexingFunctionsEnumerator<TType> _multipleIndexingFunctionsEnumerator;
+        private readonly Dictionary<string, IEnumerable> _resultsOfCurrentDocument;
+        private readonly Dictionary<string, MultipleIndexingFunctionsEnumerator<TType>> _multipleIndexingFunctionsEnumerator;
+        private readonly bool _singleKey;
+        private readonly string _firstKey;
 
         protected StaticIndexItemEnumerator(IEnumerable<IndexItem> items)
         {
             _itemsEnumerator = items.GetEnumerator();
         }
 
-        public StaticIndexItemEnumerator(IEnumerable<IndexItem> items, List<IndexingFunc> funcs, IIndexCollection collection, IndexingStatsScope stats, IndexType type)
+        public StaticIndexItemEnumerator(IEnumerable<IndexItem> items, Dictionary<string, List<IndexingFunc>> funcs, string collection, IndexingStatsScope stats, IndexType type)
             : this(items)
         {
             _documentReadStats = stats?.For(IndexingOperation.Map.DocumentRead, start: false);
@@ -26,15 +28,23 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var mapFuncStats = stats?.For(indexingFunctionType, start: false);
 
-            if (funcs.Count == 1)
+            _resultsOfCurrentDocument = new Dictionary<string, IEnumerable>(StringComparer.OrdinalIgnoreCase);
+            _singleKey = funcs.Count == 1;
+            foreach (var kvp in funcs)
             {
-                _resultsOfCurrentDocument =
-                    new TimeCountingEnumerable(funcs[0](new DynamicIteratorOfCurrentItemWrapper<TType>(this)), mapFuncStats);
-            }
-            else
-            {
-                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator<TType>(funcs, new DynamicIteratorOfCurrentItemWrapper<TType>(this));
-                _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
+                if (_singleKey)
+                    _firstKey = kvp.Key;
+
+                if (kvp.Value.Count == 1)
+                    _resultsOfCurrentDocument[kvp.Key] = new TimeCountingEnumerable(kvp.Value[0](new DynamicIteratorOfCurrentItemWrapper<TType>(this)), mapFuncStats);
+                else
+                {
+                    if (_multipleIndexingFunctionsEnumerator == null)
+                        _multipleIndexingFunctionsEnumerator = new Dictionary<string, MultipleIndexingFunctionsEnumerator<TType>>(StringComparer.OrdinalIgnoreCase);
+
+                    _multipleIndexingFunctionsEnumerator[kvp.Key] = new MultipleIndexingFunctionsEnumerator<TType>(kvp.Value, new DynamicIteratorOfCurrentItemWrapper<TType>(this));
+                    _resultsOfCurrentDocument[kvp.Key] = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
+                }
             }
 
             CurrentIndexingScope.Current.SetSourceCollection(collection, mapFuncStats);
@@ -44,27 +54,36 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             using (_documentReadStats?.Start())
             {
-                if (Current.Item is IDisposable disposable)
-                    disposable.Dispose();
+                Current.Dispose();
 
-                if (_itemsEnumerator.MoveNext() == false)
+                while (_itemsEnumerator.MoveNext())
                 {
-                    Current = default;
-                    resultsOfCurrentDocument = null;
+                    Current = _itemsEnumerator.Current;
 
-                    return false;
+                    if (_singleKey)
+                        resultsOfCurrentDocument = _resultsOfCurrentDocument[_firstKey];
+                    else if (_resultsOfCurrentDocument.TryGetValue(Current.IndexingKey, out resultsOfCurrentDocument) == false)
+                        continue;
+
+                    return true;
                 }
 
-                Current = _itemsEnumerator.Current;
-                resultsOfCurrentDocument = _resultsOfCurrentDocument;
+                Current = default;
+                resultsOfCurrentDocument = null;
 
-                return true;
+                return false;
             }
         }
 
         public void OnError()
         {
-            _multipleIndexingFunctionsEnumerator?.Reset();
+            if (_multipleIndexingFunctionsEnumerator == null)
+                return;
+
+            if (_multipleIndexingFunctionsEnumerator.TryGetValue(Current.IndexingKey ?? _firstKey, out var func) == false)
+                return;
+
+            func?.Reset();
         }
 
         public IndexItem Current { get; private set; }
@@ -72,9 +91,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public void Dispose()
         {
             _itemsEnumerator.Dispose();
-
-            if (Current.Item is IDisposable disposable)
-                disposable.Dispose();
+            Current.Dispose();
         }
 
         protected class DynamicIteratorOfCurrentItemWrapper<TDynamicIteratorOfCurrentItemWrapperType> : IEnumerable<TDynamicIteratorOfCurrentItemWrapperType> where TDynamicIteratorOfCurrentItemWrapperType : AbstractDynamicObject, new()

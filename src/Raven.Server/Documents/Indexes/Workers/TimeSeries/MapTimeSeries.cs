@@ -6,7 +6,6 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
-using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
 {
@@ -20,17 +19,15 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             _timeSeriesStorage = timeSeriesStorage;
         }
 
-        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, IIndexCollection collection, long lastEtag, int pageSize)
+        protected override IEnumerable<IndexItem> GetItemsEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
-            var timeSeriesCollection = (TimeSeriesCollection)collection;
-
-            foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, timeSeriesCollection.CollectionName, timeSeriesCollection.TimeSeriesName, lastEtag, pageSize))
+            foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, collection, lastEtag, pageSize))
             {
-                yield return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.SegmentSize, timeSeries);
+                yield return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
             }
         }
 
-        private IEnumerable<TimeSeriesItem> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, string timeSeries, long lastEtag, int pageSize)
+        private IEnumerable<TimeSeriesItem> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
             {

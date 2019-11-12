@@ -129,12 +129,12 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
-        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> documents, IIndexCollection collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+        public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             throw new NotImplementedException();
         }
 
-        public override void HandleDelete(Tombstone tombstone, IIndexCollection collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotImplementedException();
         }
