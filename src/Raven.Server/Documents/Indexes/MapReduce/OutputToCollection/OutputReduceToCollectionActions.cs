@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -97,9 +98,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             tree.Delete(reduceResultId);
         }
 
-        public OutputReduceToCollectionCommand CreateCommand(JsonOperationContext indexContext, Transaction writeTransaction)
+        public OutputReduceToCollectionCommand CreateCommand(JsonOperationContext indexContext, TransactionHolder writeTxHolder)
         {
-            return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternForOutputReduceToCollectionReferences, _index, indexContext, writeTransaction);
+            return new OutputReduceToCollectionCommand(_index.DocumentDatabase, _collectionOfReduceOutputs, _reduceOutputVersion, _patternForOutputReduceToCollectionReferences, _index, indexContext, writeTxHolder);
         }
 
         public void AddPrefixesOfDocumentsToDelete(HashSet<string> prefixes)

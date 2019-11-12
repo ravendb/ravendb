@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -24,6 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly OutputReferencesPattern _patternForReduceOutputReferences;
         private readonly MapReduceIndex _index;
         private readonly List<string> _reduceKeyHashesToDelete = new List<string>();
+        private readonly OutputReduceToCollectionReferencesCommand _outputToCollectionReferences;
 
         private readonly Dictionary<string, List<object>> _reduceDocuments =
             new Dictionary<string, List<object>>();
@@ -32,20 +34,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             new Dictionary<string, List<(BlittableJsonReaderObject, string)>>();
 
         private readonly JsonOperationContext _indexContext;
-        private readonly ReduceOutputReferencesSubCommand _outputReferences;
+        private readonly TransactionHolder _indexWriteTxHolder;
 
         private IndexingStatsScope _stats;
 
         public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, long? reduceOutputIndex,
-            OutputReferencesPattern patternForReduceOutputReferences, MapReduceIndex index, JsonOperationContext context, Transaction indexWriteTransaction)
+            OutputReferencesPattern patternForReduceOutputReferences, MapReduceIndex index, JsonOperationContext context, TransactionHolder indexWriteTxHolder)
             : this(database, outputReduceToCollection, reduceOutputIndex)
         {
             _patternForReduceOutputReferences = patternForReduceOutputReferences;
             _index = index;
             _indexContext = context;
+            _indexWriteTxHolder = indexWriteTxHolder;
 
-            if (_patternForReduceOutputReferences != null)
-                _outputReferences = new ReduceOutputReferencesSubCommand(index, outputReduceToCollection, indexWriteTransaction);
+            if (_patternForReduceOutputReferences != null) 
+                _outputToCollectionReferences = new OutputReduceToCollectionReferencesCommand(index, outputReduceToCollection);
         }
 
         /// <summary>
@@ -81,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 if (deleteResult != null)
                 {
-                    _outputReferences?.DeleteFromReferenceDocument(id);
+                    _outputToCollectionReferences?.Delete(id);
                 }
                 else
                 {
@@ -90,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                     var prefix = GetOutputDocumentKeyForSameReduceKeyHashPrefix(reduceKeyHash);
 
-                    if (_outputReferences != null)
+                    if (_outputToCollectionReferences != null)
                     {
                         var docs = _database.DocumentsStorage.GetDocumentsStartingWith(context, prefix, null, null, null, 0, int.MaxValue);
 
@@ -98,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         {
                             using (doc)
                             {
-                                _outputReferences.DeleteFromReferenceDocument(doc.Id);
+                                _outputToCollectionReferences.Delete(doc.Id);
                             }
                         }
                     }
@@ -122,11 +125,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     }
                     
                     if (referenceDocumentId != null)
-                        _outputReferences?.Add(referenceDocumentId, id);
+                        _outputToCollectionReferences?.Add(referenceDocumentId, id);
                 }
             }
 
-            _outputReferences?.Execute(context);
+            if (_outputReduceToCollection != null)
+            {
+                using (_indexWriteTxHolder.AcquireTransaction(out var writeTransaction))
+                {
+                    // we must not let index write transaction to run concurrently so we wait for index writer commit
+                    _outputToCollectionReferences?.Execute(context, writeTransaction);
+                }
+            }
 
             return _reduceDocuments.Count;
         }
@@ -271,20 +281,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
         }
 
-        private class ReduceOutputReferencesSubCommand
+        private class OutputReduceToCollectionReferencesCommand
         {
             private readonly MapReduceIndex _index;
             private readonly string _outputReduceToCollection;
-            private readonly Transaction _indexWriteTransaction;
             private readonly DocumentDatabase _database;
-            readonly Dictionary<string, HashSet<string>> _referencesOfReduceOutputs = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-            readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, HashSet<string>> _referencesOfReduceOutputs = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            private readonly List<string> _deletedReduceOutputs = new List<string>();
+            private readonly Dictionary<string, HashSet<string>> _idsToDeleteByReferenceDocumentId = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-            public ReduceOutputReferencesSubCommand(MapReduceIndex index, string outputReduceToCollection, Transaction indexWriteTransaction)
+            public OutputReduceToCollectionReferencesCommand(MapReduceIndex index, string outputReduceToCollection)
             {
                 _index = index;
                 _outputReduceToCollection = outputReduceToCollection;
-                _indexWriteTransaction = indexWriteTransaction;
                 _database = index.DocumentDatabase;
             }
 
@@ -300,23 +309,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 values.Add(reduceOutputDocumentId);
             }
 
-            public void DeleteFromReferenceDocument(string reduceOutputId)
+            public void Delete(string reduceOutputId)
             {
-                var referenceId = _index.OutputReduceToCollection.GetPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId);
-
-                if (_idsToDeleteByReferenceDocumentId.TryGetValue(referenceId, out var values) == false)
-                {
-                    values = new HashSet<string>(1, StringComparer.OrdinalIgnoreCase);
-
-                    _idsToDeleteByReferenceDocumentId.Add(referenceId, values);
-                }
-
-                values.Add(reduceOutputId);
+                _deletedReduceOutputs.Add(reduceOutputId);
             }
 
-            public void Execute(DocumentsOperationContext context)
+            public void Execute(DocumentsOperationContext context, Transaction indexWriteTransaction)
             {
                 // delete
+
+                foreach (string reduceOutputId in _deletedReduceOutputs)
+                {
+                    var referenceId = _index.OutputReduceToCollection.GetPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId);
+
+                    if (_idsToDeleteByReferenceDocumentId.TryGetValue(referenceId, out var values) == false)
+                    {
+                        values = new HashSet<string>(1, StringComparer.OrdinalIgnoreCase);
+
+                        _idsToDeleteByReferenceDocumentId.Add(referenceId, values);
+                    }
+
+                    values.Add(reduceOutputId);
+                }
 
                 foreach (var reduceReferenceIdToReduceOutputIds in _idsToDeleteByReferenceDocumentId)
                 {
@@ -363,7 +377,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         {
                             _database.DocumentsStorage.Put(context, referenceDocument.Id, null, doc);
 
-                            _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(_indexWriteTransaction, referenceDocument.Id);
+                            _index.OutputReduceToCollection.DeletePatternGeneratedIdForReduceOutput(indexWriteTransaction, referenceDocument.Id);
                         }
                     }
                 }
@@ -388,7 +402,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                         foreach (var reduceOutputId in referencesOfReduceOutput.Value)
                         {
-                            _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(_indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
+                            _index.OutputReduceToCollection.AddPatternGeneratedIdForReduceOutput(indexWriteTransaction, reduceOutputId, referencesOfReduceOutput.Key);
                         }
                     }
                 }
