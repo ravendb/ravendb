@@ -1920,11 +1920,7 @@ more responsive application.
         {
             _session = session;
 
-            if (Interlocked.Read(ref _session._asyncTasksCounter) == 0)
-            {
-                Interlocked.Increment(ref _session._asyncTasksCounter);
-            }
-            else
+            if (Interlocked.Increment(ref _session._asyncTasksCounter) > 1)
             {
                 throw new InvalidOperationException("Concurrent usage of async tasks in async session is forbidden, please make sure that async session doesn't execute async methods concurrently.");
             }
