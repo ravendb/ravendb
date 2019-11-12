@@ -16,13 +16,15 @@ namespace Raven.Server.Documents.Indexes.Auto
             _itemsEnumerator = items.GetEnumerator();
         }
 
-        public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
+        public bool MoveNext(out IEnumerable resultsOfCurrentDocument, out long? etag)
         {
             using (_documentReadStats.Start())
             {
                 var moveNext = _itemsEnumerator.MoveNext();
 
-                _results[0] = (Document)_itemsEnumerator.Current.Item;
+                var document = (Document)_itemsEnumerator.Current.Item;
+                _results[0] = document;
+                etag = document.Etag;
                 resultsOfCurrentDocument = _results;
 
                 return moveNext;

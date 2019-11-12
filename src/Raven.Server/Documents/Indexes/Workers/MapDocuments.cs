@@ -103,8 +103,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 while (true)
                                 {
-                                    if (itemEnumerator.MoveNext(out IEnumerable mapResults) == false)
+                                    if (itemEnumerator.MoveNext(out IEnumerable mapResults, out var etag) == false)
                                     {
+                                        if (etag.HasValue)
+                                            lastEtag = etag.Value;
+
                                         collectionStats.RecordMapCompletedReason("No more documents to index");
                                         keepRunning = false;
                                         break;

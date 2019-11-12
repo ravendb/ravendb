@@ -50,17 +50,19 @@ namespace Raven.Server.Documents.Indexes.Static
             CurrentIndexingScope.Current.SetSourceCollection(collection, mapFuncStats);
         }
 
-        public bool MoveNext(out IEnumerable resultsOfCurrentDocument)
+        public bool MoveNext(out IEnumerable resultsOfCurrentDocument, out long? etag)
         {
             using (_documentReadStats?.Start())
             {
                 Current.Dispose();
+                etag = null;
 
                 while (_itemsEnumerator.MoveNext())
                 {
                     Current = _itemsEnumerator.Current;
+                    etag = Current.Etag;
 
-                    if (_singleKey)
+                    if (Current.IndexingKey == null && _singleKey)
                         resultsOfCurrentDocument = _resultsOfCurrentDocument[_firstKey];
                     else if (_resultsOfCurrentDocument.TryGetValue(Current.IndexingKey, out resultsOfCurrentDocument) == false)
                         continue;
