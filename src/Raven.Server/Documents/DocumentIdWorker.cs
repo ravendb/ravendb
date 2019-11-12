@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -187,6 +188,7 @@ namespace Raven.Server.Documents
              *  string size = 2, GetMaxByteCount = 9, converted string size = 12, maxStrSize = 19
              */
             var maxStrSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * escapedCount;
+            var originalMaxStrSize = maxStrSize;
 
             int idSize = JsonParserState.VariableSizeIntSize(maxStrSize);
 
@@ -236,6 +238,7 @@ namespace Raven.Server.Documents
 
             var writePos = ptr + maxStrSize;
 
+            Debug.Assert(strLength <= originalMaxStrSize, $"Calculated {nameof(originalMaxStrSize)} value {originalMaxStrSize}, was smaller than actually {nameof(strLength)} value {strLength}");
             var sizeDifference = idSize - JsonParserState.VariableSizeIntSize(strLength);
             if (sizeDifference > 0)
             {

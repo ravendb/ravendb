@@ -186,7 +186,6 @@ namespace SlowTests.Issues
             {
                 tryCounter++;
                 using var session = store.OpenAsyncSession();
-                ;
                 await session.StoreAsync(new User());
                 session.SaveChangesAsync();
             }
@@ -245,7 +244,7 @@ namespace SlowTests.Issues
                 exceptionsCounter++;
             }
 
-            Assert.Equal(tryCounter, exceptionsCounter);
+            Assert.True(tryCounter >= exceptionsCounter);
         }
 
         private class User
