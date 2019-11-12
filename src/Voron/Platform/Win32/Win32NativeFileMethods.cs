@@ -87,9 +87,8 @@ namespace Voron.Platform.Win32
             out int pNumberOfBytesRead,
             NativeOverlapped* lpOverlapped
         );
-
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-
+        
+        [DllImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, CharSet = CharSet.Unicode, BestFitMapping = false)]
         public static extern SafeFileHandle CreateFile(string lpFileName,
             Win32NativeFileAccess dwDesiredAccess, Win32NativeFileShare dwShareMode,
             IntPtr lpSecurityAttributes,
@@ -423,8 +422,8 @@ namespace Voron.Platform.Win32
             int OutBufferSize,
             out int BytesReturned,
             IntPtr Overlapped);
-
-        [DllImport("Kernel32.dll", SetLastError = true)]
+        
+        [DllImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, CharSet = CharSet.Unicode, BestFitMapping = false)]
         public extern static IntPtr CreateFile(string FileName, uint DesiredAccess,
             uint ShareMode, IntPtr lpSecurityAttributes,
             uint CreationDisposition, uint dwFlagsAndAttributes,

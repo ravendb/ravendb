@@ -115,13 +115,11 @@ namespace Raven.Server.Routing
                 }
 
                 var status = RavenServer.AuthenticationStatus.ClusterAdmin;
-                bool authResult = true;
                 try
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database, out status);
-                        if (authResult == false)
+                        if (TryAuthorize(tryMatch.Value, context, reqCtx.Database, out status) == false)
                             return;
                     }
                 }
@@ -138,12 +136,29 @@ namespace Raven.Server.Routing
                         }
 
                         if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency && 
-                            skipAuthorization == false && 
-                            authResult && 
-                            status != RavenServer.AuthenticationStatus.ClusterAdmin)
+                            skipAuthorization == false)
                         {
-                            _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
-                            _lastAuthorizedNonClusterAdminRequestTime = now;
+                            switch (status)
+                            {
+                                case RavenServer.AuthenticationStatus.Allowed:
+                                case RavenServer.AuthenticationStatus.Operator:
+                                {
+                                    _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
+                                    _lastAuthorizedNonClusterAdminRequestTime = now;
+                                    break;
+                                }
+                                case RavenServer.AuthenticationStatus.None:
+                                case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                                case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
+                                case RavenServer.AuthenticationStatus.ClusterAdmin:
+                                case RavenServer.AuthenticationStatus.Expired:
+                                case RavenServer.AuthenticationStatus.NotYetValid:
+                                    break;
+                                default:
+                                    ThrowUnknownAuthStatus(status);
+                                    break;
+                            }
                         }
                     }
                 }
@@ -337,6 +352,11 @@ namespace Raven.Server.Routing
         private static void ThrowUnknownAuthStatus(RouteInformation route)
         {
             throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
+        }
+
+        private static void ThrowUnknownAuthStatus(RavenServer.AuthenticationStatus status)
+        {
+            throw new ArgumentOutOfRangeException("Unknown auth status: " + status);
         }
 
         public static void UnlikelyFailAuthorization(HttpContext context, string database,
