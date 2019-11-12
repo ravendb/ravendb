@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron.Impl;
 
@@ -14,13 +15,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
     public class OutputReduceIndexWriteOperation : IndexWriteOperation
     {
         private readonly OutputReduceToCollectionCommand _outputReduceToCollectionCommand;
+        private readonly TransactionHolder _txHolder;
 
         public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
             LuceneIndexPersistence persistence, JsonOperationContext indexContext)
             : base(index, directory, converter, writeTransaction, persistence)
         {
             Debug.Assert(index.OutputReduceToCollection != null);
-            _outputReduceToCollectionCommand = index.OutputReduceToCollection.CreateCommand(indexContext, writeTransaction);
+            _txHolder = new TransactionHolder(writeTransaction);
+            _outputReduceToCollectionCommand = index.OutputReduceToCollection.CreateCommand(indexContext, _txHolder);
         }
 
         public override void Commit(IndexingStatsScope stats)
@@ -28,7 +31,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             _outputReduceToCollectionCommand.SetIndexingStatsScope(stats);
 
             var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
-            base.Commit(stats);
+
+            using (_txHolder.AcquireTransaction(out _))
+            {
+                base.Commit(stats);
+            }
+
             try
             {
                 using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
