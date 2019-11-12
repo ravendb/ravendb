@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Auto
 
                 var document = (Document)_itemsEnumerator.Current.Item;
                 _results[0] = document;
-                etag = document.Etag;
+                etag = document?.Etag;
                 resultsOfCurrentDocument = _results;
 
                 return moveNext;

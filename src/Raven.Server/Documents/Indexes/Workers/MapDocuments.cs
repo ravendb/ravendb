@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 {
                                     if (itemEnumerator.MoveNext(out IEnumerable mapResults, out var etag) == false)
                                     {
-                                        if (etag.HasValue)
+                                        if (etag > lastEtag)
                                             lastEtag = etag.Value;
 
                                         collectionStats.RecordMapCompletedReason("No more documents to index");
