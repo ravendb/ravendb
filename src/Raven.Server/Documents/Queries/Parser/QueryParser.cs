@@ -1322,7 +1322,9 @@ namespace Raven.Server.Documents.Queries.Parser
             if (_timeSeriesParser.Scanner.TryScan('{') == false)
                 ThrowParseException($"Failed to find opening parentheses {{ for {name.Value}");
 
-            var timeSeriesFunction = _timeSeriesParser.ParseTimeSeriesBody(name.Value, parameters?[0]?.ToString());
+            //var root = (parameters?[0] as FieldExpression)?.FieldValue;
+
+            var timeSeriesFunction = _timeSeriesParser.ParseTimeSeriesBody(name.Value);
 
             if (_timeSeriesParser.Scanner.TryScan('}') == false)
                 ThrowParseException($"Failed to find opening parentheses }} for {name.Value}");
@@ -1545,25 +1547,29 @@ namespace Raven.Server.Documents.Queries.Parser
 
                         if (compound.Count > 1)
                         {
-                            var items = new List<StringSegment>();
-
                             if (query?.From.Alias != null)
                             {
                                 // todo aviv - is this really needed? 
 
-                                items.Add(query.From.Alias.Value);
+                                args.Add(new FieldExpression(new List<StringSegment> {query.From.Alias.Value}));
 
                                 if (query.From.Alias.Value != compound[0])
                                 {
-                                    items.Add(compound[0]);
+                                    args.Add(new FieldExpression(new List<StringSegment>
+                                    {
+                                        compound[0]
+                                    }));
                                 }
                             }
                             else
                             {
-                                items.Add(compound[0]);
+                                args.Add(new FieldExpression(new List<StringSegment>
+                                {
+                                    compound[0]
+                                }));
                             }
 
-                            args.Add(new FieldExpression(items));
+                            func.Parameters = args;
                         }
 
                         expr = new MethodExpression(func.Name, args);

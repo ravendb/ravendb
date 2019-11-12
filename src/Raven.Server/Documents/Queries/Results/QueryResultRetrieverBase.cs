@@ -22,11 +22,13 @@ using Raven.Server.Utils;
 using Sparrow;
 using System.Globalization;
 using System.Buffers.Text;
+using System.Dynamic;
 using System.Linq.Expressions;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TimeSeries;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
+using ExpressionType = Raven.Server.Documents.Queries.AST.ExpressionType;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -746,12 +748,14 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (compound.Count > 1)
             {
-                source = ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
 
-                if (args.Length < declaredFunction.Parameters.Count)
+                if (args == null || args.Length < declaredFunction.Parameters.Count)
                 {
                     throw new ArgumentException($"Failed"); //todo aviv
                 }
+
+                source = ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
+
 
                 int index;
                 for (index = 0; index < declaredFunction.Parameters.Count; index++)
@@ -770,36 +774,18 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new ArgumentException($"Failed"); //todo aviv
                 }
 
-                if (index == 0)
+                if (!(args[index] is Document document))
                 {
-                    if (args[0] is Document document)
-                    {
-                        documentId = document.Id;
-                    }
-
-/*                    else
-                    {
-                        Document arg = ((Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?>)args[0])?.Item1;
-                        documentId = arg?.Id;
-                    }*/
-
-
-                }
-
-                else
-                {
-                    if (!(args[index] is Document document))
+                    if (index != 0)
                     {
                         throw new ArgumentException($"Failed"); //todo aviv
                     }
-
+                }
+                else
+                {
                     documentId = document.Id;
 
                 }
-
-
-
-
             }
 
 /*            if (args?.Length > 0 && args[0] is Document documentArgument)
@@ -821,12 +807,12 @@ namespace Raven.Server.Documents.Queries.Results
             var min = GetDateValue(timeSeriesFunction.Between.Min) ?? DateTime.MinValue;
             var max = GetDateValue(timeSeriesFunction.Between.Max) ?? DateTime.MaxValue;
 
-/*            BinaryExpression filter = default;
+            BinaryExpression filter = default;
 
             if (timeSeriesFunction.Where != null)
             {
                 filter = (BinaryExpression)timeSeriesFunction.Where;
-            }*/
+            }
 
             if (timeSeriesFunction.GroupBy == null)
             {
@@ -836,8 +822,8 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var singleResult in reader2.AllValues())
                 {
-/*                    if (Filter(filter, singleResult))
-                        continue;*/
+                    if (Filter(filter, singleResult))
+                        continue;
 
                     var vals = new DynamicJsonArray();
                     for (var index = 0; index < singleResult.Values.Span.Length; index++)
@@ -964,6 +950,64 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+        private object GetValue(QueryExpression expression, SingleResult singleResult)
+        {
+            if (expression is FieldExpression fe)
+            {
+                if (fe.Compound.Count == 1)
+                {
+                    switch (fe.FieldValue)
+                    {
+                        case "Tag":
+                            return singleResult.Tag.ToString();
+                        case "Values":
+                            return singleResult.Values;
+                        case "Timestamp":
+                            return singleResult.TimeStamp;
+                        default:
+                            throw new ArgumentException("Unknown where "); // todo
+                    }
+                }
+
+                if (fe.Compound[0] == "Values")
+                {
+                    // todo aviv
+
+                    if (fe.Compound.Count > 2)
+                    {
+                        throw new ArgumentException("Failed");
+                    }
+
+                    if (int.TryParse(fe.Compound[1].Value, out var index) == false)
+                    {
+                        throw new ArgumentException("Failed");
+                    }
+
+                    if (index >= singleResult.Values.Length)
+                    {
+                        throw new ArgumentException("Failed");
+                    }
+
+                    return singleResult.Values.ToArray()[index];
+
+                }
+                else
+                {
+                    // todo aviv
+                }
+            }
+
+            if (expression is ValueExpression ve)
+            {
+                return ve.Value == ValueTokenType.String 
+                    ? ve.Token.Value : 
+                    ve.GetValue(_query.QueryParameters);
+            }
+
+            return null;
+
+        }
+
         private bool Filter(BinaryExpression be, SingleResult singleResult)
         {
             if (be == null)
@@ -972,80 +1016,42 @@ namespace Raven.Server.Documents.Queries.Results
             switch (be.Operator)
             {
                 case OperatorType.And:
-                    return Filter((BinaryExpression)be.Left, singleResult) == false || 
+                    return Filter((BinaryExpression)be.Left, singleResult) || 
                            Filter((BinaryExpression)be.Right, singleResult);
                 case OperatorType.Or:
                     return Filter((BinaryExpression)be.Left, singleResult) == false &&
                            Filter((BinaryExpression)be.Right, singleResult) == false;
             }
 
-            object left = default;
-            object right;
+            dynamic left = GetValue(be.Left, singleResult);
+            dynamic right = GetValue(be.Right, singleResult);
 
-            if (!(be.Left is FieldExpression fe))
-                throw new ArgumentException(""); // todo
-
-            if (fe.Compound.Count > 1)
-            {
-            }
-
-            else
-            {
-                switch (fe.FieldValue)
-                {
-                    case "Tag":
-                        left = singleResult.Tag.ToString();
-                        break;
-                    case "Values":
-                        left = singleResult.Values;
-                        break;
-                    case "Timestamp":
-                        left = singleResult.TimeStamp;
-                        break;
-                    default:
-                        throw new ArgumentException("Unknown where "); // todo
-                }
-            }
-
-
-            if (!(be.Right is ValueExpression ve))
-                throw new ArgumentException(""); // todo
-
-            if (ve.Value == ValueTokenType.String)
-            {
-                right = ve.Token.Value;
-            }
-            else
-            {
-                right = ve.GetValue(_query.QueryParameters);
-            }
-
+            bool result;
             switch (be.Operator)
             {
                 case OperatorType.Equal:
-                    return Equals(left, right) == false;
+                    result = Equals(left, right);
+                    break;
                 case OperatorType.NotEqual:
-                    return Equals(left, right);
-
-/*                            case OperatorType.LessThan:
-                                result = left < right;
-                                break;
-                            case OperatorType.GreaterThan:
-                                result = left > right;
-                                break;
-                            case OperatorType.LessThanEqual:
-                                result = left <= right;
-                                break;
-                            case OperatorType.GreaterThanEqual:
-                                result = left >= right;
-                                break;*/
-                            case OperatorType.And:
-/*                                return (bool)left == false || (bool)right == false;
-                            case OperatorType.Or:
-                                return (bool)left == false && (bool)right == false;*/
+                    result = Equals(left, right) == false;
+                    break;
+                case OperatorType.LessThan:
+                    result = left < right;
+                    break;
+                case OperatorType.GreaterThan:
+                    result = left > right;
+                    break;
+                case OperatorType.LessThanEqual:
+                    result = left <= right;
+                    break;
+                case OperatorType.GreaterThanEqual:
+                    result = left >= right;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            return result == false;
         }
 
         private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
