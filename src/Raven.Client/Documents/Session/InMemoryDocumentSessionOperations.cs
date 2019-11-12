@@ -1307,7 +1307,7 @@ more responsive application.
 
             var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
             if (asyncTasksCounter != 0)
-                throw new InvalidOperationException($"Disposing session with active async task is forbidden. Number of active async tasks: {asyncTasksCounter}");
+                throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
 
             _isDisposed = true;
 
@@ -1919,7 +1919,15 @@ more responsive application.
         public AsyncTaskHolder(InMemoryDocumentSessionOperations session)
         {
             _session = session;
-            Interlocked.Increment(ref _session._asyncTasksCounter);
+
+            if (Interlocked.Read(ref _session._asyncTasksCounter) == 0)
+            {
+                Interlocked.Increment(ref _session._asyncTasksCounter);
+            }
+            else
+            {
+                throw new InvalidOperationException("Concurrent usage of async tasks in async session is forbidden, please make sure that async session doesn't execute async methods concurrently.");
+            }
         }
 
         public void Dispose()
