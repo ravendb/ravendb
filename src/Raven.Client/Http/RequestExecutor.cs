@@ -40,6 +40,9 @@ namespace Raven.Client.Http
     {
         private const int InitialTopologyEtag = -2;
 
+
+        protected internal const int TopologyUpdateAfterFailoverFailoverTimeout = 60 * 1000;
+
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
@@ -1238,7 +1241,7 @@ namespace Raven.Client.Http
                     if (command.FailedNodes.ContainsKey(node))
                     {
                         // we tried all the nodes, let's try to update topology and retry one more time
-                        var success = await UpdateTopologyAsync(chosenNode, 60 * 1000, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
+                        var success = await UpdateTopologyAsync(chosenNode, TopologyUpdateAfterFailoverFailoverTimeout, forceUpdate: true, debugTag: "handle-unsuccessful-response").ConfigureAwait(false);
 
                         if (success == false)
                             return false;

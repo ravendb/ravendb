@@ -54,15 +54,18 @@ namespace RachisTests
         [Theory]        
         [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/3,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]        
         [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/3,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
-        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
-        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
+        //[InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
+        //[InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
         //[InlineData(/*subscriptionsChainSize:*/3,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
         public async Task SubscriptionsShouldFailoverAndReturnToOriginalNodes(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldMaintainElectionTimeout)
         {
             const int SubscriptionsCount = 20;
             const int DocsBatchSize = 10;
             var cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
-            
+
+            Console.WriteLine(cluster.Leader.WebUrl);
+            Console.WriteLine("Press 'any' key");
+            Console.ReadLine();
             using (var cdeArray = new CountdownsArray(subscriptionsChainSize, SubscriptionsCount))
             using (var store = GetDocumentStore(new Options
             {
@@ -99,7 +102,8 @@ namespace RachisTests
                         if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
                             break;
                     }
-
+                    Console.WriteLine("Mercy killings");
+                    
                     await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, shouldMaintainElectionTimeout);                    
                 }
 

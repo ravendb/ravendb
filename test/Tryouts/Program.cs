@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using RachisTests;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
@@ -27,9 +28,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_13940(testOutputHelper))
+                    using (var test = new SubscriptionFailoverWithWaitingChains(testOutputHelper))
                     {
-                        test.CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet();
+                        test.SubscriptionsShouldFailoverAndReturnToOriginalNodes(2,5,3,true).Wait();
                     }
                 }
                 catch (Exception e)

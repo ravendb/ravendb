@@ -625,6 +625,9 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                         if (ShouldTryToReconnect(ex))
                         {
+                            var reqEx = _store.GetRequestExecutor(_dbName);
+
+                            await _store.GetRequestExecutor(_dbName).UpdateTopologyAsync(reqEx.TopologyNodes.OrderBy(x => Guid.NewGuid()).First(), RequestExecutor.TopologyUpdateAfterFailoverFailoverTimeout, true).ConfigureAwait(false);
                             await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
                             var onSubscriptionConnectionRetry = OnSubscriptionConnectionRetry;
                             onSubscriptionConnectionRetry?.Invoke(ex);
