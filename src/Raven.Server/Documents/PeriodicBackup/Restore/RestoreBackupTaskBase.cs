@@ -41,12 +41,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTaskBase>("Server");
 
         private readonly ServerStore _serverStore;
-        protected readonly RestoreBackupConfigurationBase RestoreFromConfiguration;//protect for using in GetFilesForRestore()
         private readonly string _nodeTag;
         private readonly OperationCancelToken _operationCancelToken;
         private bool _hasEncryptionKey;
         private readonly bool _restoringToDefaultDataDirectory;
 
+        public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
+        
         protected RestoreBackupTaskBase(ServerStore serverStore,
             RestoreBackupConfigurationBase restoreFromConfiguration,
             string nodeTag,
@@ -56,11 +57,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreFromConfiguration = restoreFromConfiguration;
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
-
-            if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.DatabaseName))
-                throw new ArgumentException("Database name can't be null or empty");
-
-            if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, _serverStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            
+            var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) ?
+                                       _serverStore.Configuration.Core.DataDirectory.FullPath :
+                                       PathUtil.ToFullPath(RestoreFromConfiguration.DataDirectory, _serverStore.Configuration.Core.DataDirectory.FullPath);
+            
+            if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
             _serverStore.EnsureNotPassive();
@@ -88,9 +90,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var hasRestoreDataDirectory = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) == false;
             if (hasRestoreDataDirectory &&
-                HasFilesOrDirectories(RestoreFromConfiguration.DataDirectory))
+                HasFilesOrDirectories(dataDirectoryThatWillBeUsed))
                 throw new ArgumentException("New data directory must be empty of any files or folders, " +
-                                            $"path: {RestoreFromConfiguration.DataDirectory}");
+                                            $"path: {dataDirectoryThatWillBeUsed}");
 
             if (hasRestoreDataDirectory == false)
                 RestoreFromConfiguration.DataDirectory = GetDataDirectory();
@@ -535,6 +537,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
         }
+        
         private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
         {
             var defaultDataDirectory = RavenConfiguration.GetDataDirectoryPath(

@@ -45,7 +45,7 @@ namespace Raven.Client.Util
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                errorMessage = "An empty name is forbidden for use!";
+                errorMessage = "Name cannot be null or empty.";
                 return false;
             }
             if (IsValidName(name, ValidIndexNameCharactersRegex) == false)
