@@ -40,20 +40,24 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
-            if (_referencedCollections.Count > 0)
-                DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
+            if (documentDatabase == null)
+                return;
 
-            if (DocumentDatabase != null)
-                DocumentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
+            if (_referencedCollections.Count > 0)
+                documentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
+
+            documentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
         }
 
         protected override void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
-            if (_referencedCollections.Count > 0)
-                DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+            if (documentDatabase == null)
+                return;
 
-            if (DocumentDatabase != null)
-                DocumentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
+            if (_referencedCollections.Count > 0)
+                documentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
+
+            documentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
         }
 
         protected override void HandleDocumentChange(DocumentChange change)

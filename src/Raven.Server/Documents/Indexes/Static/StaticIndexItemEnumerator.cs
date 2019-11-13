@@ -42,8 +42,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (_multipleIndexingFunctionsEnumerator == null)
                         _multipleIndexingFunctionsEnumerator = new Dictionary<string, MultipleIndexingFunctionsEnumerator<TType>>(StringComparer.OrdinalIgnoreCase);
 
-                    _multipleIndexingFunctionsEnumerator[kvp.Key] = new MultipleIndexingFunctionsEnumerator<TType>(kvp.Value, new DynamicIteratorOfCurrentItemWrapper<TType>(this));
-                    _resultsOfCurrentDocument[kvp.Key] = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
+                    var multipleIndexingFunctionsEnumerator = _multipleIndexingFunctionsEnumerator[kvp.Key] = new MultipleIndexingFunctionsEnumerator<TType>(kvp.Value, new DynamicIteratorOfCurrentItemWrapper<TType>(this));
+                    _resultsOfCurrentDocument[kvp.Key] = new TimeCountingEnumerable(multipleIndexingFunctionsEnumerator, mapFuncStats);
                 }
             }
 
