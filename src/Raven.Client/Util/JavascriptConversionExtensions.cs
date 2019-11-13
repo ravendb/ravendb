@@ -837,7 +837,7 @@ namespace Raven.Client.Util
                     context.PreventDefault();
                     context.Visitor.Visit(expr);
                     return;
-                }   
+                }
 
 
                 if (!(context.Node is MemberExpression memberExpression) || 
@@ -1555,7 +1555,8 @@ namespace Raven.Client.Util
                         {
                             writer.Write("Date.parse(");
                             context.Visitor.Visit(memberExpression.Expression);
-                            writer.Write($".{memberExpression.Member.Name}");
+                            if (memberExpression.Expression.Type.IsNullableType() == false)
+                                writer.Write($".{memberExpression.Member.Name}");
                             writer.Write(")");
                         }
 
@@ -1564,29 +1565,34 @@ namespace Raven.Client.Util
                         switch (node.Member.Name)
                         {
                             case "Year":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCFullYear()" : ".getFullYear()");
+                                writer.Write(IsUtc() ? ".getUTCFullYear()" : ".getFullYear()");
                                 break;
                             case "Month":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMonth()+1" : ".getMonth()+1");
+                                writer.Write(IsUtc() ? ".getUTCMonth()+1" : ".getMonth()+1");
                                 break;
                             case "Day":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCDate()" : ".getDate()");
+                                writer.Write(IsUtc() ? ".getUTCDate()" : ".getDate()");
                                 break;
                             case "Hour":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCHours()" : ".getHours()");
+                                writer.Write(IsUtc() ? ".getUTCHours()" : ".getHours()");
                                 break;
                             case "Minute":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMinutes()" : ".getMinutes()");
+                                writer.Write(IsUtc() ? ".getUTCMinutes()" : ".getMinutes()");
                                 break;
                             case "Second":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCSeconds()" : ".getSeconds()");
+                                writer.Write(IsUtc() ? ".getUTCSeconds()" : ".getSeconds()");
                                 break;
                             case "Millisecond":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMilliseconds()" : ".getMilliseconds()");
+                                writer.Write(IsUtc() ? ".getUTCMilliseconds()" : ".getMilliseconds()");
                                 break;
                             case "Ticks":
                                 writer.Write(".getTime()*10000");
                                 break;
+                        }
+
+                        bool IsUtc()
+                        {
+                            return memberExpression.Member.Name == "UtcNow";
                         }
                     }
                 }
