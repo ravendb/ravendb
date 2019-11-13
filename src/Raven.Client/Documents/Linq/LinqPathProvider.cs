@@ -113,7 +113,6 @@ namespace Raven.Client.Documents.Linq
                 return GetPath(memberExpression.Expression);
             }
 
-
             AssertNoComputation(memberExpression);
 
             var result = new Result
@@ -166,8 +165,13 @@ namespace Raven.Client.Documents.Linq
             if (memberExpression.Expression is MemberExpression innerMemberExpression)
             {
                 var innerName = name.Substring(0, name.Length - member.Name.Length - 1);
-                innerName = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName);
-                name = $"{innerName}.{member.Name}";
+                name = HandleMemberExpressionPropertyRenames(innerMemberExpression, innerName);
+
+                if (member.Name != "Value" ||
+                    Nullable.GetUnderlyingType(memberExpression.Expression.Type) == null)
+                {
+                    name += $".{member.Name}";
+                }
             }
 
             return HandlePropertyRenames(member, name);

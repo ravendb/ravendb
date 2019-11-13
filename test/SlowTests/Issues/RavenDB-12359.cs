@@ -171,9 +171,53 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void NullableDateTimeValueProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var now = DateTime.UtcNow;
+                    var sinceBirth = now - new DateTime(1985, 8, 13);
+                    newSession.Store(new Person
+                    {
+                        BirthDate = now,
+                        SinceBirth = sinceBirth
+                    });
+                    newSession.SaveChanges();
+
+                    var query = newSession.Query<Person>()
+                        .Select(x => new Projection
+                        {
+                            BirthDay = x.BirthDate.Value.Day,
+                            BirthMonth = x.BirthDate.Value.Month,
+                            BirthYear = x.BirthDate.Value.Year,
+                            SinceBirthTotalMilliseconds = x.SinceBirth.Value.TotalMilliseconds
+                        });
+
+                    var queryString = query.ToString();
+                    Assert.Equal("from People select " +
+                                 "BirthDate.Day as BirthDay, " +
+                                 "BirthDate.Month as BirthMonth, " +
+                                 "BirthDate.Year as BirthYear, " +
+                                 "SinceBirth.TotalMilliseconds as SinceBirthTotalMilliseconds", queryString);
+
+                    var list = query.ToList();
+                    Assert.Equal(1, list.Count);
+                    Assert.Equal(now.Day, list[0].BirthDay);
+                    Assert.Equal(now.Month, list[0].BirthMonth);
+                    Assert.Equal(now.Year, list[0].BirthYear);
+                    Assert.Equal(sinceBirth.TotalMilliseconds, list[0].SinceBirthTotalMilliseconds);
+                }
+            }
+        }
+
         private class Person
         {
             public DateTime? BirthDate { get; set; }
+
+            public TimeSpan? SinceBirth { get; set; }
         }
 
         private class Projection
@@ -183,6 +227,8 @@ namespace SlowTests.Issues
             public int? BirthMonth { get; set; }
 
             public int? BirthYear { get; set; }
+
+            public double SinceBirthTotalMilliseconds { get; set; }
         }
     }
 }
