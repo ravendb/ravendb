@@ -239,13 +239,11 @@ namespace Raven.Server.Documents
             var writePos = ptr + maxStrSize;
 
             Debug.Assert(strLength <= originalMaxStrSize, $"Calculated {nameof(originalMaxStrSize)} value {originalMaxStrSize}, was smaller than actually {nameof(strLength)} value {strLength}");
+
+            // in case there were no control characters the idSize could be smaller
             var sizeDifference = idSize - JsonParserState.VariableSizeIntSize(strLength);
-            if (sizeDifference > 0)
-            {
-                // in case there were no control characters the idSize could be smaller
-                writePos += sizeDifference;
-                idSize -= sizeDifference;
-            }
+            writePos += sizeDifference;
+            idSize -= sizeDifference;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
             escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
