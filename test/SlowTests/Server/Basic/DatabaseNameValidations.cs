@@ -42,26 +42,26 @@ namespace SlowTests.Server.Basic
                 Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.ForDatabase(validDbName2).Send(new GetStatisticsOperation()));
 
                 // Invalid database names:
-                var InvalidDbName3 = "._.-._-567";
+                var invalidDbName3 = "._.-._-567";
                 var e = Assert.Throws<InvalidOperationException>(() =>
-                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(InvalidDbName3))));
-                Assert.Contains("The name '._.-._-567' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.",
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(invalidDbName3))));
+                Assert.Contains($"The name '{invalidDbName3}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.",
                     e.Message);
 
-                var InvalidDbName4 = "";
+                var invalidDbName4 = "";
                 e = Assert.Throws<InvalidOperationException>(() =>
-                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(InvalidDbName4))));
-                Assert.Contains("An empty name is forbidden for use!", e.Message);
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(invalidDbName4))));
+                Assert.Contains("Name cannot be null or empty.", e.Message);
 
-                var InvalidDbName5 = "123*_&*^(ABC)$#";
+                var invalidDbName5 = "123*_&*^(ABC)$#";
                 e = Assert.Throws<InvalidOperationException>(() =>
-                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(InvalidDbName5))));
-                Assert.Contains("The name '123*_&*^(ABC)$#' is not permitted. Only letters, digits and characters ('_', '-', '.') are allowed.", e.Message);
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(invalidDbName5))));
+                Assert.Contains($"The name '{invalidDbName5}' is not permitted. Only letters, digits and characters ('_', '-', '.') are allowed.", e.Message);
 
-                var InvalidDbName6 = "lpt1";
+                var invalidDbName6 = "lpt1";
                 e = Assert.Throws<InvalidOperationException>(() =>
-                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(InvalidDbName6))));
-                Assert.Contains("The name 'lpt1' is forbidden for use!", e.Message);
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(invalidDbName6))));
+                Assert.Contains($"The name '{invalidDbName6}' is forbidden for use!", e.Message);
             }
         }
     }

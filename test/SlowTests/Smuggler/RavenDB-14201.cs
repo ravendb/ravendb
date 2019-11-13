@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Config.Settings;
@@ -36,6 +37,23 @@ namespace SlowTests.Smuggler
                     Assert.Equal(1059, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes);
                 }
+            }
+        }
+        
+        [NonLinuxFact]
+        public async Task DatabaseNameValidation()
+        {
+            string dataDir = UnzipTheZips("SampleDataEsent.zip", out PathSetting storageExplorer);
+            var invalidDbName = "abc(123)@.*.456";
+            var db = new DatabaseRecord(invalidDbName);
+            
+            var config = new OfflineMigrationConfiguration(dataDir, storageExplorer.FullPath, db);
+            
+            using (var store = GetDocumentStore(new Options() { CreateDatabase = false }))
+            {
+                var e = await Assert.ThrowsAsync<BadRequestException>(() => store.Maintenance.Server.SendAsync(new OfflineMigrationOperation(config)));
+                Assert.Contains($"The name '{invalidDbName}' is not permitted. Only letters, digits and characters ('_', '-', '.') are allowed.",
+                    e.Message);
             }
         }
 

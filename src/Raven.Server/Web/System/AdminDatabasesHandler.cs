@@ -119,15 +119,15 @@ namespace Raven.Server.Web.System
             var mentor = GetStringQueryString("mentor", false);
             var raftRequestId = GetRaftRequestIdFromQuery();
 
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
+                if (databaseRecord == null)
+                {
+                    throw new InvalidOperationException("Database Record not found when trying to add a node to the database topology");
+                }
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
 
@@ -224,51 +224,52 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
             var raftRequestId = GetRaftRequestIdFromQuery();
-
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-            {
-                var clientCert = GetCurrentCertificate();
-
-                var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                auditLog.Info($"Database {name} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
-            }
-
+            
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var index = GetLongFromHeaders("ETag");
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
-                var json = context.ReadForDisk(RequestBodyStream(), name);
+                var json = context.ReadForDisk(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+                
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
-
-                if (string.IsNullOrWhiteSpace(databaseRecord.DatabaseName))
-                    throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
-                databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
-
-                if (databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir))
+                
+                // Validate Directory
+                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ?
+                                         ServerStore.Configuration.Core.DataDirectory.FullPath : PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
+                
+                if (string.IsNullOrWhiteSpace(dir) == false)
                 {
-                    var requestedDirectory = PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
-
                     if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
                     {
-                        if (PathUtil.IsSubDirectory(requestedDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                        if (PathUtil.IsSubDirectory(dataDirectoryThatWillBeUsed, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
                         {
-                            throw new ArgumentException($"The administrator has restricted databases to be created only under the DataDir '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{requestedDirectory}'.");
+                            throw new ArgumentException($"The administrator has restricted databases to be created only under the DataDir '{ServerStore.Configuration.Core.DataDirectory.FullPath}'" +
+                                                        $" but the actual requested path is '{dataDirectoryThatWillBeUsed}'.");
                         }
                     }
 
-                    if (DataDirectoryInfo.CanAccessPath(requestedDirectory, out var error) == false)
+                    if (DataDirectoryInfo.CanAccessPath(dataDirectoryThatWillBeUsed, out var error) == false)
                     {
-                        throw new InvalidOperationException($"Cannot access path '{requestedDirectory}'. {error}");
+                        throw new InvalidOperationException($"Cannot access path '{dataDirectoryThatWillBeUsed}'. {error}");
                     }
+                }
+                
+                // Validate Name
+                databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
+                if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
+                    throw new BadRequestException(errorMessage);
+               
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
@@ -279,17 +280,16 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord.Encrypted && databaseRecord.Topology?.DynamicNodesDistribution == true)
                 {
-                    throw new InvalidOperationException($"Cannot enable '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + name);
+                    throw new InvalidOperationException($"Cannot enable '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + databaseRecord.DatabaseName);
                 }
 
-                if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
+                if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(databaseRecord.DatabaseName) == false)
                 {
-                    using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
+                    using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(databaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
                         RecreateIndexes(databaseRecord);
                 }
 
-
-                var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index, raftRequestId);
+                var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -298,7 +298,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
-                        [nameof(DatabasePutResult.Name)] = name,
+                        [nameof(DatabasePutResult.Name)] = databaseRecord.DatabaseName,
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
                         [nameof(DatabasePutResult.NodesAddedTo)] = nodeUrlsAddedTo
                     });
@@ -371,9 +371,7 @@ namespace Raven.Server.Web.System
                         index?.Dispose();
                     }
                 }
-
             }
-
         }
 
         private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index, string raftRequestId)
@@ -610,7 +608,6 @@ namespace Raven.Server.Web.System
                             cancelToken);
                         databaseName = await ValidateFreeSpace(localConfiguration, context, restoreBackupTask);
                         break;
-
                     case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
                         restoreBackupTask = new RestoreFromS3(
@@ -619,7 +616,6 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         databaseName = await ValidateFreeSpace(s3Configuration, context, restoreBackupTask);
-
                         break;
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
@@ -629,7 +625,6 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         databaseName = await ValidateFreeSpace(azureConfiguration,  context, restoreBackupTask);
-
                         break;      
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
@@ -639,7 +634,6 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         databaseName = await ValidateFreeSpace(googlCloudConfiguration,  context, restoreBackupTask);
-
                         break;
 
                     default:
@@ -1055,9 +1049,6 @@ namespace Raven.Server.Web.System
             if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
                 return;
 
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -1242,15 +1233,20 @@ namespace Raven.Server.Web.System
             }
 
             var dataDir = configuration.DataDirectory;
-            OfflineMigrationConfiguration.ValidateDataDirectory(dataDir);
+            var dataDirectoryThatWillBeUsed =  string.IsNullOrWhiteSpace(dataDir) ? 
+                                               ServerStore.Configuration.Core.DataDirectory.FullPath :
+                                               PathUtil.ToFullPath(dataDir, ServerStore.Configuration.Core.DataDirectory.FullPath); 
+            
+            OfflineMigrationConfiguration.ValidateDataDirectory(dataDirectoryThatWillBeUsed);
+            
             var dataExporter = OfflineMigrationConfiguration.EffectiveDataExporterFullPath(configuration.DataExporterFullPath);
             OfflineMigrationConfiguration.ValidateExporterPath(dataExporter);
 
-            if (IOExtensions.EnsureReadWritePermissionForDirectory(dataDir) == false)
-                throw new IOException($"Could not access {dataDir}");
+            if (IOExtensions.EnsureReadWritePermissionForDirectory(dataDirectoryThatWillBeUsed) == false)
+                throw new IOException($"Could not access {dataDirectoryThatWillBeUsed}");
 
             var databaseName = configuration.DatabaseRecord.DatabaseName;
-            if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(databaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
