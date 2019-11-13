@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System;
+using FastTests;
 using Raven.Client.Documents;
 using System.Linq;
 using Xunit;
@@ -132,6 +133,56 @@ namespace SlowTests.Issues
                     Assert.True(results[1].HasValue);
                 }
             }
+        }
+
+        [Fact]
+        public void NullableDateTimeProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var now = DateTime.UtcNow;
+                    newSession.Store(new Person
+                    {
+                        BirthDate = now
+                    });
+                    newSession.SaveChanges();
+
+                    var query = newSession.Query<Person>()
+                        .Select(x => new Projection
+                        {
+                            BirthDay = x.BirthDate != null ? x.BirthDate.Value.Day : (int?)null,
+                            BirthMonth = x.BirthDate != null ? x.BirthDate.Value.Month : (int?)null,
+                            BirthYear = x.BirthDate != null ? x.BirthDate.Value.Year : (int?)null
+                        });
+
+                    var queryString = query.ToString();
+                    Assert.Equal("from People as x select { BirthDay : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getDate():null, " +
+                                 "BirthMonth : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getMonth()+1:null, " +
+                                 "BirthYear : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getFullYear():null }", queryString);
+
+                    var list = query.ToList();
+                    Assert.Equal(1, list.Count);
+                    Assert.Equal(now.Day, list[0].BirthDay);
+                    Assert.Equal(now.Month, list[0].BirthMonth);
+                    Assert.Equal(now.Year, list[0].BirthYear);
+                }
+            }
+        }
+
+        private class Person
+        {
+            public DateTime? BirthDate { get; set; }
+        }
+
+        private class Projection
+        {
+            public int? BirthDay { get; set; }
+
+            public int? BirthMonth { get; set; }
+
+            public int? BirthYear { get; set; }
         }
     }
 }
