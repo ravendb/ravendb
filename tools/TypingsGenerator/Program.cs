@@ -474,6 +474,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
             scripter.AddType(typeof(SorterDefinition));
+            scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
 
             return scripter;
         }

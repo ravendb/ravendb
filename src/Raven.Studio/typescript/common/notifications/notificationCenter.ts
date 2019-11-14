@@ -46,6 +46,7 @@ import notificationCenterSettings = require("common/notifications/notificationCe
 import licenseLimitDetails = require("viewmodels/common/notificationCenter/detailViewer/licenseLimitDetails");
 import requestLatencyDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/requestLatencyDetails");
 import transactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/transactionCommandsDetails");
+import dumpRawIndexDataDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/dumpRawIndexDataDetails");
 
 
 interface detailsProvider {
@@ -134,6 +135,7 @@ class notificationCenter {
             compactDatabaseDetails,
             replayTransactionCommandsDetails,
             transactionCommandsDetails,
+            dumpRawIndexDataDetails,
             
             // virtual operations:
             virtualBulkInsertDetails,

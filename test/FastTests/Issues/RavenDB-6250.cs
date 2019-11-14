@@ -48,7 +48,8 @@ namespace FastTests.Issues
                 Operations.OperationType.RecordTransactionCommands,
                 Operations.OperationType.ReplayTransactionCommands,
                 Operations.OperationType.DatabaseRevert,
-                Operations.OperationType.EnforceRevisionConfiguration
+                Operations.OperationType.EnforceRevisionConfiguration,
+                Operations.OperationType.DumpRawIndexData
             };
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>
