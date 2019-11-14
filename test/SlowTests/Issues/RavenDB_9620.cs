@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CreateServerWithIllegalAppdrivePath()
         {
-            Assert.IsType(typeof(InvalidOperationException),                
+            Assert.IsType(typeof(ArgumentException),
                 Assert.Throws<Raven.Client.Exceptions.RavenException>(() => 
                 GetDocumentStore(new Options
                 {
