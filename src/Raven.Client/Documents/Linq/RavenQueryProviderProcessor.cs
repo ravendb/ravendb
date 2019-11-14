@@ -1800,7 +1800,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (lambdaExpression.Body is MemberExpression memberExpression)
             {
-                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path)
+                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path, out _)
                         is MethodCallExpression methodCallExpression &&
                     CheckForLoad(methodCallExpression))
                 {

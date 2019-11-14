@@ -260,9 +260,10 @@ namespace Raven.Client.Util
                     && context.Node is MemberExpression memberExpression
                     && memberExpression.Member.Name.In("Value", "Key"))
                 {
-                    var p = GetParameter(memberExpression);
+                    var p = GetParameterAndCheckInternalMemberName(memberExpression, out var hasInternal);
 
-                    if (p?.Name == _paramName 
+                    if (hasInternal == false 
+                        && p?.Name == _paramName
                         && p?.Type.GenericTypeArguments.Length > 0  
                         && p.Type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
                     {
@@ -708,7 +709,7 @@ namespace Raven.Client.Util
 
                         if (memberExpression.Expression is ParameterExpression == false)
                         {
-                            GetInnermostExpression(memberExpression, out var nestedPath);
+                            GetInnermostExpression(memberExpression, out var nestedPath, out _);
                             if (nestedPath != string.Empty)
                             {
                                 path = $"{nestedPath}.{path}";
@@ -2411,14 +2412,23 @@ namespace Raven.Client.Util
 
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
-            return GetInnermostExpression(expression, out _) as ParameterExpression;
+            return GetInnermostExpression(expression, out _, out _) as ParameterExpression;
         }
 
-        public static Expression GetInnermostExpression(MemberExpression expression, out string path)
+        private static ParameterExpression GetParameterAndCheckInternalMemberName(MemberExpression expression, out bool hasInternal)
+        {
+            return GetInnermostExpression(expression, out _, out hasInternal) as ParameterExpression;
+        }
+
+        public static Expression GetInnermostExpression(MemberExpression expression, out string path, out bool hasInternal)
         {
             path = string.Empty;
+            hasInternal = false;
             while (expression.Expression is MemberExpression memberExpression)
             {
+                if (expression.Member.Name.In("Value", "Key"))
+                    hasInternal = true;
+
                 expression = memberExpression;
                 path = path == string.Empty 
                     ? expression.Member.Name 
