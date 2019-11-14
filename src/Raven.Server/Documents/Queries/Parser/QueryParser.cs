@@ -1356,11 +1356,30 @@ namespace Raven.Server.Documents.Queries.Parser
                 ? ReadBetweenExpression(source) 
                 : new BetweenExpression(source, null, null);
 
-
+            StringSegment? loadTagAs = default;
             if (Scanner.TryScan("LOAD"))
             {
-                if (Field(out var load) == false)
-                    ThrowInvalidQueryException($"Failed'"); //todo aviv 
+                var loadExpressions = SelectClauseExpressions("LOAD", false);
+
+                if (loadExpressions.Count != 1)
+                {
+                    ThrowInvalidQueryException($"Failed");
+
+                }
+
+                if (!(loadExpressions[0].Item1 is FieldExpression fe))
+                {
+                    ThrowInvalidQueryException($"Failed");
+                    return null; //never hit
+
+                }
+
+                if (fe.FieldValue != "Tag")
+                {
+                    ThrowInvalidQueryException($"Failed");
+                }
+
+                loadTagAs = loadExpressions[0].Item2;
             }
 
             QueryExpression filter = null;
@@ -1404,6 +1423,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return new TimeSeriesFunction
             {
                 Between = between,
+                LoadTagAs = loadTagAs,
                 Where = filter,
                 GroupBy = groupByExpr,
                 Select = select
