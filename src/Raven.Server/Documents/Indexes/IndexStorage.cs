@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Indexes
             var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
 
             stats.Collections = new Dictionary<string, IndexStats.CollectionStats>();
-            foreach (var collection in _index.Collections)
+            foreach (var collection in _index.Definition.Collections)
             {
                 stats.Collections[collection] = new IndexStats.CollectionStats
                 {

@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private HashSet<Slice> GetReferencesForItem(Slice key)
         {
             if (ReferencesByCollection == null)
-                ReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>();
+                ReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
 
             if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
                 ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());

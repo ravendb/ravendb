@@ -4028,7 +4028,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public struct IndexItem : IDisposable
+    public class IndexItem : IDisposable
     {
         public readonly LazyStringValue Id;
 
@@ -4044,7 +4044,7 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly string IndexingKey;
 
-        public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, string indexingKey, int size, object item) : this()
+        public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, string indexingKey, int size, object item)
         {
             Id = id;
             LowerId = lowerId;

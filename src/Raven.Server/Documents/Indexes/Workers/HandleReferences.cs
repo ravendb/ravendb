@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     continue;
 
                 if (lastIndexedEtagsByCollection == null)
-                    lastIndexedEtagsByCollection = new Dictionary<string, long>();
+                    lastIndexedEtagsByCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
                 if (lastIndexedEtagsByCollection.TryGetValue(collection, out long lastIndexedEtag) == false)
                     lastIndexedEtagsByCollection[collection] = lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
