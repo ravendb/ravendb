@@ -250,10 +250,6 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             var operationId = Database.Operations.GetNextOperationId();
             var token = CreateTimeLimitedQueryOperationToken();
-            var details = new DumpIndexOperationDetails
-            {
-                Index = name,
-            };
 
             Database.Operations.AddOperation(
                 Database,
@@ -264,10 +260,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var totalFiles = index.Dump(path, onProgress);
                     return Task.FromResult((IOperationResult)new DumpIndexResult
                     {
-                        Message = $"Dumping {totalFiles} from {name} in {details.Duration.Elapsed}",
-                        Duration = details.Duration.Elapsed
+                        Message = $"Dumped {totalFiles} files from {name}",
                     });
-                }, operationId, details, token);
+                }, operationId, token: token);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -281,13 +276,11 @@ namespace Raven.Server.Documents.Handlers.Admin
         public class DumpIndexResult : IOperationResult
         {
             public string Message { get; set; }
-            public TimeSpan Duration { get; set; }
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue(GetType())
                 {
                     [nameof(Message)] = Message,
-                    [nameof(Duration)] = Duration
                 };
             }
 
@@ -311,21 +304,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     [nameof(Message)] = Message,
                     [nameof(CurrentFileSizeInBytes)] = CurrentFileSizeInBytes,
                     [nameof(CurrentFileCopiedBytes)] = CurrentFileCopiedBytes
-                };
-            }
-        }
-
-        public class DumpIndexOperationDetails : IOperationDetailedDescription
-        {
-            public string Index { get; set; }
-            public Stopwatch Duration = Stopwatch.StartNew();
-
-            DynamicJsonValue IOperationDetailedDescription.ToJson()
-            {
-                return new DynamicJsonValue(GetType())
-                {
-                    [nameof(Index)] = Index,
-                    [nameof(Duration)] = Duration.Elapsed
                 };
             }
         }
