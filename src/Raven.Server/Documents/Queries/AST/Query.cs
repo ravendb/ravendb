@@ -119,6 +119,7 @@ namespace Raven.Server.Documents.Queries.AST
         public QueryExpression Where;
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
+        public StringSegment? LoadTagAs;
 
         public struct RangeGroup
         {

@@ -2324,6 +2324,114 @@ select out(doc)
 
                 using (var session = store.OpenSession())
                 {
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Fitbit",
+                        Accuracy = 2.5
+                    }, "watches/fitbit");
+
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Apple",
+                        Accuracy = 1.8
+                    }, "watches/apple");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/apple", new[] { 179d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        load Tag as src    
+        where src.Accuracy > 2
+    group by '1 month' 
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+select out(doc)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(3, agg.Count);
+
+                        Assert.Equal(2, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(59, val.Min);
+                        Assert.Equal(69, val.Max);
+                        Assert.Equal(64, val.Avg);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(169, val.Min);
+                        Assert.Equal(169, val.Max);
+                        Assert.Equal(169, val.Avg);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereBetween()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
                     for (int i = 1; i <= 3; i++)
                     {
                         var id = $"people/{i}";
@@ -2354,8 +2462,7 @@ select out(doc)
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
-        load Tag as src    
-        where src.Accuracy > 2
+        where Values[0] between 70 and 160
     group by '1 month' 
     select min(), max(), avg()
 }
