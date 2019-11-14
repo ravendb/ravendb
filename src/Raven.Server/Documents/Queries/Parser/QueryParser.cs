@@ -1353,8 +1353,8 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             var between = Scanner.TryScan("BETWEEN") 
-                ? ReadBetweenExpression(source) 
-                : new BetweenExpression(source, null, null);
+                ? ReadTimeSeriesBetweenExpression(source) 
+                : new TimeSeriesBetweenExpression(source, null, null);
 
             StringSegment? loadTagAs = default;
             if (Scanner.TryScan("LOAD"))
@@ -2057,6 +2057,44 @@ namespace Raven.Server.Documents.Queries.Parser
                     $"Invalid Between expression, values must have the same type but got {fst.Type} and {snd.Type}");
 
             return new BetweenExpression(field, fst, snd);
+        }
+
+
+        private TimeSeriesBetweenExpression ReadTimeSeriesBetweenExpression(FieldExpression field)
+        {
+            QueryExpression minExpression, maxExpression;
+            if (Field(out var f) == false)
+            {
+                if (Value(out var val) == false)
+                    ThrowParseException("parsing Between, expected value (1st)");
+
+                minExpression = val;
+            }
+            else
+            {
+                minExpression = f;
+            }
+
+            if (Scanner.TryScan("AND") == false)
+                ThrowParseException("parsing Between, expected AND");
+
+            if (Field(out f) == false)
+            {
+                if (Value(out var val) == false)
+                    ThrowParseException("parsing Between, expected value (1st)");
+
+                maxExpression = val;
+            }
+            else
+            {
+                maxExpression = f;
+            }
+
+            if (minExpression.Type != maxExpression.Type)
+                ThrowQueryException(
+                    $"Invalid Between expression, values must have the same type but got {minExpression.Type} and {maxExpression.Type}");
+
+            return new TimeSeriesBetweenExpression(field, minExpression, maxExpression);
         }
 
         private bool Method(FieldExpression field, out MethodExpression op)
