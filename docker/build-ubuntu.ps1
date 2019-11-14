@@ -29,10 +29,10 @@ function BuildUbuntuDockerImage ($version) {
     write-host "Tags: $($repo):$version-ubuntu.18.04-x64 $($repo):5.0-ubuntu-latest"
 
     docker build $DockerfileDir `
-        ` #-t "$($repo):latest" `
-        ` #-t "$($repo):ubuntu-latest" `
         -t "$($repo):$version-ubuntu.18.04-x64" `
         -t "$($repo):5.0-ubuntu-latest"
+        #-t "$($repo):latest" `
+        #-t "$($repo):ubuntu-latest" `
 
     Remove-Item -Path $dockerPackagePath
 }
