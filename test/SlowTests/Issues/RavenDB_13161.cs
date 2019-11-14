@@ -9,7 +9,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Web.System;
 using Xunit;
 using Xunit.Abstractions;
 

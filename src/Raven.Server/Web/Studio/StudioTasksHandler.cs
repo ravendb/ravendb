@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -20,7 +21,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Util.Settings;
@@ -48,7 +48,7 @@ namespace Raven.Server.Web.Studio
                 // 2. Path defined, Path overrides any given Name
                 if (string.IsNullOrEmpty(path) == false)
                 {
-                    result = PathUtil.ToFullPath(path, baseDataDirectory);
+                    result = new PathSetting(path, baseDataDirectory).FullPath;
                 }
 
                 // 3. Name defined, No path 

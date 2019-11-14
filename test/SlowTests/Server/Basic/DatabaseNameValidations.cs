@@ -21,27 +21,39 @@ namespace SlowTests.Server.Basic
             using (var store = GetDocumentStore())
             {
                 // Valid database names:
+                //----------------------
                 var validDbName1 = "日本語-שלום-cześć-Привет-مرحبا";
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(validDbName1)));
-                Assert.Equal(0, store.Maintenance.ForDatabase(validDbName1).Send(new GetStatisticsOperation()).CountOfDocuments);
-                
-                store.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                try
                 {
-                    DatabaseNames = new[] {validDbName1}, HardDelete = true, TimeToWaitForConfirmation = TimeSpan.FromSeconds(30)
-                }));
-                Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.ForDatabase(validDbName1).Send(new GetStatisticsOperation()));
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(validDbName1)));
+                    Assert.Equal(0, store.Maintenance.ForDatabase(validDbName1).Send(new GetStatisticsOperation()).CountOfDocuments);
+                }
+                finally
+                {
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                    {
+                        DatabaseNames = new[] {validDbName1}, HardDelete = true, TimeToWaitForConfirmation = TimeSpan.FromSeconds(30)
+                    }));
+                    Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.ForDatabase(validDbName1).Send(new GetStatisticsOperation()));
+                }
               
                 var validDbName2 = "Name.with_allowed-chars.123";
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(validDbName2)));
-                Assert.Equal(0, store.Maintenance.ForDatabase(validDbName2).Send(new GetStatisticsOperation()).CountOfDocuments);
-                
-                store.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                try
                 {
-                    DatabaseNames = new[] {validDbName2}, HardDelete = true, TimeToWaitForConfirmation = TimeSpan.FromSeconds(30)
-                }));
-                Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.ForDatabase(validDbName2).Send(new GetStatisticsOperation()));
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(validDbName2)));
+                    Assert.Equal(0, store.Maintenance.ForDatabase(validDbName2).Send(new GetStatisticsOperation()).CountOfDocuments);
+                }
+                finally
+                {
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                    {
+                        DatabaseNames = new[] {validDbName2}, HardDelete = true, TimeToWaitForConfirmation = TimeSpan.FromSeconds(30)
+                    }));
+                    Assert.Throws<DatabaseDoesNotExistException>(() => store.Maintenance.ForDatabase(validDbName2).Send(new GetStatisticsOperation())); 
+                }
 
                 // Invalid database names:
+                //------------------------
                 var invalidDbName3 = "._.-._-567";
                 var e = Assert.Throws<InvalidOperationException>(() =>
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(invalidDbName3))));
