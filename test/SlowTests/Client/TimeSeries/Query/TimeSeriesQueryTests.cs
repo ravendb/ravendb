@@ -2513,5 +2513,119 @@ select out(doc)
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithFieldExpressionInBetweenClause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Event
+                        {
+                            Start = baseline.AddMonths(i - 1),
+                            End = baseline.AddMonths(3)
+                        }, $"events/{i}");
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30,
+                            Event = $"events/{i}"
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(61), "watches/apple", new[] { 259d });
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(62), "watches/sony", new[] { 279d });
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(63), "watches/fitbit", new[] { 269d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x, e) 
+{
+    from x.HeartRate between e.Start and e.End
+    group by '1 hour' 
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+load doc.Event as e
+select out(doc, e)
+");
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    var agg = result[0];
+
+                    Assert.Equal(6, agg.Count);
+
+                    Assert.Equal(2, agg.Results.Length);
+
+                    var val = agg.Results[0];
+
+                    Assert.Equal(159, val.Min);
+                    Assert.Equal(179, val.Max);
+                    Assert.Equal(169, val.Avg);
+
+                    var expectedFrom = baseline.AddMonths(1).AddHours(1);
+                    var expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, val.From);
+                    Assert.Equal(expectedTo, val.To);
+
+                    val = agg.Results[1];
+
+                    Assert.Equal(259, val.Min);
+                    Assert.Equal(279, val.Max);
+                    Assert.Equal(269, val.Avg);
+
+                    expectedFrom = expectedFrom.AddMonths(1);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, val.From);
+                    Assert.Equal(expectedTo, val.To);
+
+                    agg = result[1];
+
+                    Assert.Equal(3, agg.Count);
+
+                    Assert.Equal(1, agg.Results.Length);
+
+                    val = agg.Results[0];
+
+                    Assert.Equal(259, val.Min);
+                    Assert.Equal(279, val.Max);
+                    Assert.Equal(269, val.Avg);
+
+                    expectedFrom = baseline.AddMonths(2).AddHours(1);
+                    expectedTo = expectedFrom.AddHours(1);
+
+                    Assert.Equal(expectedFrom, val.From);
+                    Assert.Equal(expectedTo, val.To);
+                }
+            }
+        }
+
     }
 }

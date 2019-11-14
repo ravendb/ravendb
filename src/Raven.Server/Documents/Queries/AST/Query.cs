@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Queries.AST
 
     public unsafe class TimeSeriesFunction
     {
-        public BetweenExpression Between;
+        public TimeSeriesBetweenExpression Between;
         public QueryExpression Where;
         public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;

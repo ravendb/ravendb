@@ -743,8 +743,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             var source = GetSourceAndId();
             
-            var min = GetDateValue(timeSeriesFunction.Between.Min) ?? DateTime.MinValue;
-            var max = GetDateValue(timeSeriesFunction.Between.Max) ?? DateTime.MaxValue;
+            var min = GetDateValue(timeSeriesFunction.Between.Min ?? timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
+            var max = GetDateValue(timeSeriesFunction.Between.Max ?? timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
             long count = 0;
             var array = new DynamicJsonArray();
@@ -1195,23 +1195,88 @@ namespace Raven.Server.Documents.Queries.Results
             return result;
         }
 
-        private unsafe DateTime? GetDateValue(ValueExpression ve)
+        private unsafe DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
         {
-            if (ve == null)
+            if (qe == null)
                 return null;
 
-            var val = ve.GetValue(_query.QueryParameters);
-            if (val == null)
-                throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
-
-            var str = val.ToString();
-            fixed (char* c = str)
+            if (qe is ValueExpression ve)
             {
-                var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out _);
-                if (result != LazyStringParser.Result.DateTime)
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + str);
-                return dt;
+                var val = ve.GetValue(_query.QueryParameters);
+                if (val == null)
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
+
+                var str = val.ToString();
+                fixed (char* c = str)
+                {
+                    var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out _);
+                    if (result != LazyStringParser.Result.DateTime)
+                        throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + str);
+                    return dt;
+                }
             }
+
+            if (qe is FieldExpression fe)
+            {
+                if (fe.Compound.Count == 1)
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
+
+                int index;
+                for (index = 0; index < func.Parameters.Count; index++)
+                {
+                    var parameter = func.Parameters[index];
+                    var str = ((FieldExpression)parameter).FieldValue;
+
+                    if (fe.Compound[0] == str)
+                    {
+                        break;
+                    }
+                }
+
+                Document document;
+                if (index == 0)
+                {
+                    if (args[0] is Document d)
+                    {
+                        document = d;
+                    }
+                    else
+                    {
+                        document = (args[0] as Tuple<Document, object, object, object, object>)?.Item1;
+                    }
+                }
+                else
+                {
+                    if (index == func.Parameters.Count) // not found
+                    {
+                        throw new ArgumentException($"Failed"); //todo aviv
+                    }
+
+                    if (!(args[index] is Document d))
+                    {
+                        throw new ArgumentException($"Failed"); //todo aviv
+                    }
+
+                    document = d;
+                }
+
+                if (document == null || document.Data.TryGetMember(fe.Compound[1], out var val) == false)
+                {
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
+                }
+
+                var valueAsStr = val.ToString();
+                fixed (char* c = valueAsStr)
+                {
+                    var result = LazyStringParser.TryParseDateTime(c, valueAsStr.Length, out var dt, out _);
+                    if (result != LazyStringParser.Result.DateTime)
+                        throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
+                    return dt;
+                }
+
+            }
+
+            throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
 
         }
 
