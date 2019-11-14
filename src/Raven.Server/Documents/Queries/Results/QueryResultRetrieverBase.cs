@@ -901,7 +901,7 @@ namespace Raven.Server.Documents.Queries.Results
                                    Filter((BinaryExpression)be.Right, singleResult) == false;
                     }
 
-                    object left = GetValue(be.Left, singleResult);
+                    dynamic left = GetValue(be.Left, singleResult);
                     dynamic right = GetValue(be.Right, singleResult);
                     bool result;
 
@@ -992,7 +992,27 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (filter is BetweenExpression betweenExpression)
                 {
-                    //todo aviv
+                    var result = false;
+
+                    dynamic src = GetValue(betweenExpression.Source, singleResult);
+                    dynamic value = GetValue(betweenExpression.Min, singleResult);
+
+                    if (src is LazyNumberValue lnv)
+                    {
+                        if (lnv.CompareTo(value) >= 0)
+                        {
+                            value = GetValue(betweenExpression.Max, singleResult);
+                            result = lnv.CompareTo(value) <= 0;
+                        }
+                    }
+
+                    else if (src >= value)
+                    {
+                        value = GetValue(betweenExpression.Max, singleResult);
+                        result = src <= value;
+                    }
+
+                    return result == false;
                 }
 
                 throw new ArgumentOutOfRangeException(); //todo aviv
@@ -1003,7 +1023,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (expression is FieldExpression fe)
                 {
-                    switch (fe.FieldValue)
+                    switch (fe.Compound[0].Value)
                     {
                         case "Tag":
                             if (fe.Compound.Count > 1)
@@ -1030,7 +1050,7 @@ namespace Raven.Server.Documents.Queries.Results
                             return singleResult.TimeStamp;
 
                         default:
-                            if (fe.Compound[0] != timeSeriesFunction.LoadTagAs)
+                            if (fe.Compound[0].Value != timeSeriesFunction.LoadTagAs?.Value)
                                 throw new ArgumentException("Unknown where "); // todo
 
                             if (fe.Compound.Count > 2)

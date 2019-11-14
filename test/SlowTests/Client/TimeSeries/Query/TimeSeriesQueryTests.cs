@@ -2462,7 +2462,7 @@ select out(doc)
 declare timeseries out(x) 
 {
     from x.HeartRate between $start and $end
-        where Values[0] between 70 and 160
+        where Values[0] between 70 and 170
     group by '1 month' 
     select min(), max(), avg()
 }
@@ -2481,15 +2481,15 @@ select out(doc)
                     {
                         var agg = result[i];
 
-                        Assert.Equal(5, agg.Count);
+                        Assert.Equal(3, agg.Count);
 
                         Assert.Equal(2, agg.Results.Length);
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
+                        Assert.Equal(79, val.Min);
                         Assert.Equal(79, val.Max);
-                        Assert.Equal(69, val.Avg);
+                        Assert.Equal(79, val.Avg);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
