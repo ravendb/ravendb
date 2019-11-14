@@ -948,7 +948,7 @@ namespace Raven.Server.Documents.Replication
                     var database = _replicationInfo.DocumentDatabase;
                     var lastTransactionMarker = 0;
 
-                    context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+                    context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
                         if (lastTransactionMarker != item.TransactionMarker)
@@ -960,12 +960,6 @@ namespace Raven.Server.Documents.Replication
                         operationsCount++;
                         var rcvdChangeVector = item.ChangeVector;
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
-                        Console.WriteLine($"{context.DocumentDatabase.Name} {item.TransactionMarker} ({item.GetType()})");
-
-                        if (context.DocumentDatabase.Name == "CanReplicateDeletions_2" && item.TransactionMarker == 8)
-                        {
-
-                        }
 
                         switch (item)
                         {

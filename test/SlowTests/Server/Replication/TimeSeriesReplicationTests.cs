@@ -364,8 +364,11 @@ namespace SlowTests.Server.Replication
                         {
                             for (int j = 0; j < 100; j++)
                             {
+                                var time = baseline.AddMinutes(offset++);
+                                var val = value++;
+                               
                                 session.TimeSeriesFor("users/ayende")
-                                    .Append("Heartrate", baseline.AddMinutes(offset++), "watches/fitbit", new double[] { value++ });
+                                    .Append("Heartrate", time, "watches/fitbit", new double[] { val });
                             }
 
                             session.TimeSeriesFor("users/ayende")
@@ -450,7 +453,6 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(1, stats1.CountOfTimeSeriesSegments);
                 Assert.Equal(2, stats2.CountOfTimeSeriesSegments);
                 
-                Console.WriteLine("Delete");
                 using (var session = storeA.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende")
@@ -459,7 +461,6 @@ namespace SlowTests.Server.Replication
                 }
 
                 EnsureReplicating(storeA, storeB);
-             //   await Task.Delay(1000);
 
                 using (var sessionA = storeA.OpenSession())
                 using (var sessionB = storeB.OpenSession())

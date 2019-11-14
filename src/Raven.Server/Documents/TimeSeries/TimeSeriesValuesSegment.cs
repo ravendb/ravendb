@@ -145,7 +145,8 @@ namespace Raven.Server.Documents.TimeSeries
                 var prevs = new Span<StatefulTimeStampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimeStamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
-                if (tempHeader->NumberOfEntries == 0)
+                if (tempHeader->NumberOfEntries == 0 && 
+                    status == Live)
                 {
                     for (int i = 0; i < vals.Length; i++)
                     {
@@ -155,7 +156,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 for (int i = 0; i < vals.Length; i++)
                 {
-                    AddValue(ref prevs[i], ref tempBitsBuffer, vals[i]);
+                    AddValue(ref prevs[i], ref tempBitsBuffer, vals[i], status);
                 }
                 bool insertTag = false;
                 var prevTagIndex = FindPreviousTag(tag, tempHeader);
@@ -324,7 +325,7 @@ namespace Raven.Server.Documents.TimeSeries
             tempHeader->PreviousDelta = delta;
         }
 
-        private static void AddValue(ref StatefulTimeStampValue prev, ref BitsBuffer bitsBuffer, double dblVal)
+        private static void AddValue(ref StatefulTimeStampValue prev, ref BitsBuffer bitsBuffer, double dblVal, ulong status)
         {
             long val = BitConverter.DoubleToInt64Bits(dblVal);
 
@@ -332,10 +333,13 @@ namespace Raven.Server.Documents.TimeSeries
 
             prev.PreviousValue = val;
 
-            prev.Count++;
-            prev.Sum += dblVal;
-            prev.Min = Math.Min(prev.Min, dblVal);
-            prev.Max = Math.Max(prev.Max, dblVal);
+            if (status == Live)
+            {
+                prev.Count++;
+                prev.Sum += dblVal;
+                prev.Min = Math.Min(prev.Min, dblVal);
+                prev.Max = Math.Max(prev.Max, dblVal);
+            }
 
             if (xorWithPrevious == 0)
             {
@@ -382,7 +386,7 @@ namespace Raven.Server.Documents.TimeSeries
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);
 
 
-        private LazyStringValue SetTimestampTag(JsonOperationContext context, TagPointer tagPointer)
+        public static LazyStringValue SetTimestampTag(JsonOperationContext context, TagPointer tagPointer)
         {
             if (tagPointer.Pointer == null)
                 return null;
@@ -477,94 +481,18 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public bool MarkDeadRange(DocumentsOperationContext context, DateTime baseline, DateTime from, DateTime to)
-        {
-            var end = GetLastTimestamp(baseline);
-
-            if (from > end)
-                return false;
-/*
-
-            if (from <= baseline && to >= end)
-            {
-                // need to mark the entire segment
-                Header->NumberOfEntries = 0;
-                return true;
-            }*/
-
-            var changed = false;
-            for (int i = 0; i < NumberOfValues; i++)
-            {
-                SegmentValues.Span[i].Min = double.MaxValue;
-                SegmentValues.Span[i].Max = double.MinValue;
-            }
-
-            var lastValues = stackalloc double[NumberOfValues];
-
-            var first = true;
-            using (var enumerator = GetEnumerator(context.Allocator))
-            {
-                var valuesBuffer = stackalloc double[NumberOfValues];
-                var stateBuffer = stackalloc TimeStampState[NumberOfValues];
-                var values = new Span<double>(valuesBuffer, NumberOfValues);
-                var state = new Span<TimeStampState>(stateBuffer, NumberOfValues);
-                TagPointer tag = default;
-                while (enumerator.MoveNext(out int ts, values, state, ref tag, out _))
-                {
-                    var current = baseline.AddMilliseconds(ts);
-                    if (current >= from && current <= to)
-                    {
-                        enumerator.MarkCurrentAsDead();
-                        Header->NumberOfEntries--;
-
-                        for (int i = 0; i < NumberOfValues; i++)
-                        {
-                            SegmentValues.Span[i].Sum -= values[i];
-                            SegmentValues.Span[i].Count--;
-                        }
-
-                        changed = true;
-                    }
-
-                    for (int i = 0; i < NumberOfValues; i++)
-                    {
-                        SegmentValues.Span[i].Max = Math.Max(SegmentValues.Span[i].Max, values[i]);
-                        SegmentValues.Span[i].Min = Math.Min(SegmentValues.Span[i].Min, values[i]);
-
-                        if (first)
-                        {
-                            SegmentValues.Span[i].First = values[i];
-                        }
-
-                        lastValues[i] = values[i];
-                    }
-
-                    first = false;
-                }
-
-                for (int i = 0; i < NumberOfValues; i++)
-                {
-                    SegmentValues.Span[i].Last = lastValues[i];
-                }
-            }
-
-            return changed;
-        }
-
         public struct Enumerator : IDisposable
         {
             private readonly TimeSeriesValuesSegment _parent;
-            private int _bitsPosisition;
+            private int _bitsPosition;
             private int _previousTimeStamp, _previousTimeStampDelta;
             private BitsBuffer _bitsBuffer;
             private ByteStringContext.InternalScope _scope;
-            private int _startBitsPositionOfCurrent;
 
             public Enumerator(TimeSeriesValuesSegment parent, ByteStringContext allocator)
             {
                 _parent = parent;
-                _bitsPosisition = 0;
-                _startBitsPositionOfCurrent = 0;
+                _bitsPosition = 0;
                 _previousTimeStamp = _previousTimeStampDelta = -1;
                 _bitsBuffer = _parent.GetBitsBuffer(_parent.Header);
                 if (_bitsBuffer.IsCompressed)
@@ -582,14 +510,13 @@ namespace Raven.Server.Documents.TimeSeries
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
 
-
-                if (_bitsPosisition >= _bitsBuffer.NumberOfBits)
+                if (_bitsPosition >= _bitsBuffer.NumberOfBits)
                 {
                     valueState = ulong.MaxValue; // invalid value
                     timestamp = default;
                     return false;
                 }
-                if (_bitsPosisition == 0)
+                if (_bitsPosition == 0)
                 {
                     // we use the values as the statement location for the previous values as well
                     values.Clear();
@@ -597,18 +524,16 @@ namespace Raven.Server.Documents.TimeSeries
                     tag = default;
                 }
 
-                _startBitsPositionOfCurrent = _bitsPosisition;
-
-                valueState = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                valueState = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
 
                 timestamp = ReadTimeStamp(_bitsBuffer);
 
                 ReadValues(MemoryMarshal.Cast<double, long>(values), state);
 
-                var differentTag = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                var differentTag = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
                 if (differentTag == 1)
                 {
-                    var hasTag = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                    var hasTag = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
                     if (hasTag == 0)
                     {
                         tag = default;
@@ -622,14 +547,9 @@ namespace Raven.Server.Documents.TimeSeries
                 return true;
             }
 
-            public void MarkCurrentAsDead()
-            {
-                _bitsBuffer.SetBits(_startBitsPositionOfCurrent, Dead, 1);
-            }
-
             private void ReadTagValueByIndex(ref TagPointer tag)
             {
-                var tagIndex = (int)_bitsBuffer.ReadValue(ref _bitsPosisition, 7);
+                var tagIndex = (int)_bitsBuffer.ReadValue(ref _bitsPosition, 7);
                 var offset = _parent.Header->SizeOfTags;
                 var tagsPtr = _parent._buffer + sizeof(SegmentHeader) + sizeof(StatefulTimeStampValue) * _parent.Header->NumberOfValues;
                 var numberOfTags = *(tagsPtr + offset - 1);
@@ -641,37 +561,40 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     tagBackwardOffset += tagsLens[i];
                 }
-                tag = new TagPointer
+
+                tag.Pointer = tagsLens - tagBackwardOffset;
+                tag.Length = tagsLens[tagIndex];
+                /*tag = new TagPointer
                 {
                     Length = tagsLens[tagIndex],
                     Pointer = tagsLens - tagBackwardOffset
-                };
+                };*/
             }
 
             private void ReadValues(Span<long> values, Span<TimeStampState> state)
             {
                 for (int i = 0; i < values.Length; i++)
                 {
-                    var nonZero = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                    var nonZero = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
                     if (nonZero == 0)
                     {
                         continue; // no change since last time
                     }
-                    var usePreviousBlockInfo = _bitsBuffer.ReadValue(ref _bitsPosisition, 1);
+                    var usePreviousBlockInfo = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
                     long xorValue;
 
                     if (usePreviousBlockInfo == 1)
                     {
-                        xorValue = (long)_bitsBuffer.ReadValue(ref _bitsPosisition, 64 - state[i].LeadingZeroes - state[i].TrailingZeroes);
+                        xorValue = (long)_bitsBuffer.ReadValue(ref _bitsPosition, 64 - state[i].LeadingZeroes - state[i].TrailingZeroes);
                         xorValue <<= state[i].TrailingZeroes;
                     }
                     else
                     {
-                        int leadingZeros = (int)_bitsBuffer.ReadValue(ref _bitsPosisition, LeadingZerosLengthBits);
-                        int blockSize = (int)_bitsBuffer.ReadValue(ref _bitsPosisition, BlockSizeLengthBits) + BlockSizeAdjustment;
+                        int leadingZeros = (int)_bitsBuffer.ReadValue(ref _bitsPosition, LeadingZerosLengthBits);
+                        int blockSize = (int)_bitsBuffer.ReadValue(ref _bitsPosition, BlockSizeLengthBits) + BlockSizeAdjustment;
                         int trailingZeros = 64 - blockSize - leadingZeros;
 
-                        xorValue = (long)_bitsBuffer.ReadValue(ref _bitsPosisition, blockSize);
+                        xorValue = (long)_bitsBuffer.ReadValue(ref _bitsPosition, blockSize);
                         xorValue <<= trailingZeros;
 
                         state[i].TrailingZeroes = (byte)trailingZeros;
@@ -684,19 +607,19 @@ namespace Raven.Server.Documents.TimeSeries
 
             private int ReadTimeStamp(BitsBuffer bitsBuffer)
             {
-                if (_bitsPosisition == 1)
+                if (_bitsPosition == 1)
                 {
-                    _previousTimeStamp = (int)bitsBuffer.ReadValue(ref _bitsPosisition, BitsForFirstTimestamp);
+                    _previousTimeStamp = (int)bitsBuffer.ReadValue(ref _bitsPosition, BitsForFirstTimestamp);
                     _previousTimeStampDelta = DefaultDelta;
                     return _previousTimeStamp;
                 }
 
-                var type = bitsBuffer.FindTheFirstZeroBit(ref _bitsPosisition, TimestampEncodingDetails.MaxControlBitLength);
+                var type = bitsBuffer.FindTheFirstZeroBit(ref _bitsPosition, TimestampEncodingDetails.MaxControlBitLength);
                 if (type > 0)
                 {
                     var index = type - 1;
                     ref var encoding = ref TimestampEncodingDetails.Encodings[index];
-                    long decodedValue = (long)bitsBuffer.ReadValue(ref _bitsPosisition, encoding.BitsForValue);
+                    long decodedValue = (long)bitsBuffer.ReadValue(ref _bitsPosition, encoding.BitsForValue);
                     // [0, 255] becomes [-128, 127]
                     decodedValue -= encoding.MaxValueForEncoding;
                     if (decodedValue >= 0)

@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.TimeSeries.Query;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -311,6 +314,121 @@ namespace SlowTests.Client.TimeSeries.Operations
                     Assert.Equal(new[] { 79d }, vals[1].Values);
                     Assert.Equal("watches/fitbit", vals[1].Tag);
                     Assert.Equal(baseline.AddMinutes(3), vals[1].Timestamp);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDeleteLargeRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+
+                    session.Store(new User(), "foo/bar");
+                    var tsf = session.TimeSeriesFor("foo/bar");
+
+                    for (int j = 1; j < 10_000; j++)
+                    {
+                        var offset = j * 10;
+                        var time = baseline.AddSeconds(offset);
+                        
+                        tsf.Append("BloodPressure", time, "watches/apple", new[] { (double)(j) });
+                    }
+
+                    session.SaveChanges();
+                }
+                var rawQuery = @"
+                                declare timeseries blood_pressure(doc) 
+                                {
+                                    from doc.BloodPressure between $start and $end 
+                                    group by 1h 
+                                    select min(), max(), avg(), first(), last()
+                                }
+                                from Users as p 
+                                select blood_pressure(p) as BloodPressure
+                                ";
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesQueryTests.RawQueryResult>(rawQuery)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(1));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+
+                    var agg = result[0];
+
+                    var bloodPressure = agg.BloodPressure;
+                    var count = bloodPressure.Results.Sum(r => r.Count);
+                    Assert.Equal(8640, count);
+                    Assert.Equal(bloodPressure.Count, count);
+                    Assert.Equal(bloodPressure.Results.Length, 24);
+
+                    for (var index = 0; index < bloodPressure.Results.Length; index++)
+                    {
+                        var item = bloodPressure.Results[index];
+                        Assert.Equal(360, item.Count);
+                        Assert.Equal(index * 360 + 180 + 0.5, item.Avg);
+                        Assert.Equal((index + 1) * 360, item.Max);
+                        Assert.Equal(index * 360 + 1, item.Min);
+                        Assert.Equal(index * 360 + 1, item.First);
+                        Assert.Equal((index + 1) * 360, item.Last);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("foo/bar");
+                    tsf.Remove("BloodPressure", baseline.AddSeconds(3600), baseline.AddSeconds(3600 * 10)); // remove 9 hours
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    NoCaching = true
+                }))
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesQueryTests.RawQueryResult>(rawQuery)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(1));
+
+                    var result = query.ToList();
+
+                    var agg = result[0];
+
+                    var bloodPressure = agg.BloodPressure;
+                    var count = bloodPressure.Results.Sum(r => r.Count);
+                    Assert.Equal(5399, count);
+                    Assert.Equal(bloodPressure.Count, count);
+                    Assert.Equal(bloodPressure.Results.Length, 15);
+
+                    var index = 0;
+                    var item = bloodPressure.Results[index];
+                    Assert.Equal(359, item.Count);
+                    Assert.Equal(180, item.Avg);
+                    Assert.Equal(359, item.Max);
+                    Assert.Equal(1, item.Min);
+                    Assert.Equal(1, item.First);
+                    Assert.Equal(359, item.Last);
+
+                    for (index = 1; index < bloodPressure.Results.Length; index++)
+                    {
+                        item = bloodPressure.Results[index];
+                        var realIndex = index + 9;
+
+                        Assert.Equal(360, item.Count);
+                        Assert.Equal(realIndex * 360 + 180 + 0.5, item.Avg);
+                        Assert.Equal((realIndex + 1) * 360, item.Max);
+                        Assert.Equal(realIndex * 360 + 1, item.Min);
+                        Assert.Equal(realIndex * 360 + 1, item.First);
+                        Assert.Equal((realIndex + 1) * 360, item.Last);
+                    }
                 }
             }
         }

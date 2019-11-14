@@ -16,7 +16,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
         }
 
-        private class TimeSeriesRangeAggregation
+        public class TimeSeriesRangeAggregation
         {
 #pragma warning disable 649
             public long Count;
@@ -25,7 +25,7 @@ namespace SlowTests.Client.TimeSeries.Query
 #pragma warning restore 649
         }
 
-        private class TimeSeriesAggregation
+        public class TimeSeriesAggregation
         {
             public long Count { get; set; }
             public TimeSeriesRangeAggregation[] Results { get; set; }
@@ -66,7 +66,7 @@ namespace SlowTests.Client.TimeSeries.Query
             public string WorksAt { get; set; }
         }
 
-        private class RawQueryResult
+        public class RawQueryResult
         {
             public TimeSeriesAggregation HeartRate { get; set; }
 
