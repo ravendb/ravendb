@@ -126,7 +126,7 @@ namespace Raven.Server.Web.System
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
                 if (databaseRecord == null)
                 {
-                    throw new InvalidOperationException("Database Record not found when trying to add a node to the database topology");
+                    throw new DatabaseDoesNotExistException("Database Record not found when trying to add a node to the database topology");
                 }
 
                 var clusterTopology = ServerStore.GetClusterTopology(context);
@@ -234,13 +234,22 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+               
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
+                }
                 
                 if (databaseRecord.Encrypted)
                     ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
                 
                 // Validate Directory
-                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ?
-                                         ServerStore.Configuration.Core.DataDirectory.FullPath : PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
+                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ? 
+                                                  ServerStore.Configuration.Core.DataDirectory.FullPath :
+                                                  new PathSetting(dir, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
                 
                 if (string.IsNullOrWhiteSpace(dir) == false)
                 {
@@ -263,14 +272,6 @@ namespace Raven.Server.Web.System
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
                 if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                     throw new BadRequestException(errorMessage);
-               
-                if (LoggingSource.AuditLog.IsInfoEnabled)
-                {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
-                }
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(withNotification: false, out var licenseLimit) == false)
@@ -1235,7 +1236,7 @@ namespace Raven.Server.Web.System
             var dataDir = configuration.DataDirectory;
             var dataDirectoryThatWillBeUsed =  string.IsNullOrWhiteSpace(dataDir) ? 
                                                ServerStore.Configuration.Core.DataDirectory.FullPath :
-                                               PathUtil.ToFullPath(dataDir, ServerStore.Configuration.Core.DataDirectory.FullPath); 
+                                               new PathSetting(dataDir, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
             
             OfflineMigrationConfiguration.ValidateDataDirectory(dataDirectoryThatWillBeUsed);
             
