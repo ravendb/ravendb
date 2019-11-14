@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyAutoIndexDefinition : IndexDefinitionBaseServerSide<IndexField>
+    public class FaultyAutoIndexDefinition : IndexDefinitionBase<IndexField>
     {
         public readonly AutoIndexDefinitionBase Definition;
 
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             return (hashCode * 397) ^ -1337;
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
         {
             return Definition.Compare(indexDefinition);
         }

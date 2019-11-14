@@ -9,50 +9,18 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
-using Raven.Client.Json.Converters;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Indexes
 {
     /// <summary>
     /// A definition of a RavenIndex
     /// </summary>
-    public class IndexDefinition : IndexDefinitionBase
+    public class IndexDefinition
     {
-        public override IndexSourceType SourceType => IndexSourceType.Documents;
-    }
-
-    [CreateFromBlittableJson]
-    public abstract class IndexDefinitionBase
-    {
-        internal static IndexDefinitionBase CreateFromBlittableJson(BlittableJsonReaderObject json)
-        {
-            if (json == null)
-                return null;
-
-            IndexSourceType sourceType;
-            if (json.TryGet(nameof(SourceType), out string sourceTypeString) == false)
-                sourceType = IndexSourceType.Documents; // backward compatibility
-            else if (Enum.TryParse(sourceTypeString, ignoreCase: true, out sourceType) == false)
-                throw new InvalidOperationException($"Could not recognize '{sourceTypeString}' as a valid index source type.");
-
-            switch (sourceType)
-            {
-                case IndexSourceType.Documents:
-                    return JsonDeserializationClient.IndexDefinition(json);
-                case IndexSourceType.TimeSeries:
-                    return JsonDeserializationClient.TimeSeriesIndexDefinition(json);
-                default:
-                    throw new NotSupportedException($"Not supported source type '{sourceType}'.");
-            }
-        }
-
-        protected IndexDefinitionBase()
+        public IndexDefinition()
         {
             _configuration = new IndexConfiguration();
         }
-
-        public abstract IndexSourceType SourceType { get; }
 
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
@@ -107,8 +75,12 @@ namespace Raven.Client.Documents.Indexes
             set => _configuration = value;
         }
 
-        public IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
+        public virtual IndexSourceType SourceType { get; set; } = IndexSourceType.Documents;
+
+        public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
+            // TODO arek need to compare other.SourceType ?
+
             if (other == null)
                 throw new ArgumentNullException(nameof(other));
 

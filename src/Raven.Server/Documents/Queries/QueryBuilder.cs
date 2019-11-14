@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
         private static readonly KeywordAnalyzer KeywordAnalyzer = new KeywordAnalyzer();
 
         public static Lucene.Net.Search.Query BuildQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression,
-            IndexDefinitionBaseServerSide indexDef, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
+            IndexDefinitionBase indexDef, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
-            QueryExpression expression, QueryMetadata metadata, IndexDefinitionBaseServerSide indexDef,
+            QueryExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDef,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -414,7 +414,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
-        private static bool IsExact(IndexDefinitionBaseServerSide indexDefinition, bool exact, QueryFieldName fieldName)
+        private static bool IsExact(IndexDefinitionBase indexDefinition, bool exact, QueryFieldName fieldName)
         {
             if (exact)
                 return true;
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.Queries
             return parser.Parse(GetValueAsString(value));
         }
 
-        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBaseServerSide indexDefinition, BlittableJsonReaderObject parameters, bool exact)
+        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDefinition, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -608,7 +608,7 @@ namespace Raven.Server.Documents.Queries
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix, exact: exact);
         }
 
-        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBaseServerSide indexDefinition, BlittableJsonReaderObject parameters, bool exact)
+        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDefinition, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);

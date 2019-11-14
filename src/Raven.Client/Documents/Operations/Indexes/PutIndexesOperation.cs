@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Operations.Indexes
 {
     public class PutIndexesOperation : IMaintenanceOperation<PutIndexResult[]>
     {
-        private readonly IndexDefinitionBase[] _indexToAdd;
+        private readonly IndexDefinition[] _indexToAdd;
 
-        public PutIndexesOperation(params IndexDefinitionBase[] indexToAdd)
+        public PutIndexesOperation(params IndexDefinition[] indexToAdd)
         {
             if (indexToAdd == null || indexToAdd.Length == 0)
                 throw new ArgumentNullException(nameof(indexToAdd));
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             private readonly BlittableJsonReaderObject[] _indexToAdd;
             private bool _allJavaScriptIndexes;
 
-            public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinitionBase[] indexesToAdd)
+            public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinition[] indexesToAdd)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));

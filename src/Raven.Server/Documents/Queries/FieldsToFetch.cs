@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsDistinct;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
         {
             Fields = GetFieldsToFetch(query.Metadata, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias);
             IsProjection = Fields != null && Fields.Count > 0;
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static FieldToFetch GetFieldToFetch(
-            IndexDefinitionBaseServerSide indexDefinition,
+            IndexDefinitionBase indexDefinition,
             SelectField selectField,
             Dictionary<string, FieldToFetch> results,
             out string selectFieldKey,
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(
             QueryMetadata metadata,
-            IndexDefinitionBaseServerSide indexDefinition,
+            IndexDefinitionBase indexDefinition,
             out bool anyExtractableFromIndex,
             out bool extractAllStoredFields,
             out bool singleFieldNoAlias)

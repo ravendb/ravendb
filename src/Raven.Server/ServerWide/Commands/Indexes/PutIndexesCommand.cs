@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public class PutIndexesCommand : UpdateDatabaseCommand
     {
-        public List<IndexDefinitionBase> Static = new List<IndexDefinitionBase>();
+        public List<IndexDefinition> Static = new List<IndexDefinition>();
 
         public List<AutoIndexDefinition> Auto = new List<AutoIndexDefinition>();
 

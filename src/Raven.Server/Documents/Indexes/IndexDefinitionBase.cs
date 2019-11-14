@@ -17,7 +17,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class IndexDefinitionBaseServerSide
+    public abstract class IndexDefinitionBase
     {
         public string Name { get; protected set; }
 
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
-        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition);
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
 
         public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes
         public Dictionary<string, IndexField> IndexFields { get; set; }
     }
 
-    public abstract class IndexDefinitionBaseServerSide<T> : IndexDefinitionBaseServerSide where T : IndexFieldBase
+    public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase
     {
         protected const string MetadataFileName = "metadata";
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Indexes
 
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBaseServerSide(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
+        protected IndexDefinitionBase(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, T[] mapFields)
         {
             Name = name;
             Collections = collections;
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Indexes
             Priority = priority;
         }
 
-        static IndexDefinitionBaseServerSide()
+        static IndexDefinitionBase()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {

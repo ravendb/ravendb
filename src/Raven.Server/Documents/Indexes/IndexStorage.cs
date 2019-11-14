@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void WriteDefinition(IndexDefinitionBaseServerSide indexDefinition, TimeSpan? timeout = null)
+        public void WriteDefinition(IndexDefinitionBase indexDefinition, TimeSpan? timeout = null)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction(timeout))

@@ -49,11 +49,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public readonly TransactionOperationContext IndexContext;
 
-        public readonly IndexDefinitionBaseServerSide IndexDefinition;
+        public readonly IndexDefinitionBase IndexDefinition;
 
         public LuceneDocumentConverter CreateFieldConverter;
 
-        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBaseServerSide indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
+        public CurrentIndexingScope(Index index, DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {
             _documentsStorage = documentsStorage;
             _documentsContext = documentsContext;

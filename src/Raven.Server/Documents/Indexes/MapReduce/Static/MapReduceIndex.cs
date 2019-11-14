@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public static void ValidateReduceResultsCollectionName(IndexDefinitionBase definition, AbstractStaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
+        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, AbstractStaticIndexBase index, DocumentDatabase database, bool checkIfCollectionEmpty)
         {
             var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         private static MapReduceIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);

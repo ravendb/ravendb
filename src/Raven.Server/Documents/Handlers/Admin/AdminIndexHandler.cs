@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var raftRequestId = GetRaftRequestIdFromQuery();
                 foreach (BlittableJsonReaderObject indexToAdd in indexes)
                 {
-                    var indexDefinition = IndexDefinitionBase.CreateFromBlittableJson(indexToAdd);
+                    var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
                     var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();

@@ -546,7 +546,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public void WriteIndex(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
+            public void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType)
             {
                 if (First == false)
                     Writer.WriteComma();

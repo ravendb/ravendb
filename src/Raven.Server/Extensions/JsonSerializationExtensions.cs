@@ -6,7 +6,7 @@ namespace Raven.Server.Extensions
 {
     public static class JsonSerializationExtensions
     {
-        public static DynamicJsonValue ToJson(this IndexDefinitionBase definition)
+        public static DynamicJsonValue ToJson(this IndexDefinition definition)
         {
             var result = new DynamicJsonValue();
 #if FEATURE_TEST_INDEX

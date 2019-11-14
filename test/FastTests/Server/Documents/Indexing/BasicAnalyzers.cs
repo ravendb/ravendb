@@ -161,7 +161,7 @@ namespace FastTests.Server.Documents.Indexing
         }
     }
 
-    internal class TestIndexDefinitions : IndexDefinitionBaseServerSide
+    internal class TestIndexDefinitions : IndexDefinitionBase
     {
         public TestIndexDefinitions()
         {
@@ -187,7 +187,7 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
         {
             throw new NotImplementedException();
         }

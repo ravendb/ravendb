@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-        public static AbstractStaticIndexBase Compile(IndexDefinitionBase definition)
+        public static AbstractStaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return newReferences;
         }
 
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinitionBase definition)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(members.Add(ctor));
         }
 
-        private static List<CompiledIndexField> GetIndexedFields(IndexDefinitionBase definition, FieldNamesValidator fieldNamesValidator)
+        private static List<CompiledIndexField> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
         {
             var fields = fieldNamesValidator.Fields.ToList();
 

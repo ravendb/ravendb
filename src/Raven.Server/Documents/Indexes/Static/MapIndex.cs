@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MapIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);

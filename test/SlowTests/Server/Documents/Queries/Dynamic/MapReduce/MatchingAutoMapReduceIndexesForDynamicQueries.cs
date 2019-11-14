@@ -378,7 +378,7 @@ select Name, count()"));
             }
         }
 
-        protected void add_index(IndexDefinitionBaseServerSide definition)
+        protected void add_index(IndexDefinitionBase definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()));
         }

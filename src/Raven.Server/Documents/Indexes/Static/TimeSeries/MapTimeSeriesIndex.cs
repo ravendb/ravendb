@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
         }
 
-        public static Index CreateNew(TimeSeriesIndexDefinition definition, DocumentDatabase documentDatabase)
+        public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
             instance.Initialize(documentDatabase,
@@ -190,9 +190,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return instance;
         }
 
-        private static MapTimeSeriesIndex CreateIndexInstance(TimeSeriesIndexDefinition definition, RavenConfiguration configuration)
+        private static MapTimeSeriesIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = (StaticTimeSeriesIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);

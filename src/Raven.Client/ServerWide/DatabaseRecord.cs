@@ -55,7 +55,7 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, SorterDefinition> Sorters = new Dictionary<string, SorterDefinition>();
 
-        public Dictionary<string, IndexDefinitionBase> Indexes;
+        public Dictionary<string, IndexDefinition> Indexes;
 
         public Dictionary<string, List<IndexHistoryEntry>> IndexesHistory;
 
@@ -106,7 +106,7 @@ namespace Raven.Client.ServerWide
             Sorters?.Remove(sorterName);
         }
 
-        public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, long raftIndex)
+        public void AddIndex(IndexDefinition definition, string source, DateTime createdAt, long raftIndex)
         {
             var lockMode = IndexLockMode.Unlock;
 
@@ -285,7 +285,7 @@ namespace Raven.Client.ServerWide
 
     public class IndexHistoryEntry
     {
-        public IndexDefinitionBase Definition { get; set; }
+        public IndexDefinition Definition { get; set; }
         public string Source { get; set; }
         public DateTime CreatedAt { get; set; }
     }
