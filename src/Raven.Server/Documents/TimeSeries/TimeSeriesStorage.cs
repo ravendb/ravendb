@@ -105,35 +105,26 @@ namespace Raven.Server.Documents.TimeSeries
 
                 string changeVector = null;
 
-                var upcomingSegment = TryGetNextSegment(ref segmentValueReader);
-
                 while (true)
                 {
-                    // we get the next segment _before_ we filter the current one
-                    // because we might be deleting the segment and lose its key and thus
-                    // our position in the range
-                    Table.TableValueHolder nextSegment = null;
-                    if (upcomingSegment != null)
+                    if (TryRemoveRange(ref segmentValueReader, out DateTime lastBaseline) == false)
                     {
-                        nextSegment = upcomingSegment;
-                        upcomingSegment = TryGetNextSegment(ref upcomingSegment.Reader);
+                        RemoveTimeSeriesNameFromMetadata(context, documentId, name);
+                        if (changeVector != null)
+                            Notify();
+
+                        return changeVector;
                     }
 
-                    if (TryRemoveRange(ref segmentValueReader) == false)
+                    var upcomingSegment = TryGetNextSegment(lastBaseline);
+                    if (upcomingSegment == null)
                     {
                         RemoveTimeSeriesNameFromMetadata(context, documentId, name);
                         Notify();
                         return changeVector;
                     }
 
-                    if (nextSegment == null)
-                    {
-                        RemoveTimeSeriesNameFromMetadata(context, documentId, name);
-                        Notify();
-                        return changeVector;
-                    }
-
-                    segmentValueReader = nextSegment.Reader;
+                    segmentValueReader = upcomingSegment.Reader;
                 }
 
                 void Notify()
@@ -149,64 +140,70 @@ namespace Raven.Server.Documents.TimeSeries
                     });
                 }
 
-                bool TryRemoveRange(ref TableValueReader reader)
+                bool TryRemoveRange(ref TableValueReader reader, out DateTime next)
                 {
+                    next = default;
+
                     var key = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
                     var baselineMilliseconds = Bits.SwapBytes(
                         *(long*)(key + keySize - sizeof(long))
                     );
-
                     var ticks = baselineMilliseconds * 10_000;
                     var baseline = new DateTime(ticks);
 
                     if (baseline > to)
                         return false; // we got to the end
 
-                    var segmentReadOnlyBuffer = reader.Read((int)TimeSeriesTable.Segment, out int size);
-                    var readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
-
-                    if (readOnlySegment.MarkDeadRange(context, baseline, from, to))
+                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline))
                     {
-                        long newEtag;
-                        (changeVector, newEtag) = GenerateChangeVector(context, null);
+                        if (holder.LoadCurrentSegment() == false)
+                            return false;
 
-                        EnsureSegmentSize(readOnlySegment.NumberOfBytes);
+                        var readOnlySegment = holder.ReadOnlySegment;
+                        var end = readOnlySegment.GetLastTimestamp(baseline);
 
-                        // we change the segment in-place so we need to clone it
-                        var mem = context.GetMemory(readOnlySegment.NumberOfBytes);
-                        Memory.Copy(mem.Address, readOnlySegment.Ptr, readOnlySegment.NumberOfBytes);
+                        if (baseline > end)
+                            return false;
 
-                        using (Slice.From(context.Allocator, changeVector, out Slice cv))
-                        using (Slice.From(context.Allocator, new Span<byte>(key, keySize), out Slice keySlice))
-                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out var collectionSlice))
-                        using (table.Allocate(out TableValueBuilder tvb))
+                        var newSegment = new TimeSeriesValuesSegment(holder.Allocator.Buffer.Ptr, MaxSegmentSize);
+                        newSegment.Initialize(readOnlySegment.NumberOfValues);
+
+                        using (var enumerator = readOnlySegment.GetEnumerator(context.Allocator))
                         {
-                            tvb.Add(keySlice);
-                            tvb.Add(Bits.SwapBytes(newEtag));
-                            tvb.Add(cv);
-                            tvb.Add(mem.Address, readOnlySegment.NumberOfBytes);
-                            tvb.Add(collectionSlice);
-                            tvb.Add(context.GetTransactionMarker());
+                            var state = new TimeStampState[readOnlySegment.NumberOfValues];
+                            var values = new double[readOnlySegment.NumberOfValues];
+                            var tag = new TimeSeriesValuesSegment.TagPointer();
 
-                            table.Set(tvb);
+                            while (enumerator.MoveNext(out int ts, values, state, ref tag, out var status))
+                            {
+                                var current = baseline.AddMilliseconds(ts);
+                                if (current >= from && current <= to)
+                                {
+                                    status = TimeSeriesValuesSegment.Dead;
+                                }
+
+                                holder.AddValue(current, values, tag.AsSpan(), ref newSegment, status);
+                            }
                         }
+
+                        holder.AppendExistingSegment(newSegment);
+                        changeVector = holder.ChangeVector;
+                        next = holder.BaselineDate;
+                        return next < end;
                     }
-                    return true;
                 }
 
-                Table.TableValueHolder TryGetNextSegment(ref TableValueReader reader)
+                Table.TableValueHolder TryGetNextSegment(DateTime baseline)
                 {
-                    var key = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
-                    using (Slice.From(context.Allocator, key, keySize - sizeof(long), out var prefix))
-                    using (Slice.From(context.Allocator, key, keySize, out var current))
-                    {
-                        foreach (var (nextKey, tvh) in table.SeekByPrimaryKeyPrefix(prefix, current, 0))
-                        {
-                            return tvh;
-                        }
+                    var offset = timeSeriesKeySlice.Size - sizeof(long);
+                    *(long*)(timeSeriesKeySlice.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
 
-                        return null;
+                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(timeSeriesKeySlice, timeSeriesKeySlice, 0))
+                    {
+                        return tvh;
                     }
+
+                    return null;
                 }
 
                 void RemoveTimeSeriesNameFromMetadata(DocumentsOperationContext ctx, string docId, string tsName)
@@ -265,7 +262,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
         }
-        
+
         public void DeleteTimeSeriesForDocument(DocumentsOperationContext context, string documentId, CollectionName collection)
         {
             // this will be called as part of document's delete
@@ -378,6 +375,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                 do
                 {
+                    if (_currentSegment.NumberOfEntries == 0)
+                        continue;
+
                     for (int i = 0; i < _currentSegment.NumberOfValues; i++)
                     {
                         if (result.Count == 0)
@@ -420,7 +420,9 @@ namespace Raven.Server.Documents.TimeSeries
                     segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
                     segmentResult.Start = baseline;
 
-                    if (segmentResult.Start >= _from && segmentResult.End <= _to)
+                    if (segmentResult.Start >= _from && 
+                        segmentResult.End <= _to && 
+                        _currentSegment.NumberOfEntries > 0)
                     {
                         // we can yield the whole segment in one go
                         segmentResult.Summary = _currentSegment.SegmentValues;
@@ -469,6 +471,10 @@ namespace Raven.Server.Documents.TimeSeries
             private IEnumerable<SingleResult> YieldSegment(DateTime baseline)
             {
                 var result = new SingleResult();
+
+                if (_currentSegment.NumberOfEntries == 0)
+                    yield break;
+
                 using (var enumerator = _currentSegment.GetEnumerator(_context.Allocator))
                 {
                     while (enumerator.MoveNext(out int ts, _values, _states, ref _tagPointer, out var status))
@@ -692,9 +698,15 @@ namespace Raven.Server.Documents.TimeSeries
                 _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice, timestamp, out TimeSeriesKeySlice));
                 _internalScopesToDispose.Add(context.Allocator.Allocate(MaxSegmentSize, out Buffer));
 
+                Memory.Set(Buffer.Ptr, 0, MaxSegmentSize);
+
                 if (tag != null)
                 {
                     _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, tag, out TagSlice));
+
+                    if (TagSlice.Size > byte.MaxValue)
+                        throw new ArgumentOutOfRangeException(nameof(tag),
+                            $"Tag '{tag}' is too big (max 255 bytes) for document '{documentId}' in time series: {name}");
                 }
             }
 
@@ -709,15 +721,17 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     internalScope.Dispose();
                 }
+                _internalScopesToDispose.Clear();
 
                 foreach (var externalScope in _externalScopesToDispose)
                 {
                     externalScope.Dispose();
                 }
+                _externalScopesToDispose.Clear();
             }
         }
 
-        public class TimeSeriesSegmentHolder
+        public class TimeSeriesSegmentHolder : IDisposable
         {
             private readonly TimeSeriesStorage _tss;
             private readonly DocumentsOperationContext _context;
@@ -734,9 +748,33 @@ namespace Raven.Server.Documents.TimeSeries
             public TimeSeriesValuesSegment ReadOnlySegment;
 
             private long _currentEtag;
+            
             private string _currentChangeVector;
+            public string ChangeVector => _currentChangeVector;
+
             private byte* _key;
             private int _keySize;
+            private AllocatedMemoryData _clonedReadonlySegment;
+
+            public TimeSeriesSegmentHolder(
+                TimeSeriesStorage tss,
+                DocumentsOperationContext context,
+                string docId,
+                string name,
+                CollectionName collection,
+                DateTime timeStamp
+                )
+            {
+                _tss = tss;
+                _context = context;
+                _collection = collection;
+                _docId = docId;
+                _name = name;
+
+                Allocator = new TimeSeriesSlicer(_context, docId, name, timeStamp);
+
+                (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, null);
+            }
 
             public TimeSeriesSegmentHolder(
                 TimeSeriesStorage tss,
@@ -758,22 +796,28 @@ namespace Raven.Server.Documents.TimeSeries
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, fromReplicationChangeVector);
             }
 
-            public void Initialize(ref TableValueReader tvr)
+            private void Initialize()
             {
-                _tvr = tvr;
+                Debug.Assert(_tvr.Equals(default) == false);
 
-                if (_tvr.Equals(default(TableValueReader)))
-                    return;
-
-                _key = tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out _keySize);
+                _key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out _keySize);
                 BaselineMilliseconds = Bits.SwapBytes(
                     *(long*)(_key + _keySize - sizeof(long))
                 );
 
                 BaselineDate = new DateTime(BaselineMilliseconds * 10_000);
 
-                var segmentReadOnlyBuffer = tvr.Read((int)TimeSeriesTable.Segment, out int size);
-                ReadOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
+                var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
+
+                Debug.Assert(_clonedReadonlySegment == null);
+                // while appending or deleting, we might change the same segment. 
+                // So we clone it.
+                // for better reuse let use the const size of 'MaxSegmentSize'
+                _clonedReadonlySegment = _context.GetMemory(MaxSegmentSize);
+                Memory.Set(_clonedReadonlySegment.Address, 0, MaxSegmentSize);
+
+                Memory.Copy(_clonedReadonlySegment.Address, segmentReadOnlyBuffer, size);
+                ReadOnlySegment = new TimeSeriesValuesSegment(_clonedReadonlySegment.Address, size);
             }
 
             public Table Table => _tss.GetTimeSeriesTable(_context.Transaction.InnerTransaction, _collection);
@@ -801,7 +845,7 @@ namespace Raven.Server.Documents.TimeSeries
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context, null);
             }
 
-            public void AppendNewSegment(ByteString buffer, Slice key, Span<double> valuesCopy, Slice tag, ulong status)
+            public void AppendToNewSegment(ByteString buffer, Slice key, Span<double> valuesCopy, Slice tag, ulong status)
             {
                 int deltaFromStart = 0;
 
@@ -819,7 +863,7 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(key);
                     tvb.Add(Bits.SwapBytes(_currentEtag));
                     tvb.Add(cv);
-                    tvb.Add(buffer.Ptr, newSegment.NumberOfBytes);
+                    tvb.Add(newSegment.Ptr, newSegment.NumberOfBytes);
                     tvb.Add(collectionSlice);
                     tvb.Add(_context.GetTransactionMarker());
 
@@ -845,6 +889,17 @@ namespace Raven.Server.Documents.TimeSeries
                     FlushCurrentSegment(ref segment, values, tagSlice, status);
                     UpdateBaseline(timestampDiff);
                 }
+            }
+
+            public bool LoadCurrentSegment()
+            {
+                if (Table.SeekOneBackwardByPrimaryKeyPrefix(Allocator.TimeSeriesPrefixSlice, Allocator.TimeSeriesKeySlice, out _tvr))
+                {
+                    Initialize();
+                    return true;
+                }
+
+                return false;
             }
 
             private void FlushCurrentSegment(
@@ -873,6 +928,16 @@ namespace Raven.Server.Documents.TimeSeries
                 *(long*)(Allocator.TimeSeriesKeyBuffer.Ptr + Allocator.TimeSeriesKeyBuffer.Length - sizeof(long)) = Bits.SwapBytes(BaselineMilliseconds);
                 _key = Allocator.TimeSeriesKeyBuffer.Ptr;
                 _keySize = Allocator.TimeSeriesKeyBuffer.Length;
+            }
+
+            public void Dispose()
+            {
+                Allocator.Dispose();
+
+                if (_clonedReadonlySegment != null)
+                {
+                    _context.ReturnMemory(_clonedReadonlySegment);
+                }
             }
         }
 
@@ -904,7 +969,8 @@ namespace Raven.Server.Documents.TimeSeries
             string collection,
             string name,
             IEnumerable<Reader.SingleResult> toAppend,
-            string changeVectorFromReplication = null)
+            string changeVectorFromReplication = null
+            )
         {
             if (context.Transaction == null)
             {
@@ -913,7 +979,6 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
-            var table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
             var newSeries = false;
 
             using (var appendEnumerator = toAppend.GetEnumerator())
@@ -929,25 +994,14 @@ namespace Raven.Server.Documents.TimeSeries
 
                         using (var slicer = new TimeSeriesSlicer(context, documentId, name, current.TimeStamp, current.Tag))
                         {
-                            Memory.Set(slicer.Buffer.Ptr, 0, MaxSegmentSize);
-
-                            if (slicer.TagSlice.Size > byte.MaxValue)
-                                throw new ArgumentOutOfRangeException(nameof(current.Tag),
-                                    $"Tag '{current.Tag}' is too big (max 255 bytes) for document '{documentId}' in time series: {name}");
-
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, changeVectorFromReplication);
-
-                            if (table.SeekOneBackwardByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out var tvr) == false)
+                            if (segmentHolder.LoadCurrentSegment() == false)
                             {
                                 // no matches for this series at all, need to create new segment
-                                segmentHolder.AppendNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice, current.Status);
+                                segmentHolder.AppendToNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice, current.Status);
                                 newSeries = true;
                                 break;
                             }
-
-                            // we found the segment that should contain the new value, now we need to check if we can append
-                            // it to the end or need to split it
-                            segmentHolder.Initialize(ref tvr);
 
                             var segment = segmentHolder.ReadOnlySegment;
 
@@ -1066,7 +1120,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // either the range is too high to fit in a single segment (~50 days) or the 
                     // previous segment is full, we can just create a completely new segment with the 
                     // new value
-                    segmentHolder.AppendNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice, current.Status);
+                    segmentHolder.AppendToNewSegment(slicer.Buffer, slicer.TimeSeriesKeySlice, current.Values.Span, slicer.TagSlice, current.Status);
                     return true;
                 }
 
@@ -1123,7 +1177,7 @@ namespace Raven.Server.Documents.TimeSeries
                             var currentTime = originalBaseline.AddMilliseconds(currentTimestamp);
                             while (true)
                             {
-                                if (ShouldAddLocal(currentTime, currentValues, current, nextSegmentBaseline, timeSeriesSegment.FromReplication))
+                                if (ShouldAddLocal(currentTime, currentValues, current, nextSegmentBaseline, timeSeriesSegment))
                                 {
                                     timeSeriesSegment.AddValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
                                     if (currentTime == current?.TimeStamp)
@@ -1152,7 +1206,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         changed = true;
                         retryAppend = false;
-                        timeSeriesSegment.AddValue(current, ref splitSegment, TimeSeriesValuesSegment.Live);
+                        timeSeriesSegment.AddValue(current, ref splitSegment, current.Status);
                     }
 
                     if (changed == false)
@@ -1163,7 +1217,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
         }
-        private static bool ShouldAddLocal(DateTime localTime, Span<double> localValues, Reader.SingleResult remote, DateTime? nextSegmentBaseline, bool fromReplication)
+        private static bool ShouldAddLocal(DateTime localTime, Span<double> localValues, Reader.SingleResult remote, DateTime? nextSegmentBaseline, TimeSeriesSegmentHolder holder)
         {
             if (remote == null)
                 return true;
@@ -1176,10 +1230,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (localTime == remote.TimeStamp)
             {
-                /*if (remote.Status == TimeSeriesValuesSegment.Dead)
-                    return false;*/
-
-                return fromReplication == false || // if not from replication, this value overrides
+                return holder.FromReplication == false || // if not from replication, this value overrides
                        localValues.SequenceCompareTo(remote.Values.Span) > 0; // if from replication, the largest value wins
             }
 

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
-using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Memory = Sparrow.Memory;
 
 namespace Raven.Server.Documents.TimeSeries
 {
@@ -124,7 +124,6 @@ namespace Raven.Server.Documents.TimeSeries
             _buffer = buffer + sizeof(BitsBufferHeader) + Header->CompressedSize;
             Size = size;
         }
-
 
         private ushort BitsAvailableInLastByte()
         {
@@ -272,6 +271,8 @@ namespace Raven.Server.Documents.TimeSeries
             var size = Header->UncompressedSize + UncompressedBitsInBytes + sizeof(BitsBufferHeader);
             ByteStringContext.InternalScope scope = allocator.Allocate(size, out var buffer);
             Memory.Set(buffer.Ptr, 0, buffer.Length);
+            var bufferHeader = (BitsBufferHeader*)buffer.Ptr;
+
             if (Header->CompressedSize > 0)
             {
                 var compressedBufferPtr = ((byte*)Header) + sizeof(BitsBufferHeader);
@@ -282,7 +283,6 @@ namespace Raven.Server.Documents.TimeSeries
             }
             Memory.Copy(buffer.Ptr + sizeof(BitsBufferHeader) + Header->UncompressedSize, _buffer, UncompressedBitsInBytes);
 
-            var bufferHeader = (BitsBufferHeader*)buffer.Ptr;
             bufferHeader->UncompressedBitsPosition = (Header->UncompressedBitsPosition + Header->UncompressedSize * 8);
 
             bitsBuffer = new BitsBuffer(buffer.Ptr, buffer.Length);
