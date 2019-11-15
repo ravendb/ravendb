@@ -4,7 +4,6 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -24,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private HandleReferences _handleReferences;
 
         protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
-            : base(definition.IndexDefinition.Type, definition)
+            : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
 

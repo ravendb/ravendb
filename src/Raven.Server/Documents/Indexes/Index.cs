@@ -70,8 +70,8 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(IndexType type, TIndexDefinition definition)
-            : base(type, definition)
+        protected Index(IndexType type, IndexSourceType sourceType, TIndexDefinition definition)
+            : base(type, sourceType, definition)
         {
         }
     }
@@ -208,9 +208,12 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly double _txAllocationsRatio;
 
-        protected Index(IndexType type, IndexDefinitionBase definition)
+        private readonly string _itemType;
+
+        protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBase definition)
         {
             Type = type;
+            SourceType = sourceType;
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
 
@@ -230,6 +233,21 @@ namespace Raven.Server.Documents.Indexes
             else
             {
                 _txAllocationsRatio = 2;
+            }
+
+            switch (sourceType)
+            {
+                case IndexSourceType.None:
+                    _itemType = "item";
+                    break;
+                case IndexSourceType.Documents:
+                    _itemType = "document";
+                    break;
+                case IndexSourceType.TimeSeries:
+                    _itemType = "time series";
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown index source type: {sourceType}");
             }
 
             _disposeOne = new DisposeOnce<SingleAttempt>(() =>
@@ -394,6 +412,8 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public IndexType Type { get; }
+
+        public IndexSourceType SourceType { get; }
 
         public IndexState State { get; protected set; }
 
@@ -900,10 +920,10 @@ namespace Raven.Server.Documents.Indexes
                         var lastDoc = GetItemByEtag(databaseContext, lastItemEtag);
 
                         var message = $"There are still some documents to process from collection '{collection}'. " +
-                                   $"The last document etag in that collection is '{lastItemEtag:#,#;;0}' " +
+                                   $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
                                    $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
-                                   $"but last committed document etag for that collection is '{lastProcessedItemEtag:#,#;;0}'";
+                                   $"but last committed {_itemType} etag for that collection is '{lastProcessedItemEtag:#,#;;0}'";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
 
@@ -941,11 +961,11 @@ namespace Raven.Server.Documents.Indexes
                         var lastDoc = GetItemByEtag(databaseContext, lastItemEtag);
 
                         var message = $"There are still some documents to process from collection '{collection}'. " +
-                                   $"The last document etag in that collection is '{lastItemEtag:#,#;;0}' " +
+                                   $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
                                    $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
                                    $"with cutoff set to '{cutoff.Value}', " +
-                                   $"but last committed document etag for that collection is '{lastProcessedItemEtag:#,#;;0}'.";
+                                   $"but last committed {_itemType} etag for that collection is '{lastProcessedItemEtag:#,#;;0}'.";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
 

@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Auto
     public class AutoMapIndex : MapIndexBase<AutoMapIndexDefinition, AutoIndexField>
     {
         private AutoMapIndex(AutoMapIndexDefinition definition)
-            : base(IndexType.AutoMap, definition)
+            : base(IndexType.AutoMap, IndexSourceType.Documents, definition)
         {
         }
 

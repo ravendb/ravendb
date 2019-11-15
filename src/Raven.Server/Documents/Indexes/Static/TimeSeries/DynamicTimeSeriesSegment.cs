@@ -5,13 +5,13 @@ using System.Diagnostics;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
     public class DynamicTimeSeriesSegment : AbstractDynamicObject
     {
         private TimeSeriesItem _item;
+        private DynamicArray _entries;
 
         public override dynamic GetId()
         {
@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return DynamicNullObject.Null;
 
             Debug.Assert(_item.Key != null, "_item.Key != null");
+            Debug.Assert(nameof(Baseline) == nameof(_item.Baseline), "nameof(Baseline) == nameof(_item.Baseline)");
 
             return _item.Key;
         }
@@ -26,31 +27,47 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override void Set(object item)
         {
             _item = (TimeSeriesItem)item;
+            _entries = null;
         }
+
+        public DynamicArray Entries
+        {
+            get
+            {
+                if (_entries == null)
+                {
+                    var context = CurrentIndexingScope.Current.IndexContext;
+                    var entries = _item.Segment.YieldAllValues(context, context.Allocator, _item.Baseline);
+                    var enumerable = new DynamicTimeSeriesEnumerable(entries);
+
+                    _entries = new DynamicArray(enumerable);
+                }
+
+                return _entries;
+            }
+        }
+
+        public dynamic Baseline => TypeConverter.ToDynamicType(_item.Baseline);
 
         protected override bool TryGetByName(string name, out object result)
         {
             Debug.Assert(_item != null, "Item cannot be null");
 
-            if (string.Equals("Entries", name))
-            {
-                var context = CurrentIndexingScope.Current.IndexContext;
-                var entries = _item.Segment.YieldAllValues(context, context.Allocator, _item.Baseline);
-                var enumerable = new DynamicTimeSeriesEnumerable(entries);
-
-                result = new DynamicArray(enumerable);
-                return true;
-            }
-
-            if (string.Equals("DocumentId", name))
+            if (string.Equals("DocumentId", name)) // TODO arek - https://github.com/ravendb/ravendb/pull/9875/files#r346221961
             {
                 result = TypeConverter.ToDynamicType(_item.DocId);
                 return true;
             }
 
-            if (string.Equals(nameof(_item.Baseline), name))
+            if (string.Equals(nameof(Entries), name))
             {
-                result = TypeConverter.ToDynamicType(_item.Baseline);
+                result = Entries;
+                return true;
+            }
+
+            if (string.Equals(nameof(Baseline), name))
+            {
+                result = Baseline;
                 return true;
             }
 
@@ -110,9 +127,14 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             private class DynamicTimeSeriesEntry : AbstractDynamicObject
             {
                 private TimeSeriesStorage.Reader.SingleResult _entry;
+                private DynamicArray _values;
 
                 public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
                 {
+                    Debug.Assert(nameof(Values) == nameof(entry.Values), "nameof(Values) == nameof(entry.Values)");
+                    Debug.Assert(nameof(TimeStamp) == nameof(_entry.TimeStamp), "nameof(TimeStamp) == nameof(_entry.TimeStamp");
+                    Debug.Assert(nameof(Tag) == nameof(_entry.Tag),"nameof(Tag) == nameof(_entry.Tag)");
+
                     _entry = entry;
                 }
 
@@ -124,7 +146,20 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 public override void Set(object item)
                 {
                     _entry = (TimeSeriesStorage.Reader.SingleResult)item;
+                    _values = null;
                 }
+
+                public dynamic Values
+                {
+                    get
+                    {
+                        return _values ??= new DynamicArray(_entry.Values.ToArray());
+                    }
+                }
+
+                public dynamic TimeStamp => TypeConverter.ToDynamicType(_entry.TimeStamp);
+
+                public dynamic Tag => TypeConverter.ToDynamicType(_entry.Tag);
 
                 protected override bool TryGetByName(string name, out object result)
                 {
@@ -132,20 +167,19 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
                     if (string.Equals(nameof(_entry.Tag), name))
                     {
-                        result = TypeConverter.ToDynamicType(_entry.Tag);
+                        result = Tag;
                         return true;
                     }
 
                     if (string.Equals(nameof(_entry.TimeStamp), name))
                     {
-                        result = TypeConverter.ToDynamicType(_entry.TimeStamp);
+                        result = TimeStamp;
                         return true;
                     }
 
                     if (string.Equals(nameof(_entry.Values), name))
                     {
-                        // TODO [ppekrol] can we do better here? Implement dedicated DynamicArray for this?
-                        result = new DynamicArray(_entry.Values.ToArray());
+                        result = Values;
                         return true;
                     }
 
