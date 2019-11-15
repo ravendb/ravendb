@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
         }
 
-        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinition definition)
+        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBase definition)
             : base(IndexType.Faulty, definition)
         {
             _e = e;
