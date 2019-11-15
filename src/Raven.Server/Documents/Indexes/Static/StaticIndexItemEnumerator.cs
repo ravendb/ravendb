@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             using (_documentReadStats?.Start())
             {
-                Current.Dispose();
+                Current?.Dispose();
                 etag = null;
 
                 while (_itemsEnumerator.MoveNext())
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public void Dispose()
         {
             _itemsEnumerator.Dispose();
-            Current.Dispose();
+            Current?.Dispose();
         }
 
         protected class DynamicIteratorOfCurrentItemWrapper<TDynamicIteratorOfCurrentItemWrapperType> : IEnumerable<TDynamicIteratorOfCurrentItemWrapperType> where TDynamicIteratorOfCurrentItemWrapperType : AbstractDynamicObject, new()
