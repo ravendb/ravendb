@@ -75,7 +75,21 @@ namespace Raven.Client.Documents.Indexes
             set => _configuration = value;
         }
 
-        public virtual IndexSourceType SourceType { get; set; } = IndexSourceType.Documents;
+        private IndexSourceType? _indexSourceType;
+
+        public virtual IndexSourceType SourceType
+        {
+            get
+            {
+                if (_indexSourceType == null || _indexSourceType.Value == IndexSourceType.None)
+                {
+                    _indexSourceType = IndexSourceType.Documents; // TODO arek - do we really need this for backward compatibility?
+                }
+
+                return _indexSourceType.Value;
+            }
+            internal set => _indexSourceType = value;
+        }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
