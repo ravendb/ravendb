@@ -1528,10 +1528,19 @@ namespace Raven.Server.Documents.TimeSeries
                     return list;
 
                 var size = documentKeyPrefix.Size;
+                bool excludeValueFromSeek;
                 do
                 {
-                    list.Add(GetNameAndUpdateSlice(ref reader, size, ref slice));
-                } while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader));
+                    var name = GetNameAndUpdateSlice(ref reader, size, ref slice);
+                    if (name == null)
+                    {
+                        excludeValueFromSeek = true;
+                        continue;
+                    }
+
+                    excludeValueFromSeek = false;
+                    list.Add(name);
+                } while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader, excludeValueFromSeek));
 
                 list.Items.Reverse();
                 return list;
@@ -1540,13 +1549,27 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static string GetNameAndUpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
         {
-            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out var size);
-            var name = Encoding.UTF8.GetString(keyPtr + prefixSize, size - prefixSize - sizeof(long) - 1);
+            var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out var size);
+            var segment = new TimeSeriesValuesSegment(segmentPtr, size);
+            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out size);
 
+            for (int i = 0; i < segment.NumberOfValues; i++)
+            {
+                if (segment.SegmentValues.Span[i].Count > 0)
+                {
+                    var name = Encoding.UTF8.GetString(keyPtr + prefixSize, size - prefixSize - sizeof(long) - 1);
+                    slice.Content._pointer->Ptr = keyPtr;
+                    slice.Content._pointer->Length = size - sizeof(long);
+                    slice.Content._pointer->Size = size - sizeof(long);
+                    return name;
+                }
+            }
+
+            // this segment is empty or marked as deleted, look for the next segment in this time-series
             slice.Content._pointer->Ptr = keyPtr;
-            slice.Content._pointer->Length = size - sizeof(long);
-            slice.Content._pointer->Size = size - sizeof(long);
-            return name;
+            slice.Content._pointer->Length = size;
+            slice.Content._pointer->Size = size;
+            return null;
         }
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context, string collection)
