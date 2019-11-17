@@ -1143,7 +1143,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool SeekOneBackwardByPrimaryKeyPrefix(Slice prefix, Slice value, out TableValueReader reader)
+        public bool SeekOneBackwardByPrimaryKeyPrefix(Slice prefix, Slice value, out TableValueReader reader, bool excludeValueFromSeek = false)
         {
             reader = default;
             var pk = _schema.Key;
@@ -1162,7 +1162,7 @@ namespace Voron.Data.Tables
                             return false;
                     }
                 }
-                else if (SliceComparer.AreEqual(it.CurrentKey, value) == false)
+                else if (SliceComparer.AreEqual(it.CurrentKey, value) == excludeValueFromSeek)
                 {
                     it.SetRequiredPrefix(prefix);
                     if (it.MovePrev() == false)
