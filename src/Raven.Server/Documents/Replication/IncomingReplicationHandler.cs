@@ -1005,7 +1005,7 @@ namespace Raven.Server.Documents.Replication
                                     continue;
                                 }
 
-                                var values = segment.Segment.YieldAllValues(context, baseline);
+                                var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, name, values, segment.ChangeVector);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
