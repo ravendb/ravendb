@@ -109,6 +109,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateUnusedDatabaseIdsCommand)] = 42_002,
             [nameof(UpdateLicenseLimitsCommand)] = 42_002,
             [nameof(EditRefreshCommand)] = 42_003,
+
+            [nameof(EditRevisionsForConflictsConfigurationCommand)] = 42_004,
         };
 
         public static bool CanPutCommand(string command)
