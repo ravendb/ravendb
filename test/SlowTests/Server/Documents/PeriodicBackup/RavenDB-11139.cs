@@ -326,7 +326,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         }
 
                         var stats = store2.Maintenance.ForDatabase(databaseName).Send(new GetDetailedStatisticsOperation());
-                        Assert.True(4 == stats.CountOfCompareExchange, $"lastFile: {string.Join(", ", files)}");
+                        Assert.True(4 == stats.CountOfCompareExchange, $"all backup files: {string.Join(", ", files)}");
 
                         Assert.Equal(user2.Name, users["emojis/clown"].Value.Name);
                         Assert.Equal(user3.Name, users["emojis/goblin"].Value.Name);
