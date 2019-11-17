@@ -540,17 +540,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             public long LastRaftIndex { get; set; }
         }
 
-        private InternalBackupResult CreateLocalBackupOrSnapshot(
-            PeriodicBackupStatus status, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
+        private InternalBackupResult CreateLocalBackupOrSnapshot(PeriodicBackupStatus status, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
         {
             var internalBackupResult = new InternalBackupResult();
 
             using (status.LocalBackup.UpdateStats(_isFullBackup))
             {
+                // will rename the file after the backup is finished
+                var tempBackupFilePath = backupFilePath + InProgressExtension;
+
                 try
                 {
-                    // will rename the file after the backup is finished
-                    var tempBackupFilePath = backupFilePath + InProgressExtension;
+                    
 
                     BackupTypeValidation();
 
@@ -631,6 +632,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 catch (Exception e)
                 {
                     status.LocalBackup.Exception = e.ToString();
+
+                    // deleting the temp backup file if the backup failed
+                    IOExtensions.DeleteFile(tempBackupFilePath);
                     throw;
                 }
             }
