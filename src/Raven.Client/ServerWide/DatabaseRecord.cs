@@ -65,6 +65,8 @@ namespace Raven.Client.ServerWide
 
         public RevisionsConfiguration Revisions;
 
+        public RevisionsCollectionConfiguration RevisionsForConflicts;
+
         public ExpirationConfiguration Expiration;
 
         public RefreshConfiguration Refresh;

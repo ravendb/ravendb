@@ -754,6 +754,13 @@ namespace Raven.Server.Smuggler.Documents
                     progress.RevisionsConfigurationUpdated = true;
                 }
 
+                if (databaseRecord?.RevisionsForConflicts != null)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring revisions for conflicts from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsForConflictsConfigurationCommand(databaseRecord.RevisionsForConflicts, _database.Name, RaftIdGenerator.DontCareId)));
+                }
+
                 if (databaseRecord?.Expiration != null)
                 {
                     if (_log.IsInfoEnabled)

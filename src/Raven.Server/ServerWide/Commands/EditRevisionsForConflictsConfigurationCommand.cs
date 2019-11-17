@@ -1,26 +1,26 @@
-using Raven.Client.Documents.Operations.Revisions;
+﻿using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class EditRevisionsConfigurationCommand : UpdateDatabaseCommand
+    public class EditRevisionsForConflictsConfigurationCommand : UpdateDatabaseCommand
     {
-        public RevisionsConfiguration Configuration { get; protected set; }
+        public RevisionsCollectionConfiguration Configuration { get; protected set; }
 
-        public EditRevisionsConfigurationCommand()
+        public EditRevisionsForConflictsConfigurationCommand()
         {
         }
 
-        public EditRevisionsConfigurationCommand(RevisionsConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
+        public EditRevisionsForConflictsConfigurationCommand(RevisionsCollectionConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.Revisions = Configuration;
+            record.RevisionsForConflicts = Configuration;
             return null;
         }
 

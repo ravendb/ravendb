@@ -338,7 +338,8 @@ namespace Raven.Server.Documents
                         _documentsStorage.RevisionsStorage.Put(
                             context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions, nonPersistentFlags, conflicted.ChangeVector,
                             conflicted.LastModified.Ticks,
-                            collectionName: collection, configuration: RevisionsStorage.ConflictConfiguration.Default);
+                            collectionName: collection, 
+                            configuration: RevisionsStorage.ConflictConfiguration.Default);
                     }
                     else if (conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
                     {

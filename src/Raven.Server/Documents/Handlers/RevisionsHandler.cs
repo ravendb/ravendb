@@ -62,6 +62,15 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/admin/revisions/conflicts/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigConflictedRevisions()
+        {
+            await DatabaseConfigurations(
+                ServerStore.ModifyRevisionsForConflicts,
+                "conflicted-revisions-config",
+                GetRaftRequestIdFromQuery());
+        }
+
         [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigRevisions()
         {
