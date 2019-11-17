@@ -260,9 +260,9 @@ namespace Raven.Client.Util
                     && context.Node is MemberExpression memberExpression
                     && memberExpression.Member.Name.In("Value", "Key"))
                 {
-                    var p = GetParameterAndCheckInternalMemberName(memberExpression, out var hasInternal);
+                    var p = GetParameterAndCheckInternalMemberName(memberExpression, out var hasInternalKeyOrValue);
 
-                    if (hasInternal == false 
+                    if (hasInternalKeyOrValue == false 
                         && p?.Name == _paramName
                         && p?.Type.GenericTypeArguments.Length > 0  
                         && p.Type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
@@ -2415,19 +2415,19 @@ namespace Raven.Client.Util
             return GetInnermostExpression(expression, out _, out _) as ParameterExpression;
         }
 
-        private static ParameterExpression GetParameterAndCheckInternalMemberName(MemberExpression expression, out bool hasInternal)
+        private static ParameterExpression GetParameterAndCheckInternalMemberName(MemberExpression expression, out bool hasInternalKeyOrValue)
         {
-            return GetInnermostExpression(expression, out _, out hasInternal) as ParameterExpression;
+            return GetInnermostExpression(expression, out _, out hasInternalKeyOrValue) as ParameterExpression;
         }
 
-        public static Expression GetInnermostExpression(MemberExpression expression, out string path, out bool hasInternal)
+        public static Expression GetInnermostExpression(MemberExpression expression, out string path, out bool hasInternalKeyOrValue)
         {
             path = string.Empty;
-            hasInternal = false;
+            hasInternalKeyOrValue = false;
             while (expression.Expression is MemberExpression memberExpression)
             {
                 if (expression.Member.Name.In("Value", "Key"))
-                    hasInternal = true;
+                    hasInternalKeyOrValue = true;
 
                 expression = memberExpression;
                 path = path == string.Empty 
