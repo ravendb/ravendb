@@ -26,9 +26,13 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Exceptions;
+using Sparrow.Server.Utils;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -599,6 +603,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // snapshot backup
                         AddInfo("Started a snapshot backup");
 
+                        ValidateFreeSpaceForSnapshot(tempBackupFilePath);
+
                         internalBackupResult.LastDocumentEtag = _database.ReadLastEtag();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
                         var databaseSummary = _database.GetDatabaseSummary();
@@ -646,6 +652,30 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return internalBackupResult;
+        }
+
+        private void ValidateFreeSpaceForSnapshot(string filePath)
+        {
+            long totalUsedSpace = 0;
+            foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
+            {
+                totalUsedSpace += mountPointUsage.UsedSpace;
+            }
+
+            var directoryPath = Path.GetDirectoryName(filePath);
+            var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(directoryPath);
+            if (destinationDriveInfo == null)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Couldn't find the disk space info for path: {filePath}");
+
+                return;
+            }
+
+            var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(totalUsedSpace, SizeUnit.Bytes);
+            if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
+                throw new DiskFullException($"Not enough free space to create a snapshot. " +
+                                            $"Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
         }
 
         private void BackupTypeValidation()
