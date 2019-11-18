@@ -676,19 +676,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var directoryPath = Path.GetDirectoryName(filePath);
-            var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(directoryPath);
-            if (destinationDriveInfo == null)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Couldn't find the disk space info for path: {filePath}");
 
-                return;
-            }
-
-            var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(totalUsedSpace, SizeUnit.Bytes);
-            if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
-                throw new DiskFullException($"Not enough free space to create a snapshot. " +
-                                            $"Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
+            BackupHelper.AssertFreeSpaceForSnapshot(directoryPath, totalUsedSpace, "create a snapshot", _logger);
         }
 
         private void BackupTypeValidation()
