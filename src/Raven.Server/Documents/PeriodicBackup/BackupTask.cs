@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // if user did not specify local folder we delete the temporary file
                     if (_backupToLocalFolder == false)
                     {
-                        IOExtensions.DeleteFile(backupFilePath);
+                        DeleteFile(backupFilePath);
                     }
                 }
 
@@ -640,7 +640,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     status.LocalBackup.Exception = e.ToString();
 
                     // deleting the temp backup file if the backup failed
-                    IOExtensions.DeleteFile(tempBackupFilePath);
+                    DeleteFile(tempBackupFilePath);
                     throw;
                 }
             }
@@ -652,6 +652,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return internalBackupResult;
+        }
+
+        private void DeleteFile(string path)
+        {
+            try
+            {
+                IOExtensions.DeleteFile(path);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete file: {path}", e);
+            }
         }
 
         private void ValidateFreeSpaceForSnapshot(string filePath)
