@@ -281,6 +281,70 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
+        public async Task DontKickFromClusterOnElectionTimeoutMismatch()
+        {
+            var cluster = await CreateRaftCluster(2, shouldRunInMemory: false);
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[0]);
+            await cluster.Nodes[1].ServerStore.WaitForState(RachisState.Candidate, CancellationToken.None);
+            cluster.Nodes[0] = GetNewServer(new ServerCreationOptions
+            {
+                DeletePrevious = false,
+                RunInMemory = false,
+                PartialPath = result.DataDir,
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url,
+                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 600.ToString(),
+                }
+            });
+
+            using (var cts = new CancellationTokenSource(10_000))
+            {
+                var t1 = cluster.Nodes[0].ServerStore.WaitForState(RachisState.Leader, cts.Token);
+                var t2 = cluster.Nodes[1].ServerStore.WaitForState(RachisState.Leader, cts.Token);
+
+                var task = await Task.WhenAny(t1, t2);
+                if (task == t1)
+                {
+                    Assert.NotEqual(RachisState.Passive, cluster.Nodes[1].ServerStore.Engine.CurrentState);
+                }
+                else
+                {
+                    Assert.NotEqual(RachisState.Passive, cluster.Nodes[0].ServerStore.Engine.CurrentState);
+                }
+            }
+
+            result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[1]);
+            cluster.Nodes[1] = GetNewServer(new ServerCreationOptions
+            {
+                DeletePrevious = false,
+                RunInMemory = false,
+                PartialPath = result.DataDir,
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url,
+                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = 600.ToString(),
+                }
+            });
+
+            using (var cts = new CancellationTokenSource(10_000))
+            {
+                var t1 = cluster.Nodes[0].ServerStore.WaitForState(RachisState.Leader, cts.Token);
+                var t2 = cluster.Nodes[1].ServerStore.WaitForState(RachisState.Leader, cts.Token);
+
+                var task = await Task.WhenAny(t1, t2);
+                if (task == t1)
+                {
+                    Assert.Equal(RachisState.Follower, cluster.Nodes[1].ServerStore.Engine.CurrentState);
+                }
+                else
+                {
+                    Assert.Equal(RachisState.Follower, cluster.Nodes[0].ServerStore.Engine.CurrentState);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ReconnectRemovedNodeWithOneDatabase()
         {
             // BAD IDEA - we lose the database!

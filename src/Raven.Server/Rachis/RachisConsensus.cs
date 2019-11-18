@@ -1204,7 +1204,7 @@ namespace Raven.Server.Rachis
             var rcvdTimeout = initialMessage.ElectionTimeout;
             if (rcvdTimeout < min || rcvdTimeout > max)
             {
-                throw new TopologyMismatchException(
+                throw new InvalidOperationException(
                     $"Cannot accept the connection '{initialMessage.InitialMessageType}' from {initialMessage.DebugSourceIdentifier} because his election timeout of {rcvdTimeout} deviates more than 10% from ours {(int)ElectionTimeout.TotalMilliseconds}.");
             }
         }
