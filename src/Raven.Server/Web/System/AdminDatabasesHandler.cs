@@ -586,7 +586,7 @@ namespace Raven.Server.Web.System
                 RestoreType restoreType;
                 if (restoreConfiguration.TryGet("Type", out string typeAsString))
                 {
-                    if (RestoreType.TryParse(typeAsString, out restoreType) == false)
+                    if (Enum.TryParse(typeAsString, out restoreType) == false)
                         throw new ArgumentException($"{typeAsString} is unknown backup type.");
                 }
                 else
@@ -607,7 +607,7 @@ namespace Raven.Server.Web.System
                             localConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(localConfiguration, context, restoreBackupTask);
+                        databaseName = await ValidateFreeSpace(localConfiguration, restoreBackupTask);
                         break;
                     case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
@@ -616,7 +616,7 @@ namespace Raven.Server.Web.System
                             s3Configuration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(s3Configuration, context, restoreBackupTask);
+                        databaseName = await ValidateFreeSpace(s3Configuration, restoreBackupTask);
                         break;
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
@@ -625,7 +625,7 @@ namespace Raven.Server.Web.System
                             azureConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(azureConfiguration,  context, restoreBackupTask);
+                        databaseName = await ValidateFreeSpace(azureConfiguration, restoreBackupTask);
                         break;      
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
@@ -634,7 +634,7 @@ namespace Raven.Server.Web.System
                             googlCloudConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(googlCloudConfiguration,  context, restoreBackupTask);
+                        databaseName = await ValidateFreeSpace(googlCloudConfiguration, restoreBackupTask);
                         break;
 
                     default:
@@ -655,8 +655,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task<string> ValidateFreeSpace(RestoreBackupConfigurationBase restoreBackup, TransactionOperationContext context,
-            RestoreBackupTaskBase restoreBackupTask)
+        private async Task<string> ValidateFreeSpace(RestoreBackupConfigurationBase restoreBackup, RestoreBackupTaskBase restoreBackupTask)
         {
             var extension = Path.GetExtension(restoreBackup.LastFileNameToRestore);
             if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension ||
@@ -696,17 +695,7 @@ namespace Raven.Server.Web.System
                     ? new PathSetting(restoreBackup.DataDirectory, baseDataDirectory).FullPath
                     : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, restoreBackup.DatabaseName, ResourceType.Database);
 
-                var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-                var destinationDirInfo = DiskSpaceChecker.GetDriveInfo(destinationPath, drivesInfo, out _);
-                var destinationDriveInfo = DiskSpaceChecker.GetDiskSpaceInfo(destinationDirInfo.DriveName);
-
-                if (destinationDriveInfo == null)
-                    throw new ArgumentException($"Provided path starts with an invalid drive name. Please use a proper path. Drive name provided: {destinationDirInfo.DriveName}.");
-
-                var desiredFreeSpace = Size.Min(new Size(512, SizeUnit.Megabytes), destinationDriveInfo.TotalSize * 0.01) + new Size(backupSizeInBytes, SizeUnit.Bytes);
-
-                if (destinationDriveInfo.TotalFreeSpace < desiredFreeSpace)
-                    throw new ArgumentException($"No enough free space to restore a backup. Required space {desiredFreeSpace}, available space: {destinationDriveInfo.TotalFreeSpace}");
+                BackupHelper.AssertFreeSpaceForSnapshot(destinationPath, backupSizeInBytes, "restore a backup", Logger);
             }
 
             return restoreBackup.DatabaseName;
