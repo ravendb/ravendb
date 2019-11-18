@@ -153,6 +153,40 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         public LeaderStamp Stamp;
         public bool DynamicNodesDistribution;
         public int ReplicationFactor = 1;
+        public List<string> PriorityOrder;
+
+        private readonly Random _random = new Random();
+        public int Shuffle(string _, string __)
+        {
+            return _random.Next(-100, 100);
+        }
+
+        public void ReorderMembers()
+        {
+            if (PriorityOrder == null || PriorityOrder.Count == 0)
+            {
+                Members.Sort(Shuffle);
+                return;
+            }
+
+            var members = new List<string>();
+            for (int i = 0; i < PriorityOrder.Count; i++)
+            {
+                var priorityNode = PriorityOrder[i];
+                if (Members.Contains(priorityNode))
+                    members.Add(priorityNode);
+            }
+
+            for (int i = 0; i < Members.Count; i++)
+            {
+                var member = Members[i];
+                if (members.Contains(member) == false)
+                    members.Add(member);
+            }
+
+            Members = members;
+        }
+
 
         public bool RelevantFor(string nodeTag)
         {
@@ -329,7 +363,8 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64
+                [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64,
+                [nameof(PriorityOrder)] = new DynamicJsonArray(PriorityOrder)
             };
         }
 
