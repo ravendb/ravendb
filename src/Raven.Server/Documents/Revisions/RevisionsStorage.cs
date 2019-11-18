@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Revisions
             TableType = (byte)TableType.Revisions
         };
 
-        public static RevisionsConfiguration ConflictConfiguration;
+        public RevisionsConfiguration ConflictConfiguration;
 
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
