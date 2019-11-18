@@ -15,12 +15,13 @@ namespace Raven.Client.ServerWide.Operations
         public class Parameters
         {
             public List<string> MembersOrder;
+            public bool Fixed;
         }
 
         private readonly string _database;
         private readonly Parameters _parameters;
 
-        public ReorderDatabaseMembersOperation(string database, List<string> order)
+        public ReorderDatabaseMembersOperation(string database, List<string> order, bool fixedTopology = false)
         {
             if (order == null || order.Count == 0)
                 throw new ArgumentException("Order list must contain values");
@@ -28,7 +29,8 @@ namespace Raven.Client.ServerWide.Operations
             _database = database;
             _parameters = new Parameters
             {
-                MembersOrder = order
+                MembersOrder = order,
+                Fixed = fixedTopology
             };
         }
 

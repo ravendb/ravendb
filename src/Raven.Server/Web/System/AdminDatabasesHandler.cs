@@ -461,6 +461,8 @@ namespace Raven.Server.Web.System
                 topology.Members = reorderedTopology.Members;
                 topology.Promotables = reorderedTopology.Promotables;
                 topology.Rehabs = reorderedTopology.Rehabs;
+                if (parameters.Fixed)
+                    topology.PriorityOrder = parameters.MembersOrder;
 
                 var reorder = new UpdateTopologyCommand(name, GetRaftRequestIdFromQuery())
                 {
