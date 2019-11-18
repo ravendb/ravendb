@@ -25,6 +25,7 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly IndexQuery _indexQuery;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
+        private readonly bool _isProjectInto;
         private QueryResult _currentQueryResults;
         private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
@@ -39,7 +40,8 @@ namespace Raven.Client.Documents.Session.Operations
             FieldsToFetchToken fieldsToFetch,
             bool disableEntitiesTracking,
             bool metadataOnly = false,
-            bool indexEntriesOnly = false)
+            bool indexEntriesOnly = false,
+            bool isProjectInto = false)
         {
             _session = session;
             _indexName = indexName;
@@ -48,6 +50,7 @@ namespace Raven.Client.Documents.Session.Operations
             NoTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
+            _isProjectInto = isProjectInto;
 
             AssertPageSizeSet();
         }
@@ -144,7 +147,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                 metadata.TryGetId(out var id);
 
-                addToResult(i, Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session));
+                addToResult(i, Deserialize<T>(id, document, metadata, _fieldsToFetch, NoTracking, _session, _isProjectInto));
             }
 
             if (NoTracking == false)
@@ -159,14 +162,14 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
-        internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, FieldsToFetchToken fieldsToFetch, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
+        internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, FieldsToFetchToken fieldsToFetch, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session, bool isProjectInto)
         {
             if (metadata.TryGetProjection(out var projection) == false || projection == false)
                 return session.TrackEntity<T>(id, document, metadata, disableEntitiesTracking);
 
             var type = typeof(T);
 
-            if (fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
+            if (isProjectInto == false && fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
             {
                 var typeInfo = type.GetTypeInfo();
                 var projectionField = fieldsToFetch.Projections[0];

@@ -26,8 +26,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null)
-            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null, bool? isProjectInto = false)
+            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias, isProjectInto)
         {
         }
 
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var fields = propertyInfos.Select(p => p.Name).ToArray();
-            return SelectFields<TProjection>(new QueryData(fields, projections));
+            return SelectFields<TProjection>(new QueryData(fields, projections, isProjectInto: true));
         }
 
         /// <inheritdoc />
@@ -1106,7 +1106,8 @@ namespace Raven.Client.Documents.Session
                 IsGroupBy,
                 queryData?.DeclareToken,
                 queryData?.LoadTokens,
-                queryData?.FromAlias)
+                queryData?.FromAlias,
+                queryData?.IsProjectInto)
             {
                 QueryRaw = QueryRaw,
                 PageSize = PageSize,

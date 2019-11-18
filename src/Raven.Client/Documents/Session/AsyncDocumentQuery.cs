@@ -28,8 +28,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null)
-            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null, bool? isProjectInfo = false)
+            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias, isProjectInfo)
         {
         }
 
@@ -612,7 +612,7 @@ namespace Raven.Client.Documents.Session
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var fields = propertyInfos.Select(p => p.Name).ToArray();
-            return SelectFields<TProjection>(new QueryData(fields, projections));
+            return SelectFields<TProjection>(new QueryData(fields, projections, isProjectInto: true));
         }
 
         /// <inheritdoc />
@@ -1049,7 +1049,8 @@ namespace Raven.Client.Documents.Session
                 IsGroupBy,
                 queryData?.DeclareToken,
                 queryData?.LoadTokens,
-                queryData?.FromAlias)
+                queryData?.FromAlias,
+                queryData?.IsProjectInto)
             {
                 PageSize = PageSize,
                 SelectTokens = new LinkedList<QueryToken>(SelectTokens),
