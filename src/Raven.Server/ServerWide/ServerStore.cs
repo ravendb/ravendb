@@ -2857,11 +2857,11 @@ namespace Raven.Server.ServerWide
             if (diskSpaceResult == null)
                 yield break;
 
-            var sizeOnDisk = environment.Environment.GenerateSizeReport();
-            var usage = new Raven.Client.ServerWide.Operations.MountPointUsage
+            var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
+            var usage = new Client.ServerWide.Operations.MountPointUsage
             {
                 UsedSpace = sizeOnDisk.DataFileInBytes,
-                DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                 {
                     DriveName = diskSpaceResult.DriveName,
                     VolumeLabel = diskSpaceResult.VolumeLabel,
@@ -2883,7 +2883,7 @@ namespace Raven.Server.ServerWide
                 {
                     yield return new Client.ServerWide.Operations.MountPointUsage
                     {
-                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                         {
                             DriveName = journalPathUsage.DriveName,
                             VolumeLabel = journalPathUsage.VolumeLabel,
