@@ -1394,7 +1394,7 @@ namespace Raven.Server.Documents
                 if (environment == null)
                     continue;
 
-                var sizeOnDisk = environment.Environment.GenerateSizeReport();
+                var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers: true);
                 dataInBytes += sizeOnDisk.DataFileInBytes + sizeOnDisk.JournalsInBytes;
                 tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes + sizeOnDisk.TempRecyclableJournalsInBytes;
             }
