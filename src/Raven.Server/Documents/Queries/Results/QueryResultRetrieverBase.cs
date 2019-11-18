@@ -57,6 +57,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<ValueExpression, object> _valuesDictionary;
 
+        private Dictionary<FieldExpression, object> _parameterValuesDictionary;
+
+
         protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
         {
             _database = database;
@@ -809,6 +812,8 @@ namespace Raven.Server.Documents.Queries.Results
                 array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
             }
 
+            _parameterValuesDictionary?.Clear();
+
             return _context.ReadObject(new DynamicJsonValue
             {
                 ["Count"] = count,
@@ -822,7 +827,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     MaybeMoveToNextRange(cur.TimeStamp);
 
-                    if (Filter(timeSeriesFunction.Where, cur))
+                    if (ShouldFilter(timeSeriesFunction.Where, cur))
                         continue;
                     
                     count++;
@@ -858,7 +863,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var singleResult in reader.AllValues())
                 {
-                    if (Filter(timeSeriesFunction.Where, singleResult))
+                    if (ShouldFilter(timeSeriesFunction.Where, singleResult))
                         continue;
 
                     var vals = new DynamicJsonArray();
@@ -877,6 +882,8 @@ namespace Raven.Server.Documents.Queries.Results
                     count++;
                 }
 
+                _parameterValuesDictionary?.Clear();
+
                 return _context.ReadObject(new DynamicJsonValue
                 {
                     //["Count"] = count,
@@ -884,7 +891,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
             }
 
-            bool Filter(QueryExpression filter, SingleResult singleResult)
+            bool ShouldFilter(QueryExpression filter, SingleResult singleResult)
             {
                 if (filter == null)
                     return false;
@@ -894,11 +901,11 @@ namespace Raven.Server.Documents.Queries.Results
                     switch (be.Operator)
                     {
                         case OperatorType.And:
-                            return Filter((BinaryExpression)be.Left, singleResult) ||
-                                   Filter((BinaryExpression)be.Right, singleResult);
+                            return ShouldFilter((BinaryExpression)be.Left, singleResult) ||
+                                   ShouldFilter((BinaryExpression)be.Right, singleResult);
                         case OperatorType.Or:
-                            return Filter((BinaryExpression)be.Left, singleResult) == false &&
-                                   Filter((BinaryExpression)be.Right, singleResult) == false;
+                            return ShouldFilter((BinaryExpression)be.Left, singleResult) == false &&
+                                   ShouldFilter((BinaryExpression)be.Right, singleResult) == false;
                     }
 
                     dynamic left = GetValue(be.Left, singleResult);
@@ -1050,30 +1057,25 @@ namespace Raven.Server.Documents.Queries.Results
                             return singleResult.TimeStamp;
 
                         default:
-                            if (fe.Compound[0].Value != timeSeriesFunction.LoadTagAs?.Value)
-                                throw new ArgumentException("Unknown where "); // todo
+                            if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
+                            {
+                                return GetValueFromLoadedTag(fe, singleResult);
+                            }
 
-                            if (fe.Compound.Count > 2)
-                                throw new ArgumentException("Unknown where "); // todo
+                            if (_parameterValuesDictionary == null)
+                            {
+                                _parameterValuesDictionary = new Dictionary<FieldExpression, object>();
+                            }
 
-                            if (_loadedDocuments == null)
-                                _loadedDocuments = new Dictionary<string, Document>();
+                            if (_parameterValuesDictionary.TryGetValue(fe, out var val) == false)
+                            {
+                                _parameterValuesDictionary[fe] = val = GetValueFromParameter(declaredFunction, args, fe);
+                            }
 
-                            var tag = singleResult.Tag.ToString();
+                            return val;
 
-                            if (_loadedDocuments.TryGetValue(tag, out var document) == false)
-                                _loadedDocuments[tag] = document = _database.DocumentsStorage.Get(_includeDocumentsCommand.Context, tag);
+                        //break;
 
-                            if (fe.Compound.Count == 1)
-                                return document;
-
-                            if (document == null)
-                                throw new ArgumentException("Unknown where "); // todo
-
-                            if (document.Data.TryGetMember(fe.Compound[1], out var result) == false)
-                                throw new ArgumentException("Unknown where "); // todo
-
-                            return result;
                     }
                 }
 
@@ -1160,6 +1162,97 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+        private static object GetValueFromParameter(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
+        {
+            if (args == null || args.Length < declaredFunction.Parameters.Count)
+            {
+                throw new ArgumentException($"Failed"); //todo aviv
+            }
+
+            int i;
+            for (i = 0; i < declaredFunction.Parameters.Count; i++)
+            {
+                var parameter = declaredFunction.Parameters[i];
+                var str = ((FieldExpression)parameter).FieldValue;
+
+                if (fe.Compound[0] == str)
+                {
+                    break;
+                }
+            }
+
+            if (i == declaredFunction.Parameters.Count) // not found
+            {
+                throw new ArgumentException($"Failed"); //todo aviv
+            }
+
+            if (args[i] == null)
+            {
+                throw new ArgumentException($"Failed"); //todo aviv
+            }
+
+            if (!(args[i] is Document doc))
+            {
+                if (i == 0 && args[0] is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?> tuple)
+                {
+                    doc = tuple.Item1;
+                }
+                else
+                {
+                    return args[i];
+                }
+            }
+
+            if (fe.Compound.Count == 1)
+            {
+                return doc;
+            }
+
+            return GetFieldFromDocument(fe, doc?.Data);
+        }
+
+        private static object GetFieldFromDocument(FieldExpression fe, BlittableJsonReaderObject doc)
+        {
+            if (doc == null)
+                return null;
+
+            var currentPart = 1;
+            object val = null;
+
+            while (currentPart < fe.Compound.Count)
+            {
+                if (doc.TryGetMember(fe.Compound[currentPart], out val) == false)
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value"); //todo aviv
+                
+                if (!(val is BlittableJsonReaderObject nested))
+                    break;
+
+                doc = nested;
+                currentPart++;
+            }
+
+            return val;
+        }
+
+        private object GetValueFromLoadedTag(FieldExpression fe, SingleResult singleResult)
+        {
+            if (_loadedDocuments == null)
+                _loadedDocuments = new Dictionary<string, Document>();
+
+            var tag = singleResult.Tag.ToString();
+
+            if (_loadedDocuments.TryGetValue(tag, out var document) == false)
+                _loadedDocuments[tag] = document = _database.DocumentsStorage.Get(_includeDocumentsCommand.Context, tag);
+
+            if (fe.Compound.Count == 1)
+                return document;
+
+            if (document == null)
+                throw new ArgumentException("Unknown where "); // todo aviv
+
+            return GetFieldFromDocument(fe, document.Data);
+        }
+
         private static void InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction, TimeSeriesAggregation[] aggStates)
         {
             for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
@@ -1218,53 +1311,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (qe is FieldExpression fe)
             {
-                if (fe.Compound.Count == 1)
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
-
-                int index;
-                for (index = 0; index < func.Parameters.Count; index++)
-                {
-                    var parameter = func.Parameters[index];
-                    var str = ((FieldExpression)parameter).FieldValue;
-
-                    if (fe.Compound[0] == str)
-                    {
-                        break;
-                    }
-                }
-
-                Document document;
-                if (index == 0)
-                {
-                    if (args[0] is Document d)
-                    {
-                        document = d;
-                    }
-                    else
-                    {
-                        document = (args[0] as Tuple<Document, object, object, object, object>)?.Item1;
-                    }
-                }
-                else
-                {
-                    if (index == func.Parameters.Count) // not found
-                    {
-                        throw new ArgumentException($"Failed"); //todo aviv
-                    }
-
-                    if (!(args[index] is Document d))
-                    {
-                        throw new ArgumentException($"Failed"); //todo aviv
-                    }
-
-                    document = d;
-                }
-
-                if (document == null || document.Data.TryGetMember(fe.Compound[1], out var val) == false)
-                {
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
-                }
-
+                var val = GetValueFromParameter(func, args, fe);
                 var valueAsStr = val.ToString();
                 fixed (char* c = valueAsStr)
                 {
