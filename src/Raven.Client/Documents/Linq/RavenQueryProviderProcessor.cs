@@ -119,7 +119,8 @@ namespace Raven.Client.Documents.Linq
             HashSet<FieldToFetch> fieldsToFetch,
             bool isMapReduce,
             Type originalType,
-            DocumentConventions conventions)
+            DocumentConventions conventions,
+            bool isProjectInto)
         {
             FieldsToFetch = fieldsToFetch;
             _newExpressionType = typeof(T);
@@ -132,6 +133,7 @@ namespace Raven.Client.Documents.Linq
             _customizeQuery = customizeQuery;
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _conventions = conventions;
+            _isProjectInto = isProjectInto;
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
             _loadAliasesMovedToOutputFunction = new HashSet<string>();
@@ -2093,6 +2095,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private readonly bool _isMapReduce;
         private readonly Type _originalQueryType;
         private readonly DocumentConventions _conventions;
+        private readonly bool _isProjectInto;
 
         private void VisitSelect(Expression operand)
         {
@@ -3172,7 +3175,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 documentQuery.AfterQueryExecuted(_afterQueryExecuted);
 
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
-
             customization?.Invoke(_documentQuery);
 
             if (_highlightings != null)
@@ -3207,7 +3209,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens, isProjectInto: _isProjectInto));
         }
 
         /// <summary>
@@ -3253,7 +3255,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var (fields, projections) = GetProjections();
 
-            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
+            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens, isProjectInto: _isProjectInto));
         }
 
         /// <summary>
@@ -3295,7 +3297,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null));
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null, _isProjectInto));
 
             var executeQuery = GetQueryResult(finalQuery);
 

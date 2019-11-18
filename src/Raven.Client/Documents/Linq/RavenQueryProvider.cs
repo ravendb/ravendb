@@ -47,7 +47,8 @@ namespace Raven.Client.Documents.Linq
             Type originalQueryType,
             QueryStatistics queryStatistics,
             LinqQueryHighlightings highlightings,
-            bool isMapReduce, DocumentConventions conventions)
+            bool isMapReduce,
+            DocumentConventions conventions)
         {
             FieldsToFetch = new HashSet<FieldToFetch>();
             OriginalQueryType = originalQueryType;
@@ -87,6 +88,8 @@ namespace Raven.Client.Documents.Linq
         /// Set the fields to fetch
         /// </summary>
         public HashSet<FieldToFetch> FieldsToFetch { get; }
+
+        public bool IsProjectInto { get; set; }
 
         public Type OriginalQueryType { get; }
 
@@ -329,7 +332,8 @@ namespace Raven.Client.Documents.Linq
                 FieldsToFetch,
                 _isMapReduce,
                 OriginalQueryType,
-                _conventions);
+                _conventions,
+                IsProjectInto);
         }
 
         /// <summary>

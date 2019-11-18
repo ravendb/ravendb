@@ -19,12 +19,12 @@ namespace Raven.Client.Documents.Session
         {
             private readonly AsyncDocumentSession _parent;
             private readonly IAsyncEnumerator<BlittableJsonReaderObject> _enumerator;
-            private readonly IAsyncDocumentQuery<T> _query;
+            private readonly AsyncDocumentQuery<T> _query;
             private readonly FieldsToFetchToken _fieldsToFetch;
             private readonly CancellationToken _token;
             private BlittableJsonReaderObject _prev;
 
-            public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, FieldsToFetchToken fieldsToFetch, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
+            public YieldStream(AsyncDocumentSession parent, AsyncDocumentQuery<T> query, FieldsToFetchToken fieldsToFetch, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
             {
                 _parent = parent;
                 _enumerator = enumerator;
@@ -43,6 +43,9 @@ namespace Raven.Client.Documents.Session
             public async Task<bool> MoveNextAsync()
             {
                 _prev?.Dispose(); // dispose the previous instance
+
+                var isProjectInto = _query?.IsProjectInto ?? false;
+
                 while (true)
                 {
                     if (await _enumerator.MoveNextAsync().WithCancellation(_token).ConfigureAwait(false) == false)
@@ -52,18 +55,18 @@ namespace Raven.Client.Documents.Session
 
                     _query?.InvokeAfterStreamExecuted(_enumerator.Current);
 
-                    Current = CreateStreamResult(_enumerator.Current);
+                    Current = CreateStreamResult(_enumerator.Current, isProjectInto);
                     return true;
                 }
             }
 
-            private StreamResult<T> CreateStreamResult(BlittableJsonReaderObject json)
+            private StreamResult<T> CreateStreamResult(BlittableJsonReaderObject json, bool isProjectInto)
             {
                 var metadata = json.GetMetadata();
                 var changeVector = metadata.GetChangeVector();
                 //MapReduce indexes return reduce results that don't have @id property
                 metadata.TryGetId(out string id);
-                var entity = QueryOperation.Deserialize<T>(id, json, metadata, _fieldsToFetch, true, _parent);
+                var entity = QueryOperation.Deserialize<T>(id, json, metadata, _fieldsToFetch, true, _parent, isProjectInto);
 
                 var streamResult = new StreamResult<T>
                 {
@@ -161,7 +164,7 @@ namespace Raven.Client.Documents.Session
 
                 var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.NoTracking = true;
-                return new YieldStream<T>(this, query, fieldsToFetch, result, token);
+                return new YieldStream<T>(this, documentQuery, fieldsToFetch, result, token);
             }
         }
     }
