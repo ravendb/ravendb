@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -105,6 +106,10 @@ namespace SlowTests.Client.TimeSeries.Query
             public long Min { get; set; }
 
             public long Max { get; set; }
+
+            public bool IsoCompliant;
+
+            public DateTime EndOfWarranty { get; set; }
 
         }
 
@@ -564,6 +569,96 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From);
                         Assert.Equal(baseline2.AddMinutes(120), val.To);
+
+                    }
+                }
+            }
+        }
+
+        [Fact (Skip = "need to handle querying time series with multiple values")]
+        public void CanQueryTimeSeriesAggregation_DeclareSyntax_MultipleValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d, 159 });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d, 179});
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d, 169 });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d, 259 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/apple", new[] { 179d, 279 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d, 269 });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                new PeopleIndex().Execute(store);
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries heart_rate(doc) 
+{
+    from doc.HeartRate between $start and $end
+    group by '1 month'
+    select min(), max(), avg()
+}
+from index 'People' as p 
+where p.Age > 49
+select heart_rate(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(3));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(3, agg.Count);
+
+                        Assert.Equal(1, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(59, val.Min);
+                        Assert.Equal(79, val.Max);
+
+                        Assert.Equal(baseline.AddMinutes(60), val.From);
+                        Assert.Equal(baseline.AddMinutes(120), val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(159, val.Min);
+                        Assert.Equal(179, val.Max);
+
+                        double expectedAvg = (159 + 168 + 179) / 3.0;
+
+                        Assert.Equal(expectedAvg, val.Avg);
+
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(60), val.From);
+                        Assert.Equal(baseline.AddMonths(1).AddMinutes(120), val.To);
 
                     }
                 }
@@ -2054,6 +2149,184 @@ select out(doc)
         }
 
         [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereOnTagOrValue()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/sony", new[] { 69d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        where Values[0] < 70 or Tag = 'watches/fitbit'
+    group by '1 month' 
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+select out(doc)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(4, agg.Count);
+
+                        Assert.Equal(2, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(59, val.Min);
+                        Assert.Equal(69, val.Max);
+                        Assert.Equal(64, val.Avg);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(169, val.Min);
+                        Assert.Equal(179, val.Max);
+                        Assert.Equal(174, val.Avg);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+                    }
+                }
+            }
+        }
+
+        [Fact(Skip = "need to handle querying time series with multiple values")]
+        public void CanQueryTimeSeriesAggregation_WhereNotNull()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d, 141.5 });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d , 142.82 });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d, 138.12 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d, 142.57 });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        where Values[1] != null
+    group by '1 month' 
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+select out(doc)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(4, agg.Count);
+
+                        Assert.Equal(2, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(79, val.Min);
+                        Assert.Equal(79, val.Max);
+                        Assert.Equal(79, val.Avg);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(159, val.Min);
+                        Assert.Equal(179, val.Max);
+                        Assert.Equal(169, val.Avg);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void CanQueryTimeSeriesAggregation_WhereOnQueryParameter()
         {
             using (var store = GetDocumentStore())
@@ -2548,6 +2821,240 @@ select out(doc)
                         Assert.Equal(169, val.Min);
                         Assert.Equal(169, val.Max);
                         Assert.Equal(169, val.Avg);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereOnBoolean()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Fitbit",
+                        Accuracy = 2.5,
+                        IsoCompliant = true
+                    }, "watches/fitbit");
+
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Apple",
+                        Accuracy = 1.8,
+                        IsoCompliant = false
+                    }, "watches/apple");
+
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Sony",
+                        Accuracy = 2.8,
+                        IsoCompliant = true
+                    }, "watches/sony");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        load Tag as src    
+        where src.IsoCompliant = true
+    group by '1 month' 
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+select out(doc)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(4, agg.Count);
+
+                        Assert.Equal(2, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(59, val.Min);
+                        Assert.Equal(69, val.Max);
+                        Assert.Equal(64, val.Avg);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(169, val.Min);
+                        Assert.Equal(179, val.Max);
+                        Assert.Equal(174, val.Avg);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereOnTimestamp()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Fitbit",
+                        Accuracy = 2.5,
+                        EndOfWarranty = baseline.AddDays(-1)
+                    }, "watches/fitbit");
+
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Apple",
+                        Accuracy = 1.8,
+                        EndOfWarranty = baseline.AddMonths(6)
+                    }, "watches/apple");
+
+                    session.Store(new Watch
+                    {
+                        Manufacturer = "Sony",
+                        Accuracy = 2.8,
+                        EndOfWarranty = baseline.AddDays(2)
+                    }, "watches/sony");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        load Tag as src    
+        where TimeStamp <= src.EndOfWarranty
+    group by '1 month' 
+    select min(), max(), avg()
+}
+from People as doc
+where doc.Age > 49
+select out(doc)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(2, agg.Count);
+
+                        Assert.Equal(2, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(79, val.Min);
+                        Assert.Equal(79, val.Max);
+                        Assert.Equal(79, val.Avg);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(159, val.Min);
+                        Assert.Equal(159, val.Max);
+                        Assert.Equal(159, val.Avg);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
