@@ -191,7 +191,7 @@ namespace SlowTests.Server.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var result = await storeB.Maintenance.Server.SendAsync(new EditRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
+                var result = await storeB.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
                 {
                     MinimumRevisionsToKeep = 3,
                 }));
@@ -256,7 +256,7 @@ namespace SlowTests.Server.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var result = await storeB.Maintenance.Server.SendAsync(new EditRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
+                var result = await storeB.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
                 {
                     Disabled = true
                 }));
