@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Indexes
                     _itemType = "document";
                     break;
                 case IndexSourceType.TimeSeries:
-                    _itemType = "time series";
+                    _itemType = "time series item";
                     break;
                 default:
                     throw new ArgumentException($"Unknown index source type: {sourceType}");
@@ -920,7 +920,7 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = GetItemByEtag(databaseContext, lastItemEtag);
 
-                        var message = $"There are still some documents to process from collection '{collection}'. " +
+                        var message = $"There are still some {_itemType}s to process from collection '{collection}'. " +
                                    $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
                                    $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
@@ -961,7 +961,7 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = GetItemByEtag(databaseContext, lastItemEtag);
 
-                        var message = $"There are still some documents to process from collection '{collection}'. " +
+                        var message = $"There are still some {_itemType}s to process from collection '{collection}'. " +
                                    $"The last {_itemType} etag in that collection is '{lastItemEtag:#,#;;0}' " +
                                    $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
