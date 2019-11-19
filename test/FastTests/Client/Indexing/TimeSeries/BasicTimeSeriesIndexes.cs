@@ -21,7 +21,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var now1 = DateTime.Now;
+                var now1 = DateTime.Today; // DateTime.Now; - RavenDB-14242
                 var now2 = now1.AddSeconds(1);
 
                 using (var session = store.OpenSession())
@@ -107,8 +107,6 @@ namespace FastTests.Client.Indexing.TimeSeries
                     session.SaveChanges();
                 }
 
-                // TODO [ppekrol] handle deletes
-                /*
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(1, staleness.StalenessReasons.Count);
@@ -117,7 +115,13 @@ namespace FastTests.Client.Indexing.TimeSeries
                 store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
-                */
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("7", terms);
             }
         }
 

@@ -3,30 +3,29 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
     public class DynamicTimeSeriesSegment : AbstractDynamicObject
     {
-        private TimeSeriesItem _item;
+        private TimeSeriesSegmentEntry _segmentEntry;
         private DynamicArray _entries;
 
         public override dynamic GetId()
         {
-            if (_item == null)
+            if (_segmentEntry == null)
                 return DynamicNullObject.Null;
 
-            Debug.Assert(_item.Key != null, "_item.Key != null");
-            Debug.Assert(nameof(Baseline) == nameof(_item.Baseline), "nameof(Baseline) == nameof(_item.Baseline)");
+            Debug.Assert(_segmentEntry.Key != null, "_segmentEntry.Key != null");
+            Debug.Assert(nameof(Baseline) == nameof(_segmentEntry.Baseline), "nameof(Baseline) == nameof(_segmentEntry.Baseline)");
 
-            return _item.Key;
+            return _segmentEntry.Key;
         }
 
         public override void Set(object item)
         {
-            _item = (TimeSeriesItem)item;
+            _segmentEntry = (TimeSeriesSegmentEntry)item;
             _entries = null;
         }
 
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 if (_entries == null)
                 {
                     var context = CurrentIndexingScope.Current.IndexContext;
-                    var entries = _item.Segment.YieldAllValues(context, context.Allocator, _item.Baseline);
+                    var entries = _segmentEntry.Segment.YieldAllValues(context, context.Allocator, _segmentEntry.Baseline, tombstones: false);
                     var enumerable = new DynamicTimeSeriesEnumerable(entries);
 
                     _entries = new DynamicArray(enumerable);
@@ -47,15 +46,15 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             }
         }
 
-        public dynamic Baseline => TypeConverter.ToDynamicType(_item.Baseline);
+        public dynamic Baseline => TypeConverter.ToDynamicType(_segmentEntry.Baseline);
 
         protected override bool TryGetByName(string name, out object result)
         {
-            Debug.Assert(_item != null, "Item cannot be null");
+            Debug.Assert(_segmentEntry != null, "Item cannot be null");
 
             if (string.Equals("DocumentId", name)) // TODO arek - https://github.com/ravendb/ravendb/pull/9875/files#r346221961
             {
-                result = TypeConverter.ToDynamicType(_item.DocId);
+                result = TypeConverter.ToDynamicType(_segmentEntry.DocId);
                 return true;
             }
 
@@ -123,8 +122,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
             {
                 Debug.Assert(nameof(Values) == nameof(entry.Values), "nameof(Values) == nameof(entry.Values)");
-                Debug.Assert(nameof(TimeStamp) == nameof(_entry.TimeStamp), "nameof(TimeStamp) == nameof(_entry.TimeStamp");
-                Debug.Assert(nameof(Tag) == nameof(_entry.Tag), "nameof(Tag) == nameof(_entry.Tag)");
+                Debug.Assert(nameof(TimeStamp) == nameof(_entry.TimeStamp), "nameof(TimeStamp) == nameof(_segmentEntry.TimeStamp");
+                Debug.Assert(nameof(Tag) == nameof(_entry.Tag), "nameof(Tag) == nameof(_segmentEntry.Tag)");
 
                 _entry = entry;
             }

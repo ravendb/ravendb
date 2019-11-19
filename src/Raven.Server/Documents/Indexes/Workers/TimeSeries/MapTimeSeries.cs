@@ -23,11 +23,11 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
         {
             foreach (var timeSeries in GetTimeSeriesEnumerator(databaseContext, collection, lastEtag, pageSize))
             {
-                yield return new IndexItem(timeSeries.Key, timeSeries.Key, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+                yield return new IndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
             }
         }
 
-        private IEnumerable<TimeSeriesItem> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
+        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(DocumentsOperationContext databaseContext, string collection, long lastEtag, int pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
             {

@@ -998,7 +998,7 @@ namespace Raven.Server.Documents.Replication
                                 break;
                             case TimeSeriesReplicationItem segment:
                                 var tss = database.DocumentsStorage.TimeSeriesStorage;
-                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, out var docId, out var name, out var baseline);
+                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out var docId, out var name, out var baseline, out var a);
 
                                 if (tss.TryAppendEntireSegment(context, segment, baseline))
                                 {

@@ -677,7 +677,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.SegmentSize));
-                Writer.WriteInteger(item.Segment.NumberOfBytes);
+                Writer.WriteInteger(item.SegmentSize);
                 Writer.WriteComma();
 
                 Writer.WritePropertyName(nameof(TimeSeriesItem.Baseline));

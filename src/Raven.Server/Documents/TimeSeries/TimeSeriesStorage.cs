@@ -180,6 +180,7 @@ namespace Raven.Server.Documents.TimeSeries
                             while (enumerator.MoveNext(out int ts, values, state, ref tag, out var status))
                             {
                                 var current = baseline.AddMilliseconds(ts);
+
                                 if (current >= from && current <= to)
                                 {
                                     status = TimeSeriesValuesSegment.Dead;
@@ -1360,7 +1361,7 @@ namespace Raven.Server.Documents.TimeSeries
             return item;
         }
 
-        public TimeSeriesItem GetTimeSeries(DocumentsOperationContext context, Slice key)
+        public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, Slice key)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
@@ -1370,7 +1371,7 @@ namespace Raven.Server.Documents.TimeSeries
             return CreateTimeSeriesItem(context, ref reader);
         }
 
-        public TimeSeriesItem GetTimeSeries(DocumentsOperationContext context, long etag)
+        public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
             var index = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
@@ -1381,7 +1382,7 @@ namespace Raven.Server.Documents.TimeSeries
             return CreateTimeSeriesItem(context, ref tvr);
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeriesFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
@@ -1391,7 +1392,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag)
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -1408,7 +1409,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static TimeSeriesItem CreateTimeSeriesItem(DocumentsOperationContext context, ref TableValueReader reader)
+        private static TimeSeriesSegmentEntry CreateTimeSeriesItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -1417,13 +1418,14 @@ namespace Raven.Server.Documents.TimeSeries
 
             var key = new LazyStringValue(null, keyPtr, keySize, context);
 
-            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, out var docId, out var name, out var baseline);
+            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize,  context, out var docId, out var name, out var baseline, out var docIdAndName);
 
-            return new TimeSeriesItem
+            return new TimeSeriesSegmentEntry
             {
                 Key = key,
                 DocId = docId,
                 Name = name,
+                DocIdAndName = docIdAndName,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 SegmentSize = segmentSize,

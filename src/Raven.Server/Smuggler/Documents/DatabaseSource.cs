@@ -466,7 +466,17 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, collection, _startDocumentEtag))
                     {
-                        yield return ts;
+                        yield return new TimeSeriesItem
+                        {
+                            Name = ts.Name,
+                            DocId = ts.DocId,
+                            Baseline = ts.Baseline,
+                            ChangeVector = ts.ChangeVector,
+                            Collection = ts.Collection,
+                            SegmentSize = ts.SegmentSize,
+                            Segment = ts.Segment,
+                            Etag = ts.Etag,
+                        };
                     }
                 }
 
@@ -475,7 +485,17 @@ namespace Raven.Server.Smuggler.Documents
 
             foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag))
             {
-                yield return ts;
+                yield return new TimeSeriesItem
+                {
+                    Name = ts.Name,
+                    DocId = ts.DocId,
+                    Baseline = ts.Baseline,
+                    ChangeVector = ts.ChangeVector,
+                    Collection = ts.Collection,
+                    SegmentSize = ts.SegmentSize,
+                    Segment = ts.Segment,
+                    Etag = ts.Etag
+                };
             }
         }
 
