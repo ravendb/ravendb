@@ -2,13 +2,31 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class TimeSeriesBetweenExpression : BetweenExpression
     {
-        public QueryExpression MinExpression;
-        public QueryExpression MaxExpression;
+        public QueryExpression MinExpression => Min ?? _minExpression;
+        public QueryExpression MaxExpression => Max ?? _maxExpression;
+
+        private readonly QueryExpression _minExpression;
+        private readonly QueryExpression _maxExpression;
 
         public TimeSeriesBetweenExpression(QueryExpression source, QueryExpression min, QueryExpression max) : base(source, null, null)
         {
-            MinExpression = min;
-            MaxExpression = max;
+            if (min is ValueExpression ve)
+            {
+                Min = ve;
+            }
+            else
+            {
+                _minExpression = min;
+            }
+
+            if (max is ValueExpression ve2)
+            {
+                Max = ve2;
+            }
+            else
+            {
+                _maxExpression = max;
+            }
         }
 
         public override string ToString()
