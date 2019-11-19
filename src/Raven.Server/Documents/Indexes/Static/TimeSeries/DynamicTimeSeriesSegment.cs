@@ -59,23 +59,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return true;
             }
 
-            if (string.Equals(nameof(Entries), name))
-            {
-                result = Entries;
-                return true;
-            }
-
-            if (string.Equals(nameof(Baseline), name))
-            {
-                result = Baseline;
-                return true;
-            }
-
             result = DynamicNullObject.Null;
             return true;
         }
 
-        private class DynamicTimeSeriesEnumerable : IEnumerable<object>
+        private class DynamicTimeSeriesEnumerable : IEnumerable<DynamicTimeSeriesEntry>
         {
             private readonly IEnumerable<TimeSeriesStorage.Reader.SingleResult> _inner;
 
@@ -84,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 _inner = inner;
             }
 
-            public IEnumerator<object> GetEnumerator()
+            public IEnumerator<DynamicTimeSeriesEntry> GetEnumerator()
             {
                 return new Enumerator(_inner.GetEnumerator());
             }
@@ -94,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return GetEnumerator();
             }
 
-            private class Enumerator : IEnumerator<object>
+            private class Enumerator : IEnumerator<DynamicTimeSeriesEntry>
             {
                 private IEnumerator<TimeSeriesStorage.Reader.SingleResult> _inner;
 
@@ -103,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                     _inner = inner;
                 }
 
-                public object Current { get; private set; }
+                public DynamicTimeSeriesEntry Current { get; private set; }
 
                 public void Dispose()
                 {
@@ -122,87 +110,65 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 {
                     throw new NotSupportedException();
                 }
+
+                object IEnumerator.Current { get; }
+            }
+        }
+
+        public class DynamicTimeSeriesEntry : AbstractDynamicObject
+        {
+            private TimeSeriesStorage.Reader.SingleResult _entry;
+            private DynamicArray _values;
+
+            public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
+            {
+                Debug.Assert(nameof(Values) == nameof(entry.Values), "nameof(Values) == nameof(entry.Values)");
+                Debug.Assert(nameof(TimeStamp) == nameof(_entry.TimeStamp), "nameof(TimeStamp) == nameof(_entry.TimeStamp");
+                Debug.Assert(nameof(Tag) == nameof(_entry.Tag), "nameof(Tag) == nameof(_entry.Tag)");
+
+                _entry = entry;
             }
 
-            private class DynamicTimeSeriesEntry : AbstractDynamicObject
+            public override dynamic GetId()
             {
-                private TimeSeriesStorage.Reader.SingleResult _entry;
-                private DynamicArray _values;
+                throw new NotSupportedException();
+            }
 
-                public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
+            public override void Set(object item)
+            {
+                _entry = (TimeSeriesStorage.Reader.SingleResult)item;
+                _values = null;
+            }
+
+            public dynamic Values
+            {
+                get
                 {
-                    Debug.Assert(nameof(Values) == nameof(entry.Values), "nameof(Values) == nameof(entry.Values)");
-                    Debug.Assert(nameof(TimeStamp) == nameof(_entry.TimeStamp), "nameof(TimeStamp) == nameof(_entry.TimeStamp");
-                    Debug.Assert(nameof(Tag) == nameof(_entry.Tag),"nameof(Tag) == nameof(_entry.Tag)");
-
-                    _entry = entry;
+                    return _values ??= new DynamicArray(_entry.Values.ToArray());
                 }
+            }
 
-                public override dynamic GetId()
+            public dynamic Value
+            {
+                get
                 {
-                    throw new NotSupportedException();
+                    if (_values == null)
+                        _values = new DynamicArray(_entry.Values.ToArray());
+
+                    return _values.Get(0);
                 }
+            }
 
-                public override void Set(object item)
-                {
-                    _entry = (TimeSeriesStorage.Reader.SingleResult)item;
-                    _values = null;
-                }
+            public dynamic TimeStamp => TypeConverter.ToDynamicType(_entry.TimeStamp);
 
-                public dynamic Values
-                {
-                    get
-                    {
-                        return _values ??= new DynamicArray(_entry.Values.ToArray());
-                    }
-                }
+            public dynamic Tag => TypeConverter.ToDynamicType(_entry.Tag);
 
-                public dynamic Value
-                {
-                    get
-                    {
-                        if (_values == null) 
-                            _values = new DynamicArray(_entry.Values.ToArray());
+            protected override bool TryGetByName(string name, out object result)
+            {
+                Debug.Assert(_entry != null, "Entry cannot be null");
 
-                        return _values.Get(0);
-                    }
-                }
-
-                public dynamic TimeStamp => TypeConverter.ToDynamicType(_entry.TimeStamp);
-
-                public dynamic Tag => TypeConverter.ToDynamicType(_entry.Tag);
-
-                protected override bool TryGetByName(string name, out object result)
-                {
-                    Debug.Assert(_entry != null, "Entry cannot be null");
-
-                    if (string.Equals(nameof(_entry.Tag), name))
-                    {
-                        result = Tag;
-                        return true;
-                    }
-
-                    if (string.Equals(nameof(_entry.TimeStamp), name))
-                    {
-                        result = TimeStamp;
-                        return true;
-                    }
-
-                    if (string.Equals(nameof(Value), name))
-                    {
-                        result = Value;
-                        return true;
-                    }
-
-                    if (string.Equals(nameof(_entry.Values), name))
-                    {
-                        result = Values;
-                        return true;
-                    }
-
-                    result = DynamicNullObject.Null;
-                    return true;
-                }
+                result = DynamicNullObject.Null;
+                return true;
             }
         }
     }

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -389,6 +390,9 @@ namespace Raven.Server.Utils
                 return DynamicNullObject.ExplicitNull;
 
             if (value is DynamicNullObject)
+                return value;
+
+            if (value is DynamicObject)
                 return value;
 
             if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
