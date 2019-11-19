@@ -11,30 +11,30 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class EditRevisionsForConflictsOperation : IServerOperation<EditRevisionsForConflictsOperationResult>
+    public class ConfigureRevisionsForConflictsOperation : IServerOperation<ConfigureRevisionsForConflictsResult>
     {
         private readonly string _database;
         private readonly RevisionsCollectionConfiguration _configuration;
 
-        public EditRevisionsForConflictsOperation(string database, RevisionsCollectionConfiguration configuration)
+        public ConfigureRevisionsForConflictsOperation(string database, RevisionsCollectionConfiguration configuration)
         {
             Helpers.AssertValidDatabaseName(database);
             _database = database;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
-        public RavenCommand<EditRevisionsForConflictsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public RavenCommand<ConfigureRevisionsForConflictsResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigRevisionsOnConflictCommand(conventions, _database, _configuration);
+            return new ConfigureRevisionsForConflictsCommand(conventions, _database, _configuration);
         }
 
-        private class ConfigRevisionsOnConflictCommand : RavenCommand<EditRevisionsForConflictsOperationResult>, IRaftCommand
+        private class ConfigureRevisionsForConflictsCommand : RavenCommand<ConfigureRevisionsForConflictsResult>, IRaftCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
             private readonly RevisionsCollectionConfiguration _configuration;
 
-            public ConfigRevisionsOnConflictCommand(
+            public ConfigureRevisionsForConflictsCommand(
                 DocumentConventions conventions,
                 string database,
                 RevisionsCollectionConfiguration configuration)
