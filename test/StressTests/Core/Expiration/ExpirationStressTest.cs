@@ -7,12 +7,13 @@
 using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Server.Documents.Expiration;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Core.Expiration
 {
-    public class ExpirationStressTest : NoDisposalNeeded
+    public class ExpirationStressTest : NoDisposalNoOutputNeeded
     {
         public ExpirationStressTest(ITestOutputHelper output) : base(output)
         {

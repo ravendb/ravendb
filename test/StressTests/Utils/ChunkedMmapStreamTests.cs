@@ -1,12 +1,13 @@
 ﻿using FastTests;
 using FastTests.Utils;
 using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Utils
 {
-    public class ChunkedMmapStreamStressTests : NoDisposalNeeded
+    public class ChunkedMmapStreamStressTests : NoDisposalNoOutputNeeded
     {
         public ChunkedMmapStreamStressTests(ITestOutputHelper output) : base(output)
         {
