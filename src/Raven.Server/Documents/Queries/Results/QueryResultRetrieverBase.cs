@@ -15,6 +15,7 @@ using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
@@ -741,16 +742,16 @@ namespace Raven.Server.Documents.Queries.Results
 
         private BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args)
         {
-            var tss = _database.DocumentsStorage.TimeSeriesStorage;
-            var timeSeriesFunction = declaredFunction.TimeSeries;
-
             if (_valuesDictionary == null)
                 _valuesDictionary = new Dictionary<ValueExpression, object>();
 
             if (_parameterValuesDictionary == null)
                 _parameterValuesDictionary = new Dictionary<FieldExpression, object>();
 
+            var tss = _database.DocumentsStorage.TimeSeriesStorage;
+            var timeSeriesFunction = declaredFunction.TimeSeries;
             var source = GetSourceAndId();
+
             var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
             var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
@@ -890,7 +891,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     ["Count"] = count,
                     ["Results"] = array
-                }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
+                }, "timeseries/value");
             }
 
             bool ShouldFilter(QueryExpression filter, SingleResult singleResult)
@@ -906,65 +907,31 @@ namespace Raven.Server.Documents.Queries.Results
                             return ShouldFilter((BinaryExpression)be.Left, singleResult) ||
                                    ShouldFilter((BinaryExpression)be.Right, singleResult);
                         case OperatorType.Or:
-                            return ShouldFilter((BinaryExpression)be.Left, singleResult) == false &&
-                                   ShouldFilter((BinaryExpression)be.Right, singleResult) == false;
+                            return ShouldFilter((BinaryExpression)be.Left, singleResult) &&
+                                   ShouldFilter((BinaryExpression)be.Right, singleResult);
                     }
 
-                    dynamic left = GetValue(be.Left, singleResult);
-                    dynamic right = GetValue(be.Right, singleResult);
+                    if (be.Left is ValueExpression)
+                        throw new ArgumentOutOfRangeException(); //todo aviv
+
+                    var left = GetValue(be.Left, singleResult);
+                    var right = GetValue(be.Right, singleResult);
                     bool result;
 
-                    if (!(left is LazyNumberValue lnv))
+                    switch (left)
                     {
-                        switch (be.Operator)
-                        {
-                            case OperatorType.Equal:
-                                result = Equals(left, right);
-                                break;
-                            case OperatorType.NotEqual:
-                                result = Equals(left, right) == false;
-                                break;
-                            case OperatorType.LessThan:
-                                result = left < right;
-                                break;
-                            case OperatorType.GreaterThan:
-                                result = left > right;
-                                break;
-                            case OperatorType.LessThanEqual:
-                                result = left <= right;
-                                break;
-                            case OperatorType.GreaterThanEqual:
-                                result = left >= right;
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(); //todo aviv
-                        }
-                    }
-                    else
-                    {
-                        switch (be.Operator)
-                        {
-                            case OperatorType.Equal:
-                                result = lnv.Equals(right);
-                                break;
-                            case OperatorType.NotEqual:
-                                result = lnv.Equals(right) == false;
-                                break;
-                            case OperatorType.LessThan:
-                                result = lnv.CompareTo(right) < 0;
-                                break;
-                            case OperatorType.GreaterThan:
-                                result = lnv.CompareTo(right) > 0;
-                                break;
-                            case OperatorType.LessThanEqual:
-                                result = lnv.CompareTo(right) <= 0;
-                                break;
-                            case OperatorType.GreaterThanEqual:
-                                result = lnv.CompareTo(right) >= 0;
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(); //todo aviv
-                        }
+                        case DateTime dt:
+                            result = CompareDateTimes(dt, right);
+                            break;
+                        case LazyNumberValue lnv:
+                            result = CompareNumbers(lnv, right);
+                            break;
+                        case LazyStringValue lsv:
+                            result = CompareStrings(lsv, right);
+                            break;
+                        default:
+                            result = CompareDynamic(left, right);
+                            break;
                     }
 
                     return result == false;
@@ -972,9 +939,123 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (filter is InExpression inExpression)
                 {
+                    var result = HandleInExpression();
+                    return result == false;
+                }
+
+                if (filter is TimeSeriesBetweenExpression betweenExpression)
+                {
+                    var result = HandleBetweenExpression();
+                    return result == false;
+                }
+
+                throw new ArgumentOutOfRangeException(); //todo aviv
+
+                bool CompareNumbers(LazyNumberValue lnv, object right)
+                {
+                    switch (be.Operator)
+                    {
+                        case OperatorType.Equal:
+                            return lnv.Equals(right);
+                        case OperatorType.NotEqual:
+                            return lnv.Equals(right) == false;
+                        case OperatorType.LessThan:
+                            return lnv.CompareTo(right) < 0;
+                        case OperatorType.GreaterThan:
+                            return lnv.CompareTo(right) > 0;
+                        case OperatorType.LessThanEqual:
+                            return lnv.CompareTo(right) <= 0;
+                        case OperatorType.GreaterThanEqual:
+                            return lnv.CompareTo(right) >= 0;
+                        default:
+                            throw new ArgumentOutOfRangeException(); //todo aviv
+                    }
+                }
+
+                bool CompareDateTimes(DateTime dateTime, object right)
+                {
+                    DateTime? rightAsDt;
+
+                    if (right is DateTime dt)
+                        rightAsDt = dt;
+                    else
+                        rightAsDt = ParseDateTime(right?.ToString());
+
+                    switch (be.Operator)
+                    {
+                        case OperatorType.Equal:
+                            return dateTime.Equals(rightAsDt);
+                        case OperatorType.NotEqual:
+                            return dateTime.Equals(rightAsDt) == false;
+                        case OperatorType.LessThan:
+                            return dateTime < rightAsDt;
+                        case OperatorType.GreaterThan:
+                            return dateTime > rightAsDt;
+                        case OperatorType.LessThanEqual:
+                            return dateTime <= rightAsDt;
+                        case OperatorType.GreaterThanEqual:
+                            return dateTime >= rightAsDt;
+                        default:
+                            throw new ArgumentOutOfRangeException(); //todo aviv
+                    }
+                }
+
+                bool CompareStrings(LazyStringValue lsv, object right)
+                {
+                    switch (be.Operator)
+                    {
+                        case OperatorType.Equal:
+                            return lsv.Equals(right);
+                        case OperatorType.NotEqual:
+                            return lsv.Equals(right) == false;
+                        case OperatorType.LessThan:
+                            return lsv.CompareTo(right) < 0;
+                        case OperatorType.GreaterThan:
+                            return lsv.CompareTo(right) > 0;
+                        case OperatorType.LessThanEqual:
+                            return lsv.CompareTo(right) <= 0;
+                        case OperatorType.GreaterThanEqual:
+                            return lsv.CompareTo(right) >= 0;
+                        default:
+                            throw new ArgumentOutOfRangeException(); //todo aviv
+                    }
+                }
+
+                bool CompareDynamic(dynamic left, dynamic right)
+                {
+                    bool result;
+                    switch (be.Operator)
+                    {
+                        case OperatorType.Equal:
+                            result = Equals(left, right);
+                            break;
+                        case OperatorType.NotEqual:
+                            result = Equals(left, right) == false;
+                            break;
+                        case OperatorType.LessThan:
+                            result = left < right;
+                            break;
+                        case OperatorType.GreaterThan:
+                            result = left > right;
+                            break;
+                        case OperatorType.LessThanEqual:
+                            result = left <= right;
+                            break;
+                        case OperatorType.GreaterThanEqual:
+                            result = left >= right;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(); //todo aviv
+                    }
+
+                    return result;
+                }
+
+                bool HandleInExpression()
+                {
                     object src = GetValue(inExpression.Source, singleResult);
 
-                    bool result = false;
+                    bool b = false;
                     dynamic val;
 
                     if (inExpression.All == false)
@@ -984,10 +1065,9 @@ namespace Raven.Server.Documents.Queries.Results
                             val = GetValue(inExpression.Values[i], singleResult);
                             if (Equals(src, val))
                             {
-                                result = true;
+                                b = true;
                                 break;
                             }
-
                         }
                     }
 
@@ -996,10 +1076,10 @@ namespace Raven.Server.Documents.Queries.Results
                         // todo aviv
                     }
 
-                    return result == false;
+                    return b;
                 }
 
-                if (filter is TimeSeriesBetweenExpression betweenExpression)
+                bool HandleBetweenExpression()
                 {
                     var result = false;
 
@@ -1021,12 +1101,10 @@ namespace Raven.Server.Documents.Queries.Results
                         result = src <= value;
                     }
 
-                    return result == false;
+                    return result;
                 }
-
-                throw new ArgumentOutOfRangeException(); //todo aviv
-
             }
+
 
             object GetValue(QueryExpression expression, SingleResult singleResult)
             {
@@ -1285,7 +1363,7 @@ namespace Raven.Server.Documents.Queries.Results
             return result;
         }
 
-        private unsafe DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
+        private DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
         {
             if (qe == null)
                 return null;
@@ -1297,36 +1375,32 @@ namespace Raven.Server.Documents.Queries.Results
 
                 var val = ve.GetValue(_query.QueryParameters);
                 if (val == null)
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value"); 
 
-                var str = val.ToString();
-                fixed (char* c = str)
-                {
-                    var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out _);
-                    if (result != LazyStringParser.Result.DateTime)
-                        throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + str);
+                DateTime? result;
+                _valuesDictionary[ve] = result = ParseDateTime(val.ToString());
 
-                    _valuesDictionary[ve] = dt;
-                    return dt;
-                }
+                return result;
             }
 
             if (qe is FieldExpression fe)
             {
                 var val = GetValueFromParameter(func, args, fe);
-                var valueAsStr = val.ToString();
-                fixed (char* c = valueAsStr)
-                {
-                    var result = LazyStringParser.TryParseDateTime(c, valueAsStr.Length, out var dt, out _);
-                    if (result != LazyStringParser.Result.DateTime)
-                        throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
-                    return dt;
-                }
-
+                return ParseDateTime(val.ToString());
             }
 
             throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
+        }
 
+        private static unsafe DateTime? ParseDateTime(string valueAsStr)
+        {
+            fixed (char* c = valueAsStr)
+            {
+                var result = LazyStringParser.TryParseDateTime(c, valueAsStr.Length, out var dt, out _);
+                if (result != LazyStringParser.Result.DateTime)
+                    throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + valueAsStr);
+                return dt;
+            }
         }
 
         private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
