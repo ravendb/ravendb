@@ -744,25 +744,23 @@ namespace Raven.Server.Documents.Queries.Results
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var timeSeriesFunction = declaredFunction.TimeSeries;
 
+            if (_valuesDictionary == null)
+                _valuesDictionary = new Dictionary<ValueExpression, object>();
+
+            if (_parameterValuesDictionary == null)
+                _parameterValuesDictionary = new Dictionary<FieldExpression, object>();
+
             var source = GetSourceAndId();
-            
-            var min = GetDateValue(timeSeriesFunction.Between.Min ?? timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
-            var max = GetDateValue(timeSeriesFunction.Between.Max ?? timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
+            var min = GetDateValue(timeSeriesFunction.Between.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
+            var max = GetDateValue(timeSeriesFunction.Between.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
 
             long count = 0;
             var array = new DynamicJsonArray();
             TimeSeriesStorage.Reader reader;
 
-            if (_valuesDictionary == null)
-            {
-                _valuesDictionary = new Dictionary<ValueExpression, object>();
-            }
-
             if (timeSeriesFunction.GroupBy == null)
-            {
                 return GetRawValues();
-            }
-
+            
             var groupBy = timeSeriesFunction.GroupBy.GetValue(_query.QueryParameters)?.ToString();
             if (groupBy == null)
                 throw new ArgumentException("Unable to parse group by value, expected range specification, but got a null");
@@ -772,54 +770,8 @@ namespace Raven.Server.Documents.Queries.Results
             var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
             InitializeAggregationStates(timeSeriesFunction, aggStates);
 
-            reader = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
             DateTime start = default, next = default;
-
-
-            foreach (var it in reader.SegmentsOrValues())
-            {
-                if (it.IndividualValues != null)
-                {
-                    AggregateIndividualItems(it.IndividualValues);
-                }
-                else
-                {
-                    //We might need to close the old aggregation range and start a new one
-                    MaybeMoveToNextRange(it.Segment.Start);
-
-                    // now we need to see if we can consume the whole segment, or 
-                    // if the range it cover needs to be broken up to multiple ranges.
-                    // For example, if the segment covers 3 days, but we have group by 1 hour,
-                    // we still have to deal with the individual values
-                    if (it.Segment.End > next || timeSeriesFunction.Where != null)
-                    {
-                        AggregateIndividualItems(it.Segment.Values);
-                    }
-                    else
-                    {
-                        var span = it.Segment.Summary.Span;
-                        for (int i = 0; i < aggStates.Length; i++)
-                        {
-                            aggStates[i].Segment(span);
-                        }
-                        count += span[0].Count;
-                    }
-                }
-            }
-
-            if (aggStates[0].Count > 0)
-            {
-                array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
-            }
-
-            _parameterValuesDictionary?.Clear();
-
-            return _context.ReadObject(new DynamicJsonValue
-            {
-                ["Count"] = count,
-                ["Results"] = array
-            }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
-
+            return GetAggregatedValues();
 
             void AggregateIndividualItems(IEnumerable<SingleResult> items)
             {
@@ -887,6 +839,56 @@ namespace Raven.Server.Documents.Queries.Results
                 return _context.ReadObject(new DynamicJsonValue
                 {
                     //["Count"] = count,
+                    ["Results"] = array
+                }, "timeseries/value");
+            }
+
+            BlittableJsonReaderObject GetAggregatedValues()
+            {
+                reader = tss.GetReader(_includeDocumentsCommand.Context, documentId, source, min, max);
+
+                foreach (var it in reader.SegmentsOrValues())
+                {
+                    if (it.IndividualValues != null)
+                    {
+                        AggregateIndividualItems(it.IndividualValues);
+                    }
+                    else
+                    {
+                        //We might need to close the old aggregation range and start a new one
+                        MaybeMoveToNextRange(it.Segment.Start);
+
+                        // now we need to see if we can consume the whole segment, or 
+                        // if the range it cover needs to be broken up to multiple ranges.
+                        // For example, if the segment covers 3 days, but we have group by 1 hour,
+                        // we still have to deal with the individual values
+                        if (it.Segment.End > next || timeSeriesFunction.Where != null)
+                        {
+                            AggregateIndividualItems(it.Segment.Values);
+                        }
+                        else
+                        {
+                            var span = it.Segment.Summary.Span;
+                            for (int i = 0; i < aggStates.Length; i++)
+                            {
+                                aggStates[i].Segment(span);
+                            }
+
+                            count += span[0].Count;
+                        }
+                    }
+                }
+
+                if (aggStates[0].Count > 0)
+                {
+                    array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
+                }
+
+                _parameterValuesDictionary?.Clear();
+
+                return _context.ReadObject(new DynamicJsonValue
+                {
+                    ["Count"] = count,
                     ["Results"] = array
                 }, "timeseries/value", BlittableJsonDocumentBuilder.UsageMode.None);
             }
@@ -1060,11 +1062,6 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
                             {
                                 return GetValueFromLoadedTag(fe, singleResult);
-                            }
-
-                            if (_parameterValuesDictionary == null)
-                            {
-                                _parameterValuesDictionary = new Dictionary<FieldExpression, object>();
                             }
 
                             if (_parameterValuesDictionary.TryGetValue(fe, out var val) == false)
@@ -1295,6 +1292,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (qe is ValueExpression ve)
             {
+                if (_valuesDictionary.TryGetValue(ve, out var value))
+                    return (DateTime)value;
+
                 var val = ve.GetValue(_query.QueryParameters);
                 if (val == null)
                     throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value");
@@ -1305,6 +1305,8 @@ namespace Raven.Server.Documents.Queries.Results
                     var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out _);
                     if (result != LazyStringParser.Result.DateTime)
                         throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + str);
+
+                    _valuesDictionary[ve] = dt;
                     return dt;
                 }
             }

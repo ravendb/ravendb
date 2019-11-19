@@ -2554,7 +2554,6 @@ select out(doc)
             }
         }
 
-
         [Fact]
         public void CanQueryTimeSeriesAggregation_WhereInOnPropertyFromLoadedTag()
         {
@@ -2874,7 +2873,6 @@ select out(doc)
             }
         }
 
-
         [Fact]
         public void CanQueryTimeSeriesAggregation_WhereBetweenOnPropertyFromLoadedTag()
         {
@@ -2988,7 +2986,6 @@ select out(doc)
                 }
             }
         }
-
 
         [Fact]
         public void CanQueryTimeSeriesAggregation_WhereBetweenOnPropertyFromLoadedTagAndQueryParameters()

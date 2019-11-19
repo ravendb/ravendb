@@ -1362,7 +1362,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 var loadExpressions = SelectClauseExpressions("LOAD", false);
 
                 if (loadExpressions.Count != 1)
-                {
+                {//todo aviv
                     ThrowInvalidQueryException($"Failed");
 
                 }
