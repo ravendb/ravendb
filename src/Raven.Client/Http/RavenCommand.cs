@@ -37,6 +37,7 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
+
         public Dictionary<ServerNode, Exception> FailedNodes;
 
         public TResult Result;
@@ -100,6 +101,7 @@ namespace Raven.Client.Http
             return FailedNodes != null && FailedNodes.ContainsKey(node);
         }
 
+
         public virtual async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (ResponseType == RavenCommandResponseType.Empty || response.StatusCode == HttpStatusCode.NoContent)
@@ -116,19 +118,65 @@ namespace Raven.Client.Http
                     // we intentionally don't dispose the reader here, we'll be using it
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
-                    if (cache != null) //precaution
+
+                    await FirstSuccessfulAction(() =>
                     {
-                        CacheResponse(cache, url, response, json);
-                    }
-                    SetResponse(context, json, fromCache: false);
+                        if (cache != null) //precaution
+                        {
+                            CacheResponse(cache, url, response, json);
+                        }
+                        SetResponse(context, json, fromCache: false);
+                    }).ConfigureAwait(false);
+
                     return ResponseDisposeHandling.Automatic;
                 }
 
                 // We do not cache the stream response.
                 using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
-                    SetResponseRaw(response, uncompressedStream, context);
+                {
+                    await FirstSuccessfulAction(() =>
+                    {
+                        SetResponseRaw(response, uncompressedStream, context);
+                    }).ConfigureAwait(false);
+                }
             }
             return ResponseDisposeHandling.Automatic;
+        }
+
+        private TaskCompletionSource<bool> _successfulResponseWaiter;
+
+        internal void SetTimeout(TimeSpan timeout)
+        {
+            Timeout = timeout;
+        }
+
+        private async Task FirstSuccessfulAction(Action action)
+        {
+            TaskCompletionSource<bool> tcs;
+            while (true)
+            {
+                tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var responseTask = Interlocked.CompareExchange(ref _successfulResponseWaiter, tcs, null);
+                if (responseTask != null)
+                {
+                    if (await responseTask.Task.ConfigureAwait(false))
+                        return; // this action was already _successfully_ performed by a different task
+
+                    continue;
+                }
+                break;
+            }
+
+            try
+            {
+                action();
+                tcs.TrySetResult(true);
+            }
+            catch
+            {
+                tcs.TrySetResult(false);
+                throw;
+            }
         }
 
         protected void CacheResponse(HttpCache cache, string url, HttpResponseMessage response, BlittableJsonReaderObject responseJson)

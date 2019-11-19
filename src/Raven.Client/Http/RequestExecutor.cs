@@ -1082,7 +1082,8 @@ namespace Raven.Client.Http
                    selector.Topology?.Nodes?.Count > 1 &&
                    command.IsReadRequest &&
                    command.ResponseType == RavenCommandResponseType.Object &&
-                   chosenNode != null;
+                   chosenNode != null && 
+                   typeof(IRaftCommand) != command.GetType();
         }
 
         private static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
@@ -1191,6 +1192,11 @@ namespace Raven.Client.Http
 
                 var raftRequestString = "raft-request-id=" + raftCommand.RaftUniqueRequestId;
                 builder.Query = builder.Query?.Length > 1 ? $"{builder.Query.Substring(1)}&{raftRequestString}" : raftRequestString;
+
+                if (command.Timeout.HasValue == false)
+                {
+                    command.SetTimeout(TimeSpan.FromSeconds(3));
+                }
             }
 
             request.RequestUri = builder.Uri;
@@ -1303,15 +1309,21 @@ namespace Raven.Client.Http
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
+            if (nodeIndex.HasValue == false)
+            {
+                // we executed request over a node not in the topology. This means no failover...
+                return false;
+            }
+
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
 
             await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
-            if (nodeIndex.HasValue == false)
+            if (command is IRaftCommand && _nodeSelector.Topology.Nodes.Count > 1)
             {
-                // we executed request over a node not in the topology. This means no failover...
-                return false;
+                await Broadcast(command, sessionInfo, token).ConfigureAwait(false);
+                return true;
             }
 
             SpawnHealthChecks(chosenNode, nodeIndex.Value);
@@ -1340,6 +1352,64 @@ namespace Raven.Client.Http
             await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
             return true;
+        }
+
+        private async Task Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)
+        {
+            if (command is IRaftCommand == false)
+                throw new InvalidOperationException("You can broadcast only raft commands.");
+
+            var tasks = new Dictionary<Task, CancellationTokenSource>();
+
+            command.SetTimeout(TimeSpan.FromSeconds(30)); //TODO configurable broadcast timeout 
+
+            for (var index = 0; index < _nodeSelector.Topology.Nodes.Count; index++)
+            {
+                var node = _nodeSelector.Topology.Nodes[index];
+                if (command.IsFailedWithNode(node))
+                    continue;
+
+                var returnContext = ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
+                var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(token);
+
+                var task = ExecuteAsync(node, null, ctx, command, shouldRetry: false, sessionInfo, cancellationToken.Token);
+#pragma warning disable 4014
+                task.ContinueWith(_ => returnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+#pragma warning restore 4014
+
+                tasks.Add(task, cancellationToken);
+            }
+
+            var ae = new List<Exception>();
+            
+            while (tasks.Count > 0)
+            {
+                var completed = await Task.WhenAny(tasks.Keys).ConfigureAwait(false);
+                if (completed.IsCanceled || completed.IsFaulted)
+                {
+                    if (completed.Exception != null)
+                        ae.Add(completed.Exception.InnerException);
+
+                    tasks.Remove(completed);
+                    continue;
+                }
+
+                foreach (var tuple in tasks)
+                {
+                    if (tuple.Key == completed)
+                    {
+                        tuple.Value.Dispose();   
+                        continue;
+                    }
+
+                    tuple.Value.Cancel();
+                    tuple.Value.Dispose();
+                }
+
+                return;
+            }
+
+            throw new AllTopologyNodesDownException($"Broadcasting {command.GetType()} failed.", new AggregateException(ae));
         }
 
         public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)

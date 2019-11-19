@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -20,6 +21,8 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.Client.Documents.Operations.Identities;
+using Raven.Server.Utils;
+using Sparrow.Server;
 using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
@@ -99,6 +102,42 @@ namespace SlowTests.Cluster
                     var id = session.Advanced.GetDocumentId(user);
                     Assert.Equal("users/1991", id);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task NextIdentityForOperationShouldBroadcast()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var database = GetDatabaseName();
+            var numberOfNodes = 5;
+            var cluster = await CreateRaftCluster(numberOfNodes);
+            var createResult = await CreateDatabaseInClusterInner(new DatabaseRecord(database), numberOfNodes, cluster.Leader.WebUrl, null);
+
+            using (var store = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Leader.WebUrl }
+            }.Initialize())
+            {
+                var result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                Assert.Equal(1, result);
+
+                for (int i = 0; i < 2; i++)
+                {
+                    var tag = createResult.Result.Topology.Members[i];
+                    var server = createResult.Servers.Single(s => s.ServerStore.NodeTag == tag);
+                    server.ServerStore.InitializationCompleted.Reset();
+                    server.ServerStore.Initialized = false;
+                    server.ServerStore.Engine.CurrentLeader?.StepDown();
+                }
+
+                var sp = Stopwatch.StartNew();
+                result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                Assert.Equal(2, result);
+                sp.Stop();
+                Assert.True(sp.Elapsed < TimeSpan.FromSeconds(5));
             }
         }
 
