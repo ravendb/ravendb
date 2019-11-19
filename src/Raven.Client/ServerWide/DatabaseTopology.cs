@@ -140,6 +140,17 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         }
     }
 
+    public static class ThreadSafeRandom
+    {
+        [ThreadStatic]
+        private static Random _random;
+
+        public static int Shuffle(string _, string __)
+        {
+            return (_random ??= new Random()).Next(-100, 100);
+        }
+    }
+
     public class DatabaseTopology
     {
         public List<string> Members = new List<string>();
@@ -155,19 +166,12 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         public int ReplicationFactor = 1;
         public List<string> PriorityOrder;
 
-        private readonly Random _random = new Random();
-        public int Shuffle(string _, string __)
-        {
-            return _random.Next(-100, 100);
-        }
-
         public void ReorderMembers()
         {
+            Members.Sort(ThreadSafeRandom.Shuffle);
+
             if (PriorityOrder == null || PriorityOrder.Count == 0)
-            {
-                Members.Sort(Shuffle);
                 return;
-            }
 
             var members = new List<string>();
             for (int i = 0; i < PriorityOrder.Count; i++)
