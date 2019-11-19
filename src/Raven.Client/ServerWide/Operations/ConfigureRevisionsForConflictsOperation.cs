@@ -18,7 +18,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public ConfigureRevisionsForConflictsOperation(string database, RevisionsCollectionConfiguration configuration)
         {
-            Helpers.AssertValidDatabaseName(database);
+            ResourceNameValidator.AssertValidDatabaseName(database);
             _database = database;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
