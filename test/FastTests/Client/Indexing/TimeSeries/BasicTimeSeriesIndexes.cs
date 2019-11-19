@@ -155,7 +155,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                     "from entry in ts.Entries " +
                     "let employee = LoadDocument(entry.Tag, \"Employees\")" +
                     "select new { " +
-                    "   HeartBeat = entry.Values[0], " +
+                    "   HeartBeat = entry.Value, " +
                     "   Date = entry.TimeStamp.Date, " +
                     "   User = ts.DocumentId, " +
                     "   Employee = employee.FirstName" +

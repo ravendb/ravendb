@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private Dictionary<string, long> GetReferenceEtags()
         {
             if (ReferenceEtagsByCollection == null)
-                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>();
+                ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 
             if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out Dictionary<string, long> referenceEtags) == false)
                 ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));

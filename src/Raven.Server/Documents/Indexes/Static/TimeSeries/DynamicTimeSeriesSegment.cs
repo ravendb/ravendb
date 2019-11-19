@@ -157,6 +157,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                     }
                 }
 
+                public dynamic Value
+                {
+                    get
+                    {
+                        if (_values == null) 
+                            _values = new DynamicArray(_entry.Values.ToArray());
+
+                        return _values.Get(0);
+                    }
+                }
+
                 public dynamic TimeStamp => TypeConverter.ToDynamicType(_entry.TimeStamp);
 
                 public dynamic Tag => TypeConverter.ToDynamicType(_entry.Tag);
@@ -174,6 +185,12 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                     if (string.Equals(nameof(_entry.TimeStamp), name))
                     {
                         result = TimeStamp;
+                        return true;
+                    }
+
+                    if (string.Equals(nameof(Value), name))
+                    {
+                        result = Value;
                         return true;
                     }
 
