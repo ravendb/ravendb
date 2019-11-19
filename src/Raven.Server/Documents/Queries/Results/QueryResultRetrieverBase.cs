@@ -999,25 +999,25 @@ namespace Raven.Server.Documents.Queries.Results
                     return result == false;
                 }
 
-                if (filter is BetweenExpression betweenExpression)
+                if (filter is TimeSeriesBetweenExpression betweenExpression)
                 {
                     var result = false;
 
                     dynamic src = GetValue(betweenExpression.Source, singleResult);
-                    dynamic value = GetValue(betweenExpression.Min, singleResult);
+                    dynamic value = GetValue(betweenExpression.MinExpression, singleResult);
 
                     if (src is LazyNumberValue lnv)
                     {
                         if (lnv.CompareTo(value) >= 0)
                         {
-                            value = GetValue(betweenExpression.Max, singleResult);
+                            value = GetValue(betweenExpression.MaxExpression, singleResult);
                             result = lnv.CompareTo(value) <= 0;
                         }
                     }
 
                     else if (src >= value)
                     {
-                        value = GetValue(betweenExpression.Max, singleResult);
+                        value = GetValue(betweenExpression.MaxExpression, singleResult);
                         result = src <= value;
                     }
 

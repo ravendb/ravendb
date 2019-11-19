@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private int _statePos;
 
+        private bool _insideTimeSeriesBody;
         public const string TimeSeries = "timeseries";
 
         public QueryScanner Scanner = new QueryScanner();
@@ -1341,6 +1342,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private TimeSeriesFunction ParseTimeSeriesBody(string name, StringSegment rootSource = default)
         {
+            _insideTimeSeriesBody = true;
+
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
 
@@ -1419,6 +1422,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 select = SelectClauseExpressions("SELECT", false);
             }
+
+            _insideTimeSeriesBody = false;
 
             return new TimeSeriesFunction
             {
@@ -1958,7 +1963,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     type = OperatorType.NotEqual;
                     break;
                 case "BETWEEN":
-                    op = ReadBetweenExpression(field);
+                    op = _insideTimeSeriesBody
+                        ? ReadTimeSeriesBetweenExpression(field)
+                        : ReadBetweenExpression(field);
                     return true;
                 case "IN":
                 case "ALL IN":
