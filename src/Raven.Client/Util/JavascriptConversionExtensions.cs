@@ -208,6 +208,8 @@ namespace Raven.Client.Util
                             case "Count":
                                 _innerCallExpected = DictionaryInnerCall.Key;
                                 break;
+                            case "SelectMany":
+                                return;
                             case "Select":
                                 _innerCallExpected = DictionaryInnerCall.Map;
                                 HandleMap(context, callNode);
