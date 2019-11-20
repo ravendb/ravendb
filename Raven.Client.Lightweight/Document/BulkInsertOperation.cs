@@ -101,7 +101,7 @@ namespace Raven.Client.Document
             if (tag != null)
                 metadata.Add(Constants.RavenEntityName, tag);
 
-            var data = entityToJson.ConvertEntityToJson(id, entity, metadata);
+            var data = entityToJson.ConvertEntityToJson(id, entity, metadata, executeListeners: true);
 
             OnBeforeEntityInsert(id, data, metadata);
 

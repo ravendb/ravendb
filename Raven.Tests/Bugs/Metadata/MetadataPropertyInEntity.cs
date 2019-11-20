@@ -28,7 +28,9 @@ namespace Raven.Tests.Bugs.Metadata
         {
             using(var store = NewDocumentStore())
             {
-                using(var session = store.OpenSession())
+                store.RegisterListener(new MetadataToPropertyConvertionListener());
+
+                using (var session = store.OpenSession())
                 {
                     var account = new Account
                     {
@@ -39,7 +41,7 @@ namespace Raven.Tests.Bugs.Metadata
                     session.SaveChanges();
                 }
 
-                store.RegisterListener(new MetadataToPropertyConvertionListener());
+                
 
                 using (var session = store.OpenSession())
                 {

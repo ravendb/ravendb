@@ -31,11 +31,14 @@ namespace Raven.Client.Document
 
         public readonly Dictionary<object, Dictionary<string, JToken>> MissingDictionary = new Dictionary<object, Dictionary<string, JToken>>(ObjectReferenceEqualityComparer<object>.Default);
 
-        public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata)
+        public RavenJObject ConvertEntityToJson(string key, object entity, RavenJObject metadata, bool executeListeners)
         {
-            foreach (var extendedDocumentConversionListener in Listeners.ConversionListeners)
+            if (executeListeners)
             {
-                extendedDocumentConversionListener.BeforeConversionToDocument(key, entity, metadata);
+                foreach (var extendedDocumentConversionListener in Listeners.ConversionListeners)
+                {
+                    extendedDocumentConversionListener.BeforeConversionToDocument(key, entity, metadata);
+                }
             }
 
             var entityType = entity.GetType();
@@ -49,9 +52,12 @@ namespace Raven.Client.Document
 
             SetClrType(entityType, metadata);
 
-            foreach (var extendedDocumentConversionListener in Listeners.ConversionListeners)
+            if (executeListeners)
             {
-                extendedDocumentConversionListener.AfterConversionToDocument(key, entity, objectAsJson, metadata);
+                foreach (var extendedDocumentConversionListener in Listeners.ConversionListeners)
+                {
+                    extendedDocumentConversionListener.AfterConversionToDocument(key, entity, objectAsJson, metadata);
+                }
             }
 
             return objectAsJson;

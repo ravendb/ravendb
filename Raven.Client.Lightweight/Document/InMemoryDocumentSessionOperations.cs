@@ -900,7 +900,7 @@ more responsive application.
                                                     "You cannot change the document key property of a entity loaded into the session");
             }
 
-            var json = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
+            var json = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata, executeListeners: true);
 
             var etag = (UseOptimisticConcurrency && documentMetadata.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled) || documentMetadata.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced
                            ? (documentMetadata.ETag ?? Etag.Empty)
@@ -942,7 +942,7 @@ more responsive application.
                 documentMetadata.Key = batchResult.Key;
                 documentMetadata.OriginalMetadata = (RavenJObject)batchResult.Metadata.CloneToken();
                 documentMetadata.Metadata = batchResult.Metadata;
-                documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
+                documentMetadata.OriginalValue = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata, executeListeners: false);
 
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, batchResult.Key);
 
@@ -1210,7 +1210,7 @@ more responsive application.
                 documentMetadata.Metadata.Value<bool>(Constants.RavenReadOnly))
                 return false;
 
-            var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata);
+            var newObj = EntityToJson.ConvertEntityToJson(documentMetadata.Key, entity, documentMetadata.Metadata, executeListeners: false);
             var changedData = changes != null ? new List<DocumentsChanges>() : null;
 
             var isObjectEquals = RavenJToken.DeepEquals(newObj, documentMetadata.OriginalValue, changedData);
