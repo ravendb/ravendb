@@ -1311,6 +1311,14 @@ namespace Raven.Server
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
                             SendErrorIfPossible(tcp, e);
+                            try
+                            {
+                                tcp?.Dispose();
+                            }
+                            catch
+                            {
+                                // nothing we can do
+                            }
                         }
                         finally
                         {

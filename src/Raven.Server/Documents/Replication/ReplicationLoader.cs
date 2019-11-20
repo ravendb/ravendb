@@ -192,15 +192,6 @@ namespace Raven.Server.Documents.Replication
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
                 incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
 
-                try
-                {
-                    tcpConnectionOptions.Dispose();
-                }
-                catch
-                {
-                    // do nothing
-                }
-
                 throw;
             }
 
@@ -270,14 +261,26 @@ namespace Raven.Server.Documents.Replication
                 newIncoming.Dispose();
         }
 
+        private long _reconnectInProgress;
+
         private void ForceTryReconnectAll()
         {
+            if (Interlocked.CompareExchange(ref _reconnectInProgress, 1, 0) == 1)
+                return;
+
             foreach (var failure in _reconnectQueue)
             {
                 try
                 {
                     if (_reconnectQueue.TryRemove(failure) == false)
                         continue;
+
+                    if (failure.RetryOn > DateTime.UtcNow)
+                    {
+                        _reconnectQueue.Add(failure);
+                        continue;
+                    }
+
                     AddAndStartOutgoingReplication(failure.Node, failure.External);
                 }
                 catch (Exception e)
@@ -288,6 +291,8 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
+
+            Interlocked.Exchange(ref _reconnectInProgress, 0);
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
@@ -312,17 +317,10 @@ namespace Raven.Server.Documents.Replication
                     $"Cannot accept the incoming replication connection from {connectionInfo.SourceUrl}, because this node is in passive state.");
             }
 
-            if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out IncomingReplicationHandler value))
+            if (_incoming.TryGetValue(connectionInfo.SourceDatabaseId, out var value))
             {
-                if (_log.IsInfoEnabled)
-                {
-                    _log.Info(
-                        $"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db");
-                }
-
-                IncomingReplicationRemoved?.Invoke(value);
-
-                value.Dispose();
+                throw new InvalidOperationException(
+                    $"connection for this database already exists from {value.ConnectionInfo.SourceUrl}.");
             }
         }
 
