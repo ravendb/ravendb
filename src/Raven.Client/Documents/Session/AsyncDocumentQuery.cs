@@ -612,18 +612,25 @@ namespace Raven.Client.Documents.Session
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var fields = propertyInfos.Select(p => p.Name).ToArray();
-            return SelectFields<TProjection>(new QueryData(fields, projections, isProjectInto: true));
+            return SelectFields<TProjection>(new QueryData(fields, projections)
+            {
+                IsProjectInto = true
+            });
         }
 
         /// <inheritdoc />
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
         {
-            return SelectFields<TProjection>(new QueryData(fields, fields));
+            return SelectFields<TProjection>(new QueryData(fields, fields)
+            {
+                IsProjectInto = true
+            });
         }
 
         /// <inheritdoc />
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(QueryData queryData)
         {
+            queryData.IsProjectInto = true;
             return CreateDocumentQueryInternal<TProjection>(queryData);
         }
 
@@ -1017,7 +1024,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
+        internal AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
             FieldsToFetchToken newFieldsToFetch;
             if (queryData != null && queryData.Fields.Length > 0)
