@@ -16,6 +16,44 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void Projection_With_A_Single_Primitive_Field()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userTalk = SaveUserTalk(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<UserTalk>()
+                        .Select(x => x.Name)
+                        .ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(userTalk.Name, result[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Projection_With_A_Single_Primitive_Field_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userTalk = SaveUserTalk(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var result = await session.Query<UserTalk>()
+                        .Select(x => x.Name)
+                        .ToListAsync();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(userTalk.Name, result[0]);
+                }
+            }
+        }
+
+        [Fact]
         public void Projection_With_A_Single_Field()
         {
             using (var store = GetDocumentStore())
@@ -174,6 +212,44 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void Select_Fields4()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userTalk = SaveUserTalk(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.DocumentQuery<UserTalk>()
+                        .SelectFields<string>("Name")
+                        .ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(userTalk.Name, result[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Select_Fields4_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var userTalk = SaveUserTalk(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var result = await session.Advanced.AsyncDocumentQuery<UserTalk>()
+                        .SelectFields<string>("Name")
+                        .ToListAsync();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(userTalk.Name, result[0]);
+                }
+            }
+        }
+
+        [Fact]
         public void Project_Into()
         {
             using (var store = GetDocumentStore())
@@ -322,7 +398,8 @@ namespace SlowTests.Issues
                 {
                     {"test1", new TalkUserDef() },
                     {"test2", new TalkUserDef() }
-                }
+                },
+                Name = "Grisha"
             };
 
             using (var session = store.OpenSession())
@@ -337,6 +414,8 @@ namespace SlowTests.Issues
         public class UserTalk
         {
             public Dictionary<string, TalkUserDef> UserDefs { get; set; }
+
+            public string Name { get; set; }
         }
 
         public class TalkUserIds

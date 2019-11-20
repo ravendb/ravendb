@@ -169,7 +169,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             var type = typeof(T);
 
-            if (isProjectInto == false && fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
+            if (fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
             {
                 var typeInfo = type.GetTypeInfo();
                 var projectionField = fieldsToFetch.Projections[0];
@@ -196,20 +196,23 @@ namespace Raven.Client.Documents.Session.Operations
                         : value;
                 }
 
-                if (document.TryGetMember(projectionField, out object inner) == false)
-                    return default;
-
-                if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
+                if (isProjectInto == false)
                 {
-                    if (inner is BlittableJsonReaderObject innerJson)
+                    if (document.TryGetMember(projectionField, out object inner) == false)
+                        return default;
+
+                    if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                     {
-                        //extraction from original type
-                        document = innerJson;
-                    }
-                    else if (inner is BlittableJsonReaderArray bjra &&
-                             JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
-                    {
-                        return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
+                        if (inner is BlittableJsonReaderObject innerJson)
+                        {
+                            //extraction from original type
+                            document = innerJson;
+                        }
+                        else if (inner is BlittableJsonReaderArray bjra &&
+                                 JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
+                        {
+                            return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
+                        }
                     }
                 }
             }
