@@ -160,7 +160,7 @@ namespace Raven.Client.Util
                 // Rewrite .Count / .Values / .Keys
                 if (context.Node is MemberExpression contextNode
                     && contextNode.Expression != null
-                    && typeof(IDictionary).IsAssignableFrom(contextNode.Expression.Type))
+                    && LinqMethodsSupport.IsDictionary(contextNode.Expression.Type))
                 {
                     context.PreventDefault();
                     // Get KeyValueType identifier:
@@ -195,7 +195,7 @@ namespace Raven.Client.Util
                 // Only call it when we do a methodCall on a memberExpression of type dictionary
                 if (context.Node is MethodCallExpression callNode
                     && callNode.Arguments.Count > 0
-                    && typeof(IDictionary).IsAssignableFrom(callNode.Arguments[0].Type))
+                    && LinqMethodsSupport.IsDictionary(callNode.Arguments[0].Type))
                 {
                     if (_innerCallExpected == default)
                     {
@@ -219,7 +219,7 @@ namespace Raven.Client.Util
                 // Now we translate the memberExpression
                 else if (_innerCallExpected != default
                     && _innerCallExpected != DictionaryInnerCall.Map
-                    && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
+                    && LinqMethodsSupport.IsDictionary(context.Node.Type))
                 {
                     context.PreventDefault();
                     var currentCall = _innerCallExpected;
