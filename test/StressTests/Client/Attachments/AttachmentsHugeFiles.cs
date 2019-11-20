@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
-    public class AttachmentsHugeFiles : NoDisposalNeeded
+    public class AttachmentsHugeFiles : NoDisposalNoOutputNeeded
     {
         public AttachmentsHugeFiles(ITestOutputHelper output) : base(output)
         {
