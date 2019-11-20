@@ -140,12 +140,12 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         }
     }
 
-    public static class ThreadSafeRandom
+    internal static class ThreadSafeRandom
     {
         [ThreadStatic]
         private static Random _random;
 
-        public static int Shuffle(string _, string __)
+        internal static int Shuffle(string _, string __)
         {
             return (_random ??= new Random()).Next(-100, 100);
         }
@@ -166,7 +166,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         public int ReplicationFactor = 1;
         public List<string> PriorityOrder;
 
-        public void ReorderMembers()
+        internal void ReorderMembers()
         {
             Members.Sort(ThreadSafeRandom.Shuffle);
 
