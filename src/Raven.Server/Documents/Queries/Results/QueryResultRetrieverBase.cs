@@ -972,7 +972,7 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                 }
 
-                bool CompareDateTimes(DateTime dateTime, object right)
+                bool CompareDateTimes(DateTime? dateTime, object right)
                 {
                     DateTime? rightAsDt;
 
@@ -1002,6 +1002,12 @@ namespace Raven.Server.Documents.Queries.Results
 
                 bool CompareStrings(LazyStringValue lsv, object right)
                 {
+                    if (right is DateTime)
+                    {
+                        var leftAsDt = ParseDateTime(lsv);
+                        return CompareDateTimes(leftAsDt, right);
+                    }
+
                     switch (be.Operator)
                     {
                         case OperatorType.Equal:
