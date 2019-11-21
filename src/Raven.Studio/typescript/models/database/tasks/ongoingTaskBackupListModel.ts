@@ -129,7 +129,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
 
             this.textClass("text-details");
             const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = moment.utc(nextBackup.StartTimeInUtc).diff(now);
+            const diff = moment.utc(nextBackup.DateTime).diff(now);
             if (diff <= 0) {
                 this.refreshBackupInfo(true);
             }
@@ -174,7 +174,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             }
 
             const now = timeHelpers.utcNowWithSecondPrecision();
-            const diff = moment.utc(nextBackup.StartTimeInUtc).diff(now);
+            const diff = moment.utc(nextBackup.DateTime).diff(now);
             return diff <= 0;
         });
 

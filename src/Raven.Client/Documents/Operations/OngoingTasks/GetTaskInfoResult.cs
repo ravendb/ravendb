@@ -299,23 +299,19 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
     {
         public TimeSpan TimeSpan { get; set; }
 
-        public DateTime StartTimeLocal { get; set; }
-
-        public DateTime StartTimeInUtc => StartTimeLocal.ToUniversalTime();
+        public DateTime DateTime { get; set; }
 
         public bool IsFull { get; set; }
 
-        public long TaskId { get; set; }
+        internal long TaskId { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(TimeSpan)] = TimeSpan,
-                [nameof(StartTimeLocal)] = StartTimeLocal,
-                [nameof(StartTimeInUtc)] = StartTimeInUtc,
-                [nameof(IsFull)] = IsFull,
-                [nameof(TaskId)] = TaskId
+                [nameof(DateTime)] = DateTime,
+                [nameof(IsFull)] = IsFull
             };
         }
     }
