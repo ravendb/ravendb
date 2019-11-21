@@ -368,7 +368,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
                 [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64,
-                [nameof(PriorityOrder)] = new DynamicJsonArray(PriorityOrder)
+                [nameof(PriorityOrder)] = PriorityOrder != null ? new DynamicJsonArray(PriorityOrder) : null
             };
         }
 

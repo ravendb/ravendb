@@ -37,6 +37,26 @@
                     </div>
                 </div>
             </div>
+            <div data-bind="visible: inSortableMode">
+                <div class="flex-form">
+                    <div class="form-group">
+                        <label class="control-label">After failure recovery</label>
+                        <div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-default"
+                                        data-bind="click: _.partial(fixOrder, false), css: { active: !fixOrder() }">
+                                    Shuffle nodes order
+                                </button>
+                                <button type="button" class="btn btn-default"
+                                        data-bind="click: _.partial(fixOrder, true), css: { active: fixOrder() }">
+                                    Try to maintain nodes order
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div class="scroll flex-grow nodes-list" data-bind="css: { 'sort-mode' : inSortableMode }">
                 <div class="not-deleted-nodes" data-bind="foreach: nodes">
                     <div class="panel destination-item panel-hover">

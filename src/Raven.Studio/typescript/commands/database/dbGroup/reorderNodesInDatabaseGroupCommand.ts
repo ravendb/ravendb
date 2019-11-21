@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class reorderNodesInDatabaseGroupCommand extends commandBase {
 
-    constructor(private databaseName: string, private nodesOrder: string[]) {
+    constructor(private databaseName: string, private nodesOrder: string[], private fixedTopology: boolean) {
         super();
     }
 
@@ -14,7 +14,8 @@ class reorderNodesInDatabaseGroupCommand extends commandBase {
         const url = endpoints.global.adminDatabases.adminDatabasesReorder + this.urlEncodeArgs(args);
 
         const payload = {
-            MembersOrder: this.nodesOrder
+            MembersOrder: this.nodesOrder,
+            Fixed: this.fixedTopology
         } as Raven.Client.ServerWide.Operations.ReorderDatabaseMembersOperation.Parameters;
         
         return this.post<void>(url, JSON.stringify(payload), null,  { dataType: undefined })
