@@ -300,6 +300,8 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private static readonly TimeSpan MaxInactiveTime = TimeSpan.FromMinutes(1);
+
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
             //precaution, should never happen..
@@ -324,13 +326,14 @@ namespace Raven.Server.Documents.Replication
 
             if (_incoming.TryGetValue(connectionInfo.SourceDatabaseId, out var value))
             {
-                if (value.LastHeartbeatTicks + TimeSpan.FromMinutes(1).Ticks > Database.Time.GetUtcNow().Ticks)
+                var lastHeartbeat = new DateTime(value.LastHeartbeatTicks);
+                if (lastHeartbeat + MaxInactiveTime > Database.Time.GetUtcNow())
                     throw new InvalidOperationException(
-                        $"An active connection for this database already exists from {value.ConnectionInfo.SourceUrl} (last heartbeat: {new DateTime(value.LastHeartbeatTicks)}).");
+                        $"An active connection for this database already exists from {value.ConnectionInfo.SourceUrl} (last heartbeat: {lastHeartbeat}).");
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db " +
-                              $"(last heartbeat was at {new DateTime(value.LastHeartbeatTicks)}).");
+                              $"(last heartbeat was at {lastHeartbeat}).");
 
                 IncomingReplicationRemoved?.Invoke(value);
 
