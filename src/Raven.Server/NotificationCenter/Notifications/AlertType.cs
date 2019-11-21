@@ -64,6 +64,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         Throttling_CpuCreditsBalance,
 
-        IntegrityErrorOfAlreadySyncedData
+        IntegrityErrorOfAlreadySyncedData,
+
+        ConcurrentDatabaseLoadTimeout
     }
 }
