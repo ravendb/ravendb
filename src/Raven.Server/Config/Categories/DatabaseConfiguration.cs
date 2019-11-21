@@ -48,7 +48,7 @@ namespace Raven.Server.Config.Categories
         /// different databases get loaded at the same time
         /// </summary>
         [Description("The time in seconds to wait for a database to start loading when under load")]
-        [DefaultValue(10)]
+        [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.ConcurrentLoadTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting ConcurrentLoadTimeout { get; set; }
