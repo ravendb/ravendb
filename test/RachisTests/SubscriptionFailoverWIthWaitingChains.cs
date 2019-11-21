@@ -2,12 +2,16 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide.Commands.Cluster;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -15,12 +19,12 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace RachisTests
 {
     public class SubscriptionFailoverWithWaitingChains : ClusterTestBase
     {
-
         public class CountdownsArray : IDisposable
         {
             private CountdownEvent[] _array;
@@ -51,17 +55,59 @@ namespace RachisTests
         {
         }
 
-        [Theory]        
-        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/3,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]        
-        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/3,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
-        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
-        [InlineData(/*subscriptionsChainSize:*/2,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/true)]
-        //[InlineData(/*subscriptionsChainSize:*/3,/*clusterSize:*/5,/*dBGroupSize:*/3, /*shouldMaintainElectionTimeout:*/false)]
-        public async Task SubscriptionsShouldFailoverAndReturnToOriginalNodes(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldMaintainElectionTimeout)
+        private class TestParams: DataAttribute
         {
-            const int SubscriptionsCount = 20;
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="subscriptionsChainSize">Suka</param>
+            /// <param name="clusterSize"></param>
+            /// <param name="dBGroupSize"></param>
+            /// <param name="ShouldTrapRevivedNodesIntoCandidate"></param>
+            public TestParams(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
+            {
+                SubscriptionsChainSize = subscriptionsChainSize;
+                ClusterSize = clusterSize;
+                DBGroupSize = dBGroupSize;
+                ShouldTrapRevivedNodesIntoCandidate = shouldTrapRevivedNodesIntoCandidate;                
+            }
+
+            public int SubscriptionsChainSize { get; }
+            public int ClusterSize { get; }
+            public int DBGroupSize { get; }
+            public bool ShouldTrapRevivedNodesIntoCandidate { get; }            
+
+            public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+            {
+                yield return new object[]{
+                    SubscriptionsChainSize,
+                    ClusterSize,
+                    DBGroupSize,
+                    ShouldTrapRevivedNodesIntoCandidate};
+            }
+        }
+
+        [Theory(Skip = "Uprobable, intermediate state")]
+        [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: true)]
+        public async Task SkippedSubscriptionsShouldFailoverAndReturnToOriginalNodes(int subscriptionsChainSize, int clusterSize, int dBGroupSize, bool shouldMaintainElectionTimeout)
+        {
+            await SubscriptionsShouldFailoverCorrectrlyAndAllowThemselvesToBeTerminated(subscriptionsChainSize, clusterSize, dBGroupSize, shouldMaintainElectionTimeout);
+        }
+
+        [Theory]
+        [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
+        [TestParams(subscriptionsChainSize: 2, clusterSize: 3, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]        
+        [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
+        [TestParams(subscriptionsChainSize: 2, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]        
+        [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
+        [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 3, shouldTrapRevivedNodesIntoCandidate: false)]
+        [TestParams(subscriptionsChainSize: 3, clusterSize: 5, dBGroupSize: 5, shouldTrapRevivedNodesIntoCandidate: false)]
+        public async Task SubscriptionsShouldFailoverCorrectrlyAndAllowThemselvesToBeTerminated(int subscriptionsChainSize, int clusterSize ,int dBGroupSize, bool shouldTrapRevivedNodesIntoCandidate)
+        {
+            const int SubscriptionsCount = 10;
             const int DocsBatchSize = 10;
             var cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
+
             
             using (var cdeArray = new CountdownsArray(subscriptionsChainSize, SubscriptionsCount))
             using (var store = GetDocumentStore(new Options
@@ -89,7 +135,8 @@ namespace RachisTests
                     await ContinuouslyGenerateDocs(DocsBatchSize, store);
                 });
 
-                foreach (var node in store.GetRequestExecutor().TopologyNodes.Take(dBGroupSize-1))
+                var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
+                foreach (var node in store.GetRequestExecutor().TopologyNodes.Take(dbNodesCountToToggle))
                 {
 
                     var i = 0;
@@ -100,7 +147,7 @@ namespace RachisTests
                             break;
                     }
 
-                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, shouldMaintainElectionTimeout);                    
+                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, shouldTrapRevivedNodesIntoCandidate);
                 }
 
                 Assert.All(cdeArray.GetArray(), cde => Assert.Equal(cde.CurrentCount, SubscriptionsCount));
@@ -116,6 +163,77 @@ namespace RachisTests
                 }
                 
                 await Task.WhenAll(workerTasks);
+            }
+        }
+
+        [Theory]
+        [InlineData(5)]
+        public void MakeSureAllNodesAreRoundRobined(int clusterSize)
+        {
+            var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize));            
+                        
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = clusterSize,
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+                var databaseName = store.Database;
+
+                var subsId = store.Subscriptions.Create<User>();
+                var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                }
+                );
+
+                HashSet<string> redirects = new HashSet<string>();                
+
+                subsWorker.OnSubscriptionConnectionRetry += ex =>
+                {
+                    redirects.Add(subsWorker.CurrentNodeTag);
+                };
+                var task = subsWorker.Run(x => { });
+
+                var sp = Stopwatch.StartNew();
+
+                foreach (var node in store.GetRequestExecutor().TopologyNodes)
+                {
+                    try
+                    {
+                        var i = 0;
+
+                        for (; i < cluster.Nodes.Count; i++)
+                        {
+                            if (cluster.Nodes[i].ServerStore.NodeTag == node.ClusterTag)
+                                break;
+                        }
+                        AsyncHelpers.RunSync(() => ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, i, true));
+                    }
+                    catch (Exception)
+                    {
+                        // noop, we might hit a leader here
+                    }
+                }
+
+                while (clusterSize != redirects.Count)
+                {
+                    var curLeader = cluster.Nodes.FirstOrDefault(x => x.ServerStore.IsLeader());
+
+                    if (curLeader!=null)
+                        curLeader.ServerStore.Engine.CurrentLeader.StepDown();
+
+                    Thread.Sleep(16);
+                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(5));
+                }
+
+                Assert.Equal(clusterSize, redirects.Count);
             }
         }
 
@@ -172,15 +290,15 @@ namespace RachisTests
                         });
         }
 
-        private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index, bool shouldMaintainElectionTimeout)
+        private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index, bool shouldTrapRevivedNodesIntoCandidate)
         {
             var node = cluster.Nodes[index];
 
-            node = await ToggleServer(node, shouldMaintainElectionTimeout);
+            node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
             await Task.Delay(5000);
-            node = await ToggleServer(node, shouldMaintainElectionTimeout);
+            node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
             await WaitForRehab(databaseName, cluster);
@@ -250,7 +368,7 @@ namespace RachisTests
                     mainTcs.SetResult(true);
             }, null, 10000, true);
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 20; i++)
             {                
                 await DropSubscriptions(databaseName, SubscriptionsCount, cluster);
                 
@@ -267,7 +385,7 @@ namespace RachisTests
             {
                 var curNode = cluster.Nodes[i];
                 var rehabCount = 0;
-                var attempts = 10;
+                var attempts = 20;
                 do
                 {                    
                     using (curNode.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -325,11 +443,10 @@ namespace RachisTests
             }
         }
 
-        private async Task<Raven.Server.RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldMaintainElectionTimeout)
+        private async Task<Raven.Server.RavenServer> ToggleServer(Raven.Server.RavenServer node, bool shouldTrapRevivedNodesIntoCandidate)
         {
             if (node.Disposed)
             {
-
                 var settings = new Dictionary<string, string>
                 {
                     [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1",
@@ -339,12 +456,10 @@ namespace RachisTests
                 };
 
                 var dataDir = node.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-
-                Dictionary<string, string> settings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.WebUrl                    
-                };
-                if (false == shouldMaintainElectionTimeout)
+                
+                // if we want to make sure that the revived node will be trapped in candidate node, we should make sure that the election timeout value is different from the 
+                // rest of the node (note that this is a configuration value, therefore we need to define it in "settings" and nowhere else)
+                if (shouldTrapRevivedNodesIntoCandidate == false)
                     settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = node.Configuration.Cluster.ElectionTimeout.AsTimeSpan.TotalMilliseconds.ToString();
 
                 node = base.GetNewServer(new ServerCreationOptions()
@@ -352,9 +467,8 @@ namespace RachisTests
                     DeletePrevious = false,
                     RunInMemory = false,
                     CustomSettings = settings,
-                    PartialPath = dataDir
+                    PartialPath = dataDir                    
                 });
-
             }
             else
             {
