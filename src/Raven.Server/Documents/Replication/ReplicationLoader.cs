@@ -268,31 +268,36 @@ namespace Raven.Server.Documents.Replication
             if (Interlocked.CompareExchange(ref _reconnectInProgress, 1, 0) == 1)
                 return;
 
-            foreach (var failure in _reconnectQueue)
+            try
             {
-                try
+                foreach (var failure in _reconnectQueue)
                 {
-                    if (_reconnectQueue.TryRemove(failure) == false)
-                        continue;
-
-                    if (failure.RetryOn > DateTime.UtcNow)
+                    try
                     {
-                        _reconnectQueue.Add(failure);
-                        continue;
+                        if (_reconnectQueue.TryRemove(failure) == false)
+                            continue;
+
+                        if (failure.RetryOn > DateTime.UtcNow)
+                        {
+                            _reconnectQueue.Add(failure);
+                            continue;
+                        }
+
+                        AddAndStartOutgoingReplication(failure.Node, failure.External);
                     }
-
-                    AddAndStartOutgoingReplication(failure.Node, failure.External);
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
+                    catch (Exception e)
                     {
-                        _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
+                        }
                     }
                 }
             }
-
-            Interlocked.Exchange(ref _reconnectInProgress, 0);
+            finally
+            {
+                Interlocked.Exchange(ref _reconnectInProgress, 0);
+            }
         }
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
@@ -319,8 +324,17 @@ namespace Raven.Server.Documents.Replication
 
             if (_incoming.TryGetValue(connectionInfo.SourceDatabaseId, out var value))
             {
-                throw new InvalidOperationException(
-                    $"connection for this database already exists from {value.ConnectionInfo.SourceUrl}.");
+                if (value.LastHeartbeatTicks + TimeSpan.FromMinutes(1).Ticks > Database.Time.GetUtcNow().Ticks)
+                    throw new InvalidOperationException(
+                        $"An active connection for this database already exists from {value.ConnectionInfo.SourceUrl} (last heartbeat: {new DateTime(value.LastHeartbeatTicks)}).");
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db " +
+                              $"(last heartbeat was at {new DateTime(value.LastHeartbeatTicks)}).");
+
+                IncomingReplicationRemoved?.Invoke(value);
+
+                value.Dispose();
             }
         }
 
