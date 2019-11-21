@@ -5,6 +5,9 @@ import colorsManager = require("common/colorsManager");
 import generalUtils = require("common/generalUtils");
 import fileDownloader = require("common/fileDownloader");
 import messagePublisher = require("common/messagePublisher");
+import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
+import fileImporter = require("common/fileImporter");
+import viewHelpers = require("../../../common/helpers/view/viewHelpers");
 
 type rTreeLeaf = {
     minX: number;
@@ -109,7 +112,7 @@ class hitTest {
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
         const overToggleIndexes = items.filter(x => x.actionType === "toggleIndexes").length > 0;
-        this.cursor(overToggleIndexes ? "pointer" : "auto"); //TODO: move it!
+        this.cursor(overToggleIndexes ? "pointer" : "auto"); 
 
         const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
         if (currentItem) {
@@ -228,6 +231,8 @@ class ioStatsGraph {
 
     /* private observables */
 
+    private tracksOrder: string[];
+    private statsNameProvider: () => string;
     private autoScroll = ko.observable<boolean>(false);
     private hasAnyData = ko.observable<boolean>(false);
     private loading: KnockoutComputed<boolean>;
@@ -249,12 +254,14 @@ class ioStatsGraph {
 
     /* private */
 
+    private liveViewClientProvider: (onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+                                      dateCutOff?: Date) => liveIOStatsWebSocketClient;
     private liveViewClient = ko.observable<liveIOStatsWebSocketClient>();
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
     private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
-    private closedIndexesItemsCache: Array<IOMetricsRecentStatsWithCache>;
+    private closedIndexesItemsCache: Array<IOMetricsRecentStatsWithCache>; 
     private commonPathsPrefix: string;
     private totalWidth: number;
     private totalHeight: number;
@@ -309,7 +316,14 @@ class ioStatsGraph {
         }
     };
 
-    constructor() {
+    constructor(statsNameProvider: () => string,
+                tracksOrder: string[],
+        liveClientProvider: (onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+                                     dateCutOff?: Date) => liveIOStatsWebSocketClient) {
+        
+        this.statsNameProvider = statsNameProvider;
+        this.tracksOrder = tracksOrder;
+        this.liveViewClientProvider = liveClientProvider;
         _.bindAll(this, "clearGraphWithConfirm");
 
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
@@ -333,24 +347,17 @@ class ioStatsGraph {
             const client = this.liveViewClient();
             return client ? client.loading() : true;
         });
-    }
 
-    activate(args: { indexName: string, database: string }): void {
-        super.activate(args);
         this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());
     }
 
-    deactivate() {
-        super.deactivate();
-
+    dispose() {
         if (this.liveViewClient) {
             this.cancelLiveView();
         }
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-
+    init(width: number, height: number) {
         colorsManager.setup(".io-stats .main-colors", this.colors);
         colorsManager.setup(".io-stats .event-colors", this.eventsColors);
         this.scrollConfig = graphHelper.readScrollConfig();
@@ -360,7 +367,8 @@ class ioStatsGraph {
         });
 
         this.tooltip = d3.select(".tooltip");
-        [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
+        this.totalWidth = width;
+        this.totalHeight = height;
 
         this.initCanvas();
 
@@ -380,7 +388,7 @@ class ioStatsGraph {
     private setLegendScales() {
         this.legends.forEach(x => x().setLegendScales());
     }
-
+    
     private initViewData() {
         this.hasIndexes(false);
 
@@ -396,7 +404,7 @@ class ioStatsGraph {
         this.data.Environments.forEach(env => {
 
             // 2.1 Check if indexes exist
-            if (env.Path.substring(this.commonPathsPrefix.length).startsWith(ioStats.indexesString)) {
+            if (env.Path.substring(this.commonPathsPrefix.length).startsWith(ioStatsGraph.indexesString)) {
                 this.hasIndexes(true);
             }
 
@@ -497,9 +505,7 @@ class ioStatsGraph {
                     const currentMouseLocation = d3.mouse(node);
                     const yDiff = currentMouseLocation[1] - initialClickLocation[1];
 
-                    const newYOffset = initialOffset - yDiff;
-
-                    this.currentYOffset = newYOffset;
+                    this.currentYOffset = initialOffset - yDiff;
                     this.fixCurrentOffset();
                 });
 
@@ -518,7 +524,7 @@ class ioStatsGraph {
             return temp.startsWith(ioStatsGraph.indexesString);
         }) : [];
 
-        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + ioStats.indexesString.length));
+        const indexesTracksNames = indexesTracks.map(x => x.Path.substring(this.commonPathsPrefix.length + 1 + ioStatsGraph.indexesString.length));
 
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));
@@ -569,7 +575,7 @@ class ioStatsGraph {
             }
         };
 
-        this.liveViewClient(new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
+        this.liveViewClient(this.liveViewClientProvider(onDataUpdate, this.dateCutoff));
     }
 
     private checkBufferUsage() {
@@ -765,60 +771,57 @@ class ioStatsGraph {
         const range = [] as Array<number>;
         let firstIndex = true;
 
-        // 1. Database main path
-        const documentsEnv = this.data.Environments.find(x => x.Type === "Documents");
-        if (documentsEnv) {
-            domain.push(documentsEnv.Path);
-            range.push(currentOffset);
-            currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
-        }
-
-        // 2. We want indexes to show in second track even though they are last in the endpoint info..       
-        if (this.indexesVisible()) {
-            for (let i = 0; i < this.data.Environments.length; i++) {
-                const env = this.data.Environments[i];
-                if (env.Type === "Index") {
-                    // 2.1 indexes closed
-                    if (!this.isIndexesExpanded()) {
-                        if (firstIndex) {
-                            domain.push(ioStatsGraph.indexesString);
-                            range.push(currentOffset);
-                            firstIndex = false;
+        for (let trackIdx = 0; trackIdx < this.tracksOrder.length; trackIdx++) {
+            const expectedType = this.tracksOrder[trackIdx];
+            
+            if (expectedType === "Index") {
+                if (this.indexesVisible()) {
+                    for (let i = 0; i < this.data.Environments.length; i++) {
+                        const env = this.data.Environments[i];
+                        if (env.Type === "Index") {
+                            // 2.1 indexes closed
+                            if (!this.isIndexesExpanded()) {
+                                if (firstIndex) {
+                                    domain.push(ioStatsGraph.indexesString);
+                                    range.push(currentOffset);
+                                    firstIndex = false;
+                                }
+                                domain.push(env.Path);
+                                range.push(currentOffset);
+                            }
+                            // 2.2 indexes opened
+                            else {
+                                // If first index.... push the special indexes header ...
+                                if (firstIndex) {
+                                    domain.push(ioStatsGraph.indexesString);
+                                    range.push(currentOffset);
+                                    currentOffset += ioStatsGraph.closedTrackHeight + ioStatsGraph.trackMargin;
+                                    firstIndex = false;
+                                }
+                                // Push the index path - only if not filtered out..
+                                if (!this.filtered(env.Path)) {
+                                    domain.push(env.Path);
+                                    range.push(currentOffset);
+                                    currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
+                                }
+                            }
                         }
-                        domain.push(env.Path);
-                        range.push(currentOffset);
                     }
-                    // 2.2 indexes opened
-                    else {
-                        // If first index.... push the special indexes header ...
-                        if (firstIndex) {
-                            domain.push(ioStatsGraph.indexesString);
-                            range.push(currentOffset);
-                            currentOffset += ioStatsGraph.closedTrackHeight + ioStatsGraph.trackMargin;
-                            firstIndex = false;
-                        }
-                        // Push the index path - only if not filtered out..
-                        if (!this.filtered(env.Path)) {
-                            domain.push(env.Path);
-                            range.push(currentOffset);
-                            currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
-                        }
+
+                    if (!this.isIndexesExpanded()) {
+                        currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
                     }
                 }
-            }
-
-            if (!this.isIndexesExpanded()) {
-                currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
+            } else {
+                const expectedEnv = this.data.Environments.find(x => x.Type === expectedType);
+                if (expectedEnv) {
+                    domain.push(expectedEnv.Path);
+                    range.push(currentOffset);
+                    currentOffset += ioStatsGraph.openedTrackHeight + ioStatsGraph.trackMargin;
+                }
             }
         }
-
-        // 3. Configuration path
-        const configurationEnv = this.data.Environments.find(x => x.Type === "Configuration");
-        if (configurationEnv) {
-            domain.push(configurationEnv.Path);
-            range.push(currentOffset);
-        }
-
+        
         this.yScale = d3.scale.ordinal<string, number>()
             .domain(domain)
             .range(range);
@@ -847,7 +850,7 @@ class ioStatsGraph {
             const trackName = track.Path.substring(this.commonPathsPrefix.length);
             result.add(trackName);
         });
-
+        
         return Array.from(result);
     }
 
@@ -1198,7 +1201,7 @@ class ioStatsGraph {
         context.save();
 
         context.beginPath();
-        context.rect(0, ioStats.axisHeight, this.totalWidth, this.totalHeight - ioStatsGraph.brushSectionHeight);
+        context.rect(0, ioStatsGraph.axisHeight, this.totalWidth, this.totalHeight - ioStatsGraph.brushSectionHeight);
         context.clip();
 
         context.fillStyle = this.colors.trackBackground;
@@ -1363,7 +1366,7 @@ class ioStatsGraph {
     }
 
     clearGraphWithConfirm() {
-        this.confirmationMessage("Clear graph data", "Do you want to discard all collected IO statistics?")
+        viewHelpers.confirmationMessage("Clear graph data", "Do you want to discard all collected IO statistics?")
             .done(result => {
                 if (result.can) {
                     this.clearGraph();
@@ -1425,7 +1428,7 @@ class ioStatsGraph {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `IOStats-of-${this.activeDatabase().name}-${moment().format("YYYY-MM-DD-HH-mm")}`;
+            exportFileName = `IOStats-of-${this.statsNameProvider()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
         }
 
         const keysToIgnore: Array<keyof IOMetricsRecentStatsWithCache> = ["StartedAsDate", "CompletedAsDate"];

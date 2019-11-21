@@ -1,8 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import dbLiveIOStatsWebSocketClient = require("common/dbLiveIOStatsWebSocketClient");
+import serverWideLiveIOStatsWebSocketClient = require("common/serverWideLiveIOStatsWebSocketClient");
 import ioStatsGraph = require("models/database/status/ioStatsGraph");
 
-class ioStats extends viewModelBase {
+class serverWideIoStats extends viewModelBase {
     private graph: ioStatsGraph;
     
     constructor() {
@@ -10,8 +10,8 @@ class ioStats extends viewModelBase {
         
         this.graph = new ioStatsGraph(
             () => this.activeDatabase().name,
-            ["Documents", "Index", "Configuration"],
-            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.activeDatabase(), onUpdate, cutOff));
+            ["System"],
+            (onUpdate, cutOff) => new serverWideLiveIOStatsWebSocketClient(onUpdate, cutOff));
     }
 
     compositionComplete() {
@@ -29,4 +29,4 @@ class ioStats extends viewModelBase {
     }
 }
 
-export = ioStats;
+export = serverWideIoStats;

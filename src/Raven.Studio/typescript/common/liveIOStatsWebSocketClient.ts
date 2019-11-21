@@ -4,7 +4,7 @@ import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import d3 = require("d3");
 import endpoints = require("endpoints");
 
-class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Handlers.IOMetricsResponse> {
+abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Handlers.IOMetricsResponse> {
 
     private readonly onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void;
     private static isoParser = d3.time.format.iso;
@@ -14,21 +14,13 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
-    constructor(db: database, 
+    protected constructor(db: database, 
                 onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
                 dateCutOff?: Date) {
         super(db);
         this.onData = onData;
         this.mergedData = { Environments: [], Performances: [] };
         this.dateCutOff = dateCutOff;
-    }
-
-    get connectionDescription() {
-        return "Live I/O Stats";
-    }
-
-    protected webSocketUrlFactory() {
-        return endpoints.databases.ioMetrics.debugIoMetricsLive;
     }
 
     get autoReconnect() {
