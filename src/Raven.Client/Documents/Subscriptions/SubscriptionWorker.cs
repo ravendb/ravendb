@@ -45,6 +45,8 @@ namespace Raven.Client.Documents.Subscriptions
         private bool _disposed;
         private Task _subscriptionTask;
         private Stream _stream;
+        private int _forcedTopologyUpdateAttempts = 0;
+
 
         /// <summary>
         /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
@@ -192,6 +194,8 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                         tcpInfo = command.Result;
+
+                        _redirectNode = requestExecutor.Topology.Nodes.Where(x => tcpInfo.Urls.Contains(x.Url)).FirstOrDefault();
                     }
                     catch (ClientVersionMismatchException)
                     {
@@ -626,6 +630,20 @@ namespace Raven.Client.Documents.Subscriptions
                         if (ShouldTryToReconnect(ex))
                         {
                             await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+
+                            if (_redirectNode == null)
+                            {
+                                var reqEx = _store.GetRequestExecutor(_dbName);
+                                var curTopology = reqEx.TopologyNodes;
+                                var nextNodeIndex = (_forcedTopologyUpdateAttempts++) % curTopology.Count;
+                                _redirectNode = curTopology[nextNodeIndex];
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info(
+                                        $"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}", ex);
+                                }
+                            }
+
                             var onSubscriptionConnectionRetry = OnSubscriptionConnectionRetry;
                             onSubscriptionConnectionRetry?.Invoke(ex);
                         }
@@ -680,7 +698,10 @@ namespace Raven.Client.Documents.Subscriptions
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
 
                     if (se.AppropriateNode == null)
+                    {
+                        _redirectNode = null;
                         return true;
+                    }
 
                     var nodeToRedirectTo = requestExecutor.TopologyNodes
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
