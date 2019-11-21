@@ -374,11 +374,11 @@ namespace SlowTests.Client.TimeSeries.Operations
                     {
                         var item = bloodPressure.Results[index];
                         Assert.Equal(360, item.Count);
-                        Assert.Equal(index * 360 + 180 + 0.5, item.Avg);
-                        Assert.Equal((index + 1) * 360, item.Max);
-                        Assert.Equal(index * 360 + 1, item.Min);
-                        Assert.Equal(index * 360 + 1, item.First);
-                        Assert.Equal((index + 1) * 360, item.Last);
+                        Assert.Equal(index * 360 + 180 + 0.5, item.Avg[0]);
+                        Assert.Equal((index + 1) * 360, item.Max[0]);
+                        Assert.Equal(index * 360 + 1, item.Min[0]);
+                        Assert.Equal(index * 360 + 1, item.First[0]);
+                        Assert.Equal((index + 1) * 360, item.Last[0]);
                     }
                 }
 
@@ -411,11 +411,11 @@ namespace SlowTests.Client.TimeSeries.Operations
                     var index = 0;
                     var item = bloodPressure.Results[index];
                     Assert.Equal(359, item.Count);
-                    Assert.Equal(180, item.Avg);
-                    Assert.Equal(359, item.Max);
-                    Assert.Equal(1, item.Min);
-                    Assert.Equal(1, item.First);
-                    Assert.Equal(359, item.Last);
+                    Assert.Equal(180, item.Avg[0]);
+                    Assert.Equal(359, item.Max[0]);
+                    Assert.Equal(1, item.Min[0]);
+                    Assert.Equal(1, item.First[0]);
+                    Assert.Equal(359, item.Last[0]);
 
                     for (index = 1; index < bloodPressure.Results.Length; index++)
                     {
@@ -423,11 +423,11 @@ namespace SlowTests.Client.TimeSeries.Operations
                         var realIndex = index + 9;
 
                         Assert.Equal(360, item.Count);
-                        Assert.Equal(realIndex * 360 + 180 + 0.5, item.Avg);
-                        Assert.Equal((realIndex + 1) * 360, item.Max);
-                        Assert.Equal(realIndex * 360 + 1, item.Min);
-                        Assert.Equal(realIndex * 360 + 1, item.First);
-                        Assert.Equal((realIndex + 1) * 360, item.Last);
+                        Assert.Equal(realIndex * 360 + 180 + 0.5, item.Avg[0]);
+                        Assert.Equal((realIndex + 1) * 360, item.Max[0]);
+                        Assert.Equal(realIndex * 360 + 1, item.Min[0]);
+                        Assert.Equal(realIndex * 360 + 1, item.First[0]);
+                        Assert.Equal((realIndex + 1) * 360, item.Last[0]);
                     }
                 }
             }
