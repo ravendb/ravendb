@@ -35,10 +35,12 @@
     <div class="flex-vertical absolute-fill">
         <div class="flex-horizontal margin-bottom margin-bottom-sm">
             <div class="form-inline">
-                <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes" />
+                <span data-bind="visible: supportsIndexes">
+                    <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes" />
 
-                <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
-                <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>
+                    <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
+                    <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>    
+                </span>
 
                 <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current IO stats graph to a file">
                     <i class="icon-export"></i><span>Export</span>
