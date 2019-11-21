@@ -32,14 +32,13 @@ namespace Raven.Client.ServerWide.Operations
             return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
         }
 
-
-
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
 
-            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)            {
+            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
+            {
                 _restoreConfiguration = restoreConfiguration;
                 SelectedNodeTag = nodeTag;
             }
