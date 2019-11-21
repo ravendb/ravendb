@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.TimeSeries
         public void Initialize(int numberOfValues)
         {
             new Span<byte>(_buffer, _capacity).Clear();
-            if (numberOfValues > 32)
+            if (numberOfValues > MaxNumberOfValues)
                 ThrowValuesOutOfRange(numberOfValues);
             if (_capacity > ushort.MaxValue)
                 ThrowInvalidCapacityLength();
@@ -103,6 +103,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public const ulong Live = 0;
         public const ulong Dead = 1;
+        public const int MaxNumberOfValues = 32;
 
         public static void AssertValueStatus(ulong status)
         {
@@ -336,9 +337,15 @@ namespace Raven.Server.Documents.TimeSeries
             if (status == Live)
             {
                 prev.Count++;
-                prev.Sum += dblVal;
-                prev.Min = Math.Min(prev.Min, dblVal);
-                prev.Max = Math.Max(prev.Max, dblVal);
+
+                if (double.IsNaN(dblVal) == false)
+                {
+                    prev.Sum += dblVal;
+                    prev.Max = Math.Max(prev.Max, dblVal);
+                    prev.Min = double.IsNaN(prev.Min)
+                        ? dblVal
+                        : Math.Min(prev.Min, dblVal);
+                }
             }
 
             if (xorWithPrevious == 0)

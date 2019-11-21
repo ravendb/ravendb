@@ -401,8 +401,15 @@ namespace Raven.Server.Documents.TimeSeries
                             continue;
                         }
 
-                        result.Min[i] = Math.Min(result.Min[i], _currentSegment.SegmentValues.Span[i].Min);
-                        result.Max[i] = Math.Max(result.Max[i], _currentSegment.SegmentValues.Span[i].Max);
+                        if (double.IsNaN(_currentSegment.SegmentValues.Span[i].Min) == false)
+                        {
+                            result.Min[i] = Math.Min(result.Min[i], _currentSegment.SegmentValues.Span[i].Min);
+                        }
+
+                        if (double.IsNaN(_currentSegment.SegmentValues.Span[i].Max) == false)
+                        {
+                            result.Max[i] = Math.Max(result.Max[i], _currentSegment.SegmentValues.Span[i].Max);
+                        }
                     }
 
                     result.Count += _currentSegment.SegmentValues.Span[0].Count;
