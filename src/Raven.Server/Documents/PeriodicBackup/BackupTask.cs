@@ -26,13 +26,9 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Server.Exceptions;
-using Sparrow.Server.Utils;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
-using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -44,7 +40,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly ServerStore _serverStore;
         private readonly DocumentDatabase _database;
-        private readonly DateTime _startTime;
         private readonly PeriodicBackup _periodicBackup;
         private readonly PeriodicBackupConfiguration _configuration;
         private readonly PeriodicBackupStatus _previousBackupStatus;
@@ -74,7 +69,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _serverStore = serverStore;
             _database = database;
-            _startTime = periodicBackup.StartTime;
             _periodicBackup = periodicBackup;
             _configuration = periodicBackup.Configuration;
             _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
@@ -162,7 +156,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             _logger.Info(message);
 
                         UpdateOperationId(runningBackupStatus);
-                        runningBackupStatus.LastIncrementalBackup = _startTime;
+                        runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTimeInUtc;
                         DatabaseSmuggler.EnsureProcessed(_backupResult);
                         AddInfo(message);
 
@@ -210,9 +204,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 runningBackupStatus.FolderName = folderName;
 
                 if (_isFullBackup)
-                    runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
+                    runningBackupStatus.LastFullBackup = _periodicBackup.StartTimeInUtc;
                 else
-                    runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTime;
+                    runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTimeInUtc;
 
                 totalSw.Stop();
 
@@ -268,9 +262,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // we need to update the last backup time to avoid
                     // starting a new backup right after this one
                     if (_isFullBackup)
-                        runningBackupStatus.LastFullBackupInternal = _startTime;
+                        runningBackupStatus.LastFullBackupInternal = _periodicBackup.StartTimeInUtc;
                     else
-                        runningBackupStatus.LastIncrementalBackupInternal = _startTime;
+                        runningBackupStatus.LastIncrementalBackupInternal = _periodicBackup.StartTimeInUtc;
 
                     runningBackupStatus.NodeTag = _serverStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;

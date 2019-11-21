@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public OperationCancelToken CancelToken { get; set; }
 
-        public DateTime StartTime { get; set; }
+        public DateTime StartTimeInUtc { get; set; }
 
         public PeriodicBackupConfiguration Configuration { get; set; }
 
