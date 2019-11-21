@@ -231,8 +231,9 @@ class ioStatsGraph {
 
     /* private observables */
 
-    private tracksOrder: string[];
-    private statsNameProvider: () => string;
+    private readonly supportsIndexes: boolean;
+    private readonly tracksOrder: string[];
+    private readonly statsNameProvider: () => string;
     private autoScroll = ko.observable<boolean>(false);
     private hasAnyData = ko.observable<boolean>(false);
     private loading: KnockoutComputed<boolean>;
@@ -318,11 +319,13 @@ class ioStatsGraph {
 
     constructor(statsNameProvider: () => string,
                 tracksOrder: string[],
+                supportsIndexes: boolean,
         liveClientProvider: (onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
                                      dateCutOff?: Date) => liveIOStatsWebSocketClient) {
         
         this.statsNameProvider = statsNameProvider;
         this.tracksOrder = tracksOrder;
+        this.supportsIndexes = supportsIndexes;
         this.liveViewClientProvider = liveClientProvider;
         _.bindAll(this, "clearGraphWithConfirm");
 
