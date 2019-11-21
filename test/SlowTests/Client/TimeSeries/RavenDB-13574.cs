@@ -252,5 +252,57 @@ namespace SlowTests.Client.TimeSeries
                 }
             }
         }
+
+        [Fact]
+        public async Task CanGetSeriesMinMaxAndCount_DifferentNumberOfValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = new DateTime(2000, 1, 1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/ayende");
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline, "fitbit", new[] { 60d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddSeconds(1), "fitbit", new[] { 62d, 178d, 278 });
+                    session.SaveChanges();
+                }
+
+                for (int i = 1; i <= 10; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        for (int j = 0; j < 1000; j++)
+                        {
+                            session.TimeSeriesFor("users/ayende")
+                                .Append("Heartrate", baseline.AddYears(i).AddMinutes(j), "fitbit", new[] { 58d + i, 170d - i });
+                        }
+
+                        session.SaveChanges();
+                    }
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSeriesSummary(ctx, "users/ayende", "Heartrate");
+
+                    Assert.Equal(10002, summary.Count);
+
+                    Assert.Equal(59, summary.Min[0]);
+                    Assert.Equal(68, summary.Max[0]);
+
+                    Assert.Equal(160, summary.Min[1]);
+                    Assert.Equal(178, summary.Max[1]);
+
+                    Assert.Equal(278, summary.Min[2]);
+                    Assert.Equal(278, summary.Max[2]);
+
+                }
+            }
+        }
     }
 }
