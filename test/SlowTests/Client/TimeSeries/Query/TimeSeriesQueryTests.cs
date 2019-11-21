@@ -22,7 +22,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
 #pragma warning disable 649
             public long Count;
-            public double? Max, Min, Last, First, Avg;
+            public double?[] Max, Min, Last, First, Avg;
             public DateTime To, From;
 #pragma warning restore 649
         }
@@ -205,11 +205,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(59, val.First);
-                    Assert.Equal(59, val.Min);
+                    Assert.Equal(59, val.First[0]);
+                    Assert.Equal(59, val.Min[0]);
 
-                    Assert.Equal(69, val.Last);
-                    Assert.Equal(79, val.Max);
+                    Assert.Equal(69, val.Last[0]);
+                    Assert.Equal(79, val.Max[0]);
 
                     Assert.Equal(baseline.AddMinutes(60), val.From);
                     Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -261,11 +261,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(59, val.First);
-                    Assert.Equal(59, val.Min);
+                    Assert.Equal(59, val.First[0]);
+                    Assert.Equal(59, val.Min[0]);
 
-                    Assert.Equal(69, val.Last);
-                    Assert.Equal(79, val.Max);
+                    Assert.Equal(69, val.Last[0]);
+                    Assert.Equal(79, val.Max[0]);
 
                     Assert.Equal(baseline.AddMinutes(60), val.From);
                     Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -317,11 +317,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(59, val.First);
-                    Assert.Equal(59, val.Min);
+                    Assert.Equal(59, val.First[0]);
+                    Assert.Equal(59, val.Min[0]);
 
-                    Assert.Equal(69, val.Last);
-                    Assert.Equal(79, val.Max);
+                    Assert.Equal(69, val.Last[0]);
+                    Assert.Equal(79, val.Max[0]);
 
                     Assert.Equal(baseline.AddMinutes(60), val.From);
                     Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -377,11 +377,11 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(59, val.First);
-                    Assert.Equal(59, val.Min);
+                    Assert.Equal(59, val.First[0]);
+                    Assert.Equal(59, val.Min[0]);
 
-                    Assert.Equal(69, val.Last);
-                    Assert.Equal(79, val.Max);
+                    Assert.Equal(69, val.Last[0]);
+                    Assert.Equal(79, val.Max[0]);
 
                     Assert.Equal(baseline.AddMinutes(60), val.From);
                     Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -456,8 +456,8 @@ select out(p) as HeartRate, p.Name
 
                         var val = heartrate.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -546,8 +546,8 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                         var val = heartrate.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -560,105 +560,15 @@ select heart_rate(p) as HeartRate, blood_pressure(p) as BloodPressure
 
                         val = bloodPressure.Results[0];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
 
                         double expectedAvg = (159 + 168 + 179) / 3.0;
 
-                        Assert.Equal(expectedAvg, val.Avg);
+                        Assert.Equal(expectedAvg, val.Avg[0]);
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From);
                         Assert.Equal(baseline2.AddMinutes(120), val.To);
-
-                    }
-                }
-            }
-        }
-
-        [Fact (Skip = "need to handle querying time series with multiple values")]
-        public void CanQueryTimeSeriesAggregation_DeclareSyntax_MultipleValues()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var baseline = DateTime.Today;
-
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 1; i <= 3; i++)
-                    {
-                        var id = $"people/{i}";
-
-                        session.Store(new Person
-                        {
-                            Name = "Oren",
-                            Age = i * 30
-                        }, id);
-
-                        var tsf = session.TimeSeriesFor(id);
-
-                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d, 159 });
-                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d, 179});
-                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d, 169 });
-
-                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d, 259 });
-                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/apple", new[] { 179d, 279 });
-                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d, 269 });
-                    }
-
-                    session.SaveChanges();
-                }
-
-                new PeopleIndex().Execute(store);
-
-                WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
-declare timeseries heart_rate(doc) 
-{
-    from doc.HeartRate between $start and $end
-    group by '1 month'
-    select min(), max(), avg()
-}
-from index 'People' as p 
-where p.Age > 49
-select heart_rate(p)
-")
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
-
-                    var result = query.ToList();
-
-                    Assert.Equal(2, result.Count);
-
-                    for (int i = 0; i < 2; i++)
-                    {
-                        var agg = result[i];
-
-                        Assert.Equal(3, agg.Count);
-
-                        Assert.Equal(1, agg.Results.Length);
-
-                        var val = agg.Results[0];
-
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
-
-                        Assert.Equal(baseline.AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMinutes(120), val.To);
-
-                        val = agg.Results[1];
-
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-
-                        double expectedAvg = (159 + 168 + 179) / 3.0;
-
-                        Assert.Equal(expectedAvg, val.Avg);
-
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(60), val.From);
-                        Assert.Equal(baseline.AddMonths(1).AddMinutes(120), val.To);
 
                     }
                 }
@@ -729,11 +639,11 @@ select out(Company)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(1259.51d, val.Min);
-                        Assert.Equal(1279.62d, val.Max);
+                        Assert.Equal(1259.51d, val.Min[0]);
+                        Assert.Equal(1279.62d, val.Max[0]);
 
                         double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
-                        Assert.Equal(expectedAvg, val.Avg);
+                        Assert.Equal(expectedAvg, val.Avg[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -796,8 +706,8 @@ select timeseries(
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -861,8 +771,8 @@ select timeseries(
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -930,8 +840,8 @@ select timeseries(
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1002,8 +912,8 @@ as HeartRate
 
                         var val = heartrate.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1077,8 +987,8 @@ as HeartRate, Name
 
                         var val = heartrate.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1163,8 +1073,8 @@ as BloodPressure
 
                         var val = heartrate.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1177,12 +1087,12 @@ as BloodPressure
 
                         val = bloodPressure.Results[0];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
 
                         double expectedAvg = (159 + 168 + 179) / 3.0;
 
-                        Assert.Equal(expectedAvg, val.Avg);
+                        Assert.Equal(expectedAvg, val.Avg[0]);
 
                         Assert.Equal(baseline2.AddMinutes(60), val.From);
                         Assert.Equal(baseline2.AddMinutes(120), val.To);
@@ -1255,8 +1165,8 @@ as HeartRate
 
                         var val = heartrate.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1333,11 +1243,11 @@ as Stocks
 
                         var val = stocks.Results[0];
 
-                        Assert.Equal(1259.51d, val.Min);
-                        Assert.Equal(1279.62d, val.Max);
+                        Assert.Equal(1259.51d, val.Min[0]);
+                        Assert.Equal(1279.62d, val.Max[0]);
 
                         double expectedAvg = (1259.51d + 1279.62d + 1269.73d) / 3.0;
-                        Assert.Equal(expectedAvg, val.Avg);
+                        Assert.Equal(expectedAvg, val.Avg[0]);
 
                         Assert.Equal(baseline.AddMinutes(60), val.From);
                         Assert.Equal(baseline.AddMinutes(120), val.To);
@@ -1409,8 +1319,8 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -1420,8 +1330,8 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -1494,8 +1404,8 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -1505,8 +1415,8 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -1694,8 +1604,8 @@ select out(doc, e)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -1705,14 +1615,292 @@ select out(doc, e)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
 
                         Assert.Equal(expectedFrom, val.From);
                         Assert.Equal(expectedTo, val.To);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithMultipleValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d, 159 });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d, 179 });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d, 169 });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d, 259 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/apple", new[] { 179d, 279 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d, 269 });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries heart_rate(doc) 
+{
+    from doc.HeartRate between $start and $end
+    group by '1 month'
+    select min(), max(), avg()
+}
+from People as p 
+where p.Age > 49
+select heart_rate(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(3));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(6, agg.Count);
+
+                        Assert.Equal(2, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(2, val.Min.Length);
+                        Assert.Equal(2, val.Max.Length);
+                        Assert.Equal(2, val.Avg.Length);
+
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(69, val.Avg[0]);
+
+                        Assert.Equal(159, val.Min[1]);
+                        Assert.Equal(179, val.Max[1]);
+                        Assert.Equal(169, val.Avg[1]);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(2, val.Min.Length);
+                        Assert.Equal(2, val.Max.Length);
+                        Assert.Equal(2, val.Avg.Length);
+
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
+
+                        Assert.Equal(259, val.Min[1]);
+                        Assert.Equal(279, val.Max[1]);
+                        Assert.Equal(269, val.Avg[1]);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_DifferentNumberOfValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var id = $"people/{i}";
+
+                        session.Store(new Person
+                        {
+                            Name = "Oren",
+                            Age = i * 30
+                        }, id);
+
+                        var tsf = session.TimeSeriesFor(id);
+
+                        tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d, 179 });
+                        tsf.Append("HeartRate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d, 169, 269 });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d, 259 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/apple", new[] { 179d, 279, 379 });
+                        tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
+
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(61), "watches/apple", new[] { 259d, 359, 459, 559 });
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(62), "watches/apple", new[] { 279d });
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(63), "watches/apple", new[] { 269d, 369, 469 });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries heart_rate(doc) 
+{
+    from doc.HeartRate between $start and $end
+    group by '1 month'
+    select min(), max(), avg(), first(), last()
+}
+from People as p 
+where p.Age > 49
+select heart_rate(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(3));
+
+                    var result = query.ToList();
+
+                    Assert.Equal(2, result.Count);
+
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var agg = result[i];
+
+                        Assert.Equal(9, agg.Count);
+
+                        Assert.Equal(3, agg.Results.Length);
+
+                        var val = agg.Results[0];
+
+                        Assert.Equal(3, val.Min.Length);
+                        Assert.Equal(3, val.Max.Length);
+                        Assert.Equal(3, val.Avg.Length);
+                        Assert.Equal(3, val.First.Length);
+                        Assert.Equal(3, val.Last.Length);
+
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(69, val.Avg[0]);
+                        Assert.Equal(59, val.First[0]);
+                        Assert.Equal(69, val.Last[0]);
+
+                        Assert.Equal(169, val.Min[1]);
+                        Assert.Equal(179, val.Max[1]);
+                        Assert.Equal((169 + 179) / val.Count, val.Avg[1]);
+                        Assert.Equal(double.NaN, val.First[1]);
+                        Assert.Equal(169, val.Last[1]);
+
+                        Assert.Equal(269, val.Min[2]);
+                        Assert.Equal(269, val.Max[2]);
+                        Assert.Equal(269d / val.Count, val.Avg[2]);
+                        Assert.Equal(double.NaN, val.First[2]);
+                        Assert.Equal(269, val.Last[2]);
+
+                        var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                        var expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[1];
+
+                        Assert.Equal(3, val.Min.Length);
+                        Assert.Equal(3, val.Max.Length);
+                        Assert.Equal(3, val.Avg.Length);
+                        Assert.Equal(3, val.First.Length);
+                        Assert.Equal(3, val.Last.Length);
+
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
+                        Assert.Equal(159, val.First[0]);
+                        Assert.Equal(169, val.Last[0]);
+
+                        Assert.Equal(259, val.Min[1]);
+                        Assert.Equal(279, val.Max[1]);
+                        Assert.Equal((259d + 279) / val.Count, val.Avg[1]);
+                        Assert.Equal(259, val.First[1]);
+                        Assert.Equal(double.NaN, val.Last[1]);
+
+                        Assert.Equal(379, val.Min[2]);
+                        Assert.Equal(379, val.Max[2]);
+                        Assert.Equal(379d / val.Count, val.Avg[2]);
+                        Assert.Equal(double.NaN, val.First[2]);
+                        Assert.Equal(double.NaN, val.Last[2]);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
+                        val = agg.Results[2];
+
+                        Assert.Equal(4, val.Min.Length);
+                        Assert.Equal(4, val.Max.Length);
+                        Assert.Equal(4, val.Avg.Length);
+                        Assert.Equal(4, val.First.Length);
+                        Assert.Equal(4, val.Last.Length);
+
+                        Assert.Equal(259, val.Min[0]);
+                        Assert.Equal(279, val.Max[0]);
+                        Assert.Equal(269, val.Avg[0]);
+                        Assert.Equal(259, val.First[0]);
+                        Assert.Equal(269, val.Last[0]);
+
+                        Assert.Equal(359, val.Min[1]);
+                        Assert.Equal(369, val.Max[1]);
+                        Assert.Equal((359d + 369) / val.Count, val.Avg[1]);
+                        Assert.Equal(359, val.First[1]);
+                        Assert.Equal(369, val.Last[1]);
+
+                        Assert.Equal(459, val.Min[2]);
+                        Assert.Equal(469, val.Max[2]);
+                        Assert.Equal((459d + 469) / val.Count, val.Avg[2]);
+                        Assert.Equal(459, val.First[2]);
+                        Assert.Equal(469, val.Last[2]);
+
+                        Assert.Equal(559, val.Min[3]);
+                        Assert.Equal(559, val.Max[3]);
+                        Assert.Equal(559d / val.Count, val.Avg[3]);
+                        Assert.Equal(559, val.First[3]);
+                        Assert.Equal(double.NaN, val.Last[3]);
+
+                        expectedFrom = expectedTo;
+                        expectedTo = expectedFrom.AddMonths(1);
+
+                        Assert.Equal(expectedFrom, val.From);
+                        Assert.Equal(expectedTo, val.To);
+
                     }
                 }
             }
@@ -2033,9 +2221,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2045,9 +2233,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(174, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(174, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2122,9 +2310,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2134,9 +2322,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2211,9 +2399,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2223,9 +2411,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(174, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(174, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2238,7 +2426,7 @@ select out(doc)
         }
 
 
-        [Fact(Skip = "need to handle querying time series with multiple values")]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_WhereNotNull()
         {
             using (var store = GetDocumentStore())
@@ -2301,9 +2489,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2313,9 +2501,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2392,9 +2580,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2404,9 +2592,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2489,9 +2677,9 @@ select out(doc, c.AccountsReceivable)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2501,9 +2689,9 @@ select out(doc, c.AccountsReceivable)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2579,9 +2767,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(69, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(69, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2591,9 +2779,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(169, val.Max);
-                        Assert.Equal(164, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(169, val.Max[0]);
+                        Assert.Equal(164, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2687,9 +2875,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2699,9 +2887,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(169, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(169, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2807,9 +2995,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2819,9 +3007,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(169, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(169, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -2924,9 +3112,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -2936,9 +3124,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(174, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(174, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3041,9 +3229,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3053,9 +3241,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(159, val.Max);
-                        Assert.Equal(159, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(159, val.Max[0]);
+                        Assert.Equal(159, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3158,9 +3346,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3170,9 +3358,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(159, val.Max);
-                        Assert.Equal(159, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(159, val.Max[0]);
+                        Assert.Equal(159, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3272,9 +3460,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3284,9 +3472,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3387,9 +3575,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3399,9 +3587,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3477,9 +3665,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(79, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(79, val.Avg);
+                        Assert.Equal(79, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(79, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3489,9 +3677,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(169, val.Max);
-                        Assert.Equal(164, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(169, val.Max[0]);
+                        Assert.Equal(164, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3591,9 +3779,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3603,9 +3791,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(174, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(174, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3707,9 +3895,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(59, val.Min);
-                        Assert.Equal(69, val.Max);
-                        Assert.Equal(64, val.Avg);
+                        Assert.Equal(59, val.Min[0]);
+                        Assert.Equal(69, val.Max[0]);
+                        Assert.Equal(64, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3719,9 +3907,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(169, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(174, val.Avg);
+                        Assert.Equal(169, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(174, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3824,9 +4012,9 @@ select out(doc)
 
                         var val = agg.Results[0];
 
-                        Assert.Equal(69, val.Min);
-                        Assert.Equal(79, val.Max);
-                        Assert.Equal(74, val.Avg);
+                        Assert.Equal(69, val.Min[0]);
+                        Assert.Equal(79, val.Max[0]);
+                        Assert.Equal(74, val.Avg[0]);
 
                         var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                         var expectedTo = expectedFrom.AddMonths(1);
@@ -3836,9 +4024,9 @@ select out(doc)
 
                         val = agg.Results[1];
 
-                        Assert.Equal(159, val.Min);
-                        Assert.Equal(179, val.Max);
-                        Assert.Equal(169, val.Avg);
+                        Assert.Equal(159, val.Min[0]);
+                        Assert.Equal(179, val.Max[0]);
+                        Assert.Equal(169, val.Avg[0]);
 
                         expectedFrom = expectedTo;
                         expectedTo = expectedFrom.AddMonths(1);
@@ -3921,9 +4109,9 @@ select out(doc, e)
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(159, val.Min);
-                    Assert.Equal(179, val.Max);
-                    Assert.Equal(169, val.Avg);
+                    Assert.Equal(159, val.Min[0]);
+                    Assert.Equal(179, val.Max[0]);
+                    Assert.Equal(169, val.Avg[0]);
 
                     var expectedFrom = baseline.AddMonths(1).AddHours(1);
                     var expectedTo = expectedFrom.AddHours(1);
@@ -3933,9 +4121,9 @@ select out(doc, e)
 
                     val = agg.Results[1];
 
-                    Assert.Equal(259, val.Min);
-                    Assert.Equal(279, val.Max);
-                    Assert.Equal(269, val.Avg);
+                    Assert.Equal(259, val.Min[0]);
+                    Assert.Equal(279, val.Max[0]);
+                    Assert.Equal(269, val.Avg[0]);
 
                     expectedFrom = expectedFrom.AddMonths(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -3951,9 +4139,9 @@ select out(doc, e)
 
                     val = agg.Results[0];
 
-                    Assert.Equal(259, val.Min);
-                    Assert.Equal(279, val.Max);
-                    Assert.Equal(269, val.Avg);
+                    Assert.Equal(259, val.Min[0]);
+                    Assert.Equal(279, val.Max[0]);
+                    Assert.Equal(269, val.Avg[0]);
 
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -4039,9 +4227,9 @@ select out(doc)
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(159, val.Min);
-                    Assert.Equal(179, val.Max);
-                    Assert.Equal(169, val.Avg);
+                    Assert.Equal(159, val.Min[0]);
+                    Assert.Equal(179, val.Max[0]);
+                    Assert.Equal(169, val.Avg[0]);
 
                     var expectedFrom = baseline.AddMonths(1).AddHours(1);
                     var expectedTo = expectedFrom.AddHours(1);
@@ -4051,9 +4239,9 @@ select out(doc)
 
                     val = agg.Results[1];
 
-                    Assert.Equal(259, val.Min);
-                    Assert.Equal(279, val.Max);
-                    Assert.Equal(269, val.Avg);
+                    Assert.Equal(259, val.Min[0]);
+                    Assert.Equal(279, val.Max[0]);
+                    Assert.Equal(269, val.Avg[0]);
 
                     expectedFrom = expectedFrom.AddMonths(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -4069,9 +4257,9 @@ select out(doc)
 
                     val = agg.Results[0];
 
-                    Assert.Equal(259, val.Min);
-                    Assert.Equal(279, val.Max);
-                    Assert.Equal(269, val.Avg);
+                    Assert.Equal(259, val.Min[0]);
+                    Assert.Equal(279, val.Max[0]);
+                    Assert.Equal(269, val.Avg[0]);
 
                     expectedFrom = baseline.AddMonths(2).AddHours(1);
                     expectedTo = expectedFrom.AddHours(1);
@@ -4152,9 +4340,9 @@ select out(doc, c)
 
                     var val = agg.Results[0];
 
-                    Assert.Equal(69, val.Min);
-                    Assert.Equal(79, val.Max);
-                    Assert.Equal(74, val.Avg);
+                    Assert.Equal(69, val.Min[0]);
+                    Assert.Equal(79, val.Max[0]);
+                    Assert.Equal(74, val.Avg[0]);
 
                     var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
                     var expectedTo = expectedFrom.AddMonths(1);
@@ -4164,9 +4352,9 @@ select out(doc, c)
 
                     val = agg.Results[1];
 
-                    Assert.Equal(159, val.Min);
-                    Assert.Equal(179, val.Max);
-                    Assert.Equal(169, val.Avg);
+                    Assert.Equal(159, val.Min[0]);
+                    Assert.Equal(179, val.Max[0]);
+                    Assert.Equal(169, val.Avg[0]);
 
                     expectedFrom = expectedTo;
                     expectedTo = expectedFrom.AddMonths(1);
@@ -4182,9 +4370,9 @@ select out(doc, c)
 
                     val = agg.Results[0];
                     
-                    Assert.Equal(159, val.Min);
-                    Assert.Equal(179, val.Max);
-                    Assert.Equal(169, val.Avg);
+                    Assert.Equal(159, val.Min[0]);
+                    Assert.Equal(179, val.Max[0]);
+                    Assert.Equal(169, val.Avg[0]);
 
                     expectedFrom = new DateTime(baseline.Year, baseline.Month + 1, 1, 0, 0, 0);
                     expectedTo = expectedFrom.AddMonths(1);

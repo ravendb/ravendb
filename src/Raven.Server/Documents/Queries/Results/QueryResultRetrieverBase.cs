@@ -1133,7 +1133,7 @@ namespace Raven.Server.Documents.Queries.Results
                                 throw new ArgumentException("Failed");
 
                             if (index >= singleResult.Values.Length)
-                                throw new ArgumentException("Failed");
+                                return null;
 
                             return singleResult.Values.Span[index];
 
@@ -1342,7 +1342,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out TimeSeriesAggregation.Type type))
                     {
-                        aggStates[i] = new TimeSeriesAggregation(0, type);
+                        aggStates[i] = new TimeSeriesAggregation(type);
                         continue;
                     }
 
@@ -1364,7 +1364,7 @@ namespace Raven.Server.Documents.Queries.Results
             for (int i = 0; i < aggStates.Length; i++)
             {
                 var name = func.Select[i].Item2?.ToString() ?? aggStates[i].Aggregation.ToString();
-                result[name] = aggStates[i].GetFinalValue();
+                result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues());
             }
             return result;
         }
