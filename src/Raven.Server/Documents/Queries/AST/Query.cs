@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Exceptions;
 using Sparrow;
 using Raven.Server.Documents.TimeSeries;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -329,122 +331,154 @@ namespace Raven.Server.Documents.Queries.AST
 
         public Type Aggregation;
 
-        private double _val;
-        private int _valIndex;
+        private object[] _values;
         public long Count;
 
-        public TimeSeriesAggregation(int valIndex, TimeSeriesAggregation.Type type)
+        private byte _numberOfValues;
+
+        public TimeSeriesAggregation(TimeSeriesAggregation.Type type)
         {
-            _valIndex = valIndex;
             Aggregation = type;
-            _val = 0;
             Count = 0;
+            _values = new object[TimeSeriesValuesSegment.MaxNumberOfValues];
+            _numberOfValues = 0;
         }
 
         public void Init()
         {
             Count = 0;
-            _val = 0;
+            _values = new object[TimeSeriesValuesSegment.MaxNumberOfValues];
+            _numberOfValues = 0;
         }
 
         public void Segment(Span<StatefulTimeStampValue> values)
         {
-            var val = values[_valIndex];
-            switch (Aggregation)
+            if (values.Length > _numberOfValues)
             {
-                case Type.Min:
-                    if (Count == 0)
-                        _val = val.Min;
-                    else
-                        _val = Math.Min(_val, val.Min);
-                    break;
-                case Type.Max:
-                    if (Count == 0)
-                        _val = val.Max;
-                    else
-                        _val = Math.Max(_val, val.Max);
-                    break;
-                case Type.Sum:
-                case Type.Avg:
-                case Type.Mean:
-                    _val += val.Sum;
-                    break;
-                case Type.First:
-                    if (Count == 0)
-                        _val = val.First;
-                    break;
-                case Type.Last:
-                    _val = val.Last;
-                    break;
-                case Type.Count:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+                _numberOfValues = (byte)values.Length;
             }
 
-            Count += val.Count;
+            for (int i = 0; i < values.Length; i++)
+            {
+                var val = values[i];
+                switch (Aggregation)
+                {
+                    case Type.Min:
+                        if (Count == 0)
+                            _values[i] = val.Min;
+                        else
+                            _values[i] = Math.Min((double)_values[i], val.Min);
+                        break;
+                    case Type.Max:
+                        if (Count == 0)
+                            _values[i] = val.Max;
+                        else
+                            _values[i] = Math.Max((double)_values[i], val.Max);
+                        break;
+                    case Type.Sum:
+                    case Type.Avg:
+                    case Type.Mean:
+                        _values[i] = (double)(_values[i] ?? 0d) + val.Sum;
+                        break;
+                    case Type.First:
+                        if (Count == 0)
+                            _values[i] = val.First;
+                        break;
+                    case Type.Last:
+                        _values[i] = val.Last;
+                        break;
+                    case Type.Count:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+                }
+            }
 
+            Count += values[0].Count;
         }
 
         public void Step(Span<double> values)
         {
-            var val = values[_valIndex];
-            switch (Aggregation)
+            if (values.Length > _numberOfValues)
             {
-                case Type.Min:
-                    if (Count == 0)
-                        _val = val;
-                    else
-                        _val = Math.Min(_val, val);
-                    break;
-                case Type.Max:
-                    if (Count == 0)
-                        _val = val;
-                    else
-                        _val = Math.Max(_val, val);
-                    break;
-                case Type.Sum:
-                case Type.Avg:
-                case Type.Mean:
-                    _val += val;
-                    break;
-                case Type.First:
-                    if (Count == 0)
-                        _val = val;
-                    break;
-                case Type.Last:
-                    _val = val;
-                    break;
-                case Type.Count:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+                _numberOfValues = (byte)values.Length;
+            }
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                var val = values[i];
+                switch (Aggregation)
+                {
+                    case Type.Min:
+                        if (Count == 0)
+                            _values[i] = val;
+                        else
+                            _values[i] = Math.Min((double)_values[i], val);
+                        break;
+                    case Type.Max:
+                        if (Count == 0)
+                            _values[i] = val;
+                        else
+                            _values[i] = Math.Max((double)_values[i], val);
+                        break;
+                    case Type.Sum:
+                    case Type.Avg:
+                    case Type.Mean:
+                        _values[i] = (double)(_values[i] ?? 0d) + val;
+                        break;
+                    case Type.First:
+                        if (Count == 0)
+                            _values[i] = val;
+                        break;
+                    case Type.Last:
+                        _values[i] = val;
+                        break;
+                    case Type.Count:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
+                }
             }
 
             Count++;
         }
 
-        public double GetFinalValue()
+        public IEnumerable<object> GetFinalValues()
         {
+            Array.Resize(ref _values, _numberOfValues);
+
             switch (Aggregation)
             {
                 case Type.Min:
                 case Type.Max:
                 case Type.First:
                 case Type.Last:
-                    return _val;
-                case Type.Count:
-                    return Count;
                 case Type.Sum:
-                    return _val;
+                    break;
+                //case Type.Count: //todo aviv
+                    //return Count;
                 case Type.Mean:
                 case Type.Avg:
                     if (Count == 0)
-                        return double.NaN;
-                    return _val / Count;
+                    {
+                        for (int i = 0; i < _numberOfValues; i++)
+                        {
+                            _values[i] = double.NaN;
+                        }
+                        break;
+                    }
+                    for (int i = 0; i < _numberOfValues; i++)
+                    {
+                        _values[i] = _values[i] == null
+                            ? double.NaN
+                            : (double)_values[i] / Count;
+                    }
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
+
+            return _values;
         }
     }
 
