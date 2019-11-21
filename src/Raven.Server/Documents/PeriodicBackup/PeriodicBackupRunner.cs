@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return new NextBackup
             {
                 TimeSpan = nextBackupTimeSpan,
-                StartTimeLocal = nextBackupDateTimeLocal,
+                DateTime = nextBackupDateTimeLocal.ToUniversalTime(),
                 IsFull = isFullBackup,
                 TaskId = configuration.TaskId
             };
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                CreateBackupTask(periodicBackup, currentBackup.IsFull, currentBackup.StartTimeInUtc);
+                CreateBackupTask(periodicBackup, currentBackup.IsFull, currentBackup.DateTime);
             }
             catch (BackupDelayException e)
             {
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     IsFull = currentBackup.IsFull,
                     TaskId = periodicBackup.Configuration.TaskId,
-                    StartTimeLocal = DateTime.UtcNow.ToLocalTime().Add(e.DelayPeriod),
+                    DateTime = DateTime.UtcNow.Add(e.DelayPeriod),
                     TimeSpan = e.DelayPeriod
                 };
 
