@@ -75,6 +75,8 @@ namespace Raven.Server.Documents.Replication
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
 
             _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
+
+            LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
         }
 
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
