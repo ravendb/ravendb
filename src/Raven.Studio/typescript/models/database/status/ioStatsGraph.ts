@@ -23,7 +23,7 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndexes: () => void;
-    private handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void;
+    private handleTrackTooltip: (item: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
@@ -33,7 +33,7 @@ class hitTest {
 
     init(container: d3.Selection<any>,
          onToggleIndexes: () => void,
-         handleTrackTooltip: (item: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) => void,
+         handleTrackTooltip: (item: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats, x: number, y: number) => void,
          handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
          removeTooltip: () => void) {
         this.container = container;
@@ -43,7 +43,7 @@ class hitTest {
         this.removeTooltip = removeTooltip;
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
+    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats) {
         const data = {
             minX: x,
             minY: y,
@@ -114,7 +114,7 @@ class hitTest {
         const overToggleIndexes = items.filter(x => x.actionType === "toggleIndexes").length > 0;
         this.cursor(overToggleIndexes ? "pointer" : "auto"); 
 
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Server.Documents.Handlers.IOMetricsRecentStats)[0];
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Server.Utils.IoMetrics.IOMetricsRecentStats)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
@@ -255,10 +255,10 @@ class ioStatsGraph {
 
     /* private */
 
-    private liveViewClientProvider: (onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+    private liveViewClientProvider: (onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                                       dateCutOff?: Date) => liveIOStatsWebSocketClient;
     private liveViewClient = ko.observable<liveIOStatsWebSocketClient>();
-    private data: Raven.Server.Documents.Handlers.IOMetricsResponse;
+    private data: Raven.Server.Utils.IoMetrics.IOMetricsResponse;
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
     private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
@@ -286,7 +286,7 @@ class ioStatsGraph {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private tooltip: d3.Selection<Raven.Server.Documents.Handlers.IOMetricsRecentStats | timeGapInfo>;
+    private tooltip: d3.Selection<Raven.Server.Utils.IoMetrics.IOMetricsRecentStats | timeGapInfo>;
 
     /* colors */
 
@@ -320,7 +320,7 @@ class ioStatsGraph {
     constructor(statsNameProvider: () => string,
                 tracksOrder: string[],
                 supportsIndexes: boolean,
-        liveClientProvider: (onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+        liveClientProvider: (onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                                      dateCutOff?: Date) => liveIOStatsWebSocketClient) {
         
         this.statsNameProvider = statsNameProvider;
@@ -541,7 +541,7 @@ class ioStatsGraph {
     private enableLiveView() {
         let firstTime = true;
 
-        const onDataUpdate = (mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse) => {
+        const onDataUpdate = (mergedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => {
             let timeRange: [Date, Date];
 
             if (!firstTime) {
@@ -1013,7 +1013,7 @@ class ioStatsGraph {
         }
     }
 
-    private drawTrack(context:CanvasRenderingContext2D, env: Raven.Server.Documents.Handlers.IOMetricsEnvironment,
+    private drawTrack(context:CanvasRenderingContext2D, env: Raven.Server.Utils.IoMetrics.IOMetricsEnvironment,
                       xScale: d3.time.Scale<number, number>, extentFunc: (millis: number) => number,
                       visibleTimeFrame: [Date, Date]) {
 
@@ -1027,7 +1027,7 @@ class ioStatsGraph {
             return;
         }
 
-        const trackName = env.Path.substring(this.commonPathsPrefix.length);
+        const trackName = env.Path.substring(this.commonPathsPrefix.length) || env.Type;
 
         // Draw track name
         this.drawTrackName(context, trackName, yStart);
@@ -1334,7 +1334,7 @@ class ioStatsGraph {
         this.bufferIsFull(false);
 
         try {
-            const importedData: Raven.Server.Documents.Handlers.IOMetricsResponse = JSON.parse(result);
+            const importedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse = JSON.parse(result);
 
             // Check if data is an IOStats json data..
             if (!importedData.hasOwnProperty('Environments')) {
@@ -1462,7 +1462,7 @@ class ioStatsGraph {
         return string1.slice(0, i);
     }
 
-    private calcItemColor(type: Sparrow.Server.Meters.IoMetrics.MeterType, recentItem?: Raven.Server.Documents.Handlers.IOMetricsRecentStats): string {
+    private calcItemColor(type: Sparrow.Server.Meters.IoMetrics.MeterType, recentItem?: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats): string {
         if (recentItem) {
             return this.legends.get(type)().colorScale(ioStatsGraph.extractItemValue(recentItem));
         } else {
@@ -1470,8 +1470,8 @@ class ioStatsGraph {
         }
     }
 
-    private static extractItemValue(item: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
-        return item.Type === "Compression" ? (item as Raven.Server.Documents.Handlers.IOMetricsRecentStatsAdditionalTypes).CompressionRatio : item.Size;
+    private static extractItemValue(item: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats) {
+        return item.Type === "Compression" ? (item as Raven.Server.Utils.IoMetrics.IOMetricsRecentStatsAdditionalTypes).CompressionRatio : item.Size;
     }
 
     private extractTimeRanges(): Array<[Date, Date]>{
@@ -1526,7 +1526,7 @@ class ioStatsGraph {
         }
     }
 
-    private handleTrackTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats, x: number, y: number) {
+    private handleTrackTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
         // 1. Show item size position in the legend (in addition to showing the tooltip)
@@ -1554,7 +1554,7 @@ class ioStatsGraph {
                 tooltipHtml += `Speed: ${speed}<br />`;
 
             } else {
-                const compressionElement = element as Raven.Server.Documents.Handlers.IOMetricsRecentStatsAdditionalTypes;
+                const compressionElement = element as Raven.Server.Utils.IoMetrics.IOMetricsRecentStatsAdditionalTypes;
                 tooltipHtml += `Original Size: ${generalUtils.formatBytesToSize(compressionElement.OriginalSize)}<br/>`;
                 tooltipHtml += `Original Size (bytes): ${compressionElement.OriginalSize.toLocaleString()}<br/>`;
                 tooltipHtml += `Compressed Size: ${generalUtils.formatBytesToSize(compressionElement.CompressedSize)}<br/>`;
@@ -1569,7 +1569,7 @@ class ioStatsGraph {
         }
     }
 
-    private handleTooltip(element: Raven.Server.Documents.Handlers.IOMetricsRecentStats | timeGapInfo, x: number, y: number, tooltipHtml: string) {
+    private handleTooltip(element: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats | timeGapInfo, x: number, y: number, tooltipHtml: string) {
         if (element) {
             const canvas = this.canvas.node() as HTMLCanvasElement;
             const context = canvas.getContext("2d");

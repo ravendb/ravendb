@@ -4,18 +4,18 @@ import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import d3 = require("d3");
 import endpoints = require("endpoints");
 
-abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Documents.Handlers.IOMetricsResponse> {
+abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Utils.IoMetrics.IOMetricsResponse> {
 
-    private readonly onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void;
+    private readonly onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void;
     private static isoParser = d3.time.format.iso;
     private readonly dateCutOff: Date;
-    private readonly mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse;    
-    private pendingDataToApply: Raven.Server.Documents.Handlers.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
+    private readonly mergedData: Raven.Server.Utils.IoMetrics.IOMetricsResponse;    
+    private pendingDataToApply: Raven.Server.Utils.IoMetrics.IOMetricsResponse[] = []; // Used to hold data when pauseUpdates
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
     protected constructor(db: database, 
-                onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+                onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                 dateCutOff?: Date) {
         super(db);
         this.onData = onData;
@@ -46,7 +46,7 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
         this.loading(false);
     }
 
-    protected onMessage(e: Raven.Server.Documents.Handlers.IOMetricsResponse) {
+    protected onMessage(e: Raven.Server.Utils.IoMetrics.IOMetricsResponse) {
         if (this.updatesPaused) {
             this.pendingDataToApply.push(e);
         } else {
@@ -59,7 +59,7 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
         this.loading(false);
     }
 
-    private mergeIncomingData(e: Raven.Server.Documents.Handlers.IOMetricsResponse) {
+    private mergeIncomingData(e: Raven.Server.Utils.IoMetrics.IOMetricsResponse) {
         let hasAnyChange = false;
         e.Environments.forEach(env => {
 
@@ -93,7 +93,7 @@ abstract class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.
         return hasAnyChange;
     }
 
-    static fillCache(stat: Raven.Server.Documents.Handlers.IOMetricsRecentStats) {
+    static fillCache(stat: Raven.Server.Utils.IoMetrics.IOMetricsRecentStats) {
         const withCache = stat as IOMetricsRecentStatsWithCache;
         withCache.StartedAsDate = stat.Start ? liveIOStatsWebSocketClient.isoParser.parse(stat.Start) : undefined;
         withCache.CompletedAsDate = withCache.StartedAsDate ? new Date(withCache.StartedAsDate.getTime() + stat.Duration) : undefined;

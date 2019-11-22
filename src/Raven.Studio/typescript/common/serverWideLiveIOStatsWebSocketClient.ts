@@ -4,7 +4,7 @@ import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient")
 
 class serverWideLiveIOStatsWebSocketClient extends liveIOStatsWebSocketClient {
 
-    constructor(onData: (data: Raven.Server.Documents.Handlers.IOMetricsResponse) => void,
+    constructor(onData: (data: Raven.Server.Utils.IoMetrics.IOMetricsResponse) => void,
                 dateCutOff?: Date) {
         super(null, onData, dateCutOff);
     }
