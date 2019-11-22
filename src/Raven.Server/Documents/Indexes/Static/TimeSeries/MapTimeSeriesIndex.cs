@@ -159,14 +159,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 throw new InvalidOperationException("TODO ppekrol");
 
-            // TODO [ppekrol] implement this properly
-            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, 0)
-                .LastOrDefault();
-
-            if (timeSeries == null)
-                return 0;
-
-            return timeSeries.Etag;
+            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext, collection);
         }
 
         public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
