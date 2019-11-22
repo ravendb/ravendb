@@ -60,9 +60,12 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<StorageEnvironmentWithType> GetSystemEnvironment(ServerStore serverStore)
+        private static List<StorageEnvironmentWithType> GetSystemEnvironment(ServerStore serverStore)
         {
-            return new[] {new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env)};
+            return new List<StorageEnvironmentWithType>
+            {
+                new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env)
+            };
         }
     }
 }

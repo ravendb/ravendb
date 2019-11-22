@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
 
         private class DatabaseLiveIoStatsCollector : LiveIoStatsCollector<DocumentsOperationContext>
         {
-            public DatabaseLiveIoStatsCollector(DocumentDatabase database) : base(database.IoChanges, database.GetAllStoragesEnvironment(), database.GetAllPerformanceMetrics(), database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
+            public DatabaseLiveIoStatsCollector(DocumentDatabase database) : base(database.IoChanges, database.GetAllStoragesEnvironment().ToList(), database.GetAllPerformanceMetrics(), database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
             {
             }
         }
