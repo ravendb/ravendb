@@ -319,15 +319,6 @@ namespace Raven.Server.Documents.Replication
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
                 incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo {Reason = e.ToString()});
 
-                try
-                {
-                    tcpConnectionOptions.Dispose();
-                }
-                catch
-                {
-                    // do nothing
-                }
-
                 throw;
             }
 
@@ -380,29 +371,46 @@ namespace Raven.Server.Documents.Replication
             return getLatestEtagMessage;
         }
 
+        private long _reconnectInProgress;
+
         private void ForceTryReconnectAll()
         {
-            foreach (var failure in _reconnectQueue)
+            if (Interlocked.CompareExchange(ref _reconnectInProgress, 1, 0) == 1)
+                return;
+
+            try
             {
-                try
+                foreach (var failure in _reconnectQueue)
                 {
-                    if (failure.RetryOn > DateTime.UtcNow)
-                        continue;
-
-                    if (_reconnectQueue.TryRemove(failure) == false)
-                        continue;
-
-                    AddAndStartOutgoingReplication(failure.Node, failure.External);
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
+                    try
                     {
-                        _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
+                        if (_reconnectQueue.TryRemove(failure) == false)
+                            continue;
+
+                        if (failure.RetryOn > DateTime.UtcNow)
+                        {
+                            _reconnectQueue.Add(failure);
+                            continue;
+                        }
+
+                        AddAndStartOutgoingReplication(failure.Node, failure.External);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
+                        }
                     }
                 }
             }
+            finally
+            {
+                Interlocked.Exchange(ref _reconnectInProgress, 0);
+            }
         }
+
+        private static readonly TimeSpan MaxInactiveTime = TimeSpan.FromMinutes(1);
 
         private void AssertValidConnection(IncomingConnectionInfo connectionInfo)
         {
@@ -426,13 +434,16 @@ namespace Raven.Server.Documents.Replication
                     $"Cannot accept the incoming replication connection from {connectionInfo.SourceUrl}, because this node is in passive state.");
             }
 
-            if (_incoming.TryRemove(connectionInfo.SourceDatabaseId, out IncomingReplicationHandler value))
+            if (_incoming.TryGetValue(connectionInfo.SourceDatabaseId, out var value))
             {
+                var lastHeartbeat = new DateTime(value.LastHeartbeatTicks);
+                if (lastHeartbeat + MaxInactiveTime > Database.Time.GetUtcNow())
+                    throw new InvalidOperationException(
+                        $"An active connection for this database already exists from {value.ConnectionInfo.SourceUrl} (last heartbeat: {lastHeartbeat}).");
+
                 if (_log.IsInfoEnabled)
-                {
-                    _log.Info(
-                        $"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db");
-                }
+                    _log.Info($"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db " +
+                              $"(last heartbeat was at {lastHeartbeat}).");
 
                 IncomingReplicationRemoved?.Invoke(value);
 

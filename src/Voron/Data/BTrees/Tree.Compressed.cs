@@ -26,13 +26,10 @@ namespace Voron.Data.BTrees
 
             var pageToCompress = page;
 
-            if (alreadyCompressed)
-            {
+            if (alreadyCompressed) 
                 pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write); // no need to dispose, it's going to be cached anyway
-            }
 
-            CompressionResult result;
-            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out result, defrag: alreadyCompressed == false))
+            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult result, defrag: alreadyCompressed == false))
             {
                 if (result == null || result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
                 {
@@ -53,6 +50,9 @@ namespace Voron.Data.BTrees
                 }
 
                 LeafPageCompressor.CopyToPage(result, page);
+
+                if (result.InvalidateFromCache)
+                    DecompressionsCache.Invalidate(page.PageNumber, DecompressionUsage.Write);
 
                 return true;
             }
@@ -104,11 +104,14 @@ namespace Voron.Data.BTrees
 
             var decompressedNodesOffset = (ushort)(result.PageSize - input.DecompressedSize);
 
-            LZ4.Decode64LongBuffers(
-                input.Data,
-                input.CompressedSize,
-                result.Base + decompressedNodesOffset,
-                input.DecompressedSize, true);
+            if (input.CompressedSize > 0)
+            {
+                LZ4.Decode64LongBuffers(
+                    input.Data,
+                    input.CompressedSize,
+                    result.Base + decompressedNodesOffset,
+                    input.DecompressedSize, true);
+            }
 
             result.Lower += input.KeysOffsetsSize;
             result.Upper = decompressedNodesOffset;

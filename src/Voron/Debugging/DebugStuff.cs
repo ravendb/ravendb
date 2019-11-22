@@ -319,8 +319,9 @@ namespace Voron.Debugging
         private static unsafe void RenderPage(Tree tree, TreePage page, TextWriter sw, string text, bool open)
         {
             sw.WriteLine(
-               "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries</label><ul>",
-               page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text);
+               "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries {5}</label><ul>",
+               page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text, 
+               page.IsCompressed? $"(Compressed ({page.CompressionHeader->NumberOfCompressedEntries} entries [uncompressed/compressed: {page.CompressionHeader->UncompressedSize}/{page.CompressionHeader->CompressedSize}])" : string.Empty);
 
             for (int i = 0; i < page.NumberOfEntries; i++)
             {
