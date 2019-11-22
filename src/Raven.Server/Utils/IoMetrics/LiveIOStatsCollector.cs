@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
@@ -25,13 +26,13 @@ namespace Raven.Server.Utils.IoMetrics
 
         private string _basePath;
         private readonly IoChangesNotifications _ioChanges;
-        private readonly IEnumerable<StorageEnvironmentWithType> _environments;
+        private readonly List<StorageEnvironmentWithType> _environments;
         private readonly IEnumerable<DatabasePerformanceMetrics> _performanceMetrics;
         private readonly JsonContextPoolBase<T> _contextPool;
         private readonly CancellationToken _resourceShutdown;
         private readonly CancellationTokenSource _cts;
 
-        protected LiveIoStatsCollector(IoChangesNotifications ioChanges, IEnumerable<StorageEnvironmentWithType> environments, IEnumerable<DatabasePerformanceMetrics> performanceMetrics, JsonContextPoolBase<T> contextPool, CancellationToken resourceShutdown)
+        protected LiveIoStatsCollector(IoChangesNotifications ioChanges, List<StorageEnvironmentWithType> environments, IEnumerable<DatabasePerformanceMetrics> performanceMetrics, JsonContextPoolBase<T> contextPool, CancellationToken resourceShutdown)
         {
             _ioChanges = ioChanges;
             _environments = environments;
@@ -89,7 +90,7 @@ namespace Raven.Server.Utils.IoMetrics
 
             _basePath = result.Environments[0].Path;
             
-            AddEnvironmentTypeToPath(result.Environments[0]);
+            AddEnvironmentTypeToPathIfNeeded(result.Environments[0]);
 
             foreach (var environment in result.Environments)
             {
@@ -158,14 +159,42 @@ namespace Raven.Server.Utils.IoMetrics
                 var currentEnvironment = preparedMetricsResponse.Environments.FirstOrDefault(x => x.Path == envPath.FullName);
                 if (currentEnvironment == null)
                 {
-                    // If new index for example was added...
-                    currentEnvironment = new IOMetricsEnvironment { Path = envPath.FullName, Files = new List<IOMetricsFileStats>() };
+                    var existingEnv = _environments.FirstOrDefault(x => x.Environment.Options.BasePath.FullPath == envPath.FullName);
+
+                    if (existingEnv != null)
+                    {
+                        currentEnvironment = new IOMetricsEnvironment { Path = envPath.FullName, Files = new List<IOMetricsFileStats>(), Type = existingEnv.Type };
+                    }
+                    else
+                    {
+                        // If new index for example was added...
+
+                        currentEnvironment = new IOMetricsEnvironment { Path = envPath.FullName, Files = new List<IOMetricsFileStats>() };
+
+                        if (envPath.FullName.Contains("Indexes"))
+                        {
+                            currentEnvironment.Type = StorageEnvironmentWithType.StorageEnvironmentType.Index;
+                        }
+                        else if (envPath.FullName.Contains("Configuration"))
+                        {
+                            currentEnvironment.Type = StorageEnvironmentWithType.StorageEnvironmentType.Configuration;
+                        }
+                        else if (envPath.FullName.Contains("System"))
+                        {
+                            currentEnvironment.Type = StorageEnvironmentWithType.StorageEnvironmentType.System;
+                        }
+                        else
+                        {
+                            currentEnvironment.Type = StorageEnvironmentWithType.StorageEnvironmentType.Documents;
+                        }
+                    }
+
                     preparedMetricsResponse.Environments.Add(currentEnvironment);
                 }
 
                 if (currentEnvironment.Path == _basePath)
                 {
-                    AddEnvironmentTypeToPath(currentEnvironment);
+                    AddEnvironmentTypeToPathIfNeeded(currentEnvironment);
                 }
 
                 // 5. Prepare response, add recent items.  Note: History items are not added since studio does not display them anyway
@@ -200,14 +229,22 @@ namespace Raven.Server.Utils.IoMetrics
             return preparedMetricsResponse;
         }
 
-        private void AddEnvironmentTypeToPath(IOMetricsEnvironment environment)
+        private void AddEnvironmentTypeToPathIfNeeded(IOMetricsEnvironment environment)
         {
-            if (environment.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents)
-                environment.Path = Path.Combine(_basePath, "Documents");
-            else if (environment.Type == StorageEnvironmentWithType.StorageEnvironmentType.System)
-                environment.Path = Path.Combine(_basePath, "<System>");
-            else
-                throw new InvalidOperationException("Unknown type: " + environment.Type);
+            switch (environment.Type)
+            {
+                case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                    environment.Path = Path.Combine(_basePath, "Documents");
+                    break;
+                case StorageEnvironmentWithType.StorageEnvironmentType.System:
+                case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
+                case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                    // those envs already contain env type in path
+                    Debug.Assert(environment.Path.Contains(environment.Type.ToString()), "environment.Path.Contains(environment.Type.ToString())");
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown type: " + environment.Type);
+            }
         }
 
         private void OnIOChange(IoChange recentFileIoItem)
