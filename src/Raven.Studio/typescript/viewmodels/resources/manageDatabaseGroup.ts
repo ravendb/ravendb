@@ -222,8 +222,8 @@ class manageDatabaseGroup extends viewModelBase {
     private updateNodes(incomingData: databaseGroupNode[]) {
         const local = this.nodes();
         
-        const localTags = local.map(x => x.tag()).sort();
-        const remoteTags = incomingData.map(x => x.tag()).sort();
+        const localTags = local.map(x => x.tag());
+        const remoteTags = incomingData.map(x => x.tag());
         
         if (_.isEqual(localTags, remoteTags)) {
             // we have same node tags: do in place update
