@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -878,6 +879,51 @@ namespace RachisTests.DatabaseCluster
 
                     Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_14284()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store1);
+                var handlers = new HashSet<OutgoingReplicationHandler>();
+
+                database.ReplicationLoader.OutgoingReplicationAdded += handler =>
+                {
+                    handlers.Add(handler);
+                };
+
+                var databaseWatcher1 = new ExternalReplication(store2.Database, $"ConnectionString-{store1.Identifier}_1");
+                await AddWatcherToReplicationTopology(store1, databaseWatcher1, store1.Urls);
+
+                var databaseWatcher2 = new ExternalReplication(store2.Database, $"ConnectionString-{store1.Identifier}_2");
+                await AddWatcherToReplicationTopology(store1, databaseWatcher2, store1.Urls);
+
+                await WaitForValueAsync(() =>
+                {
+                    foreach (var handler in database.ReplicationLoader.OutgoingHandlers)
+                    {
+                        handlers.Add(handler);
+                    }
+
+                    return handlers.Count;
+                }, 2);
+
+                Assert.Equal(2, handlers.Count);
+
+                EnsureReplicating(store1, store2);
+
+                var list = handlers.ToList();
+                var connection1Task = WaitForValueAsync(() => list[0].IsConnectionDisposed, true, timeout: 5_000);
+                var connection2Task = WaitForValueAsync(() => list[1].IsConnectionDisposed, true, timeout: 5_000);
+
+                var connection2 = await connection2Task;
+                var connection1 = await connection1Task;
+
+                Assert.True(connection1 ^ connection2, $"connection 1 disposed={connection1}, connection 2 disposed={connection2}");
             }
         }
     }
