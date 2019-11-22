@@ -1392,7 +1392,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag)
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -1405,6 +1405,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, skip: 0))
             {
+                if (take-- <= 0)
+                    yield break;
+
                 yield return CreateTimeSeriesItem(context, ref result.Reader);
             }
         }

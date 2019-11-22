@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (HandleAllDocs)
                 throw new InvalidOperationException("TODO ppekrol");
 
-            if (_compiled.Maps.ContainsKey(change.CollectionName) == false)
+            if (Collections.Contains(change.CollectionName) == false)
                 return;
 
             _mre.Set();

@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
                 throw new NotImplementedException("TODO ppekrol");
             }
 
-            return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, lastEtag + 1); // TODO ppekrol : more parameters
+            return _timeSeriesStorage.GetTimeSeriesFrom(databaseContext, collection, lastEtag + 1, pageSize);
         }
     }
 }

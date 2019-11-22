@@ -464,7 +464,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 foreach (var collection in collectionsToExport)
                 {
-                    foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, collection, _startDocumentEtag))
+                    foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, collection, _startDocumentEtag, long.MaxValue))
                     {
                         yield return new TimeSeriesItem
                         {
