@@ -405,6 +405,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 while (enumerator.MoveNext(out int ts, values, states, ref tagPointer, out var status))
                 {
+                    if (status == Dead && tombstones == false)
+                        continue;
+
                     var cur = baseline.AddMilliseconds(ts);
                     var tag = SetTimestampTag(context, tagPointer);
 
