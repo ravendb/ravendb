@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Session
             Context = Session.Context;
             DocumentStore = Session.DocumentStore;
             DeferredCommandsDictionary = Session.DeferredCommandsDictionary;
-            DeletedEntities = Session.DeletedEntities;
             DocumentsById = Session.DocumentsById;
         }
 
@@ -26,7 +25,6 @@ namespace Raven.Client.Documents.Session
         protected JsonOperationContext Context { get; }
         protected IDocumentStore DocumentStore { get; }
         protected Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary { get; }
-        protected HashSet<object> DeletedEntities { get; }
         internal DocumentsById DocumentsById { get; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

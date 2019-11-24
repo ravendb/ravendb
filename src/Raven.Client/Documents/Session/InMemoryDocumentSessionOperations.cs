@@ -67,11 +67,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public Guid Id { get; }
 
-        /// <summary>
-        /// The entities waiting to be deleted
-        /// </summary>
-        protected internal readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
-
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
@@ -129,6 +124,12 @@ namespace Raven.Client.Documents.Session
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
         internal readonly DocumentsByEntityHolder DocumentsByEntity = new DocumentsByEntityHolder();
+
+        /// <summary>
+        /// The entities waiting to be deleted
+        /// </summary>
+        internal readonly DeletedEntitiesHolder DeletedEntities = new DeletedEntitiesHolder();
+
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
         /// </summary>
@@ -661,7 +662,7 @@ more responsive application.
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
-                throw new InvalidOperationException("Can't store object, it was already deleted in this session.  Document id: " + id);
+                throw new InvalidOperationException("Can't store object, it was already deleted in this session. Document id: " + id);
 
             // we make the check here even if we just generated the ID
             // users can override the ID generation behavior, and we need
@@ -679,6 +680,7 @@ more responsive application.
 
             if (id != null)
                 _knownMissingIds.Remove(id);
+
             StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
         }
 
@@ -753,7 +755,6 @@ more responsive application.
         protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
             ConcurrencyCheckMode forceConcurrencyCheck)
         {
-            DeletedEntities.Remove(entity);
             if (id != null)
                 _knownMissingIds.Remove(id);
 
@@ -927,50 +928,57 @@ more responsive application.
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
-            foreach (var deletedEntity in DeletedEntities)
+            using (DeletedEntities.PrepareEntitiesDeletes())
             {
-                if (DocumentsByEntity.TryGetValue(deletedEntity, out DocumentInfo documentInfo) == false)
-                    continue;
-
-                if (changes != null)
+                foreach (var deletedEntity in DeletedEntities)
                 {
-                    var docChanges = new List<DocumentsChanges>();
-                    var change = new DocumentsChanges
-                    {
-                        FieldNewValue = string.Empty,
-                        FieldOldValue = string.Empty,
-                        Change = DocumentsChanges.ChangeType.DocumentDeleted
-                    };
+                    if (DocumentsByEntity.TryGetValue(deletedEntity.Entity, out DocumentInfo documentInfo) == false)
+                        continue;
 
-                    docChanges.Add(change);
-                    changes[documentInfo.Id] = docChanges.ToArray();
-                }
-                else
-                {
-                    if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                    if (changes != null)
                     {
-                        // here we explicitly want to throw for all types of deferred commands, if the document
-                        // is being deleted, we never want to allow any other operations on it
-                        ThrowInvalidDeletedDocumentWithDeferredCommand(command);
-                    }
-                    string changeVector = null;
-                    if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
-                    {
-                        changeVector = documentInfo.ChangeVector;
-
-                        if (documentInfo.Entity != null)
+                        var docChanges = new List<DocumentsChanges>();
+                        var change = new DocumentsChanges
                         {
-                            result.OnSuccess.RemoveDocumentByEntity(documentInfo.Entity);
-                            result.Entities.Add(documentInfo.Entity);
+                            FieldNewValue = string.Empty, FieldOldValue = string.Empty, Change = DocumentsChanges.ChangeType.DocumentDeleted
+                        };
+
+                        docChanges.Add(change);
+                        changes[documentInfo.Id] = docChanges.ToArray();
+                    }
+                    else
+                    {
+                        if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                        {
+                            // here we explicitly want to throw for all types of deferred commands, if the document
+                            // is being deleted, we never want to allow any other operations on it
+                            ThrowInvalidDeletedDocumentWithDeferredCommand(command);
                         }
 
-                        result.OnSuccess.RemoveDocumentById(documentInfo.Id);
-                    }
+                        string changeVector = null;
+                        if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
+                        {
+                            changeVector = documentInfo.ChangeVector;
 
-                    changeVector = UseOptimisticConcurrency ? changeVector : null;
-                    var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
-                    OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
-                    result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                            if (documentInfo.Entity != null)
+                            {
+                                result.OnSuccess.RemoveDocumentByEntity(documentInfo.Entity);
+                                result.Entities.Add(documentInfo.Entity);
+                            }
+
+                            result.OnSuccess.RemoveDocumentById(documentInfo.Id);
+                        }
+
+                        changeVector = UseOptimisticConcurrency ? changeVector : null;
+
+                        if (deletedEntity.ExecuteOnBeforeDelete)
+                        {
+                            var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
+                            OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
+                        }
+
+                        result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                    }
                 }
             }
 
@@ -1004,7 +1012,7 @@ more responsive application.
                         ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
                     var onOnBeforeStore = OnBeforeStore;
-                    if (onOnBeforeStore != null && entity.IsOnBeforeStore == false)
+                    if (onOnBeforeStore != null && entity.ExecuteOnBeforeStore)
                     {
                         var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                         onOnBeforeStore(this, beforeStoreEventArgs);
@@ -1951,14 +1959,14 @@ more responsive application.
 
         public void Add(object entity, DocumentInfo documentInfo)
         {
-            if (_prepareEntitiesPuts)
+            if (_prepareEntitiesPuts == false)
             {
-                CreateOnBeforeStoreDocumentsByEntityIfNeeded();
-                _onBeforeStoreDocumentsByEntity.Add(entity, documentInfo);
+                _documentsByEntity.Add(entity, documentInfo);
                 return;
             }
 
-            _documentsByEntity.Add(entity, documentInfo);
+            CreateOnBeforeStoreDocumentsByEntityIfNeeded();
+            _onBeforeStoreDocumentsByEntity.Add(entity, documentInfo);
         }
 
         public DocumentInfo this[object obj]
@@ -1975,13 +1983,6 @@ more responsive application.
                     _onBeforeStoreDocumentsByEntity[obj] = value;
                 }
             }
-        }
-
-        public IDisposable PrepareEntitiesPuts()
-        {
-            _prepareEntitiesPuts = true;
-
-            return new DisposableAction(()=> _prepareEntitiesPuts = false);
         }
 
         private void CreateOnBeforeStoreDocumentsByEntityIfNeeded()
@@ -2017,7 +2018,7 @@ more responsive application.
                 {
                     Key = doc.Key,
                     Value = doc.Value,
-                    IsOnBeforeStore = false
+                    ExecuteOnBeforeStore = true
                 };
             }
 
@@ -2029,19 +2030,112 @@ more responsive application.
                     {
                         Key = doc.Key,
                         Value = doc.Value,
-                        IsOnBeforeStore = true
+                        ExecuteOnBeforeStore = false
                     };
                 }
             }
         }
 
-        public class DocumentsByEntityEnumeratorResult
+        public IDisposable PrepareEntitiesPuts()
+        {
+            _prepareEntitiesPuts = true;
+
+            return new DisposableAction(() => _prepareEntitiesPuts = false);
+        }
+
+        internal class DocumentsByEntityEnumeratorResult
         {
             public object Key { get; set; }
 
             public DocumentInfo Value { get; set; }
 
-            public bool IsOnBeforeStore { get; set; }
+            public bool ExecuteOnBeforeStore { get; set; }
+        }
+    }
+    
+    internal class DeletedEntitiesHolder
+    {
+        private readonly HashSet<object> _deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+
+        private HashSet<object> _onBeforeDeletedEntities;
+
+        private bool _prepareEntitiesDeletes;
+
+        public int Count => _deletedEntities.Count + _onBeforeDeletedEntities?.Count ?? 0;
+
+        public void Add(object entity)
+        {
+            if (_prepareEntitiesDeletes)
+            {
+                if (_onBeforeDeletedEntities == null)
+                    _onBeforeDeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+
+                _onBeforeDeletedEntities.Add(entity);
+                return;
+            }
+
+            _deletedEntities.Add(entity);
+        }
+
+        public void Remove(object entity)
+        {
+            _deletedEntities.Remove(entity);
+            _onBeforeDeletedEntities?.Remove(entity);
+        }
+
+        public bool Contains(object entity)
+        {
+            if (_deletedEntities.Contains(entity))
+                return true;
+
+            if (_onBeforeDeletedEntities == null)
+                return false;
+
+            return _onBeforeDeletedEntities.Contains(entity);
+        }
+
+        public void Clear()
+        {
+            _deletedEntities.Clear();
+            _onBeforeDeletedEntities?.Clear();
+        }
+
+        public IEnumerator<DeletedEntitiesEnumeratorResult> GetEnumerator()
+        {
+            foreach (var entity in _deletedEntities)
+            {
+                yield return new DeletedEntitiesEnumeratorResult
+                {
+                    Entity = entity,
+                    ExecuteOnBeforeDelete = true
+                };
+            }
+
+            if (_onBeforeDeletedEntities != null)
+            {
+                foreach (var entity in _onBeforeDeletedEntities)
+                {
+                    yield return new DeletedEntitiesEnumeratorResult
+                    {
+                        Entity = entity,
+                        ExecuteOnBeforeDelete = false
+                    };
+                }
+            }
+        }
+
+        public IDisposable PrepareEntitiesDeletes()
+        {
+            _prepareEntitiesDeletes = true;
+
+            return new DisposableAction(() => _prepareEntitiesDeletes = false);
+        }
+
+        public class DeletedEntitiesEnumeratorResult
+        {
+            public object Entity { get; set; }
+
+            public bool ExecuteOnBeforeDelete { get; set; }
         }
     }
 }
