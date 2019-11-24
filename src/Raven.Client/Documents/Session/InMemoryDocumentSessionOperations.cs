@@ -1220,12 +1220,12 @@ more responsive application.
         {
             if (DocumentsByEntity.TryGetValue(entity, out var documentInfo))
             {
-                DocumentsByEntity.Remove(entity);
+                DocumentsByEntity.Evict(entity);
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
             }
 
-            DeletedEntities.Remove(entity);
+            DeletedEntities.Evict(entity);
             EntityToBlittable.RemoveFromMissing(entity);
         }
 
@@ -1957,6 +1957,14 @@ more responsive application.
             _onBeforeStoreDocumentsByEntity?.Remove(entity);
         }
 
+        public void Evict(object entity)
+        {
+            if (_prepareEntitiesPuts)
+                throw new InvalidOperationException("Cannot Evict entity during OnBeforeStore");
+
+            _documentsByEntity.Remove(entity);
+        }
+
         public void Add(object entity, DocumentInfo documentInfo)
         {
             if (_prepareEntitiesPuts == false)
@@ -2081,6 +2089,14 @@ more responsive application.
         {
             _deletedEntities.Remove(entity);
             _onBeforeDeletedEntities?.Remove(entity);
+        }
+
+        public void Evict(object entity)
+        {
+            if (_prepareEntitiesDeletes)
+                throw new InvalidOperationException("Cannot Evict entity during OnBeforeDelete");
+
+            _deletedEntities.Remove(entity);
         }
 
         public bool Contains(object entity)

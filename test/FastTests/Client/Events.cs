@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Session;
+﻿using System;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,11 +13,21 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void Before_Store_Listerner()
+        public void Before_Store_Listener()
         {
             using (var store = GetDocumentStore())
             {
-                store.OnBeforeStore += eventTest1;
+                store.OnBeforeStore += (object sender, BeforeStoreEventArgs e) =>
+                {
+                    var user = e.Entity as User;
+                    if (user != null)
+                    {
+                        user.Count = 1000;
+                    }
+
+                    e.DocumentMetadata["Nice"] = "true";
+                };
+
                 using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User()
@@ -26,7 +37,14 @@ namespace FastTests.Client
                     } 
                     , "users/1");
 
-                    newSession.Advanced.OnBeforeStore += eventTest2;
+                    newSession.Advanced.OnBeforeStore += (object sender, BeforeStoreEventArgs e) =>
+                    {
+                        var user = e.Entity as User;
+                        if (user != null)
+                        {
+                            user.LastName = "ravendb";
+                        }
+                    };
 
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
                     newSession.SaveChanges();
@@ -150,23 +168,41 @@ namespace FastTests.Client
             }
         }
 
-        private void eventTest1(object sender, BeforeStoreEventArgs e)
+        [Fact]
+        public void Evict_Not_Supported_Inside_OnBeforeStore_And_OnBeforeDelete()
         {
-            var user = e.Entity as User;
-            if (user != null)
+            using (var store = GetDocumentStore())
             {
-                user.Count = 1000;
-            }
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Foo" }, "users/1");
+                    session.SaveChanges();
+                }
 
-            e.DocumentMetadata["Nice"] = "true";
-        }
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeStore += delegate (object sender, BeforeStoreEventArgs args)
+                    {
+                        var user = session.Load<User>("users/1");
+                        Assert.Throws<InvalidOperationException>(() => args.Session.Evict(user));
+                    };
 
-        private void eventTest2(object sender, BeforeStoreEventArgs e)
-        {
-            var user = e.Entity as User;
-            if (user != null)
-            {
-                user.LastName = "ravendb";
+                    session.Store(new User { Name = "Bar" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeDelete += delegate (object sender, BeforeDeleteEventArgs args)
+                    {
+                        var user2 = session.Load<User>("users/2");
+                        Assert.Throws<InvalidOperationException>(() => args.Session.Evict(user2));
+                    };
+
+                    var user1 = session.Load<User>("users/1");
+                    session.Delete(user1);
+                    session.SaveChanges();
+                }
             }
         }
     }
