@@ -2012,9 +2012,6 @@ more responsive application.
             if (_documentsByEntity.TryGetValue(entity, out documentInfo))
                 return true;
 
-            if (_prepareEntitiesPuts == false)
-                return false;
-
             return _onBeforeStoreDocumentsByEntity != null && _onBeforeStoreDocumentsByEntity.TryGetValue(entity, out documentInfo);
         }
 

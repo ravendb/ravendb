@@ -205,5 +205,36 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public void Can_Load_Entity_From_Cache()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Foo" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeStore += delegate (object sender, BeforeStoreEventArgs args)
+                    {
+                        var user = session.Load<User>("users/1");
+                        user.Name = "Grisha";
+                    };
+
+                    session.Store(new User { Name = "Bar" }, "users/2");
+                    session.SaveChanges();
+
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    Assert.Equal(2, numberOfRequests);
+
+                    session.Load<User>("users/1"); // already loaded during OnBeforeStore
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
     }
 }
