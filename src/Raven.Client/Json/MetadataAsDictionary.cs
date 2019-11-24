@@ -61,22 +61,23 @@ namespace Raven.Client.Json
             if (value is LazyStringValue || value is LazyCompressedStringValue)
                 return value.ToString();
 
-            if (value is long)
-                return (long)value;
+            if (value is long l)
+                return l;
 
-            if (value is bool)
-                return (bool)value;
+            if (value is bool b)
+                return b;
 
-            var doubleValue = value as LazyNumberValue;
-            if (doubleValue != null)
+            if (value is LazyNumberValue doubleValue)
                 return (double)doubleValue;
 
-            var obj = value as BlittableJsonReaderObject;
-            if (obj != null)
-                return new MetadataAsDictionary(obj, this, key);
+            if (value is BlittableJsonReaderObject obj)
+            {
+                var dictionary = new MetadataAsDictionary(obj, this, key);
+                dictionary.Init();
+                return dictionary;
+            }
 
-            var array = value as BlittableJsonReaderArray;
-            if (array != null)
+            if (value is BlittableJsonReaderArray array)
             {
                 var result = new object[array.Length];
                 for (int i = 0; i < array.Length; i++)
