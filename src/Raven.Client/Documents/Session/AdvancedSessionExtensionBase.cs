@@ -11,7 +11,6 @@ namespace Raven.Client.Documents.Session
         protected AdvancedSessionExtensionBase(InMemoryDocumentSessionOperations session)
         {
             Session = session;
-            DocumentsByEntity = Session.DocumentsByEntity;
             RequestExecutor = Session.RequestExecutor;
             SessionInfo = Session.SessionInfo;
             Context = Session.Context;
@@ -22,7 +21,6 @@ namespace Raven.Client.Documents.Session
         }
 
         protected InMemoryDocumentSessionOperations Session { get; }
-        protected Dictionary<object, DocumentInfo> DocumentsByEntity { get; }
         protected RequestExecutor RequestExecutor { get; }
         protected SessionInfo SessionInfo { get; }
         protected JsonOperationContext Context { get; }
