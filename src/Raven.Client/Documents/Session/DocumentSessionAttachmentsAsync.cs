@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session
         {
             using (Session.AsyncTaskHolder())
             {
-                if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
+                if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                     ThrowEntityNotInSessionOrMissingId(entity);
 
                 var operation = new GetAttachmentOperation(document.Id, name, AttachmentType.Document, null);

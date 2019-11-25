@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
             if (ReferenceEquals(entity, null))
                 throw new ArgumentNullException(nameof(entity));
            
-            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
+            if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
             {
                 throw new InvalidOperationException("Cannot create a revision for the requested entity because it is Not tracked by the session");
             }
