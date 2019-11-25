@@ -452,17 +452,22 @@ namespace Raven.Server.Documents.Handlers
                         if (index.IsStale(context) == false)
                             continue;
 
+                        var progress = index.GetProgress(context, isStale: true);
+
                         if (first == false)
                             writer.WriteComma();
 
                         first = false;
 
-                        var progress = index.GetProgress(context, isStale: true);
                         writer.WriteIndexProgress(context, progress);
                     }
                     catch (ObjectDisposedException)
                     {
-                        // index was deleted?
+                        // index was deleted
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // index was deleted
                     }
                     catch (Exception e)
                     {
