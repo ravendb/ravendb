@@ -4,8 +4,6 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Reflection;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
@@ -15,7 +13,7 @@ using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Handlers;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
@@ -25,6 +23,7 @@ using Raven.Server.Utils;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TimeSeries;
+using Sparrow.Extensions;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -58,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<ValueExpression, object> _valuesDictionary;
 
-        private Dictionary<FieldExpression, object> _parameterValuesDictionary;
+        private Dictionary<FieldExpression, object> _argumentValuesDictionary;
 
 
         protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
@@ -745,8 +744,8 @@ namespace Raven.Server.Documents.Queries.Results
             if (_valuesDictionary == null)
                 _valuesDictionary = new Dictionary<ValueExpression, object>();
 
-            if (_parameterValuesDictionary == null)
-                _parameterValuesDictionary = new Dictionary<FieldExpression, object>();
+            if (_argumentValuesDictionary == null)
+                _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
 
             var tss = _database.DocumentsStorage.TimeSeriesStorage;
             var timeSeriesFunction = declaredFunction.TimeSeries;
@@ -835,11 +834,11 @@ namespace Raven.Server.Documents.Queries.Results
                     count++;
                 }
 
-                _parameterValuesDictionary?.Clear();
+                _argumentValuesDictionary?.Clear();
 
                 return _context.ReadObject(new DynamicJsonValue
                 {
-                    //["Count"] = count,
+                    ["Count"] = count,
                     ["Results"] = array
                 }, "timeseries/value");
             }
@@ -885,7 +884,7 @@ namespace Raven.Server.Documents.Queries.Results
                     array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
                 }
 
-                _parameterValuesDictionary?.Clear();
+                _argumentValuesDictionary?.Clear();
 
                 return _context.ReadObject(new DynamicJsonValue
                 {
@@ -910,9 +909,6 @@ namespace Raven.Server.Documents.Queries.Results
                             return ShouldFilter((BinaryExpression)be.Left, singleResult) &&
                                    ShouldFilter((BinaryExpression)be.Right, singleResult);
                     }
-
-                    if (be.Left is ValueExpression)
-                        throw new ArgumentOutOfRangeException(); //todo aviv
 
                     var left = GetValue(be.Left, singleResult);
                     var right = GetValue(be.Right, singleResult);
@@ -949,7 +945,8 @@ namespace Raven.Server.Documents.Queries.Results
                     return result == false;
                 }
 
-                throw new ArgumentOutOfRangeException(); //todo aviv
+                throw new InvalidOperationException($"Unsupported expression '{filter}' inside 'Where' clause of TimeSeries function '{declaredFunction.Name}'. " +
+                                                    "Supported expressions are : Binary Expressions (=, !=, <, >, <=, >=, AND, OR), IN expressions, BETWEEN expressions.");
 
                 bool CompareNumbers(LazyNumberValue lnv, object right)
                 {
@@ -968,7 +965,8 @@ namespace Raven.Server.Documents.Queries.Results
                         case OperatorType.GreaterThanEqual:
                             return lnv.CompareTo(right) >= 0;
                         default:
-                            throw new ArgumentOutOfRangeException(); //todo aviv
+                            throw new InvalidOperationException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
+                                                                $"Operator '{be.Operator}' is not supported.");
                     }
                 }
 
@@ -996,7 +994,8 @@ namespace Raven.Server.Documents.Queries.Results
                         case OperatorType.GreaterThanEqual:
                             return dateTime >= rightAsDt;
                         default:
-                            throw new ArgumentOutOfRangeException(); //todo aviv
+                            throw new InvalidOperationException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
+                                                                $"Operator '{be.Operator}' is not supported.");
                     }
                 }
 
@@ -1023,7 +1022,8 @@ namespace Raven.Server.Documents.Queries.Results
                         case OperatorType.GreaterThanEqual:
                             return lsv.CompareTo(right) >= 0;
                         default:
-                            throw new ArgumentOutOfRangeException(); //todo aviv
+                            throw new InvalidOperationException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
+                                                                $"Operator '{be.Operator}' is not supported.");
                     }
                 }
 
@@ -1051,7 +1051,8 @@ namespace Raven.Server.Documents.Queries.Results
                             result = left >= right;
                             break;
                         default:
-                            throw new ArgumentOutOfRangeException(); //todo aviv
+                            throw new InvalidOperationException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
+                                                                $"Operator '{be.Operator}' is not supported.");
                     }
 
                     return result;
@@ -1061,7 +1062,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     object src = GetValue(inExpression.Source, singleResult);
 
-                    bool b = false;
+                    bool result = false;
                     dynamic val;
 
                     if (inExpression.All == false)
@@ -1071,7 +1072,7 @@ namespace Raven.Server.Documents.Queries.Results
                             val = GetValue(inExpression.Values[i], singleResult);
                             if (Equals(src, val))
                             {
-                                b = true;
+                                result = true;
                                 break;
                             }
                         }
@@ -1079,10 +1080,10 @@ namespace Raven.Server.Documents.Queries.Results
 
                     else
                     {
-                        // todo aviv
+                        // todo aviv - add support for 'where x all in y' 
                     }
 
-                    return b;
+                    return result;
                 }
 
                 bool HandleBetweenExpression()
@@ -1120,17 +1121,17 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         case "Tag":
                             if (fe.Compound.Count > 1)
-                                throw new ArgumentException("Unknown where "); // todo
+                                throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
                             return singleResult.Tag.ToString();
                         case "Values":
                             if (fe.Compound.Count == 1)
                                 return singleResult.Values;
 
                             if (fe.Compound.Count > 2)
-                                throw new ArgumentException("Failed");
+                                throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
 
                             if (int.TryParse(fe.Compound[1].Value, out var index) == false)
-                                throw new ArgumentException("Failed");
+                                throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
 
                             if (index >= singleResult.Values.Length)
                                 return null;
@@ -1139,7 +1140,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                         case "TimeStamp":
                             if (fe.Compound.Count > 1)
-                                throw new ArgumentException("Unknown where "); // todo
+                                throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
                             return singleResult.TimeStamp;
 
                         default:
@@ -1148,15 +1149,12 @@ namespace Raven.Server.Documents.Queries.Results
                                 return GetValueFromLoadedTag(fe, singleResult);
                             }
 
-                            if (_parameterValuesDictionary.TryGetValue(fe, out var val) == false)
+                            if (_argumentValuesDictionary.TryGetValue(fe, out var val) == false)
                             {
-                                _parameterValuesDictionary[fe] = val = GetValueFromParameter(declaredFunction, args, fe);
+                                _argumentValuesDictionary[fe] = val = GetValueFromArgument(declaredFunction, args, fe);
                             }
 
                             return val;
-
-                        //break;
-
                     }
                 }
 
@@ -1172,7 +1170,9 @@ namespace Raven.Server.Documents.Queries.Results
                     return val;
                 }
 
-                throw new ArgumentException("Failed"); //todo aviv
+                // shouldn't happen - query parser should have caught this 
+                throw new InvalidQueryException($"Failed to invoke time series function '{declaredFunction.Name}'. Unable to get the value of expression '{expression}'. " +
+                                                    $"Unsupported expression type : '{expression.Type}'");
             }
 
             string GetSourceAndId()
@@ -1184,9 +1184,16 @@ namespace Raven.Server.Documents.Queries.Results
                     return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValue;
                 }
 
-                if (args == null || args.Length < declaredFunction.Parameters.Count)
+                if (args == null)
                 {
-                    throw new ArgumentException($"Failed"); //todo aviv
+                    throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                                                        $"'{compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
+                }
+
+                if (args.Length < declaredFunction.Parameters.Count)
+                {
+                    throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'." +
+                                                        $"Expected '{declaredFunction.Parameters.Count}' arguments, but got '{args.Length}'");
                 }
 
                 int index;
@@ -1212,51 +1219,42 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (index == declaredFunction.Parameters.Count) // not found
                     {
-                        throw new ArgumentException($"Failed"); //todo aviv
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                                                            $"'{compound[0]}' is unknown, and no matching argument was provided to time series function '{declaredFunction.Name}'.");
                     }
 
                     if (!(args[index] is Document document))
                     {
-                        throw new ArgumentException($"Failed"); //todo aviv
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{(FieldExpression)timeSeriesFunction.Between.Source}'. " +
+                                                            $"Expected argument '{compound[0]}' to be a Document instance, but got '{args[index].GetType()}'");
                     }
 
                     documentId = document.Id;
                 }
 
                 return ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
-
-                /*            if (args?.Length > 0 && args[0] is Document documentArgument)
-                            {
-                                // take the id from argument 
-                                documentId = documentArgument.Id;
-
-                                if (compound.Count > 1)
-                                {
-                                    source = ((FieldExpression)timeSeriesFunction.Between.Source).FieldValueWithoutAlias;
-                                }
-                            }
-                            else if (compound.Count > 1)
-                            {
-                                throw new ArgumentException($"Unable to operate on time series '{((FieldExpression)timeSeriesFunction.Between.Source).FieldValue}'. '{compound[0]}' is unknown." +
-                                                            "Time series aggregations should either be implicit (no aliases defined in the query) or explicit (the document to operate on is passed as an argument).");
-                            }*/
             }
         }
 
-        private static object GetValueFromParameter(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
+        private static object GetValueFromArgument(DeclaredFunction declaredFunction, object[] args, FieldExpression fe)
         {
-            if (args == null || args.Length < declaredFunction.Parameters.Count)
+            if (args == null)
             {
-                throw new ArgumentException($"Failed"); //todo aviv
+                throw new InvalidQueryException($"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, and no arguments were provided to time series function '{declaredFunction.Name}'.");
+            }
+
+            if (args.Length < declaredFunction.Parameters.Count)
+            {
+                throw new InvalidQueryException($"Incorrect number of arguments passed to time series function '{declaredFunction.Name}'. " +
+                                                    $"Expected '{declaredFunction.Parameters.Count}', but got '{args.Length}.'");
             }
 
             int i;
             for (i = 0; i < declaredFunction.Parameters.Count; i++)
             {
                 var parameter = declaredFunction.Parameters[i];
-                var str = ((FieldExpression)parameter).FieldValue;
 
-                if (fe.Compound[0] == str)
+                if (fe.Compound[0] == ((FieldExpression)parameter).FieldValue)
                 {
                     break;
                 }
@@ -1264,12 +1262,13 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (i == declaredFunction.Parameters.Count) // not found
             {
-                throw new ArgumentException($"Failed"); //todo aviv
+                throw new InvalidQueryException($"Unable to get the value of '{fe}'. '{fe.Compound[0]}' is unknown, " +
+                                                    $"and no matching argument was provided to time series function '{declaredFunction.Name}'.");
             }
 
             if (args[i] == null)
             {
-                throw new ArgumentException($"Failed"); //todo aviv
+                throw new InvalidQueryException($"Unable to get the value of '{fe}', argument '{fe.Compound[0]}' is null. TimeSeries function '{declaredFunction.Name}'.");
             }
 
             if (!(args[i] is Document doc))
@@ -1289,26 +1288,35 @@ namespace Raven.Server.Documents.Queries.Results
                 return doc;
             }
 
-            return GetFieldFromDocument(fe, doc?.Data);
+            return GetFieldFromDocument(fe, doc);
         }
 
-        private static object GetFieldFromDocument(FieldExpression fe, BlittableJsonReaderObject doc)
+        private static object GetFieldFromDocument(FieldExpression fe, Document document)
         {
-            if (doc == null)
+            if (document == null)
                 return null;
 
             var currentPart = 1;
             object val = null;
+            var data = document.Data;
 
             while (currentPart < fe.Compound.Count)
             {
-                if (doc.TryGetMember(fe.Compound[currentPart], out val) == false)
-                    throw new ArgumentException("Unable to parse timeseries from/to values. Got a null instead of a value"); //todo aviv
-                
+                if (data.TryGetMember(fe.Compound[currentPart], out val) == false)
+                {
+                    var id = currentPart == 1
+                        ? document.Id
+                        : data.TryGetId(out var nestedId) 
+                            ? nestedId : null;
+
+                    throw new InvalidQueryException($"Unable to get the value of '{fe.FieldValueWithoutAlias}' from document '{document.Id}'. " +
+                                                        $"Document '{id}' does not have a property named '{fe.Compound[currentPart]}'.");
+                }
+
                 if (!(val is BlittableJsonReaderObject nested))
                     break;
 
-                doc = nested;
+                data = nested;
                 currentPart++;
             }
 
@@ -1320,7 +1328,10 @@ namespace Raven.Server.Documents.Queries.Results
             if (_loadedDocuments == null)
                 _loadedDocuments = new Dictionary<string, Document>();
 
-            var tag = singleResult.Tag.ToString();
+            var tag = singleResult.Tag?.ToString();
+            if (tag == null)
+                throw new InvalidQueryException("Unable to load document from 'Tag' property of time series entry. 'Tag' is null. " +
+                                                    $"Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
 
             if (_loadedDocuments.TryGetValue(tag, out var document) == false)
                 _loadedDocuments[tag] = document = _database.DocumentsStorage.Get(_includeDocumentsCommand.Context, tag);
@@ -1329,9 +1340,10 @@ namespace Raven.Server.Documents.Queries.Results
                 return document;
 
             if (document == null)
-                throw new ArgumentException("Unknown where "); // todo aviv
+                throw new InvalidQueryException($"Unable to load document '{tag}' from 'Tag' property of time series entry. " +
+                                                    $"Document '{tag}' does not exist. Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
 
-            return GetFieldFromDocument(fe, document.Data);
+            return GetFieldFromDocument(fe, document);
         }
 
         private static void InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction, TimeSeriesAggregation[] aggStates)
@@ -1391,7 +1403,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (qe is FieldExpression fe)
             {
-                var val = GetValueFromParameter(func, args, fe);
+                var val = GetValueFromArgument(func, args, fe);
                 return ParseDateTime(val.ToString());
             }
 
