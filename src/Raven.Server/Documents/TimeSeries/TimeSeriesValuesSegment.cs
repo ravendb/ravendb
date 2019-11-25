@@ -334,18 +334,20 @@ namespace Raven.Server.Documents.TimeSeries
 
             prev.PreviousValue = val;
 
-            if (status == Live)
+            if (status == Live && double.IsNaN(dblVal) == false)
             {
-                prev.Count++;
+                if (double.IsNaN(prev.First))
+                    prev.First = dblVal;
 
-                if (double.IsNaN(dblVal) == false)
-                {
-                    prev.Sum += dblVal;
-                    prev.Max = Math.Max(prev.Max, dblVal);
-                    prev.Min = double.IsNaN(prev.Min)
-                        ? dblVal
-                        : Math.Min(prev.Min, dblVal);
-                }
+                prev.Count++;
+                prev.Sum += dblVal;
+                prev.Max = double.IsNaN(prev.Max)
+                    ? dblVal
+                    : Math.Max(prev.Max, dblVal);
+                prev.Min = double.IsNaN(prev.Min)
+                    ? dblVal
+                    : Math.Min(prev.Min, dblVal);
+
             }
 
             if (xorWithPrevious == 0)
