@@ -796,7 +796,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (ts <= next)
                     return;
 
-                if (aggStates[0].Count > 0)
+                if (aggStates[0].Any)
                 {
                     array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
                 }
@@ -880,7 +880,7 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                 }
 
-                if (aggStates[0].Count > 0)
+                if (aggStates[0].Any)
                 {
                     array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, next));
                 }
@@ -1359,7 +1359,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 ["From"] = start,
                 ["To"] = next,
-                ["Count"] = aggStates[0].Count
+                ["Count"] = new DynamicJsonArray(aggStates[0].Count)
             };
             for (int i = 0; i < aggStates.Length; i++)
             {

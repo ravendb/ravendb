@@ -21,7 +21,7 @@ namespace SlowTests.Client.TimeSeries.Query
         public class TimeSeriesRangeAggregation
         {
 #pragma warning disable 649
-            public long Count;
+            public long[] Count;
             public double?[] Max, Min, Last, First, Avg;
             public DateTime To, From;
 #pragma warning restore 649
@@ -1763,9 +1763,9 @@ select heart_rate(p)
                         tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/apple", new[] { 179d, 279, 379 });
                         tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/apple", new[] { 169d });
 
-                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(61), "watches/apple", new[] { 259d, 359, 459, 559 });
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(61), "watches/apple", new[] { 259d, 359, 459 });
                         tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(62), "watches/apple", new[] { 279d });
-                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(63), "watches/apple", new[] { 269d, 369, 469 });
+                        tsf.Append("HeartRate", baseline.AddMonths(2).AddMinutes(63), "watches/apple", new[] { 269d, 369, 469, 569});
                     }
 
                     session.SaveChanges();
@@ -1815,13 +1815,13 @@ select heart_rate(p)
 
                         Assert.Equal(169, val.Min[1]);
                         Assert.Equal(179, val.Max[1]);
-                        Assert.Equal((169 + 179) / val.Count, val.Avg[1]);
+                        Assert.Equal((169 + 179) / val.Count[1], val.Avg[1]);
                         Assert.Equal(double.NaN, val.First[1]);
                         Assert.Equal(169, val.Last[1]);
 
                         Assert.Equal(269, val.Min[2]);
                         Assert.Equal(269, val.Max[2]);
-                        Assert.Equal(269d / val.Count, val.Avg[2]);
+                        Assert.Equal(269d / val.Count[2], val.Avg[2]);
                         Assert.Equal(double.NaN, val.First[2]);
                         Assert.Equal(269, val.Last[2]);
 
@@ -1847,13 +1847,13 @@ select heart_rate(p)
 
                         Assert.Equal(259, val.Min[1]);
                         Assert.Equal(279, val.Max[1]);
-                        Assert.Equal((259d + 279) / val.Count, val.Avg[1]);
+                        Assert.Equal((259d + 279) / val.Count[1], val.Avg[1]);
                         Assert.Equal(259, val.First[1]);
                         Assert.Equal(double.NaN, val.Last[1]);
 
                         Assert.Equal(379, val.Min[2]);
                         Assert.Equal(379, val.Max[2]);
-                        Assert.Equal(379d / val.Count, val.Avg[2]);
+                        Assert.Equal(379d / val.Count[2], val.Avg[2]);
                         Assert.Equal(double.NaN, val.First[2]);
                         Assert.Equal(double.NaN, val.Last[2]);
 
@@ -1879,19 +1879,19 @@ select heart_rate(p)
 
                         Assert.Equal(359, val.Min[1]);
                         Assert.Equal(369, val.Max[1]);
-                        Assert.Equal((359d + 369) / val.Count, val.Avg[1]);
+                        Assert.Equal((359d + 369) / val.Count[1], val.Avg[1]);
                         Assert.Equal(359, val.First[1]);
                         Assert.Equal(369, val.Last[1]);
 
                         Assert.Equal(459, val.Min[2]);
                         Assert.Equal(469, val.Max[2]);
-                        Assert.Equal((459d + 469) / val.Count, val.Avg[2]);
+                        Assert.Equal((459d + 469) / val.Count[2], val.Avg[2]);
                         Assert.Equal(459, val.First[2]);
                         Assert.Equal(469, val.Last[2]);
 
                         Assert.Equal(559, val.Min[3]);
                         Assert.Equal(559, val.Max[3]);
-                        Assert.Equal(559d / val.Count, val.Avg[3]);
+                        Assert.Equal(559d / val.Count[3], val.Avg[3]);
                         Assert.Equal(559, val.First[3]);
                         Assert.Equal(double.NaN, val.Last[3]);
 
