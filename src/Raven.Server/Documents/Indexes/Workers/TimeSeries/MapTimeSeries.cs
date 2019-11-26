@@ -5,7 +5,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
 
 namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
 {

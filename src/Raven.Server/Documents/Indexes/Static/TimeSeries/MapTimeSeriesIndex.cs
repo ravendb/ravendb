@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new IndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            return new IndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         protected override IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)

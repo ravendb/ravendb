@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             }
         }
 
-        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
             {
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(lowerId, id, wrapper, indexContext, stats);
+            return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
         }
 
         private IDisposable IgnoreStalenessDueToReduceOutputsToDelete()
