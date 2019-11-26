@@ -118,13 +118,16 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public async Task<Dictionary<string, FacetResult>> ExecuteAsync(CancellationToken token = default)
         {
-            var command = GetCommand(isAsync: true);
+            using (_session.AsyncTaskHolder())
+            {
+                var command = GetCommand(isAsync: true);
 
-            _duration = Stopwatch.StartNew();
-            _session.IncrementRequestCount();
-            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo, token).ConfigureAwait(false);
+                _duration = Stopwatch.StartNew();
+                _session.IncrementRequestCount();
+                await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo, token).ConfigureAwait(false);
 
-            return ProcessResults(command.Result, _session.Conventions);
+                return ProcessResults(command.Result, _session.Conventions);
+            }
         }
 
         public Lazy<Dictionary<string, FacetResult>> ExecuteLazy(Action<Dictionary<string, FacetResult>> onEval = null)

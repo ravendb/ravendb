@@ -88,14 +88,20 @@ namespace Raven.Client.Documents.Session
             _storeCompareExchange = null;
         }
 
-        protected Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
+        protected async Task<CompareExchangeValue<T>> GetCompareExchangeValueAsyncInternal<T>(string key, CancellationToken token = default)
         {
-            return _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key), sessionInfo: _session.SessionInfo, token: token);
+            using (_session.AsyncTaskHolder())
+            {
+                return await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<T>(key), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+            }
         }
 
-        protected Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesInternal<T>(string[] keys, CancellationToken token = default)
+        protected async Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesInternal<T>(string[] keys, CancellationToken token = default)
         {
-            return _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<T>(keys), sessionInfo: _session.SessionInfo, token: token);
+            using (_session.AsyncTaskHolder())
+            {
+                return await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<T>(keys), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+            }
         }
 
         protected void EnsureNotDeleted(string key)

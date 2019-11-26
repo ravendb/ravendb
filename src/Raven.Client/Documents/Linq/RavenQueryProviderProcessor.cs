@@ -119,7 +119,8 @@ namespace Raven.Client.Documents.Linq
             HashSet<FieldToFetch> fieldsToFetch,
             bool isMapReduce,
             Type originalType,
-            DocumentConventions conventions)
+            DocumentConventions conventions,
+            bool isProjectInto)
         {
             FieldsToFetch = fieldsToFetch;
             _newExpressionType = typeof(T);
@@ -132,6 +133,7 @@ namespace Raven.Client.Documents.Linq
             _customizeQuery = customizeQuery;
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _conventions = conventions;
+            _isProjectInto = isProjectInto;
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
             _loadAliasesMovedToOutputFunction = new HashSet<string>();
@@ -1800,7 +1802,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (lambdaExpression.Body is MemberExpression memberExpression)
             {
-                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path)
+                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path, out _)
                         is MethodCallExpression methodCallExpression &&
                     CheckForLoad(methodCallExpression))
                 {
@@ -2093,6 +2095,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private readonly bool _isMapReduce;
         private readonly Type _originalQueryType;
         private readonly DocumentConventions _conventions;
+        private readonly bool _isProjectInto;
 
         private void VisitSelect(Expression operand)
         {
@@ -3167,12 +3170,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <value>The lucene query.</value>
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression, Action<IAbstractDocumentQuery<T>> customization = null)
         {
-            var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
+            var documentQuery = (DocumentQuery<T>)QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
             if (_afterQueryExecuted != null)
                 documentQuery.AfterQueryExecuted(_afterQueryExecuted);
 
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
-
             customization?.Invoke(_documentQuery);
 
             if (_highlightings != null)
@@ -3202,12 +3204,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
+                return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
+            return documentQuery.CreateDocumentQueryInternal<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens)
+            {
+                IsProjectInto = _isProjectInto
+            });
         }
 
         /// <summary>
@@ -3216,7 +3221,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <value>The lucene query.</value>
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression, Action<IAbstractDocumentQuery<T>> customization = null)
         {
-            var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
+            var asyncDocumentQuery = (AsyncDocumentQuery<T>)QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
             if (_afterQueryExecuted != null)
                 asyncDocumentQuery.AfterQueryExecuted(_afterQueryExecuted);
 
@@ -3248,12 +3253,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
+                return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
 
-            return asyncDocumentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
+            return asyncDocumentQuery.CreateDocumentQueryInternal<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens)
+            {
+                IsProjectInto = _isProjectInto
+            });
         }
 
         /// <summary>
@@ -3295,7 +3303,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null));
+            // used only for DocumentQuery
+            var finalQuery = ((DocumentQuery<T>)_documentQuery).CreateDocumentQueryInternal<TProjection>(
+                new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null)
+                {
+                    IsProjectInto = _isProjectInto
+                });
 
             var executeQuery = GetQueryResult(finalQuery);
 

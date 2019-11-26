@@ -151,6 +151,22 @@ namespace Raven.Server.Documents
                 {
                     // the database was disabled while we were trying to execute an action (e.g. PendingClusterTransactions)
                 }
+                catch (DatabaseConcurrentLoadTimeoutException e)
+                {
+                    var title = $"Concurrent load timeout of '{databaseName}' database";
+
+                    var message = $"Failed to load database '{databaseName}' concurrently with other databases within {_serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan}. " +
+                                "Database load will be attempted on next request accessing it. If you see this on regular basis you might consider adjusting the following configuration options: " +
+                                $"{RavenConfiguration.GetKey(x => x.Databases.ConcurrentLoadTimeout)} and {RavenConfiguration.GetKey(x => x.Databases.MaxConcurrentLoads)}";
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(message, e);
+
+                    _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, message, AlertType.ConcurrentDatabaseLoadTimeout, NotificationSeverity.Warning,
+                        details: new ExceptionDetails(e)));
+
+                    throw;
+                }
                 catch (Exception e)
                 {
                     var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}' at index {index}";

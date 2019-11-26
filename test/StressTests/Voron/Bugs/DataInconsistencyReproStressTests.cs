@@ -1,12 +1,13 @@
 ﻿using FastTests;
 using SlowTests.Utils;
 using SlowTests.Voron.Bugs;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Voron.Bugs
 {
-    public class DataInconsistencyReproStressTests : NoDisposalNeeded
+    public class DataInconsistencyReproStressTests : NoDisposalNoOutputNeeded
     {
         public DataInconsistencyReproStressTests(ITestOutputHelper output) : base(output)
         {

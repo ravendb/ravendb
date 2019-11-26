@@ -38,6 +38,7 @@ namespace SlowTests.MailingList
                 }
 
                 WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var foos =

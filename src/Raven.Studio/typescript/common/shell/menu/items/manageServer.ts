@@ -124,6 +124,16 @@ function getManageServerMenuItem() {
             enabled: access.enableSystemStorageReport
         }),
         new leafMenuItem({
+            route: 'admin/settings/ioStats',
+            moduleId: 'viewmodels/manage/serverWideIoStats',
+            title: 'IO Stats',
+            tooltip: "Displays IO metrics status",
+            nav: true,
+            css: 'icon-manage-server-io-test',
+            dynamicHash: appUrl.forSystemIoStats,
+            enabled: access.enableSystemIoStats,
+        }),
+        new leafMenuItem({
             route: 'admin/settings/captureStackTraces',
             moduleId: 'viewmodels/manage/captureStackTraces',
             title: 'Stack Traces',

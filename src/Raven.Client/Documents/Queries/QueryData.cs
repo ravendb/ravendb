@@ -26,7 +26,9 @@ namespace Raven.Client.Documents.Queries
 
         public bool IsMapReduce { get; set; }
 
-        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, DeclareToken declareToken= null, List<LoadToken> loadTokens= null, bool isCustomFunction = false)
+        internal bool IsProjectInto { get; set; }
+
+        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, bool isCustomFunction = false)
         {
             Fields = fields;
             Projections = projections;

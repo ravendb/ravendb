@@ -142,6 +142,10 @@ class appUrl {
     static forSystemStorageReport(): string {
         return "#admin/settings/storageReport"
     }
+    
+    static forSystemIoStats(): string {
+        return "#admin/settings/ioStats";
+    }
 
     static forRunningQueries(db: database | databaseInfo = null): string {
         let databasePart = appUrl.getEncodedDbPart(db);

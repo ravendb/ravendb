@@ -25,6 +25,10 @@ class manageDatabaseGroup extends viewModelBase {
     deletionInProgress = ko.observableArray<string>([]);
     isEncrypted = ko.observable<boolean>(false);
     
+    priorityOrder = ko.observableArray<string>([]);
+    
+    fixOrder = ko.observable<boolean>(false);
+    
     clearNodesList = ko.observable<boolean>(false);
     
     selectedClusterNode = ko.observable<string>();
@@ -151,7 +155,7 @@ class manageDatabaseGroup extends viewModelBase {
         eventsCollector.default.reportEvent("db-group", "save-order");
         const newOrder = this.nodes().map(x => x.tag());
         
-        new reorderNodesInDatabaseGroupCommand(this.activeDatabase().name, newOrder)
+        new reorderNodesInDatabaseGroupCommand(this.activeDatabase().name, newOrder, this.fixOrder())
             .execute()
             .done(() => {
                 this.disableNodesSort();
@@ -211,13 +215,15 @@ class manageDatabaseGroup extends viewModelBase {
         this.deletionInProgress(incomingDbInfo.deletionInProgress());
         this.isEncrypted(incomingDbInfo.isEncrypted());
         this.dynamicDatabaseDistribution(incomingDbInfo.dynamicDatabaseDistribution());
+        this.priorityOrder(incomingDbInfo.priorityOrder());
+        this.fixOrder(incomingDbInfo.priorityOrder() && incomingDbInfo.priorityOrder().length > 0);
     }
     
     private updateNodes(incomingData: databaseGroupNode[]) {
         const local = this.nodes();
         
-        const localTags = local.map(x => x.tag()).sort();
-        const remoteTags = incomingData.map(x => x.tag()).sort();
+        const localTags = local.map(x => x.tag());
+        const remoteTags = incomingData.map(x => x.tag());
         
         if (_.isEqual(localTags, remoteTags)) {
             // we have same node tags: do in place update

@@ -195,7 +195,8 @@ namespace Raven.Client.Documents.Linq
                 new HashSet<FieldToFetch>(_provider.FieldsToFetch),
                 _isMapReduce,
                 _provider.OriginalQueryType,
-                _conventions);
+                _conventions,
+                _provider.IsProjectInto);
         }
 
         public string IndexName => _indexName;
@@ -207,6 +208,8 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         public void FieldsToFetch(IEnumerable<string> fields)
         {
+            _provider.IsProjectInto = true;
+
             foreach (var field in fields)
             {
                 _provider.FieldsToFetch.Add(new FieldToFetch(field, null));

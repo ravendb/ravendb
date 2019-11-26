@@ -1375,8 +1375,6 @@ namespace Raven.Client.Http
                 var value = status.Value; // materialize
                 return;
             }
-
-            status.Value.Restart();
         }
 
         internal Task CheckNodeStatusNow(string tag)
@@ -1726,13 +1724,6 @@ namespace Raven.Client.Http
 
                 _timerPeriod += TimeSpan.FromMilliseconds(100);
                 return _timerPeriod;
-            }
-
-            public void Restart()
-            {
-                Debug.Assert(_timer != null);
-                _timerPeriod = TimeSpan.Zero;
-                _timer?.Change(NextTimerPeriod(), Timeout.InfiniteTimeSpan);
             }
 
             public void StartTimer()

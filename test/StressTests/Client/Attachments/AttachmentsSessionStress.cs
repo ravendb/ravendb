@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
-    public class AttachmentsSessionStress : NoDisposalNeeded
+    public class AttachmentsSessionStress : NoDisposalNoOutputNeeded
     {
         public AttachmentsSessionStress(ITestOutputHelper output) : base(output)
         {

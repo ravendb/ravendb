@@ -30,7 +30,9 @@ namespace Sparrow.Server
 
         public Task<bool> WaitAsync(CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled<bool>(token);
+
             // for each wait we will create a new task, since the cancellation token is unique.
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             _tcs.Task.ContinueWith((t) =>
@@ -91,7 +93,10 @@ namespace Sparrow.Server
             public async Task<bool> WaitAsync(TimeSpan timeout)
             {
                 var waitAsync = _tcs.Task;
-                _parent._token.ThrowIfCancellationRequested();
+
+                if (_parent._token.IsCancellationRequested)
+                    return false;
+
                 var result = await Task.WhenAny(waitAsync, TimeoutManager.WaitFor(timeout, _parent._token)).ConfigureAwait(false);
 
                 if (result.IsFaulted)
@@ -106,13 +111,21 @@ namespace Sparrow.Server
 
         public void SetException(Exception e)
         {
-            _token.ThrowIfCancellationRequested();
+            if (_token.IsCancellationRequested)
+            {
+                _tcs.TrySetCanceled(_token);
+                return;
+            }
             _tcs.TrySetException(e);
         }
 
         public void Set()
         {
-            _token.ThrowIfCancellationRequested();
+            if (_token.IsCancellationRequested)
+            {
+                _tcs.TrySetCanceled(_token);
+                return;
+            }
             _tcs.TrySetResult(true);
         }
 
@@ -121,7 +134,13 @@ namespace Sparrow.Server
             while (true)
             {
                 var tcs = _tcs;
-                _token.ThrowIfCancellationRequested();
+
+                if (_token.IsCancellationRequested)
+                {
+                    tcs.TrySetCanceled(_token);
+                    return;
+                }
+
                 if ((tcs.Task.IsCompleted == false && force == false) ||
 #pragma warning disable 420
                     Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously), tcs) == tcs)
@@ -135,7 +154,13 @@ namespace Sparrow.Server
             while (true)
             {
                 var tcs = _tcs;
-                _token.ThrowIfCancellationRequested();
+
+                if (_token.IsCancellationRequested)
+                {
+                    tcs.TrySetCanceled(_token);
+                    return;
+                }
+
                 var taskCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 #pragma warning disable 420
                 if (Interlocked.CompareExchange(ref _tcs, taskCompletionSource, tcs) == tcs)

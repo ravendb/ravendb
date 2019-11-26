@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Documents.Indexing.Auto;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class SlowBasicAutoMapReduceIndexing : NoDisposalNeeded
+    public class SlowBasicAutoMapReduceIndexing : NoDisposalNoOutputNeeded
     {
         public SlowBasicAutoMapReduceIndexing(ITestOutputHelper output) : base(output)
         {

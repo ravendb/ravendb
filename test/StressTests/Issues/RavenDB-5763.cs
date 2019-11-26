@@ -1,12 +1,13 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Server.Replication;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
-    public class RavenDB_5763 : NoDisposalNeeded
+    public class RavenDB_5763 : NoDisposalNoOutputNeeded
     {
         public RavenDB_5763(ITestOutputHelper output) : base(output)
         {

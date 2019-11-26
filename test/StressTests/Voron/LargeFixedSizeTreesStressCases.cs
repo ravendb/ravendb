@@ -1,12 +1,13 @@
 ﻿using FastTests;
 using SlowTests.Utils;
 using SlowTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Voron
 {
-    public class LargeFixedSizeTreesStressCases : NoDisposalNeeded
+    public class LargeFixedSizeTreesStressCases : NoDisposalNoOutputNeeded
     {
         public LargeFixedSizeTreesStressCases(ITestOutputHelper output) : base(output)
         {

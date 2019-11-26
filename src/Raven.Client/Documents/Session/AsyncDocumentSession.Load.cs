@@ -15,20 +15,23 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default)
         {
-            if (id == null)
-                return default;
-
-            var loadOperation = new LoadOperation(this);
-            loadOperation.ById(id);
-
-            var command = loadOperation.CreateRequest();
-            if (command != null)
+            using (AsyncTaskHolder())
             {
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-                loadOperation.SetResult(command.Result);
-            }
+                if (id == null)
+                    return default;
 
-            return loadOperation.GetDocument<T>();
+                var loadOperation = new LoadOperation(this);
+                loadOperation.ById(id);
+
+                var command = loadOperation.CreateRequest();
+                if (command != null)
+                {
+                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    loadOperation.SetResult(command.Result);
+                }
+
+                return loadOperation.GetDocument<T>();
+            }
         }
 
         /// <inheritdoc />
@@ -78,32 +81,35 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public async Task<Dictionary<string, T>> LoadAsyncInternal<T>(string[] ids, string[] includes, string[] counterIncludes = null, bool includeAllCounters = false, IEnumerable<TimeSeriesRange> timeSeriesIncludes = null, CancellationToken token = new CancellationToken())
         {
-            if (ids == null)
-                throw new ArgumentNullException(nameof(ids));
-
-            var loadOperation = new LoadOperation(this);
-            loadOperation.ByIds(ids);
-            loadOperation.WithIncludes(includes);
-
-            if (includeAllCounters)
+            using (AsyncTaskHolder())
             {
-                loadOperation.WithAllCounters();
-            }
-            else
-            {
-                loadOperation.WithCounters(counterIncludes);
-            }
+                if (ids == null)
+                    throw new ArgumentNullException(nameof(ids));
 
-            loadOperation.WithTimeSeries(timeSeriesIncludes);
+                var loadOperation = new LoadOperation(this);
+                loadOperation.ByIds(ids);
+                loadOperation.WithIncludes(includes);
 
-            var command = loadOperation.CreateRequest();
-            if (command != null)
-            {
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
-                loadOperation.SetResult(command.Result);
+                if (includeAllCounters)
+                {
+                    loadOperation.WithAllCounters();
+                }
+                else
+                {
+                    loadOperation.WithCounters(counterIncludes);
+                }
+                
+                loadOperation.WithTimeSeries(timeSeriesIncludes);
+
+                var command = loadOperation.CreateRequest();
+                if (command != null)
+                {
+                    await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                    loadOperation.SetResult(command.Result);
+                }
+
+                return loadOperation.GetDocuments<T>();
             }
-
-            return loadOperation.GetDocuments<T>();
         }
 
         /// <inheritdoc />
@@ -162,39 +168,45 @@ namespace Raven.Client.Documents.Session
             string startAfter = null,
             CancellationToken token = default)
         {
-            if (idPrefix == null)
-                throw new ArgumentNullException(nameof(idPrefix));
-
-            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, startAfter);
-
-            var command = operation.CreateRequest();
-            if (command != null)
+            using (AsyncTaskHolder())
             {
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                if (idPrefix == null)
+                    throw new ArgumentNullException(nameof(idPrefix));
 
-                if (stream != null)
-                    Context.Write(stream, command.Result.Results.Parent);
-                else
-                    operation.SetResult(command.Result);
+                operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, startAfter);
+
+                var command = operation.CreateRequest();
+                if (command != null)
+                {
+                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+
+                    if (stream != null)
+                        Context.Write(stream, command.Result.Results.Parent);
+                    else
+                        operation.SetResult(command.Result);
+                }
             }
         }
 
         private async Task LoadAsyncInternal(string[] ids, Stream stream, LoadOperation operation, CancellationToken token = default)
         {
-            if (ids == null)
-                throw new ArgumentNullException(nameof(ids));
-
-            operation.ByIds(ids);
-
-            var command = operation.CreateRequest();
-            if (command != null)
+            using (AsyncTaskHolder())
             {
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                if (ids == null)
+                    throw new ArgumentNullException(nameof(ids));
 
-                if (stream != null)
-                    Context.Write(stream, command.Result.Results.Parent);
-                else
-                    operation.SetResult(command.Result);
+                operation.ByIds(ids);
+
+                var command = operation.CreateRequest();
+                if (command != null)
+                {
+                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+
+                    if (stream != null)
+                        Context.Write(stream, command.Result.Results.Parent);
+                    else
+                        operation.SetResult(command.Result);
+                }
             }
         }
     }

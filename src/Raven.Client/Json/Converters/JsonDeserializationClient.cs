@@ -152,6 +152,8 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsForConflictsResult> ConfigRevisionsOnConflictOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsForConflictsResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRefreshOperationResult> ConfigureRefreshOperationResult = GenerateJsonDeserializationRoutine<ConfigureRefreshOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpdatePeriodicBackupOperationResult> ConfigurePeriodicBackupOperationResult = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupOperationResult>();

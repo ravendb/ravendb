@@ -102,6 +102,17 @@
                         <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
                     </div>
                 </div>
+                <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().outputReduceToCollection">
+                    <div class="checkbox checkbox-inline flex-start on-base-background" title="Pattern for documents referencing documents from OutputReduceToCollection documents">
+                        <input id="patternForOutputReduceToCollectionReferences" class="styled" type="checkbox" data-bind="checked: editedIndex().patternForOutput">
+                        <label for="patternForOutputReduceToCollectionReferences">
+                            Pattern For Output Reduce to Collection References
+                        </label>
+                    </div>
+                    <div data-bind="validationElement: editedIndex().patternForOutputReduceToCollectionReferences">
+                        <input type="text" class="form-control flex-grow has-error" placeholder="Enter pattern" data-bind="textInput: editedIndex().patternForOutputReduceToCollectionReferences, visible: editedIndex().patternForOutput">
+                    </div>
+                </div>
             </div>
         </div>
         

@@ -9,11 +9,6 @@ namespace Raven.Server.ServerWide.Commands
     {
         public RevisionsConfiguration Configuration { get; protected set; }
 
-        public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.Revisions = Configuration;
-        }
-
         public EditRevisionsConfigurationCommand()
         {
         }

@@ -303,6 +303,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public bool IsFull { get; set; }
 
+        internal long TaskId { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

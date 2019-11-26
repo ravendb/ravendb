@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents
             var strLength = id.Length;
 
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
-            var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id);
+            var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id, out _);
 
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id);
@@ -179,11 +179,19 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);
 
-            int maxStrSize = Encoding.GetMaxByteCount(strLength);
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str, out var escapedCount);
 
-            int idSize = JsonParserState.VariableSizeIntSize(strLength);
+            /*
+             *  add the size of all control characters
+             *  this is to treat case when we have 2+ control character in a row
+             *  GetMaxByteCount returns smaller size than the actual size with escaped control characters
+             *  For example: string with two control characters such as '\0\0' will be converted to '\u0000\u0000' (another example: '\b\b' => '\u000b\u000b')
+             *  string size = 2, GetMaxByteCount = 9, converted string size = 12, maxStrSize = 19
+             */
+            var maxStrSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * escapedCount;
+            var originalMaxStrSize = maxStrSize;
 
-            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
+            int idSize = JsonParserState.VariableSizeIntSize(maxStrSize);
 
             var scope = context.Allocator.Allocate(maxStrSize // lower key
                                        + idSize // the size of var int for the len of the key
@@ -231,11 +239,18 @@ namespace Raven.Server.Documents
 
             var writePos = ptr + maxStrSize;
 
+            Debug.Assert(strLength <= originalMaxStrSize, $"Calculated {nameof(originalMaxStrSize)} value {originalMaxStrSize}, was smaller than actually {nameof(strLength)} value {strLength}");
+
+            // in case there were no control characters the idSize could be smaller
+            var sizeDifference = idSize - JsonParserState.VariableSizeIntSize(strLength);
+            writePos += sizeDifference;
+            idSize -= sizeDifference;
+
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
             escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
             idSize = escapePositionsSize + strLength + idSize;
 
-            Slice.External(context.Allocator, ptr + maxStrSize, idSize, out idSlice);
+            Slice.External(context.Allocator, ptr + maxStrSize + sizeDifference, idSize, out idSlice);
             Slice.External(context.Allocator, ptr, strLength, out lowerIdSlice);
             return scope;
 

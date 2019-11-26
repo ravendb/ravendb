@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Revisions
             TableType = (byte)TableType.Revisions
         };
 
-        public static RevisionsConfiguration ConflictConfiguration;
+        public RevisionsConfiguration ConflictConfiguration;
 
         private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documentsStorage;
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Revisions
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
-        private readonly static TimeSpan MaxEnforceConfigurationSingleBatchTime = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan MaxEnforceConfigurationSingleBatchTime = TimeSpan.FromSeconds(30);
 
         public enum RevisionsTable
         {
@@ -185,6 +185,9 @@ namespace Raven.Server.Documents.Revisions
         {
             try
             {
+                if (dbRecord.RevisionsForConflicts != null)
+                    ConflictConfiguration.Default = dbRecord.RevisionsForConflicts;
+
                 var revisions = dbRecord.Revisions;
                 if (revisions == null ||
                     (revisions.Default == null && revisions.Collections.Count == 0))
@@ -342,6 +345,10 @@ namespace Raven.Server.Documents.Revisions
                 collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document);
             if (configuration == null)
                 configuration = GetRevisionsConfiguration(collectionName.Name);
+
+            if (configuration.Disabled && 
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
+                return false;
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
             using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))

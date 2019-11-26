@@ -987,6 +987,10 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(indexDefinition.PatternForOutputReduceToCollectionReferences));
+            writer.WriteString(indexDefinition.PatternForOutputReduceToCollectionReferences);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(indexDefinition.Configuration));
             writer.WriteStartObject();
             var isFirstInternal = true;
@@ -1083,7 +1087,11 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(progress.Collections));
-            if (progress.Collections != null)
+            if (progress.Collections == null)
+            {
+                writer.WriteNull();
+            }
+            else
             {
                 writer.WriteStartObject();
                 var isFirst = true;
@@ -1125,8 +1133,7 @@ namespace Raven.Server.Json
                 }
                 writer.WriteEndObject();
             }
-            else
-                writer.WriteNull();
+
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(progress.Name));

@@ -65,7 +65,9 @@ namespace Raven.Client.Documents.Session
         {
             using (enumerator)
             {
-                var fieldsToFetch = ((DocumentQuery<T>)query).FieldsToFetchToken;
+                var documentQuery = ((DocumentQuery<T>)query);
+                var fieldsToFetch = documentQuery.FieldsToFetchToken;
+                var isProjectInto = documentQuery.IsProjectInto;
 
                 while (enumerator.MoveNext())
                 {
@@ -73,7 +75,7 @@ namespace Raven.Client.Documents.Session
                     {
                         query.InvokeAfterStreamExecuted(json);
 
-                        yield return CreateStreamResult<T>(json, fieldsToFetch);
+                        yield return CreateStreamResult<T>(json, fieldsToFetch, isProjectInto);
                     }
                 }
             }
@@ -98,14 +100,14 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, FieldsToFetchToken fieldsToFetch)
+        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, FieldsToFetchToken fieldsToFetch, bool isProjectInto)
         {
             var metadata = json.GetMetadata();
             var changeVector = metadata.GetChangeVector();
             //MapReduce indexes return reduce results that don't have @id property
             metadata.TryGetId(out string id);
 
-            var entity = QueryOperation.Deserialize<T>(id, json, metadata, fieldsToFetch, true, this);
+            var entity = QueryOperation.Deserialize<T>(id, json, metadata, fieldsToFetch, true, this, isProjectInto);
 
             var streamResult = new StreamResult<T>
             {
@@ -130,7 +132,7 @@ namespace Raven.Client.Documents.Session
                 {
                     using (var json = result.Current)
                     {
-                        yield return CreateStreamResult<T>(json, null);
+                        yield return CreateStreamResult<T>(json, null, isProjectInto: false);
                     }
                 }
             }

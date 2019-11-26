@@ -1,9 +1,8 @@
 ﻿using System;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Indexes.Persistence
+namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class DeleteReduceOutputDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
@@ -13,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public DeleteReduceOutputDocumentsCommand(DocumentDatabase database, string documentsPrefix, int batchSize)
         {
-            if (OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.IsOutputDocumentPrefix(documentsPrefix) == false)
+            if (OutputReduceToCollectionCommand.IsOutputDocumentPrefix(documentsPrefix) == false)
                 throw new ArgumentException($"Invalid prefix to delete: {documentsPrefix}", nameof(documentsPrefix));
 
             _database = database;

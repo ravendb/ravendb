@@ -142,6 +142,59 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task CanFixTopology()
+        {
+            var clusterSize = 3;
+            var databaseName = GetDatabaseName();
+            var settings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
+            };
+            var cluster = await CreateRaftCluster(clusterSize, false, 0, customSettings: settings);
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { cluster.Leader.WebUrl },
+                Database = databaseName
+            }.Initialize())
+            {
+                var order = new List<string> {"A", "B", "C"};
+                var doc = new DatabaseRecord(databaseName)
+                {
+                    Topology = new DatabaseTopology
+                    {
+                        Members = new List<string> {"A", "B", "C"}, 
+                        ReplicationFactor = 3, 
+                        PriorityOrder = order
+                    }
+                };
+
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
+
+                var node = cluster.Nodes.Single(n => n.ServerStore.NodeTag == "A");
+                var revive = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+
+                var val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
+                Assert.Equal(1, val);
+
+                settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = revive.Url;
+
+                cluster.Nodes[0] = GetNewServer(new ServerCreationOptions
+                {
+                    CustomSettings = settings,
+                    PartialPath = revive.DataDir
+                });
+                
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3);
+                Assert.Equal(3, val);
+                val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0);
+                Assert.Equal(0, val);
+
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                Assert.Equal(order, res.Topology.Members);
+            }
+        }
 
         [Fact]
         public async Task ReshuffleAfterPromotion()
