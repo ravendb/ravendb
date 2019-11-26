@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 
 namespace Raven.Server.Documents.PeriodicBackup.Retention
 {
@@ -10,6 +13,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override string Name => "Azure";
 
+        private const string Delimiter = "/";
+
+        private string _folderContinuationToken = null;
+
         public AzureRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAzureClient client)
             : base(parameters)
         {
@@ -18,22 +25,75 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         protected override GetFoldersResult GetSortedFolders()
         {
-            throw new NotSupportedException();
+            var prefix = $"{_client.RemoteFolderName}{Delimiter}";
+            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _folderContinuationToken).Result;
+            _folderContinuationToken = result.NextMarker;
+
+            return new GetFoldersResult
+            {
+                List = result.ListBlob.Select(x => x.Name).OrderBy(x => x).ToList(),
+                HasMore = result.NextMarker != null
+            };
         }
 
         protected override string GetFolderName(string folderPath)
         {
-            throw new NotSupportedException();
+            return folderPath.Substring(0, folderPath.Length - 1);
         }
 
         protected override GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
-            throw new NotSupportedException();
+            var backupFiles = new GetBackupFolderFilesResult();
+            var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, maxResult: 2).Result;
+            backupFiles.FirstFile = blobs.ListBlob?.Select(x => x.Name).FirstOrDefault();
+
+            blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false).Result;
+
+            foreach (var blob in blobs.ListBlob)
+            {
+                if (RestorePointsBase.TryExtractDateFromFileName(blob.Name, out var lastModified) && lastModified > startDateOfRetentionRange)
+                {
+                    backupFiles.LastFile = blob.Name;
+                    break;
+                }
+            }
+
+            return backupFiles;
         }
 
         protected override void DeleteFolders(List<string> folders)
         {
-            throw new NotSupportedException();
+            const int numberOfObjectsInBatch = 256;
+            var blobsToDelete = new List<string>();
+
+            foreach (var folder in folders)
+            {
+                string blobsNextMarker = null;
+
+                do
+                {
+                    var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker).Result;
+
+                    foreach (var blob in blobs.ListBlob)
+                    {
+                        if (blobsToDelete.Count == numberOfObjectsInBatch)
+                        {
+                            _client.DeleteMultipleBlobs(blobsToDelete).Wait();
+                            blobsToDelete.Clear();
+                        }
+
+                        blobsToDelete.Add(blob.Name);
+                    }
+
+                    blobsNextMarker = blobs.NextMarker;
+
+                    CancellationToken.ThrowIfCancellationRequested();
+
+                } while (blobsNextMarker != null);
+            }
+
+            if (blobsToDelete.Count > 0)
+                _client.DeleteMultipleBlobs(blobsToDelete).Wait();
         }
     }
 }
