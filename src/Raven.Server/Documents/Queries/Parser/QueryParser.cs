@@ -1318,12 +1318,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 _timeSeriesParser = new QueryParser();
             _timeSeriesParser.Init(functionBody);
 
-            //var ts = _timeSeriesParser.ParseTimeSeries(name.Value);
-
             if (_timeSeriesParser.Scanner.TryScan('{') == false)
                 ThrowParseException($"Failed to find opening parentheses {{ for {name.Value}");
-
-            //var root = (parameters?[0] as FieldExpression)?.FieldValue;
 
             var timeSeriesFunction = _timeSeriesParser.ParseTimeSeriesBody(name.Value);
 
@@ -1345,10 +1341,10 @@ namespace Raven.Server.Documents.Queries.Parser
             _insideTimeSeriesBody = true;
 
             if (Scanner.TryScan("from") == false)
-                ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
+                ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
 
             if (Field(out var source) == false)
-                ThrowParseException($"Unable to parse timeseries query for {name}, missing FROM");
+                ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
 
             if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
             {
@@ -1365,21 +1361,22 @@ namespace Raven.Server.Documents.Queries.Parser
                 var loadExpressions = SelectClauseExpressions("LOAD", false);
 
                 if (loadExpressions.Count != 1)
-                {//todo aviv
-                    ThrowInvalidQueryException($"Failed");
-
+                {
+                    ThrowInvalidQueryException("Cannot have multiple LOAD fields in time series functions");
                 }
 
                 if (!(loadExpressions[0].Item1 is FieldExpression fe))
                 {
-                    ThrowInvalidQueryException($"Failed");
+                    ThrowInvalidQueryException($"Expected to have a filed expression after LOAD, but got expression '{loadExpressions[0]}' of type '{loadExpressions[0].Item1.Type}'");
                     return null; //never hit
 
                 }
 
                 if (fe.FieldValue != "Tag")
                 {
-                    ThrowInvalidQueryException($"Failed");
+                    ThrowInvalidQueryException($"Expected to find 'Tag' after LOAD in time series function '{name}', but got '{fe.FieldValue}'." +
+                                               "In time series functions you can only use LOAD in order to load by the 'Tag' property of a time series entry. " +
+                                               "You can use the root RQL in order to load any other documents, and can pass them as arguments to the time series function");
                 }
 
                 loadTagAs = loadExpressions[0].Item2;
@@ -1389,9 +1386,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE"))
             {
                 if (Expression(out filter) == false)
-                    ThrowInvalidQueryException($"Failed to parse filter expression after 'where' in time series function '{name}'");
-
-                //filter.ThrowIfInvalidMethodInvocationInWhere(null, Scanner.Input, collection.FieldValue);
+                    ThrowInvalidQueryException($"Failed to parse filter expression after WHERE in time series function '{name}'");
             }
 
 
@@ -1561,43 +1556,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (field.FieldValue == TimeSeries)
                     {
-                        var func = SelectTimeSeries(query?.From.Alias);
-
-                        if (query?.TryAddTimeSeriesFunction(func) == false)
-                            ThrowParseException($"{func.Name} time series function was declared multiple times");
-
-                        var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
-
-                        List<QueryExpression> args = new List<QueryExpression>();
-
-                        if (compound.Count > 1)
-                        {
-                            if (query?.From.Alias != null)
-                            {
-                                // todo aviv - is this really needed? 
-
-                                args.Add(new FieldExpression(new List<StringSegment> {query.From.Alias.Value}));
-
-                                if (query.From.Alias.Value != compound[0])
-                                {
-                                    args.Add(new FieldExpression(new List<StringSegment>
-                                    {
-                                        compound[0]
-                                    }));
-                                }
-                            }
-                            else
-                            {
-                                args.Add(new FieldExpression(new List<StringSegment>
-                                {
-                                    compound[0]
-                                }));
-                            }
-
-                            func.Parameters = args;
-                        }
-
-                        expr = new MethodExpression(func.Name, args);
+                        expr = GetTimeSeriesExpression(query);
                     }
                     else if (Scanner.TryScan('('))
                     {
@@ -1631,6 +1590,38 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             } while (true);
             return select;
+        }
+
+        private MethodExpression GetTimeSeriesExpression(Query query)
+        {
+            var func = SelectTimeSeries(query?.From.Alias);
+
+            if (query?.TryAddTimeSeriesFunction(func) == false)
+                ThrowParseException($"time series function '{func.Name}' was declared multiple times");
+
+            var compound = ((FieldExpression)func.TimeSeries.Between.Source).Compound;
+            var args = new List<QueryExpression>();
+
+            if (compound.Count > 1)
+            {
+                if (query?.From.Alias != null)
+                {
+                    args.Add(new FieldExpression(new List<StringSegment> {query.From.Alias.Value}));
+
+                    if (query.From.Alias.Value != compound[0])
+                    {
+                        args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
+                    }
+                }
+                else
+                {
+                    args.Add(new FieldExpression(new List<StringSegment> {compound[0]}));
+                }
+
+                func.Parameters = args;
+            }
+
+            return new MethodExpression(func.Name, args);
         }
 
         private bool TryParseFromClause(out FromClause fromClause, out string message)
@@ -2073,7 +2064,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Field(out var f) == false)
             {
                 if (Value(out var val) == false)
-                    ThrowParseException("parsing Between, expected value (1st)");
+                    ThrowParseException("parsing Between, expected value or field (1st)");
 
                 minExpression = val;
             }
@@ -2088,7 +2079,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Field(out f) == false)
             {
                 if (Value(out var val) == false)
-                    ThrowParseException("parsing Between, expected value (1st)");
+                    ThrowParseException("parsing Between, expected value or field (2nd)");
 
                 maxExpression = val;
             }
