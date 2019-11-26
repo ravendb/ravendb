@@ -952,7 +952,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
 
                 throw new InvalidQueryException($"Unsupported expression '{filter}' inside WHERE clause of TimeSeries function '{declaredFunction.Name}'. " +
-                                                "Supported expressions are : Binary Expressions (=, !=, <, >, <=, >=, AND, OR), IN expressions, BETWEEN expressions.");
+                                                "Supported expressions are : Binary Expressions (=, !=, <, >, <=, >=, AND, OR, NOT), IN expressions, BETWEEN expressions.");
 
                 bool CompareNumbers(LazyNumberValue lnv, object right)
                 {
@@ -1066,27 +1066,38 @@ namespace Raven.Server.Documents.Queries.Results
 
                 bool EvaluateInExpression()
                 {
-                    object src = GetValue(inExpression.Source, singleResult);
-
+                    dynamic src = GetValue(inExpression.Source, singleResult);
                     bool result = false;
                     dynamic val;
 
-                    if (inExpression.All == false)
+                    if (inExpression.All)
+                        throw new InvalidQueryException($"Invalid InExpression '{inExpression}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
+                                                        "Operator 'ALL IN' is not supported in time series functions");
+
+                    if (src is LazyNumberValue lnv)
                     {
                         for (int i = 0; i < inExpression.Values.Count; i++)
                         {
                             val = GetValue(inExpression.Values[i], singleResult);
-                            if (Equals(src, val))
+
+                            if (lnv.CompareTo(val) == 0)
                             {
                                 result = true;
                                 break;
                             }
                         }
                     }
-
                     else
                     {
-                        // todo aviv - add support for 'where x all in y' 
+                        for (int i = 0; i < inExpression.Values.Count; i++)
+                        {
+                            val = GetValue(inExpression.Values[i], singleResult);
+                            if (src == val)
+                            {
+                                result = true;
+                                break;
+                            }
+                        }
                     }
 
                     return result;
