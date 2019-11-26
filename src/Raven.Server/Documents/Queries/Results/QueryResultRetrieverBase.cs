@@ -904,11 +904,11 @@ namespace Raven.Server.Documents.Queries.Results
                     switch (be.Operator)
                     {
                         case OperatorType.And:
-                            return ShouldFilter((BinaryExpression)be.Left, singleResult) ||
-                                   ShouldFilter((BinaryExpression)be.Right, singleResult);
+                            return ShouldFilter(be.Left, singleResult) ||
+                                   ShouldFilter(be.Right, singleResult);
                         case OperatorType.Or:
-                            return ShouldFilter((BinaryExpression)be.Left, singleResult) &&
-                                   ShouldFilter((BinaryExpression)be.Right, singleResult);
+                            return ShouldFilter(be.Left, singleResult) &&
+                                   ShouldFilter(be.Right, singleResult);
                     }
 
                     var left = GetValue(be.Left, singleResult);
@@ -934,9 +934,14 @@ namespace Raven.Server.Documents.Queries.Results
                     return result == false;
                 }
 
+                if (filter is NegatedExpression ne)
+                {
+                    return ShouldFilter(ne.Expression, singleResult) == false;
+                }
+
                 if (filter is InExpression inExpression)
                 {
-                    var result = HandleInExpression();
+                    var result = EvaluateInExpression();
                     return result == false;
                 }
 
@@ -1059,7 +1064,7 @@ namespace Raven.Server.Documents.Queries.Results
                     return result;
                 }
 
-                bool HandleInExpression()
+                bool EvaluateInExpression()
                 {
                     object src = GetValue(inExpression.Source, singleResult);
 
@@ -1118,13 +1123,13 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (expression is FieldExpression fe)
                 {
-                    switch (fe.Compound[0].Value)
+                    switch (fe.Compound[0].Value.ToLower())
                     {
-                        case "Tag":
+                        case "tag":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
                             return singleResult.Tag.ToString();
-                        case "Values":
+                        case "values":
                             if (fe.Compound.Count == 1)
                                 return singleResult.Values;
 
@@ -1138,12 +1143,10 @@ namespace Raven.Server.Documents.Queries.Results
                                 return null;
 
                             return singleResult.Values.Span[index];
-
-                        case "TimeStamp":
+                        case "timestamp":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
                             return singleResult.TimeStamp;
-
                         default:
                             if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
                                 return GetValueFromLoadedTag(fe, singleResult);
