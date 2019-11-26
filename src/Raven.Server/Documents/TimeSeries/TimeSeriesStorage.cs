@@ -1111,7 +1111,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var deltaInMs = (current.TimeStamp.Ticks / 10_000) - segmentHolder.BaselineMilliseconds;
 
                 if (canAppend &&
-                    deltaInMs < int.MaxValue) // if the range is too big (over 50 days, using ms precision), we need a new segment
+                    deltaInMs < int.MaxValue) // if the range is too big (over 24.85 days, using ms precision), we need a new segment
                 {
                     // this is the simplest scenario, we can just add it.
                     if (newValueFetched == false)
