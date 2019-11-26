@@ -33,12 +33,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private readonly byte[] _accountKey;
         private readonly string _containerName;
         private readonly string _serverUrlForContainer;
-        private const string AzureStorageVersion = "2017-04-17";
+        private const string AzureStorageVersion = "2019-02-02";
         private const int MaxUploadPutBlobInBytes = 256 * 1024 * 1024; // 256MB
         private const int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
         private readonly Logger _logger;
         public static bool TestMode;
+        public string RemoteFolderName { get; }
 
         public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
             : base(progress, cancellationToken)
@@ -62,6 +63,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 throw new ArgumentException("Wrong format for Account Key", e);
             }
+
+            RemoteFolderName = azureSettings.RemoteFolderName;
 
             _containerName = azureSettings.StorageContainer;
 
@@ -497,6 +500,164 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
+        public async Task DeleteMultipleBlobs(List<string> blobs)
+        {
+            if (blobs.Count == 0)
+                return;
+
+            const string xMsDate = "x-ms-date";
+            const string xMsClientRequestId = "x-ms-client-request-id";
+            const string xMsReturnClientRequestId = "x-ms-return-client-request-id";
+
+            var now = SystemTime.UtcNow.ToString("R");
+            var url = $"{GetBaseServerUrl()}/?comp=batch";
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            {
+                Headers =
+                {
+                    { xMsDate, SystemTime.UtcNow.ToString("R") }, { "x-ms-version", AzureStorageVersion }
+                }
+            };
+
+            var batchContent = new MultipartContent("mixed", $"batch_{Guid.NewGuid()}");
+            requestMessage.Content = batchContent;
+
+            var blobsWithIds = new Dictionary<string, string>();
+            for (var i = 0; i < blobs.Count; i++)
+            {
+                using var ms = new MemoryStream();
+                using var writer = new StreamWriter(ms);
+                var clientRequestId = Guid.NewGuid().ToString();
+                blobsWithIds[clientRequestId] = blobs[i];
+
+                await writer.WriteLineAsync($"{HttpMethods.Delete} /{_containerName}/{blobs[i]} HTTP/1.1");
+                await writer.WriteLineAsync($"{xMsDate}: {now}");
+                await writer.WriteLineAsync($"{xMsClientRequestId}: {clientRequestId}");
+                await writer.WriteLineAsync($"{xMsReturnClientRequestId}: true");
+
+                using (var hash = new HMACSHA256(_accountKey))
+                {
+                    var uri = new Uri($"{GetBaseServerUrl()}/{_containerName}/{blobs[i]}", UriKind.Absolute);
+                    var hashStr = $"{HttpMethods.Delete}\n\n\n\n\n\n\n\n\n\n\n\n{xMsClientRequestId}:{clientRequestId}\n{xMsDate}:{now}\n{xMsReturnClientRequestId}:true\n/{_accountName}{uri.AbsolutePath}";
+                    await writer.WriteLineAsync($"Authorization: SharedKey {_accountName}:{Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(hashStr)))}");
+                }
+
+                await writer.WriteLineAsync("Content-Length: 0");
+                await writer.FlushAsync();
+
+                batchContent.Add(new ByteArrayContent(ms.ToArray())
+                {
+                    Headers = { { "Content-Type", "application/http" }, { "Content-Transfer-Encoding", "binary" }, { "Content-ID", $"{i}" } }
+                });
+            }
+
+            var client = GetClient();
+
+            if (batchContent.Headers.ContentLength.HasValue == false)
+            {
+                // we need the ContentLength to CalculateAuthorizationHeaderValue
+                // the ContentLength is calculated on the fly, it gets added to Headers only when we try to access it.
+                throw new ArgumentException($"{nameof(MultipartContent)} should have content length");
+            }
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, requestMessage.Headers, batchContent.Headers);
+
+            var response = client.SendAsync(requestMessage).Result;
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
+
+            using var stream = response.Content.ReadAsStreamAsync().Result;
+            using var reader = new StreamReader(stream);
+
+            const string statusCode = "StatusCode";
+            const string status = "Status";
+            var responseBoundary = $"--{response.Content.Headers.ContentType.Parameters.First().Value}";
+            var result = new Dictionary<string, Dictionary<string, string>>();
+
+            while (reader.Peek() >= 0)
+            {
+                var line = reader.ReadLine();
+
+                // read batch response
+                if (line != responseBoundary && line != $"{responseBoundary}--")
+                    throw new InvalidDataException("Got invalid response from server.");
+
+                while (string.IsNullOrEmpty(line) == false)
+                {
+                    line = reader.ReadLine();
+                }
+
+                line = reader.ReadLine();
+
+                // read sub-response block
+                if (string.IsNullOrEmpty(line))
+                    break;
+
+                string[] res = line.Split(" ");
+                var dic = new Dictionary<string, string> { { statusCode, res[1] }, { status, res[1] == "202" ? res[res.Length - 1] : string.Join(" ", res, 2, res.Length - 2) } };
+
+                line = reader.ReadLine();
+
+                while (string.IsNullOrEmpty(line) == false)
+                {
+                    var r = line.Split(": ");
+                    dic[r.First()] = r.Last();
+                    line = reader.ReadLine();
+
+                }
+                result[blobsWithIds[dic["x-ms-client-request-id"]]] = dic;
+
+                if (dic.TryGetValue("x-ms-error-code", out _))
+                {
+                    // read the error message body
+                    line = reader.ReadLine();
+                    if (line.StartsWith("<?xml"))
+                    {
+                        while (line.EndsWith("</Error>") == false)
+                        {
+                            line = reader.ReadLine();
+                        }
+                    }
+                    else
+                    {
+                        while (string.IsNullOrEmpty(line) == false)
+                        {
+                            line = reader.ReadLine();
+                        }
+                    }
+                }
+            }
+
+            var errors = result.Keys.Where(key => result[key][status] != "Accepted").ToDictionary(key => key, key => result[key][status]);
+            var canLog = _logger != null && _logger.IsInfoEnabled;
+
+            if (errors.Count == 0)
+            {
+                if (canLog)
+                    _logger.Info($"Successfully deleted {result.Count} blob{Pluralize(result.Count)} from container: {_containerName}.");
+
+                return;
+            }
+
+            var reasons = errors.Values.Distinct().ToArray();
+            var failedToDeleteReasons = reasons.Aggregate(string.Empty, (current, r) =>
+                current + $"Reason: {r} Blobs ({errors.Count(x => x.Value == r)}): {string.Join(", ", errors.Where(x => x.Value == r).Select(y => y.Key))}. ");
+
+            var message = $"Failed to delete {errors.Count} blob{Pluralize(errors.Count)} from container: {_containerName}. Successfully deleted {result.Count - errors.Count} blob{Pluralize(result.Count - errors.Count)}. {failedToDeleteReasons}";
+
+            if (canLog)
+            {
+                _logger.Info(message);
+            }
+
+            string Pluralize(int num)
+            {
+                return num == 0 || num > 1 ? "s" : string.Empty;
+            }
+
+            throw new InvalidOperationException(message);
+        }
+
         public List<string> GetContainerNames(int maxResults)
         {
             var url = GetBaseServerUrl() + $"?comp=list&maxresults={maxResults}";
@@ -539,10 +700,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return containersList;
         }
 
-        private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(
-            HttpMethod httpMethod, string url, HttpHeaders httpHeaders)
+        private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
         {
-            var stringToHash = ComputeCanonicalizedHeaders(httpMethod, httpHeaders);
+            var stringToHash = ComputeCanonicalizedHeaders(httpMethod, httpHeaders, httpContentHeaders);
             stringToHash += ComputeCanonicalizedResource(url);
 
             if (stringToHash.EndsWith("\n"))
@@ -557,19 +717,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        private static string ComputeCanonicalizedHeaders(HttpMethod httpMethod, HttpHeaders httpHeaders)
+        private static string ComputeCanonicalizedHeaders(HttpMethod httpMethod, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
         {
-            var headers = httpHeaders
-                .Where(x => x.Key.StartsWith("x-ms-"))
-                .OrderBy(x => x.Key);
-
             var contentLength = string.Empty;
-            if (httpHeaders.TryGetValues("Content-Length", out IEnumerable<string> values))
-                contentLength = values.First();
-
             var contentType = string.Empty;
-            if (httpHeaders.TryGetValues("Content-Type", out values))
-                contentType = values.First();
+
+            var headers = httpHeaders.Where(x => x.Key.StartsWith("x-ms-")).OrderBy(x => x.Key);
+
+            if (httpContentHeaders != null)
+            {
+                if (httpContentHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
+                    contentLength = lengthValues.First();
+
+                if (httpContentHeaders.TryGetValues("Content-Type", out IEnumerable<string> typeValues))
+                    contentType = typeValues.First();
+            }
+            else
+            {
+                if (httpHeaders.TryGetValues("Content-Length", out IEnumerable<string> lengthValues))
+                    contentLength = lengthValues.First();
+
+                if (httpHeaders.TryGetValues("Content-Type", out IEnumerable<string> typeValues))
+                    contentType = typeValues.First();
+            }
 
             var stringToHash = $"{httpMethod.Method}\n\n\n{contentLength}\n\n{contentType}\n\n\n\n\n\n\n";
 
