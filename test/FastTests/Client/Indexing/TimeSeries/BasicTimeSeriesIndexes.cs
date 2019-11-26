@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -99,6 +100,8 @@ namespace FastTests.Client.Indexing.TimeSeries
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("companies/1", terms);
 
+                // delete time series
+
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
@@ -122,6 +125,33 @@ namespace FastTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("7", terms);
+
+                // delete document
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
             }
         }
 

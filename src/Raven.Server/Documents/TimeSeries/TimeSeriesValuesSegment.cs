@@ -432,7 +432,7 @@ namespace Raven.Server.Documents.TimeSeries
             Name,
             BaseLine
         }
-        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out string docId, out string name, out DateTime baseLine, out LazyStringValue docIdAndName)
+        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out LazyStringValue docId, out string name, out DateTime baseLine, out LazyStringValue docIdAndName)
         {
             docId = null;
             name = null;
@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.TimeSeries
                 switch (order)
                 {
                     case ParsingOrder.Id:
-                        docId = Encoding.UTF8.GetString(bytes.Slice(0, i));
+                        docId = new LazyStringValue(null, ptr, i, context);
                         break;
 
                     case ParsingOrder.Name:
@@ -469,7 +469,7 @@ namespace Raven.Server.Documents.TimeSeries
             baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
         }
 
-        public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out string docId, out string name, out DateTime baseLine, out LazyStringValue docIdAndName)
+        public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out LazyStringValue docId, out string name, out DateTime baseLine, out LazyStringValue docIdAndName)
         {
             ParseTimeSeriesKey(key.Content.Ptr, key.Size, context, out docId, out name, out baseLine, out docIdAndName);
         }

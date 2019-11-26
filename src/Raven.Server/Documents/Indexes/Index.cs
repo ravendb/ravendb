@@ -1810,7 +1810,7 @@ namespace Raven.Server.Documents.Indexes
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        public abstract int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer,
+        public abstract int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
 
         private void HandleIndexChange(IndexChange change)
@@ -4112,6 +4112,10 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly LazyStringValue LowerId;
 
+        public readonly LazyStringValue DocumentId;
+
+        public readonly LazyStringValue LowerDocumentId;
+
         public readonly long Etag;
 
         public DateTime LastModified;
@@ -4121,6 +4125,8 @@ namespace Raven.Server.Documents.Indexes
         public readonly object Item;
 
         public readonly string IndexingKey;
+
+        public readonly IndexItemType ItemType; // TODO arek
 
         public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, string indexingKey, int size, object item)
         {
@@ -4133,10 +4139,30 @@ namespace Raven.Server.Documents.Indexes
             IndexingKey = indexingKey;
         }
 
+        public IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue documentId, LazyStringValue lowerDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item)
+        {
+            Id = id;
+            LowerId = lowerId;
+            Etag = etag;
+            LastModified = lastModified;
+            Size = size;
+            Item = item;
+            IndexingKey = indexingKey;
+            DocumentId = documentId;
+            LowerDocumentId = lowerDocumentId;
+        }
+
         public void Dispose()
         {
             if (Item is IDisposable disposable)
                 disposable.Dispose();
         }
+    }
+
+    public enum IndexItemType
+    {
+        None,
+        Document,
+        TimeSeries,
     }
 }

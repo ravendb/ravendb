@@ -105,12 +105,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             Definition.State = State;
         }
 
-        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
 
             var document = ((Document[])mapResults)[0];
-            Debug.Assert(lowerId == document.LowerId);
+            Debug.Assert(indexItem.LowerId == document.LowerId);
 
             using (_stats.BlittableJsonAggregation.Start())
             {
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     }
                 }
 
-                var resultsCount = PutMapResults(lowerId, id, _results, indexContext, stats);
+                var resultsCount = PutMapResults(indexItem.LowerId, indexItem.Id, _results, indexContext, stats);
 
                 DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
 
