@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Raven.Client.Exceptions;
 using Sparrow;
 using Raven.Server.Documents.TimeSeries;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -463,7 +461,7 @@ namespace Raven.Server.Documents.Queries.AST
                 case Type.Last:
                 case Type.Sum:
                     break;
-                case Type.Count: //todo aviv
+                case Type.Count:
                     return Count;
                 case Type.Mean:
                 case Type.Avg:
