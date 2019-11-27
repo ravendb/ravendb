@@ -208,6 +208,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Name = "💩"
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/poo", user, 0));
+                var val = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/poo"));
+                Assert.True(user.Name == val.Value.Name, "val.Value.Name = 'emojis/poo'");
 
                 var config = new PeriodicBackupConfiguration
                 {
@@ -232,6 +234,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Name = "🤡"
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/clown", user2, 0));
+                var val2 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/clown"));
+                Assert.True(user2.Name == val2.Value.Name, "val.Value.Name = 'emojis/clown'");
 
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
@@ -243,6 +247,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Name = "👺"
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/goblin", user3, 0));
+                var val3 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/goblin"));
+                Assert.True(user3.Name == val3.Value.Name, "val.Value.Name = 'emojis/goblin'");
 
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
@@ -254,6 +260,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Name = "👻"
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/ghost", user4, 0));
+                var val4 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/ghost"));
+                Assert.True(user4.Name == val4.Value.Name, "val.Value.Name = 'emojis/ghost'");
 
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
@@ -265,6 +273,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Name = "🤯"
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/exploding_head", user5, 0));
+                var val5 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/exploding_head"));
+                Assert.True(user5.Name == val5.Value.Name, "val.Value.Name = 'emojis/exploding_head'");
+
+                var emojisNum = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation()).CountOfCompareExchange;
+                Assert.True(emojisNum == 5, "CountOfCompareExchange == 5");
 
                 config.IncrementalBackupFrequency = "* */300 * * *";
                 config.TaskId = result.TaskId;
@@ -278,6 +291,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .Where(BackupUtils.IsBackupFile)
                     .OrderBackups()
                     .ToArray();
+
+                Assert.Equal(5, files.Length);
+                Assert.True(files.First().EndsWith("ravendb-full-backup"), "files.First().EndsWith('ravendb-full-backup')");
 
                 File.Delete(files.First());                            // delete full backup file     
 
@@ -304,8 +320,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }))
                     {
                         var users = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(new[] { "emojis/clown", "emojis/goblin", "emojis/ghost", "emojis/exploding_head" });
+                        foreach (var v in users.Values)
+                        {
+                            Assert.True(v.Value != null, $"compare exchange with key: {v.Key} is null.");
+                        }
+
                         var stats = store2.Maintenance.ForDatabase(databaseName).Send(new GetDetailedStatisticsOperation());
-                        Assert.Equal(4, stats.CountOfCompareExchange);
+                        Assert.True(4 == stats.CountOfCompareExchange, $"all backup files: {string.Join(", ", files)}");
 
                         Assert.Equal(user2.Name, users["emojis/clown"].Value.Name);
                         Assert.Equal(user3.Name, users["emojis/goblin"].Value.Name);

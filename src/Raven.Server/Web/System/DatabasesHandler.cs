@@ -300,6 +300,8 @@ namespace Raven.Server.Web.System
                 var statuses = ServerStore.GetNodesStatuses();
                 if (topology != null)
                 {
+                    nodesTopology.PriorityOrder = topology.PriorityOrder;
+                    
                     foreach (var member in topology.Members)
                     {
                         if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(member))

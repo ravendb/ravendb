@@ -1760,6 +1760,8 @@ namespace Raven.Server
                             TcpClient = tcpClient,
                         };
 
+                        var remoteEndPoint = tcpClient.Client.RemoteEndPoint;
+
                         try
                         {
                             var header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
@@ -1785,11 +1787,19 @@ namespace Raven.Server
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
                             SendErrorIfPossible(tcp, e);
+                            try
+                            {
+                                tcp?.Dispose();
+                            }
+                            catch
+                            {
+                                // nothing we can do
+                            }
                         }
                         finally
                         {
                             if (tcpAuditLog != null)
-                                tcpAuditLog.Info($"Closed TCP connection {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+                                tcpAuditLog.Info($"Closed TCP connection {remoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
 
                         }
                     }

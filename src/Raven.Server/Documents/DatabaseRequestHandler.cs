@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Util;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
@@ -9,7 +10,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;

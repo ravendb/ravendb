@@ -1,12 +1,13 @@
 ﻿using FastTests;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Trees;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Voron.Trees
 {
-    public class FreeSpaceStressTests : NoDisposalNeeded
+    public class FreeSpaceStressTests : NoDisposalNoOutputNeeded
     {
         public FreeSpaceStressTests(ITestOutputHelper output) : base(output)
         {

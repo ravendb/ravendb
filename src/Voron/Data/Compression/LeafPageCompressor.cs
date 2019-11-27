@@ -13,6 +13,35 @@ namespace Voron.Data.Compression
     {
         public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
         {
+            var returnTempPage = tx.Environment.GetTemporaryPage(tx, out TemporaryPage temp);
+
+            var tempPage = temp.GetTempPage();
+
+            if (page.NumberOfEntries == 0)
+            {
+                Memory.Copy(tempPage.Base, page.Base, Constants.Tree.PageHeaderSize);
+                tempPage.Lower = Constants.Tree.PageHeaderSize;
+                tempPage.Upper = (ushort)tempPage.PageSize;
+
+                Debug.Assert(tempPage.Lower <= tempPage.Upper);
+
+                result = new CompressionResult
+                {
+                    CompressedPage = tempPage,
+                    CompressionOutputPtr = null,
+                    Header = new CompressedNodesHeader
+                    {
+                        SectionSize = 0,
+                        CompressedSize = 0,
+                        UncompressedSize = 0,
+                        NumberOfCompressedEntries = 0,
+                    },
+                    InvalidateFromCache = true
+                };
+
+                return returnTempPage;
+            }
+
             if (defrag)
             {
                 if (page.CalcSizeUsed() != page.SizeUsed - Constants.Tree.PageHeaderSize) // check if the page really requires defrag
@@ -20,11 +49,6 @@ namespace Voron.Data.Compression
             }
 
             var valuesSize = page.PageSize - page.Upper;
-
-            TemporaryPage temp;
-            var returnTempPage = tx.Environment.GetTemporaryPage(tx, out temp);
-
-            var tempPage = temp.GetTempPage();
 
             var compressionInput = page.Base + page.Upper;
             var compressionResult = tempPage.Base + Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
@@ -104,20 +128,42 @@ namespace Voron.Data.Compression
             // let us copy the compressed values at the end of the page
             // so we will handle additional, uncompressed values as usual
 
-            var writePtr = dest.Base + dest.PageSize - Constants.Compression.HeaderSize;
+            if (compressed.CompressionOutputPtr != null)
+            {
+                Debug.Assert(compressed.Header.CompressedSize > 0, "compressed.Header.CompressedSize > 0, value: " + compressed.Header.CompressedSize);
 
-            var header = (CompressedNodesHeader*)writePtr;
-            *header = compressed.Header;
+                var writePtr = dest.Base + dest.PageSize - Constants.Compression.HeaderSize;
 
-            writePtr -= header->SectionSize;
+                var header = (CompressedNodesHeader*)writePtr;
+                *header = compressed.Header;
 
-            Memory.Copy(writePtr, compressed.CompressionOutputPtr, compressed.Header.CompressedSize + header->NumberOfCompressedEntries * Constants.Tree.NodeOffsetSize);
+                writePtr -= header->SectionSize;
 
-            dest.Flags |= PageFlags.Compressed;
-            dest.Lower = (ushort)Constants.Tree.PageHeaderSize;
-            dest.Upper = (ushort)(writePtr - dest.Base);
+                Memory.Copy(writePtr, compressed.CompressionOutputPtr,
+                    compressed.Header.CompressedSize + header->NumberOfCompressedEntries * Constants.Tree.NodeOffsetSize);
 
-            Debug.Assert((dest.Upper & 1) == 0);
+                dest.Flags |= PageFlags.Compressed;
+                dest.Lower = (ushort)Constants.Tree.PageHeaderSize;
+                dest.Upper = (ushort)(writePtr - dest.Base);
+
+                Debug.Assert((dest.Upper & 1) == 0);
+            }
+            else
+            {
+                Debug.Assert(compressed.Header.CompressedSize == 0, "compressed.Header.CompressedSize == 0, value: " + compressed.Header.CompressedSize);
+
+                if (compressed.CompressedPage.NumberOfEntries != 0) 
+                    ThrowNullCompressionOutputButNonEmptyPage(compressed.CompressedPage);
+
+                dest.Lower = (ushort)Constants.Tree.PageHeaderSize;
+                dest.Upper = (ushort)dest.PageSize;
+                dest.Flags &= ~PageFlags.Compressed;
+            }
+        }
+
+        private static void ThrowNullCompressionOutputButNonEmptyPage(TreePage page)
+        {
+            throw new InvalidOperationException($"{nameof(CompressionResult.CompressionOutputPtr)} was null but the page was not empty: {page}. Should never happen");
         }
     }
 }

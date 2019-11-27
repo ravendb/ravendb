@@ -50,6 +50,49 @@ namespace Raven.Server.Documents.Indexes.Static
             return new RecursiveFunction(item, func).Execute();
         }
 
+        public dynamic LoadDocument<TIGnored>(object keyOrEnumerable, string collectionName)
+        {
+            return LoadDocument(keyOrEnumerable, collectionName);
+        }
+
+        public dynamic LoadDocument(object keyOrEnumerable, string collectionName)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException(
+                    "Indexing scope was not initialized. Key: " + keyOrEnumerable);
+
+            if (keyOrEnumerable is LazyStringValue keyLazy)
+                return CurrentIndexingScope.Current.LoadDocument(keyLazy, null, collectionName);
+
+            if (keyOrEnumerable is string keyString)
+                return CurrentIndexingScope.Current.LoadDocument(null, keyString, collectionName);
+
+            if (keyOrEnumerable is DynamicNullObject ||
+                keyOrEnumerable == null)
+                return DynamicNullObject.Null;
+
+            if (keyOrEnumerable is IEnumerable enumerable)
+            {
+                var enumerator = enumerable.GetEnumerator();
+                using (enumerable as IDisposable)
+                {
+                    var items = new List<dynamic>();
+                    while (enumerator.MoveNext())
+                    {
+                        items.Add(LoadDocument(enumerator.Current, collectionName));
+                    }
+                    if (items.Count == 0)
+                        return DynamicNullObject.Null;
+
+                    return new DynamicArray(items);
+                }
+            }
+
+            throw new InvalidOperationException(
+                "LoadDocument may only be called with a string or an enumerable, but was called with a parameter of type " +
+                keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
+        }
+
         protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField

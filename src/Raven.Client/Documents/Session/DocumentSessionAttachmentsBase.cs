@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
             if (entity is string)
                 throw new ArgumentException($"{nameof(GetNames)} requires a tracked entity object, other types such as documentId are not valid.", nameof(entity));
             
-            if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
+            if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSession(entity);
 
             if (document.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Session
                 ThrowOtherDeferredCommandException(documentId, name, "store", "rename");
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                DeletedEntities.Contains(documentInfo.Entity))
+                Session.DeletedEntities.Contains(documentInfo.Entity))
                 ThrowDocumentAlreadyDeleted(documentId, name, "store", null, documentId);
 
             Defer(new PutAttachmentCommandData(documentId, name, stream, contentType, null));
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Session
 
         public void Store(object entity, string name, Stream stream, string contentType = null)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
+            if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSessionOrMissingId(entity);
 
             Store(document.Id, name, stream, contentType);
@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Session
 
         public void Delete(object entity, string name)
         {
-            if (DocumentsByEntity.TryGetValue(entity, out var document) == false)
+            if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
                 ThrowEntityNotInSessionOrMissingId(entity);
 
             Delete(document.Id, name);
@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Session
                 return; // no-op
 
             if (DocumentsById.TryGetValue(documentId, out DocumentInfo documentInfo) &&
-                DeletedEntities.Contains(documentInfo.Entity))
+                Session.DeletedEntities.Contains(documentInfo.Entity))
                 return; // no-op
 
             if (DeferredCommandsDictionary.ContainsKey((documentId, CommandType.AttachmentPUT, name)))
@@ -139,10 +139,10 @@ namespace Raven.Client.Documents.Session
             if (destinationEntity == null)
                 throw new ArgumentNullException(nameof(destinationEntity));
 
-            if (DocumentsByEntity.TryGetValue(sourceEntity, out DocumentInfo sourceDocument) == false)
+            if (Session.DocumentsByEntity.TryGetValue(sourceEntity, out DocumentInfo sourceDocument) == false)
                 ThrowEntityNotInSessionOrMissingId(sourceEntity);
 
-            if (DocumentsByEntity.TryGetValue(destinationEntity, out DocumentInfo destinationDocument) == false)
+            if (Session.DocumentsByEntity.TryGetValue(destinationEntity, out DocumentInfo destinationDocument) == false)
                 ThrowEntityNotInSessionOrMissingId(destinationEntity);
 
             Move(sourceDocument.Id, sourceName, destinationDocument.Id, destinationName);
@@ -162,10 +162,10 @@ namespace Raven.Client.Documents.Session
             if (string.Equals(sourceDocumentId, destinationDocumentId, StringComparison.OrdinalIgnoreCase) && sourceName == destinationName)
                 return; // no-op
 
-            if (DocumentsById.TryGetValue(sourceDocumentId, out DocumentInfo sourceDocument) && DeletedEntities.Contains(sourceDocument.Entity))
+            if (DocumentsById.TryGetValue(sourceDocumentId, out DocumentInfo sourceDocument) && Session.DeletedEntities.Contains(sourceDocument.Entity))
                 ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "move", destinationDocumentId, sourceDocumentId);
 
-            if (DocumentsById.TryGetValue(destinationDocumentId, out DocumentInfo destinationDocument) && DeletedEntities.Contains(destinationDocument.Entity))
+            if (DocumentsById.TryGetValue(destinationDocumentId, out DocumentInfo destinationDocument) && Session.DeletedEntities.Contains(destinationDocument.Entity))
                 ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "move", destinationDocumentId, destinationDocumentId);
 
             if (DeferredCommandsDictionary.ContainsKey((sourceDocumentId, CommandType.AttachmentDELETE, sourceName)))
@@ -190,10 +190,10 @@ namespace Raven.Client.Documents.Session
             if (destinationEntity == null)
                 throw new ArgumentNullException(nameof(destinationEntity));
 
-            if (DocumentsByEntity.TryGetValue(sourceEntity, out DocumentInfo sourceDocument) == false)
+            if (Session.DocumentsByEntity.TryGetValue(sourceEntity, out DocumentInfo sourceDocument) == false)
                 ThrowEntityNotInSessionOrMissingId(sourceEntity);
 
-            if (DocumentsByEntity.TryGetValue(destinationEntity, out DocumentInfo destinationDocument) == false)
+            if (Session.DocumentsByEntity.TryGetValue(destinationEntity, out DocumentInfo destinationDocument) == false)
                 ThrowEntityNotInSessionOrMissingId(destinationEntity);
 
             Copy(sourceDocument.Id, sourceName, destinationDocument.Id, destinationName);
@@ -214,10 +214,10 @@ namespace Raven.Client.Documents.Session
                 && string.Equals(sourceName, destinationName))
                 return; // no-op
 
-            if (DocumentsById.TryGetValue(sourceDocumentId, out DocumentInfo sourceDocument) && DeletedEntities.Contains(sourceDocument.Entity))
+            if (DocumentsById.TryGetValue(sourceDocumentId, out DocumentInfo sourceDocument) && Session.DeletedEntities.Contains(sourceDocument.Entity))
                 ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "copy", destinationDocumentId, sourceDocumentId);
 
-            if (DocumentsById.TryGetValue(destinationDocumentId, out DocumentInfo destinationDocument) && DeletedEntities.Contains(destinationDocument.Entity))
+            if (DocumentsById.TryGetValue(destinationDocumentId, out DocumentInfo destinationDocument) && Session.DeletedEntities.Contains(destinationDocument.Entity))
                 ThrowDocumentAlreadyDeleted(sourceDocumentId, sourceName, "copy", destinationDocumentId, destinationDocumentId);
 
             if (DeferredCommandsDictionary.ContainsKey((sourceDocumentId, CommandType.AttachmentDELETE, sourceName)))

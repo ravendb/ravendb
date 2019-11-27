@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
-using FastTests;
 using SlowTests.Server.Documents.Indexing.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
-    public class CollisionsOfReduceKeyHashes_StressTests : NoDisposalNeeded
+    public class CollisionsOfReduceKeyHashes_StressTests : NoDisposalNoOutputNeeded
     {
         public CollisionsOfReduceKeyHashes_StressTests(ITestOutputHelper output) : base(output)
         {

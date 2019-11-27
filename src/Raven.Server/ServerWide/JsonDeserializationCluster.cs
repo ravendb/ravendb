@@ -73,6 +73,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, RevisionsCollectionConfiguration> RevisionsCollectionConfiguration = GenerateJsonDeserializationRoutine<RevisionsCollectionConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, PullReplicationAsSink> PullReplicationAsSink = GenerateJsonDeserializationRoutine<PullReplicationAsSink>();
 
         public static readonly Func<BlittableJsonReaderObject, ExternalReplication> ExternalReplication = GenerateJsonDeserializationRoutine<ExternalReplication>();
@@ -123,6 +125,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddOrUpdateCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand>(),
             [nameof(RemoveCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<RemoveCompareExchangeCommand>(),
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
+            [nameof(EditRevisionsForConflictsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsForConflictsConfigurationCommand>(),
             [nameof(EditDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditDatabaseClientConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
             [nameof(EditRefreshCommand)] = GenerateJsonDeserializationRoutine<EditRefreshCommand>(),

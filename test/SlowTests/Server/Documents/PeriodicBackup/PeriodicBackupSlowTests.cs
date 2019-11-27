@@ -851,8 +851,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Database name can't be null or empty", e.InnerException.Message);
+                Assert.Contains("Name cannot be null or empty.", e.InnerException.Message);
 
+                restoreConfiguration.DatabaseName = "abc*^&.";
+                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
+                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
+                Assert.Contains("The name 'abc*^&.' is not permitted. Only letters, digits and characters ('_', '-', '.') are allowed.", e.InnerException.Message);
+                
                 restoreConfiguration.DatabaseName = store.Database;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
@@ -900,9 +905,23 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("New data directory must be empty of any files or folders", e.InnerException.Message);
 
-                var emptyFolder = NewDataPath(suffix: "BackupFolderRestore");
-                restoreConfiguration.BackupLocation = backupPath;
-                restoreConfiguration.DataDirectory = emptyFolder;
+                // perform restore with a valid db name
+                var emptyFolder = NewDataPath(suffix: "BackupFolderRestore123");
+                var validDbName = "日本語-שלום-cześć_Привет.123";
+                
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
+                    DataDirectory = emptyFolder, 
+                    DatabaseName = validDbName
+                }))
+                {
+                    using (var session = store.OpenAsyncSession(validDbName))
+                    {
+                        var user = await session.LoadAsync<User>("users/1");
+                        Assert.NotNull(user);
+                    }
+                };
             }
         }
 

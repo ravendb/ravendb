@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
-    public class Retention : NoDisposalNeeded
+    public class Retention : NoDisposalNoOutputNeeded
     {
         public Retention(ITestOutputHelper output) : base(output)
         {

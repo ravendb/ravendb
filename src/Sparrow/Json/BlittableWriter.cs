@@ -451,7 +451,7 @@ namespace Sparrow.Json
             if (_intBuffer == null)
                 _intBuffer = new FastList<int>();
 
-            var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(str);
+            var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(str, out _);
             int size = Encodings.Utf8.GetMaxByteCount(str.Length) + escapePositionsMaxSize;
 
             AllocatedMemoryData buffer = null;

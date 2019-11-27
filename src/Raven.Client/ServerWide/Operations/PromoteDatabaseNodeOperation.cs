@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public PromoteDatabaseNodeOperation(string databaseName, string node)
         {
-            Helpers.AssertValidDatabaseName(databaseName);
+            ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _databaseName = databaseName;
             _node = node;
         }

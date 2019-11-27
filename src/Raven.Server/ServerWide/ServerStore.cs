@@ -189,6 +189,8 @@ namespace Raven.Server.ServerWide
 
         public TransactionContextPool ContextPool;
 
+        public IoChangesNotifications IoChanges { get; private set; }
+
         public long LastRaftCommitIndex
         {
             get
@@ -512,6 +514,8 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
             var storeAlertForLateRaise = new List<AlertRaised>();
 
+            IoChanges = new IoChangesNotifications();
+
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)
             {
@@ -519,7 +523,7 @@ namespace Raven.Server.ServerWide
             }
             else
             {
-                options = StorageEnvironmentOptions.ForPath(path.FullPath);
+                options = StorageEnvironmentOptions.ForPath(path.FullPath, null, null, IoChanges, null);
                 var secretKey = Path.Combine(path.FullPath, "secret.key.encrypted");
                 if (File.Exists(secretKey))
                 {
@@ -1817,6 +1821,12 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editRevisions);
         }
 
+        public Task<(long, object)> ModifyRevisionsForConflicts(JsonOperationContext context, string name, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var editRevisions = new EditRevisionsForConflictsConfigurationCommand(JsonDeserializationCluster.RevisionsCollectionConfiguration(configurationJson), name, raftRequestId);
+            return SendToLeaderAsync(editRevisions);
+        }
+
         public async Task<(long, object)> PutConnectionString(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject connectionString, string raftRequestId)
         {
             if (connectionString.TryGet(nameof(ConnectionString.Type), out string type) == false)
@@ -2851,11 +2861,11 @@ namespace Raven.Server.ServerWide
             if (diskSpaceResult == null)
                 yield break;
 
-            var sizeOnDisk = environment.Environment.GenerateSizeReport();
-            var usage = new Raven.Client.ServerWide.Operations.MountPointUsage
+            var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers);
+            var usage = new Client.ServerWide.Operations.MountPointUsage
             {
                 UsedSpace = sizeOnDisk.DataFileInBytes,
-                DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                 {
                     DriveName = diskSpaceResult.DriveName,
                     VolumeLabel = diskSpaceResult.VolumeLabel,
@@ -2877,7 +2887,7 @@ namespace Raven.Server.ServerWide
                 {
                     yield return new Client.ServerWide.Operations.MountPointUsage
                     {
-                        DiskSpaceResult = new Raven.Client.ServerWide.Operations.DiskSpaceResult()
+                        DiskSpaceResult = new Client.ServerWide.Operations.DiskSpaceResult
                         {
                             DriveName = journalPathUsage.DriveName,
                             VolumeLabel = journalPathUsage.VolumeLabel,

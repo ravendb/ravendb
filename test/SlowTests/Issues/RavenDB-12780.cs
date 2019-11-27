@@ -56,6 +56,7 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store);
+                WaitForUserToContinueTheTest((store));
 
                 var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "MetadataIndex" }));
                 Assert.Empty(stats[0].Errors);

@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace StressTests.Server.Replication
 {
-    public class ExternalReplicationStressTests_NoDispose : NoDisposalNeeded
+    public class ExternalReplicationStressTests_NoDispose : NoDisposalNoOutputNeeded
     {
         public ExternalReplicationStressTests_NoDispose(ITestOutputHelper output) : base(output)
         {

@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Session
         protected bool IsIntersect;
 
         protected bool IsGroupBy;
+
         /// <summary>
         /// The session for this query
         /// </summary>
@@ -85,6 +86,8 @@ namespace Raven.Client.Documents.Session
         protected readonly List<LoadToken> LoadTokens;
 
         protected internal FieldsToFetchToken FieldsToFetchToken;
+
+        protected internal readonly bool IsProjectInto;
 
         protected LinkedList<QueryToken> WhereTokens = new LinkedList<QueryToken>();
 
@@ -169,7 +172,8 @@ namespace Raven.Client.Documents.Session
                                      bool isGroupBy,
                                      DeclareToken declareToken,
                                      List<LoadToken> loadTokens,
-                                     string fromAlias = null)
+                                     string fromAlias = null,
+                                     bool? isProjectInto = false)
         {
             IsGroupBy = isGroupBy;
             IndexName = indexName;
@@ -186,6 +190,8 @@ namespace Raven.Client.Documents.Session
 
             _conventions = session == null ? new DocumentConventions() : session.Conventions;
             _linqPathProvider = new LinqPathProvider(_conventions);
+
+            IsProjectInto = isProjectInto ?? false;
         }
 
         #region TSelf Members
@@ -226,7 +232,8 @@ namespace Raven.Client.Documents.Session
                 IndexName,
                 indexQuery,
                 FieldsToFetchToken,
-                DisableEntitiesTracking);
+                DisableEntitiesTracking,
+                isProjectInto: IsProjectInto);
         }
 
         public IndexQuery GetIndexQuery()

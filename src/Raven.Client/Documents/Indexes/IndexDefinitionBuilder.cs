@@ -109,6 +109,11 @@ namespace Raven.Client.Documents.Indexes
         public string OutputReduceToCollection { get; set; }
 
         /// <summary>
+        /// Defines pattern for identifiers of documents which reference IDs of reduce outputs documents
+        /// </summary>
+        public Expression<Func<TReduceResult, string>> PatternForOutputReduceToCollectionReferences{ get; set; }
+
+        /// <summary>
         /// Add additional sources to be compiled with the index on the server.
         /// </summary>
         public Dictionary<string, string> AdditionalSources { get; set; }
@@ -162,6 +167,9 @@ namespace Raven.Client.Documents.Indexes
                     OutputReduceToCollection = OutputReduceToCollection
                 };
 
+                if (PatternForOutputReduceToCollectionReferences!= null)
+                    indexDefinition.PatternForOutputReduceToCollectionReferences = ConvertPatternForOutputReduceToCollectionReferencesToString(PatternForOutputReduceToCollectionReferences);
+
                 var indexes = ConvertToStringDictionary(Indexes);
                 var stores = ConvertToStringDictionary(Stores);
                 var analyzers = ConvertToStringDictionary(Analyzers);
@@ -204,8 +212,6 @@ namespace Raven.Client.Documents.Indexes
                     spatialOptions.Add(spatialString);
                 }
 
-
-
                 ApplyValues(indexDefinition, indexes, (options, value) => options.Indexing = value);
                 ApplyValues(indexDefinition, stores, (options, value) => options.Storage = value);
                 ApplyValues(indexDefinition, analyzers, (options, value) => options.Analyzer = value);
@@ -233,6 +239,98 @@ namespace Raven.Client.Documents.Indexes
             {
                 throw new IndexCompilationException("Failed to create index " + _indexName, e);
             }
+        }
+
+        private string ConvertPatternForOutputReduceToCollectionReferencesToString(Expression<Func<TReduceResult, string>> reduceOutputReferencesPattern)
+        {
+            if (reduceOutputReferencesPattern.Body is MethodCallExpression methodCall)
+            {
+                // x => $"reports/daily/{x.OrderedAt:yyyy-MM-dd}";
+                // x => string.Format("reports/daily/{0:MM/dd/yyyy}", x.OrderedAt);
+
+                if (methodCall.Arguments.Count < 1)
+                    throw new InvalidOperationException(
+                        $"{nameof(MethodCallExpression)} of {nameof(PatternForOutputReduceToCollectionReferences)} expression must have at least 1 argument");
+
+                if (!(methodCall.Arguments[0] is ConstantExpression stringConstant))
+                    throw new InvalidOperationException($"First argument of {nameof(MethodCallExpression)} of {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(ConstantExpression)}");
+
+
+                string pattern = stringConstant.Value.ToString();
+
+                for (int i = 1; i < methodCall.Arguments.Count; i++)
+                {
+                    var expression = methodCall.Arguments[i];
+
+                    if (expression is UnaryExpression unaryExpression)
+                    {
+                        if (!(unaryExpression.Operand is MemberExpression memberExpression))
+                            throw new InvalidOperationException($"Properties provided in {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MemberAccessException)}");
+
+                        pattern = pattern.Replace((i - 1).ToString(), memberExpression.Member.Name);
+                    }
+                    else if (expression is MemberExpression member)
+                    {
+                        pattern = pattern.Replace((i - 1).ToString(), member.Member.Name);
+                    }
+                    else
+                    {
+                        throw new NotSupportedException($"Unsupported expression in {nameof(PatternForOutputReduceToCollectionReferences)}: '{expression}'");
+                    }
+                }
+
+                return pattern;
+            }
+            
+            if (reduceOutputReferencesPattern.Body is BinaryExpression binaryExpression)
+            {
+                // x => "reports/daily/" + x.OrderedAt;
+
+                string pattern = PatternFromBinary(binaryExpression.Left, binaryExpression.Right);
+
+                string PatternFromBinary(Expression left, Expression right)
+                {
+                    var result = string.Empty;
+
+                    result += PatternFromExpression(left);
+                    result += PatternFromExpression(right);
+                    
+                    return result;
+                }
+
+                string PatternFromExpression(Expression expr)
+                {
+                    if (expr is ConstantExpression constantExpression)
+                    {
+                        return constantExpression.Value.ToString();
+                    }
+                    
+                    if (expr is BinaryExpression binaryExpr)
+                    {
+                        return PatternFromBinary(binaryExpr.Left, binaryExpr.Right);
+                    }
+
+                    if (expr is UnaryExpression unaryExpression)
+                    {
+                        if (!(unaryExpression.Operand is MemberExpression memberExpression))
+                            throw new InvalidOperationException($"Properties provided in {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MemberAccessException)}");
+
+                        return $"{{{memberExpression.Member.Name}}}";
+                    }
+
+                    if (expr is MemberExpression memeExpr)
+                    {
+                        return $"{{{memeExpr.Member.Name}}}";
+                    }
+
+                    throw new NotSupportedException($"Unsupported expression in {nameof(PatternForOutputReduceToCollectionReferences)}: '{expr}'");
+                }
+
+                return pattern;
+            }
+
+            throw new InvalidOperationException($"Body of {nameof(PatternForOutputReduceToCollectionReferences)} expression must be {nameof(MethodCallExpression)}");
+
         }
 
         private void ApplyValues<TValue>(IndexDefinition indexDefinition, IDictionary<string, TValue> values, Action<IndexFieldOptions, TValue> action)

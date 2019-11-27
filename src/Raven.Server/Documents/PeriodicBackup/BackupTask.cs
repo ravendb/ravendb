@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly ServerStore _serverStore;
         private readonly DocumentDatabase _database;
-        private readonly DateTime _startTime;
         private readonly PeriodicBackup _periodicBackup;
         private readonly PeriodicBackupConfiguration _configuration;
         private readonly PeriodicBackupStatus _previousBackupStatus;
@@ -70,7 +69,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _serverStore = serverStore;
             _database = database;
-            _startTime = periodicBackup.StartTime;
             _periodicBackup = periodicBackup;
             _configuration = periodicBackup.Configuration;
             _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
@@ -158,7 +156,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             _logger.Info(message);
 
                         UpdateOperationId(runningBackupStatus);
-                        runningBackupStatus.LastIncrementalBackup = _startTime;
+                        runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTimeInUtc;
                         DatabaseSmuggler.EnsureProcessed(_backupResult);
                         AddInfo(message);
 
@@ -196,7 +194,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // if user did not specify local folder we delete the temporary file
                     if (_backupToLocalFolder == false)
                     {
-                        IOExtensions.DeleteFile(backupFilePath);
+                        DeleteFile(backupFilePath);
                     }
                 }
 
@@ -206,9 +204,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 runningBackupStatus.FolderName = folderName;
 
                 if (_isFullBackup)
-                    runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
+                    runningBackupStatus.LastFullBackup = _periodicBackup.StartTimeInUtc;
                 else
-                    runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTime;
+                    runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTimeInUtc;
 
                 totalSw.Stop();
 
@@ -264,9 +262,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // we need to update the last backup time to avoid
                     // starting a new backup right after this one
                     if (_isFullBackup)
-                        runningBackupStatus.LastFullBackupInternal = _startTime;
+                        runningBackupStatus.LastFullBackupInternal = _periodicBackup.StartTimeInUtc;
                     else
-                        runningBackupStatus.LastIncrementalBackupInternal = _startTime;
+                        runningBackupStatus.LastIncrementalBackupInternal = _periodicBackup.StartTimeInUtc;
 
                     runningBackupStatus.NodeTag = _serverStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
@@ -540,17 +538,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             public long LastRaftIndex { get; set; }
         }
 
-        private InternalBackupResult CreateLocalBackupOrSnapshot(
-            PeriodicBackupStatus status, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
+        private InternalBackupResult CreateLocalBackupOrSnapshot(PeriodicBackupStatus status, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
         {
             var internalBackupResult = new InternalBackupResult();
 
             using (status.LocalBackup.UpdateStats(_isFullBackup))
             {
+                // will rename the file after the backup is finished
+                var tempBackupFilePath = backupFilePath + InProgressExtension;
+
                 try
                 {
-                    // will rename the file after the backup is finished
-                    var tempBackupFilePath = backupFilePath + InProgressExtension;
+                    
 
                     BackupTypeValidation();
 
@@ -598,6 +597,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // snapshot backup
                         AddInfo("Started a snapshot backup");
 
+                        ValidateFreeSpaceForSnapshot(tempBackupFilePath);
+
                         internalBackupResult.LastDocumentEtag = _database.ReadLastEtag();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
                         var databaseSummary = _database.GetDatabaseSummary();
@@ -631,6 +632,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 catch (Exception e)
                 {
                     status.LocalBackup.Exception = e.ToString();
+
+                    // deleting the temp backup file if the backup failed
+                    DeleteFile(tempBackupFilePath);
                     throw;
                 }
             }
@@ -642,6 +646,32 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return internalBackupResult;
+        }
+
+        private void DeleteFile(string path)
+        {
+            try
+            {
+                IOExtensions.DeleteFile(path);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete file: {path}", e);
+            }
+        }
+
+        private void ValidateFreeSpaceForSnapshot(string filePath)
+        {
+            long totalUsedSpace = 0;
+            foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
+            {
+                totalUsedSpace += mountPointUsage.UsedSpace;
+            }
+
+            var directoryPath = Path.GetDirectoryName(filePath);
+
+            BackupHelper.AssertFreeSpaceForSnapshot(directoryPath, totalUsedSpace, "create a snapshot", _logger);
         }
 
         private void BackupTypeValidation()

@@ -44,6 +44,8 @@ namespace Raven.Client.Documents.Session
         [ThreadStatic]
         private static int _clientSessionIdCounter;
 
+        internal long _asyncTasksCounter;
+
         protected readonly int _clientSessionId = ++_clientSessionIdCounter;
 
         protected readonly RequestExecutor _requestExecutor;
@@ -69,11 +71,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public Guid Id { get; }
 
-        /// <summary>
-        /// The entities waiting to be deleted
-        /// </summary>
-        protected internal readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
-
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
@@ -95,23 +92,26 @@ namespace Raven.Client.Documents.Session
 
         public async Task<ServerNode> GetCurrentSessionNode()
         {
-            (int Index, ServerNode Node) result;
-            switch (RequestExecutor.Conventions.ReadBalanceBehavior)
+            using (AsyncTaskHolder())
             {
-                case ReadBalanceBehavior.None:
-                    result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
-                    break;
-                case ReadBalanceBehavior.RoundRobin:
-                    result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
-                    break;
-                case ReadBalanceBehavior.FastestNode:
-                    result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(RequestExecutor.Conventions.ReadBalanceBehavior.ToString());
-            }
+                (int Index, ServerNode Node) result;
+                switch (RequestExecutor.Conventions.ReadBalanceBehavior)
+                {
+                    case ReadBalanceBehavior.None:
+                        result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
+                        break;
+                    case ReadBalanceBehavior.RoundRobin:
+                        result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
+                        break;
+                    case ReadBalanceBehavior.FastestNode:
+                        result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(RequestExecutor.Conventions.ReadBalanceBehavior.ToString());
+                }
 
-            return result.Node;
+                return result.Node;
+            }
         }
 
         /// <summary>
@@ -127,8 +127,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
-        protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity =
-            new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
+        internal readonly DocumentsByEntityHolder DocumentsByEntity = new DocumentsByEntityHolder();
+
+        /// <summary>
+        /// The entities waiting to be deleted
+        /// </summary>
+        internal readonly DeletedEntitiesHolder DeletedEntities = new DeletedEntitiesHolder();
 
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
@@ -696,7 +700,7 @@ more responsive application.
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + id);
 
             if (DeletedEntities.Contains(entity))
-                throw new InvalidOperationException("Can't store object, it was already deleted in this session.  Document id: " + id);
+                throw new InvalidOperationException("Can't store object, it was already deleted in this session. Document id: " + id);
 
             // we make the check here even if we just generated the ID
             // users can override the ID generation behavior, and we need
@@ -714,6 +718,7 @@ more responsive application.
 
             if (id != null)
                 _knownMissingIds.Remove(id);
+
             StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
         }
 
@@ -737,15 +742,24 @@ more responsive application.
         private async Task StoreAsyncInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck,
             CancellationToken token = default(CancellationToken))
         {
-            if (null == entity)
-                throw new ArgumentNullException(nameof(entity));
-
-            if (id == null)
+            using (AsyncTaskHolder())
             {
-                id = await GenerateDocumentIdForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
-            }
+                if (null == entity)
+                    throw new ArgumentNullException(nameof(entity));
 
-            StoreInternal(entity, changeVector, id, forceConcurrencyCheck);
+                if (id == null)
+                {
+                    id = await GenerateDocumentIdForStorageAsync(entity).WithCancellation(token).ConfigureAwait(false);
+                }
+
+                StoreInternal(entity, changeVector, id, forceConcurrencyCheck);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal IDisposable AsyncTaskHolder()
+        {
+            return new AsyncTaskHolder(this);
         }
 
         protected abstract string GenerateId(object entity);
@@ -779,7 +793,6 @@ more responsive application.
         protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
             ConcurrencyCheckMode forceConcurrencyCheck)
         {
-            DeletedEntities.Remove(entity);
             if (id != null)
                 _knownMissingIds.Remove(id);
 
@@ -953,50 +966,57 @@ more responsive application.
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
         {
-            foreach (var deletedEntity in DeletedEntities)
+            using (DeletedEntities.PrepareEntitiesDeletes())
             {
-                if (DocumentsByEntity.TryGetValue(deletedEntity, out DocumentInfo documentInfo) == false)
-                    continue;
-
-                if (changes != null)
+                foreach (var deletedEntity in DeletedEntities)
                 {
-                    var docChanges = new List<DocumentsChanges>();
-                    var change = new DocumentsChanges
-                    {
-                        FieldNewValue = string.Empty,
-                        FieldOldValue = string.Empty,
-                        Change = DocumentsChanges.ChangeType.DocumentDeleted
-                    };
+                    if (DocumentsByEntity.TryGetValue(deletedEntity.Entity, out DocumentInfo documentInfo) == false)
+                        continue;
 
-                    docChanges.Add(change);
-                    changes[documentInfo.Id] = docChanges.ToArray();
-                }
-                else
-                {
-                    if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                    if (changes != null)
                     {
-                        // here we explicitly want to throw for all types of deferred commands, if the document
-                        // is being deleted, we never want to allow any other operations on it
-                        ThrowInvalidDeletedDocumentWithDeferredCommand(command);
-                    }
-                    string changeVector = null;
-                    if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
-                    {
-                        changeVector = documentInfo.ChangeVector;
-
-                        if (documentInfo.Entity != null)
+                        var docChanges = new List<DocumentsChanges>();
+                        var change = new DocumentsChanges
                         {
-                            result.OnSuccess.RemoveDocumentByEntity(documentInfo.Entity);
-                            result.Entities.Add(documentInfo.Entity);
+                            FieldNewValue = string.Empty, FieldOldValue = string.Empty, Change = DocumentsChanges.ChangeType.DocumentDeleted
+                        };
+
+                        docChanges.Add(change);
+                        changes[documentInfo.Id] = docChanges.ToArray();
+                    }
+                    else
+                    {
+                        if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                        {
+                            // here we explicitly want to throw for all types of deferred commands, if the document
+                            // is being deleted, we never want to allow any other operations on it
+                            ThrowInvalidDeletedDocumentWithDeferredCommand(command);
                         }
 
-                        result.OnSuccess.RemoveDocumentById(documentInfo.Id);
-                    }
+                        string changeVector = null;
+                        if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
+                        {
+                            changeVector = documentInfo.ChangeVector;
 
-                    changeVector = UseOptimisticConcurrency ? changeVector : null;
-                    var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
-                    OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
-                    result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                            if (documentInfo.Entity != null)
+                            {
+                                result.OnSuccess.RemoveDocumentByEntity(documentInfo.Entity);
+                                result.Entities.Add(documentInfo.Entity);
+                            }
+
+                            result.OnSuccess.RemoveDocumentById(documentInfo.Id);
+                        }
+
+                        changeVector = UseOptimisticConcurrency ? changeVector : null;
+
+                        if (deletedEntity.ExecuteOnBeforeDelete)
+                        {
+                            var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
+                            OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
+                        }
+
+                        result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
+                    }
                 }
             }
 
@@ -1006,90 +1026,93 @@ more responsive application.
 
         private void PrepareForEntitiesPuts(SaveChangesData result)
         {
-            foreach (var entity in DocumentsByEntity)
+            using (DocumentsByEntity.PrepareEntitiesPuts())
             {
-                if (entity.Value.IgnoreChanges)
-                    continue;
-
-                if (IsDeleted(entity.Value.Id))
-                    continue;
-
-                var metadataUpdated = UpdateMetadataModifications(entity.Value);
-
-                var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
-               
-                if (EntityChanged(document, entity.Value,null) == false)
+                foreach (var entity in DocumentsByEntity)
                 {
-                    document.Dispose();
-                    continue;
-                }
+                    if (entity.Value.IgnoreChanges)
+                        continue;
 
-                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientModifyDocumentCommand, null), out ICommandData command))
-                    ThrowInvalidModifiedDocumentWithDeferredCommand(command);
+                    if (IsDeleted(entity.Value.Id))
+                        continue;
 
-                var onOnBeforeStore = OnBeforeStore;
-                if (onOnBeforeStore != null)
-                {
-                    var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
-                    onOnBeforeStore(this, beforeStoreEventArgs);
-                    if (metadataUpdated || beforeStoreEventArgs.MetadataAccessed)
-                        metadataUpdated |= UpdateMetadataModifications(entity.Value);
-                    if (beforeStoreEventArgs.MetadataAccessed ||
-                        EntityChanged(document, entity.Value, null))
+                    var metadataUpdated = UpdateMetadataModifications(entity.Value);
+
+                    var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+
+                    if (EntityChanged(document, entity.Value, null) == false)
                     {
                         document.Dispose();
-                        document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                        continue;
                     }
-                }
 
-                result.Entities.Add(entity.Key);
+                    if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientModifyDocumentCommand, null), out ICommandData command))
+                        ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
-                if (entity.Value.Id != null)
-                {
-                    result.OnSuccess.RemoveDocumentById(entity.Value.Id);
-                }
-
-                result.OnSuccess.UpdateEntityDocumentInfo(entity.Value, document);
-                
-                if (metadataUpdated)
-                {
-                    // we need to preserve the metadata after the changes, otherwise we'll consume the changes
-                    // and any metadata changes will be gone afterward from the session data
-                    if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                    var onOnBeforeStore = OnBeforeStore;
+                    if (onOnBeforeStore != null && entity.ExecuteOnBeforeStore)
                     {
-                        ThrowMissingDocumentMetadata(document);
+                        var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
+                        onOnBeforeStore(this, beforeStoreEventArgs);
+                        if (metadataUpdated || beforeStoreEventArgs.MetadataAccessed)
+                            metadataUpdated |= UpdateMetadataModifications(entity.Value);
+                        if (beforeStoreEventArgs.MetadataAccessed ||
+                            EntityChanged(document, entity.Value, null))
+                        {
+                            document.Dispose();
+                            document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                        }
                     }
 
-                    entity.Value.Metadata = Context.ReadObject(metadata, entity.Value.Id, BlittableJsonDocumentBuilder.UsageMode.None);
-                }
+                    result.Entities.Add(entity.Key);
 
-                string changeVector;
-                if (UseOptimisticConcurrency)
-                {
-                    if (entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled)
-                        // if the user didn't provide a change vector, we'll test for an empty one
-                        changeVector = entity.Value.ChangeVector ?? string.Empty;
+                    if (entity.Value.Id != null)
+                    {
+                        result.OnSuccess.RemoveDocumentById(entity.Value.Id);
+                    }
+
+                    result.OnSuccess.UpdateEntityDocumentInfo(entity.Value, document);
+
+                    if (metadataUpdated)
+                    {
+                        // we need to preserve the metadata after the changes, otherwise we'll consume the changes
+                        // and any metadata changes will be gone afterward from the session data
+                        if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                        {
+                            ThrowMissingDocumentMetadata(document);
+                        }
+
+                        entity.Value.Metadata = Context.ReadObject(metadata, entity.Value.Id, BlittableJsonDocumentBuilder.UsageMode.None);
+                    }
+
+                    string changeVector;
+                    if (UseOptimisticConcurrency)
+                    {
+                        if (entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled)
+                            // if the user didn't provide a change vector, we'll test for an empty one
+                            changeVector = entity.Value.ChangeVector ?? string.Empty;
+                        else
+                            changeVector = null;
+                    }
+                    else if (entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced)
+                        changeVector = entity.Value.ChangeVector;
                     else
                         changeVector = null;
-                }
-                else if (entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced)
-                    changeVector = entity.Value.ChangeVector;
-                else
-                    changeVector = null;
 
-                var forceRevisionCreationStrategy = ForceRevisionStrategy.None;
-                
-                if (entity.Value.Id != null)
-                {
-                    // Check if user wants to Force a Revision
-                    if (IdsForCreatingForcedRevisions.TryGetValue(entity.Value.Id, out var creationStrategy))
+                    var forceRevisionCreationStrategy = ForceRevisionStrategy.None;
+
+                    if (entity.Value.Id != null)
                     {
-                        IdsForCreatingForcedRevisions.Remove(entity.Value.Id);
-                        forceRevisionCreationStrategy = creationStrategy;
+                        // Check if user wants to Force a Revision
+                        if (IdsForCreatingForcedRevisions.TryGetValue(entity.Value.Id, out var creationStrategy))
+                        {
+                            IdsForCreatingForcedRevisions.Remove(entity.Value.Id);
+                            forceRevisionCreationStrategy = creationStrategy;
+                        }
                     }
-                } 
-                
-                result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
+
+                    result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document, forceRevisionCreationStrategy));
+                }
             }
         }
 
@@ -1235,12 +1258,12 @@ more responsive application.
         {
             if (DocumentsByEntity.TryGetValue(entity, out var documentInfo))
             {
-                DocumentsByEntity.Remove(entity);
+                DocumentsByEntity.Evict(entity);
                 DocumentsById.Remove(documentInfo.Id);
                 _countersByDocId?.Remove(documentInfo.Id);
             }
 
-            DeletedEntities.Remove(entity);
+            DeletedEntities.Evict(entity);
             EntityToBlittable.RemoveFromMissing(entity);
         }
 
@@ -1329,6 +1352,10 @@ more responsive application.
         {
             if (_isDisposed)
                 return;
+
+            var asyncTasksCounter = Interlocked.Read(ref _asyncTasksCounter);
+            if (asyncTasksCounter != 0)
+                throw new InvalidOperationException($"Disposing session with active async task is forbidden, please make sure that all asynchronous session methods returning Task are awaited. Number of active async tasks: {asyncTasksCounter}");
 
             _isDisposed = true;
 
@@ -2123,6 +2150,237 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
+        }
+    }
+
+    internal struct AsyncTaskHolder : IDisposable
+    {
+        private readonly InMemoryDocumentSessionOperations _session;
+
+        public AsyncTaskHolder(InMemoryDocumentSessionOperations session)
+        {
+            _session = session;
+
+            if (Interlocked.Increment(ref _session._asyncTasksCounter) > 1)
+            {
+                throw new InvalidOperationException("Concurrent usage of async tasks in async session is forbidden, please make sure that async session doesn't execute async methods concurrently.");
+            }
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Decrement(ref _session._asyncTasksCounter);
+        }
+    }
+
+    internal class DocumentsByEntityHolder
+    {
+        private readonly Dictionary<object, DocumentInfo> _documentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
+
+        private Dictionary<object, DocumentInfo> _onBeforeStoreDocumentsByEntity;
+
+        private bool _prepareEntitiesPuts;
+
+        public int Count => _documentsByEntity.Count + _onBeforeStoreDocumentsByEntity?.Count ?? 0;
+
+        public void Remove(object entity)
+        {
+            _documentsByEntity.Remove(entity);
+            _onBeforeStoreDocumentsByEntity?.Remove(entity);
+        }
+
+        public void Evict(object entity)
+        {
+            if (_prepareEntitiesPuts)
+                throw new InvalidOperationException("Cannot Evict entity during OnBeforeStore");
+
+            _documentsByEntity.Remove(entity);
+        }
+
+        public void Add(object entity, DocumentInfo documentInfo)
+        {
+            if (_prepareEntitiesPuts == false)
+            {
+                _documentsByEntity.Add(entity, documentInfo);
+                return;
+            }
+
+            CreateOnBeforeStoreDocumentsByEntityIfNeeded();
+            _onBeforeStoreDocumentsByEntity.Add(entity, documentInfo);
+        }
+
+        public DocumentInfo this[object obj]
+        {
+            set
+            {
+                if (_prepareEntitiesPuts == false)
+                {
+                    _documentsByEntity[obj] = value;
+                }
+                else
+                {
+                    CreateOnBeforeStoreDocumentsByEntityIfNeeded();
+                    _onBeforeStoreDocumentsByEntity[obj] = value;
+                }
+            }
+        }
+
+        private void CreateOnBeforeStoreDocumentsByEntityIfNeeded()
+        {
+            if (_onBeforeStoreDocumentsByEntity != null)
+                return;
+
+            _onBeforeStoreDocumentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
+        }
+
+        public void Clear()
+        {
+            _documentsByEntity.Clear();
+            _onBeforeStoreDocumentsByEntity?.Clear();
+        }
+
+        public bool TryGetValue(object entity, out DocumentInfo documentInfo)
+        {
+            if (_documentsByEntity.TryGetValue(entity, out documentInfo))
+                return true;
+
+            return _onBeforeStoreDocumentsByEntity != null && _onBeforeStoreDocumentsByEntity.TryGetValue(entity, out documentInfo);
+        }
+
+        public IEnumerator<DocumentsByEntityEnumeratorResult> GetEnumerator()
+        {
+            foreach (var doc in _documentsByEntity)
+            {
+                yield return new DocumentsByEntityEnumeratorResult
+                {
+                    Key = doc.Key,
+                    Value = doc.Value,
+                    ExecuteOnBeforeStore = true
+                };
+            }
+
+            if (_onBeforeStoreDocumentsByEntity != null)
+            {
+                foreach (var doc in _onBeforeStoreDocumentsByEntity)
+                {
+                    yield return new DocumentsByEntityEnumeratorResult
+                    {
+                        Key = doc.Key,
+                        Value = doc.Value,
+                        ExecuteOnBeforeStore = false
+                    };
+                }
+            }
+        }
+
+        public IDisposable PrepareEntitiesPuts()
+        {
+            _prepareEntitiesPuts = true;
+
+            return new DisposableAction(() => _prepareEntitiesPuts = false);
+        }
+
+        internal class DocumentsByEntityEnumeratorResult
+        {
+            public object Key { get; set; }
+
+            public DocumentInfo Value { get; set; }
+
+            public bool ExecuteOnBeforeStore { get; set; }
+        }
+    }
+    
+    internal class DeletedEntitiesHolder
+    {
+        private readonly HashSet<object> _deletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+
+        private HashSet<object> _onBeforeDeletedEntities;
+
+        private bool _prepareEntitiesDeletes;
+
+        public int Count => _deletedEntities.Count + _onBeforeDeletedEntities?.Count ?? 0;
+
+        public void Add(object entity)
+        {
+            if (_prepareEntitiesDeletes)
+            {
+                if (_onBeforeDeletedEntities == null)
+                    _onBeforeDeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+
+                _onBeforeDeletedEntities.Add(entity);
+                return;
+            }
+
+            _deletedEntities.Add(entity);
+        }
+
+        public void Remove(object entity)
+        {
+            _deletedEntities.Remove(entity);
+            _onBeforeDeletedEntities?.Remove(entity);
+        }
+
+        public void Evict(object entity)
+        {
+            if (_prepareEntitiesDeletes)
+                throw new InvalidOperationException("Cannot Evict entity during OnBeforeDelete");
+
+            _deletedEntities.Remove(entity);
+        }
+
+        public bool Contains(object entity)
+        {
+            if (_deletedEntities.Contains(entity))
+                return true;
+
+            if (_onBeforeDeletedEntities == null)
+                return false;
+
+            return _onBeforeDeletedEntities.Contains(entity);
+        }
+
+        public void Clear()
+        {
+            _deletedEntities.Clear();
+            _onBeforeDeletedEntities?.Clear();
+        }
+
+        public IEnumerator<DeletedEntitiesEnumeratorResult> GetEnumerator()
+        {
+            foreach (var entity in _deletedEntities)
+            {
+                yield return new DeletedEntitiesEnumeratorResult
+                {
+                    Entity = entity,
+                    ExecuteOnBeforeDelete = true
+                };
+            }
+
+            if (_onBeforeDeletedEntities != null)
+            {
+                foreach (var entity in _onBeforeDeletedEntities)
+                {
+                    yield return new DeletedEntitiesEnumeratorResult
+                    {
+                        Entity = entity,
+                        ExecuteOnBeforeDelete = false
+                    };
+                }
+            }
+        }
+
+        public IDisposable PrepareEntitiesDeletes()
+        {
+            _prepareEntitiesDeletes = true;
+
+            return new DisposableAction(() => _prepareEntitiesDeletes = false);
+        }
+
+        public class DeletedEntitiesEnumeratorResult
+        {
+            public object Entity { get; set; }
+
+            public bool ExecuteOnBeforeDelete { get; set; }
         }
     }
 }

@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Workers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -62,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             _isSideBySide = null;
         }
 
-        public ReduceOutputDocumentActions ReduceOutputs { get; private set; }
+        public OutputReduceToCollectionActions OutputReduceToCollection { get; private set; }
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
@@ -92,12 +93,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             if (string.IsNullOrWhiteSpace(Definition.OutputReduceToCollection) == false)
             {
-                ReduceOutputs = new ReduceOutputDocumentActions(this);
+                OutputReduceToCollection = new OutputReduceToCollectionActions(this);
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    ReduceOutputs.Initialize(tx);
+                    OutputReduceToCollection.Initialize(tx);
 
                     tx.Commit();
                 }
@@ -365,7 +366,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         {
             var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
 
-            if (isStale == false && ReduceOutputs?.HasDocumentsToDelete(indexContext) == true)
+            if (isStale == false && OutputReduceToCollection?.HasDocumentsToDelete(indexContext) == true)
             {
                 if (_ignoreStalenessDueToReduceOutputsToDelete.Value == false)
                 {

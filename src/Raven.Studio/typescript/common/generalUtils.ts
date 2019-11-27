@@ -420,7 +420,6 @@ class genUtils {
                 spinner(false);
             }
         })
-        
     }
     
     static debounceAndFunnel<T>(func: (val: T, 

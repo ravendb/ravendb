@@ -83,6 +83,8 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         HashSet<FieldToFetch> FieldsToFetch { get; }
 
+        bool IsProjectInto { get; set; }
+
         Type OriginalQueryType { get; }
     }
 }

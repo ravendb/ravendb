@@ -19,7 +19,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/status/ioStats',
             moduleId: 'viewmodels/database/status/ioStats',
             title: 'IO Stats',
-            tooltip: "Displays IO metrics statatus",
+            tooltip: "Displays IO metrics status",
             nav: true,
             css: 'icon-io-test',
             dynamicHash: appUrls.ioStats

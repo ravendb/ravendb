@@ -5,9 +5,12 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Commands;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -178,6 +181,116 @@ namespace SlowTests.Server.Replication
                 using (var session = storeB.OpenSession())
                 {
                     Assert.Equal(2, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 2));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ChangeDefaultRevisionsConflictConfiguration()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var result = await storeB.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
+                {
+                    MinimumRevisionsToKeep = 3,
+                }));
+
+                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database);
+                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel-A-1"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel-B-1"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA,storeB);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel-B-2"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel-A-2"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
+              
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanDisableRevisionsConflict()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var result = await storeB.Maintenance.Server.SendAsync(new ConfigureRevisionsForConflictsOperation(storeB.Database, new RevisionsCollectionConfiguration
+                {
+                    Disabled = true
+                }));
+
+                var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeB.Database);
+                await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, TimeSpan.FromSeconds(10));
+                
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company(), "keep-conflicted-revision-insert-order");
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel-A-1"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel-B-1"
+                    }, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(0, session.Advanced.Revisions.GetMetadataFor("foo/bar").Count);
                 }
             }
         }

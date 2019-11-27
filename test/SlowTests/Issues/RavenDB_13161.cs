@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Orders;
+using Raven.Client.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Indexes;
@@ -8,7 +9,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Web.System;
 using Xunit;
 using Xunit.Abstractions;
 

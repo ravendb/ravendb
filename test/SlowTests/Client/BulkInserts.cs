@@ -1,11 +1,11 @@
 ﻿using System.Threading.Tasks;
-using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
-    public class BulkInserts : NoDisposalNeeded
+    public class BulkInserts : NoDisposalNoOutputNeeded
     {
         public BulkInserts(ITestOutputHelper output) : base(output)
         {

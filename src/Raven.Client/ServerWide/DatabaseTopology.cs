@@ -140,6 +140,17 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         }
     }
 
+    internal static class ThreadSafeRandom
+    {
+        [ThreadStatic]
+        private static Random _random;
+
+        internal static int Shuffle(string _, string __)
+        {
+            return (_random ??= new Random()).Next(-100, 100);
+        }
+    }
+
     public class DatabaseTopology
     {
         public List<string> Members = new List<string>();
@@ -153,6 +164,33 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         public LeaderStamp Stamp;
         public bool DynamicNodesDistribution;
         public int ReplicationFactor = 1;
+        public List<string> PriorityOrder;
+
+        internal void ReorderMembers()
+        {
+            Members.Sort(ThreadSafeRandom.Shuffle);
+
+            if (PriorityOrder == null || PriorityOrder.Count == 0)
+                return;
+
+            var members = new List<string>();
+            for (int i = 0; i < PriorityOrder.Count; i++)
+            {
+                var priorityNode = PriorityOrder[i];
+                if (Members.Contains(priorityNode))
+                    members.Add(priorityNode);
+            }
+
+            for (int i = 0; i < Members.Count; i++)
+            {
+                var member = Members[i];
+                if (members.Contains(member) == false)
+                    members.Add(member);
+            }
+
+            Members = members;
+        }
+
 
         public bool RelevantFor(string nodeTag)
         {
@@ -329,7 +367,8 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
                 [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64
+                [nameof(DatabaseTopologyIdBase64)] = DatabaseTopologyIdBase64,
+                [nameof(PriorityOrder)] = PriorityOrder != null ? new DynamicJsonArray(PriorityOrder) : null
             };
         }
 

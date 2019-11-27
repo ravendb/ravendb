@@ -160,7 +160,7 @@ namespace Raven.Client.Util
                 // Rewrite .Count / .Values / .Keys
                 if (context.Node is MemberExpression contextNode
                     && contextNode.Expression != null
-                    && typeof(IDictionary).IsAssignableFrom(contextNode.Expression.Type))
+                    && LinqMethodsSupport.IsDictionary(contextNode.Expression.Type))
                 {
                     context.PreventDefault();
                     // Get KeyValueType identifier:
@@ -195,7 +195,7 @@ namespace Raven.Client.Util
                 // Only call it when we do a methodCall on a memberExpression of type dictionary
                 if (context.Node is MethodCallExpression callNode
                     && callNode.Arguments.Count > 0
-                    && typeof(IDictionary).IsAssignableFrom(callNode.Arguments[0].Type))
+                    && LinqMethodsSupport.IsDictionary(callNode.Arguments[0].Type))
                 {
                     if (_innerCallExpected == default)
                     {
@@ -208,6 +208,8 @@ namespace Raven.Client.Util
                             case "Count":
                                 _innerCallExpected = DictionaryInnerCall.Key;
                                 break;
+                            case "SelectMany":
+                                return;
                             case "Select":
                                 _innerCallExpected = DictionaryInnerCall.Map;
                                 HandleMap(context, callNode);
@@ -219,7 +221,7 @@ namespace Raven.Client.Util
                 // Now we translate the memberExpression
                 else if (_innerCallExpected != default
                     && _innerCallExpected != DictionaryInnerCall.Map
-                    && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
+                    && LinqMethodsSupport.IsDictionary(context.Node.Type))
                 {
                     context.PreventDefault();
                     var currentCall = _innerCallExpected;
@@ -260,9 +262,10 @@ namespace Raven.Client.Util
                     && context.Node is MemberExpression memberExpression
                     && memberExpression.Member.Name.In("Value", "Key"))
                 {
-                    var p = GetParameter(memberExpression);
+                    var p = GetParameterAndCheckInternalMemberName(memberExpression, out var hasInternalKeyOrValue);
 
-                    if (p?.Name == _paramName 
+                    if (hasInternalKeyOrValue == false 
+                        && p?.Name == _paramName
                         && p?.Type.GenericTypeArguments.Length > 0  
                         && p.Type.GetGenericTypeDefinition() == typeof(KeyValuePair<,>))
                     {
@@ -708,7 +711,7 @@ namespace Raven.Client.Util
 
                         if (memberExpression.Expression is ParameterExpression == false)
                         {
-                            GetInnermostExpression(memberExpression, out var nestedPath);
+                            GetInnermostExpression(memberExpression, out var nestedPath, out _);
                             if (nestedPath != string.Empty)
                             {
                                 path = $"{nestedPath}.{path}";
@@ -837,7 +840,7 @@ namespace Raven.Client.Util
                     context.PreventDefault();
                     context.Visitor.Visit(expr);
                     return;
-                }   
+                }
 
 
                 if (!(context.Node is MemberExpression memberExpression) || 
@@ -1555,7 +1558,8 @@ namespace Raven.Client.Util
                         {
                             writer.Write("Date.parse(");
                             context.Visitor.Visit(memberExpression.Expression);
-                            writer.Write($".{memberExpression.Member.Name}");
+                            if (memberExpression.Expression.Type.IsNullableType() == false)
+                                writer.Write($".{memberExpression.Member.Name}");
                             writer.Write(")");
                         }
 
@@ -1564,29 +1568,34 @@ namespace Raven.Client.Util
                         switch (node.Member.Name)
                         {
                             case "Year":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCFullYear()" : ".getFullYear()");
+                                writer.Write(IsUtc() ? ".getUTCFullYear()" : ".getFullYear()");
                                 break;
                             case "Month":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMonth()+1" : ".getMonth()+1");
+                                writer.Write(IsUtc() ? ".getUTCMonth()+1" : ".getMonth()+1");
                                 break;
                             case "Day":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCDate()" : ".getDate()");
+                                writer.Write(IsUtc() ? ".getUTCDate()" : ".getDate()");
                                 break;
                             case "Hour":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCHours()" : ".getHours()");
+                                writer.Write(IsUtc() ? ".getUTCHours()" : ".getHours()");
                                 break;
                             case "Minute":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMinutes()" : ".getMinutes()");
+                                writer.Write(IsUtc() ? ".getUTCMinutes()" : ".getMinutes()");
                                 break;
                             case "Second":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCSeconds()" : ".getSeconds()");
+                                writer.Write(IsUtc() ? ".getUTCSeconds()" : ".getSeconds()");
                                 break;
                             case "Millisecond":
-                                writer.Write(memberExpression.Member.Name == "UtcNow" ? ".getUTCMilliseconds()" : ".getMilliseconds()");
+                                writer.Write(IsUtc() ? ".getUTCMilliseconds()" : ".getMilliseconds()");
                                 break;
                             case "Ticks":
                                 writer.Write(".getTime()*10000");
                                 break;
+                        }
+
+                        bool IsUtc()
+                        {
+                            return memberExpression.Member.Name == "UtcNow";
                         }
                     }
                 }
@@ -2411,14 +2420,23 @@ namespace Raven.Client.Util
 
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
-            return GetInnermostExpression(expression, out _) as ParameterExpression;
+            return GetInnermostExpression(expression, out _, out _) as ParameterExpression;
         }
 
-        public static Expression GetInnermostExpression(MemberExpression expression, out string path)
+        private static ParameterExpression GetParameterAndCheckInternalMemberName(MemberExpression expression, out bool hasInternalKeyOrValue)
+        {
+            return GetInnermostExpression(expression, out _, out hasInternalKeyOrValue) as ParameterExpression;
+        }
+
+        public static Expression GetInnermostExpression(MemberExpression expression, out string path, out bool hasInternalKeyOrValue)
         {
             path = string.Empty;
+            hasInternalKeyOrValue = false;
             while (expression.Expression is MemberExpression memberExpression)
             {
+                if (expression.Member.Name.In("Value", "Key"))
+                    hasInternalKeyOrValue = true;
+
                 expression = memberExpression;
                 path = path == string.Empty 
                     ? expression.Member.Name 

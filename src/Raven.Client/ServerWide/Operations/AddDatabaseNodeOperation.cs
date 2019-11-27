@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public AddDatabaseNodeOperation(string databaseName, string node = null)
         {
-            Helpers.AssertValidDatabaseName(databaseName);
+            ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _databaseName = databaseName;
             _node = node;
         }

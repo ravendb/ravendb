@@ -31,35 +31,41 @@ namespace Raven.Client.Documents.Session
         {
             GenerateDocumentIdsOnStore = false;
         }
-    
+
         public async Task<bool> ExistsAsync(string id, CancellationToken token = default)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
+            using (AsyncTaskHolder())
+            {
+                if (id == null)
+                    throw new ArgumentNullException(nameof(id));
 
-            if (_knownMissingIds.Contains(id))
-                return false;
+                if (_knownMissingIds.Contains(id))
+                    return false;
 
-            if (DocumentsById.TryGetValue(id, out _))
-                return true;
+                if (DocumentsById.TryGetValue(id, out _))
+                    return true;
 
-            var command = new HeadDocumentCommand(id, null);
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                var command = new HeadDocumentCommand(id, null);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
 
-            return command.Result != null;
+                return command.Result != null;
+            }
         }
 
         public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))
         {
-            DocumentInfo documentInfo;
-            if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
-                throw new InvalidOperationException("Cannot refresh a transient instance");
-            IncrementRequestCount();
+            using (AsyncTaskHolder())
+            {
+                DocumentInfo documentInfo;
+                if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                    throw new InvalidOperationException("Cannot refresh a transient instance");
+                IncrementRequestCount();
 
-            var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
-            await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
 
-            RefreshInternal(entity, command, documentInfo);
+                RefreshInternal(entity, command, documentInfo);
+            }
         }
 
         public IAsyncGraphQuery<T> AsyncGraphQuery<T>(string query)
@@ -125,24 +131,27 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public async Task SaveChangesAsync(CancellationToken token = default(CancellationToken))
         {
-            if (_asyncDocumentIdGeneration != null)
+            using (AsyncTaskHolder())
             {
-                await _asyncDocumentIdGeneration.GenerateDocumentIdsForSaveChanges().WithCancellation(token).ConfigureAwait(false);
-            }
+                if (_asyncDocumentIdGeneration != null)
+                {
+                    await _asyncDocumentIdGeneration.GenerateDocumentIdsForSaveChanges().WithCancellation(token).ConfigureAwait(false);
+                }
 
-            var saveChangesOperation = new BatchOperation(this);
+                var saveChangesOperation = new BatchOperation(this);
 
-            using (var command = saveChangesOperation.CreateRequest())
-            {
-                if (command == null)
-                    return;
+                using (var command = saveChangesOperation.CreateRequest())
+                {
+                    if (command == null)
+                        return;
 
-                if (NoTracking)
-                    throw new InvalidOperationException($"Cannot execute '{nameof(SaveChangesAsync)}' when entity tracking is disabled in session.");
+                    if (NoTracking)
+                        throw new InvalidOperationException($"Cannot execute '{nameof(SaveChangesAsync)}' when entity tracking is disabled in session.");
 
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
-                UpdateSessionAfterSaveChanges(command.Result);
-                saveChangesOperation.SetResult(command.Result);
+                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    UpdateSessionAfterSaveChanges(command.Result);
+                    saveChangesOperation.SetResult(command.Result);
+                }
             }
         }
     }

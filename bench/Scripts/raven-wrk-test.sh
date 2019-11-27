@@ -7,7 +7,7 @@ LOG="/tmp/${LOGNAME}.log"
 RAVENDB_PATH="../../artifacts/ubuntu.16.04-x64/package/RavenDB/Server/Raven.Server"
 # Warn: DATA_DIR is being removed rm -rf in this script
 DATA_DIR="$(pwd)/TestDataDir"
-RAVEN_CONF="--PublicServerUrl=http://${IP}:${PORT} --ServerUrl=http://0.0.0.0:${PORT} --DataDir=${DATA_DIR} --Security.UnsecuredAccessAllowed=PublicNetwork"
+RAVEN_CONF="--PublicServerUrl=http://${IP}:${PORT} --ServerUrl=http://0.0.0.0:${PORT} --DataDir=${DATA_DIR} --Security.UnsecuredAccessAllowed=PublicNetwork --Setup.Mode=None" 
 TMP_FILE="/tmp/${LOGNAME}.out"
 RESULT_FILE="/tmp/${LOGNAME}.results"
 WRK_PATH="/usr/bin/wrk"

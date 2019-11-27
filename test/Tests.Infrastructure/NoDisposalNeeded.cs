@@ -1,18 +1,10 @@
-﻿using System;
-using Xunit.Abstractions;
+﻿using Xunit.Abstractions;
 
 namespace FastTests
 {
-    public abstract class NoDisposalNeeded : IDisposable
+    public abstract class NoDisposalNeeded : LinuxRaceConditionWorkAround
     {
-        protected readonly ITestOutputHelper Output;
-        
-        protected NoDisposalNeeded(ITestOutputHelper output)
-        {
-            Output = output;
-        }
-
-        public void Dispose()
+        protected NoDisposalNeeded(ITestOutputHelper output) : base(output)
         {
         }
     }

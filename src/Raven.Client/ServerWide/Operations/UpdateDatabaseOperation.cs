@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -11,7 +12,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public UpdateDatabaseOperation(DatabaseRecord databaseRecord, long etag)
         {
-            Helpers.AssertValidDatabaseName(databaseRecord.DatabaseName);
+            ResourceNameValidator.AssertValidDatabaseName(databaseRecord.DatabaseName);
             _databaseRecord = databaseRecord;
             _etag = etag;
         }

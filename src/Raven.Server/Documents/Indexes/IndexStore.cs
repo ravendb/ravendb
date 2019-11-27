@@ -23,6 +23,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Sorting;
@@ -317,18 +318,18 @@ namespace Raven.Server.Documents.Indexes
 
                     if (replacementIndex != null)
                     {
-                        if (replacementIndex is MapReduceIndex replacementMapReduceIndex && replacementMapReduceIndex.ReduceOutputs != null)
+                        if (replacementIndex is MapReduceIndex replacementMapReduceIndex && replacementMapReduceIndex.OutputReduceToCollection != null)
                         {
                             if (replacementMapReduceIndex.Definition.ReduceOutputIndex != null)
                             {
-                                var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
+                                var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
                                     definition.OutputReduceToCollection, replacementMapReduceIndex.Definition.ReduceOutputIndex.Value);
 
                                 if (currentIndex is MapReduceIndex currentMapReduceIndex)
                                 {
                                     // original index needs to delete docs created by side-by-side indexing
 
-                                    currentMapReduceIndex.ReduceOutputs?.AddPrefixesOfDocumentsToDelete(new HashSet<string> { prefix });
+                                    currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
                                 }
                             }
                         }
@@ -360,7 +361,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Debug.Assert(currentIndex != null);
 
-                    if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.ReduceOutputs != null)
+                    if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.OutputReduceToCollection != null)
                     {
                         // we need to delete reduce output docs of existing index
 
@@ -381,7 +382,7 @@ namespace Raven.Server.Documents.Indexes
                             return;
                         }
 
-                        if (replacementIndex is MapReduceIndex oldReplacementMapReduceIndex && oldReplacementMapReduceIndex.ReduceOutputs != null)
+                        if (replacementIndex is MapReduceIndex oldReplacementMapReduceIndex && oldReplacementMapReduceIndex.OutputReduceToCollection != null)
                         {
                             // existing replacement index could already produce some reduce output documents, new replacement index needs to delete them
 
@@ -407,8 +408,8 @@ namespace Raven.Server.Documents.Indexes
                             case IndexType.JavaScriptMapReduce:
                                 var mapReduceIndex = MapReduceIndex.CreateNew(documentsIndexDefinition, _documentDatabase);
 
-                                if (mapReduceIndex.ReduceOutputs != null && prefixesOfDocumentsToDelete.Count > 0)
-                                    mapReduceIndex.ReduceOutputs.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+                                if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
+                                    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
 
                                 index = mapReduceIndex;
                                 break;
@@ -449,13 +450,13 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.ReduceOutputIndex != null)
             {
-                var prefix = OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
+                var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
                     definition.OutputReduceToCollection, definition.ReduceOutputIndex.Value);
 
                 prefixesOfDocumentsToDelete.Add(prefix);
             }
 
-            var toDelete = mapReduceIndex.ReduceOutputs.GetPrefixesOfDocumentsToDelete();
+            var toDelete = mapReduceIndex.OutputReduceToCollection.GetPrefixesOfDocumentsToDelete();
 
             if (toDelete != null)
             {
@@ -826,13 +827,13 @@ namespace Raven.Server.Documents.Indexes
             if (isStatic && name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException($"Index name '{name}' not permitted. Static index name cannot start with 'Auto/'", nameof(name));
 
-            if (isStatic && NameUtils.IsValidIndexName(name) == false)
+            if (isStatic && ResourceNameValidator.IsValidIndexName(name) == false)
             {
-                var allowedCharacters = $"('{string.Join("', '", NameUtils.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
+                var allowedCharacters = $"('{string.Join("', '", ResourceNameValidator.AllowedIndexNameCharacters.Select(Regex.Unescape))}')";
                 throw new ArgumentException($"Index name '{name}' is not permitted. Only letters, digits and characters {allowedCharacters} are allowed.", nameof(name));
             }
 
-            if (isStatic && name.Contains(".") && NameUtils.IsDotCharSurroundedByOtherChars(name) == false)
+            if (isStatic && name.Contains(".") && ResourceNameValidator.IsDotCharSurroundedByOtherChars(name) == false)
                 throw new ArgumentException(
                     $"Index name '{name}' is not permitted. If a name contains '.' character then it must be surrounded by other allowed characters.", nameof(name));
 
