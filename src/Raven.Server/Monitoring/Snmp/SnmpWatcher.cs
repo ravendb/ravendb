@@ -23,6 +23,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using ServerVersion = Raven.Server.Monitoring.Snmp.Objects.Server.ServerVersion;
+using TimeoutException = System.TimeoutException;
 
 namespace Raven.Server.Monitoring.Snmp
 {
@@ -156,6 +157,11 @@ namespace Raven.Server.Monitoring.Snmp
 
                         LoadDatabase(databaseName, mapping[databaseName]);
                     }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to update the SNMP mapping for database: {databaseName}", e);
                 }
                 finally
                 {
@@ -382,8 +388,16 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.CloseTransaction();
 
-                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, RaftIdGenerator.NewId()));
-                        await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+                        try
+                        {
+                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, RaftIdGenerator.NewId()));
+                            await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+                        }
+                        catch (Exception e) when (e is TimeoutException || e is OperationCanceledException)
+                        {
+                            // we will do the update in AddDatabaseIfNecessary
+                            return;
+                        }
 
                         context.OpenReadTransaction();
 
@@ -393,6 +407,11 @@ namespace Raven.Server.Monitoring.Snmp
                     foreach (var database in databases)
                         LoadDatabase(database, mapping[database]);
                 }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to update the SNMP mapping", e);
             }
             finally
             {
