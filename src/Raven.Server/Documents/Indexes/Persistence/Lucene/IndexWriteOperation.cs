@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -20,6 +21,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly Term _documentId = new Term(Constants.Documents.Indexing.Fields.DocumentIdFieldName, "Dummy");
         private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, "Dummy");
+        private readonly Term _sourceDocumentIdHash = new Term(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, "Dummy");
 
         protected readonly LuceneIndexWriter _writer;
         protected readonly Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsWriters;
@@ -113,14 +115,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public virtual void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public virtual void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
 
             bool shouldSkip;
             IDisposable setDocument;
             using (Stats.ConvertStats.Start())
-                setDocument = _converter.SetDocument(key, document, indexContext, out shouldSkip);
+                setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, out shouldSkip);
 
             using (setDocument)
             {
@@ -172,6 +174,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             using (Stats.DeleteStats.Start())
                 _writer.DeleteDocuments(_documentId.CreateTerm(key), _state);
+        }
+
+        public virtual void DeleteBySourceDocument(LazyStringValue sourceDocumentId, IndexingStatsScope stats)
+        {
+            EnsureValidStats(stats);
+
+            using (Stats.DeleteStats.Start())
+                _writer.DeleteDocuments(_sourceDocumentIdHash.CreateTerm(sourceDocumentId), _state);
         }
 
         public virtual void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)

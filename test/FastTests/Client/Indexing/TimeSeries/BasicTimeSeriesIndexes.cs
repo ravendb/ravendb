@@ -132,9 +132,7 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company).Remove("HeartRate", now2);
-
+                    session.Delete("companies/1");
                     session.SaveChanges();
                 }
 

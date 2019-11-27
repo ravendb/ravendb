@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             foreach (var document in GetDocumentsEnumerator(databaseContext, collection, lastEtag, pageSize))
             {
-                yield return new IndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document);
+                yield return new IndexItem(document.Id, document.LowerId, document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document, IndexItemType.Document);
             }
         }
 

@@ -50,9 +50,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public override void IndexDocument(LazyStringValue key, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
+        public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
-            base.IndexDocument(key, document, stats, indexContext);
+            base.IndexDocument(key, sourceDocumentId, document, stats, indexContext);
 
             _outputReduceToCollectionCommand.AddReduce(key, document);
         }

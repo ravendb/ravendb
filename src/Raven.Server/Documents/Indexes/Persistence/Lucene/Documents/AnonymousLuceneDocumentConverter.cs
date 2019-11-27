@@ -18,12 +18,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _isMultiMap = isMultiMap;
         }
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext)
         {
             int newFields = 0;
             if (key != null)
             {
                 instance.Add(GetOrCreateKeyField(key));
+                newFields++;
+            }
+
+            if (sourceDocumentId != null)
+            {
+                instance.Add(GetOrCreateSourceDocumentIdField(sourceDocumentId));
                 newFields++;
             }
 

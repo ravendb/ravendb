@@ -877,7 +877,7 @@ namespace Raven.Server.Documents.Indexes
             if (document == null)
                 return default;
 
-            return new IndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document);
+            return new IndexItem(document.Id, document.LowerId, document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document, IndexItemType.Document);
         }
 
         protected virtual IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)
@@ -886,7 +886,7 @@ namespace Raven.Server.Documents.Indexes
             if (tombstone == null)
                 return default;
 
-            return new IndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, null, 0, tombstone);
+            return new IndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, null, 0, tombstone, IndexItemType.Document);
         }
 
         protected virtual bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, string collection, long start, long end)
@@ -931,7 +931,7 @@ namespace Raven.Server.Documents.Indexes
                         stalenessReasons.Add(message);
                     }
 
-                    var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection, isReference: false);
+                    var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
 
                     if (lastTombstoneEtag > lastProcessedTombstoneEtag)
                     {
@@ -2303,7 +2303,7 @@ namespace Raven.Server.Documents.Indexes
                                 var collectionStats = stats.Collections[collection];
 
                                 var lastDocumentEtag = GetLastItemEtagInCollection(documentsContext, collection);
-                                var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection, isReference: false);
+                                var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection);
 
                                 collectionStats.DocumentLag = Math.Max(0,
                                     lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
@@ -3260,7 +3260,7 @@ namespace Raven.Server.Documents.Indexes
             foreach (var collection in Collections)
             {
                 var lastDocEtag = GetLastItemEtagInCollection(documentsContext, collection);
-                var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection, isReference: false);
+                var lastTombstoneEtag = GetLastTombstoneEtagInCollection(documentsContext, collection);
                 var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
                 var lastProcessedTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
@@ -3867,7 +3867,7 @@ namespace Raven.Server.Documents.Indexes
                 : DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(databaseContext, collection);
         }
 
-        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection, bool isReference)
+        public virtual long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection)
         {
             return collection == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentsStorage.ReadLastTombstoneEtag(databaseContext.Transaction.InnerTransaction)
@@ -4112,9 +4112,9 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly LazyStringValue LowerId;
 
-        public readonly LazyStringValue DocumentId;
+        public readonly LazyStringValue SourceDocumentId;
 
-        public readonly LazyStringValue LowerDocumentId;
+        public readonly LazyStringValue LowerSourceDocumentId;
 
         public readonly long Etag;
 
@@ -4126,9 +4126,9 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly string IndexingKey;
 
-        public readonly IndexItemType ItemType; // TODO arek
+        public readonly IndexItemType ItemType;
 
-        public IndexItem(LazyStringValue id, LazyStringValue lowerId, long etag, DateTime lastModified, string indexingKey, int size, object item)
+        public IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item, IndexItemType itemType)
         {
             Id = id;
             LowerId = lowerId;
@@ -4137,19 +4137,9 @@ namespace Raven.Server.Documents.Indexes
             Size = size;
             Item = item;
             IndexingKey = indexingKey;
-        }
-
-        public IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue documentId, LazyStringValue lowerDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item)
-        {
-            Id = id;
-            LowerId = lowerId;
-            Etag = etag;
-            LastModified = lastModified;
-            Size = size;
-            Item = item;
-            IndexingKey = indexingKey;
-            DocumentId = documentId;
-            LowerDocumentId = lowerDocumentId;
+            SourceDocumentId = sourceDocumentId;
+            LowerSourceDocumentId = lowerSourceDocumentId;
+            ItemType = itemType;
         }
 
         public void Dispose()
