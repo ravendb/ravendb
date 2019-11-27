@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.ServerWide;
@@ -1021,6 +1022,87 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(1, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
                 }
             }
+        }
+
+        [Fact]
+        public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount()
+        {
+            var database = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3);
+
+            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+
+            using var store1 = new DocumentStore
+            {
+                Database = database,
+                Urls = new []{cluster.Nodes[0].WebUrl},
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store2 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[1].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using var store3 = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Nodes[2].WebUrl },
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize();
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    
+                await session.StoreAsync(new User(), "foo/bar");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store2.OpenAsyncSession())
+            {
+                session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+
+                var user = await session.LoadAsync<User>("foo/bar");
+                user.Name = "Karmel";
+                await session.SaveChangesAsync();
+            }
+
+            await store2.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(database, hardDelete: true, fromNode: cluster.Nodes[1].ServerStore.NodeTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+
+            await Task.Delay(3000);
+
+            using (var session = store3.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>("foo/bar");
+                session.Advanced.WaitForReplicationAfterSaveChanges();
+
+                using (var stream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                {
+                    session.Advanced.Attachments.Store(user, "dummy", stream);
+                    user.Name = "Oops";
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                var rev = await session.Advanced.Revisions.GetMetadataForAsync("foo/bar");
+                Assert.Equal(0, rev.Count);
+            }
+
         }
 
         [Fact]
