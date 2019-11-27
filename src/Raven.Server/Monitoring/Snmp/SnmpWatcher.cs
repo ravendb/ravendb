@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -29,7 +30,7 @@ namespace Raven.Server.Monitoring.Snmp
 {
     public class SnmpWatcher
     {
-        private readonly Dictionary<string, SnmpDatabase> _loadedDatabases = new Dictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, SnmpDatabase> _loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
@@ -127,6 +128,9 @@ namespace Raven.Server.Monitoring.Snmp
         private void AddDatabaseIfNecessary(string databaseName)
         {
             if (string.IsNullOrWhiteSpace(databaseName))
+                return;
+
+            if (_loadedDatabases.ContainsKey(databaseName))
                 return;
 
             Task.Factory.StartNew(async () =>
