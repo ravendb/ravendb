@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName;
             var allObjects = await _client.ListBlobs(prefix, string.Empty, false);
-            return allObjects.ListBlob.Select(x => new string(x.Name)).ToList();
+            return allObjects.ListBlob.Select(x => x.Name).ToList();
         }
 
         protected override string GetBackupPath(string fileName)
