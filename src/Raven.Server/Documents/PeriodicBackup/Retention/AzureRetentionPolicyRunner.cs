@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
         private const string Delimiter = "/";
 
-        private string _folderContinuationToken = null;
+        private string _nextMarker = null;
 
         public AzureRetentionPolicyRunner(RetentionPolicyBaseParameters parameters, RavenAzureClient client)
             : base(parameters)
@@ -26,8 +26,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         protected override GetFoldersResult GetSortedFolders()
         {
             var prefix = $"{_client.RemoteFolderName}{Delimiter}";
-            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _folderContinuationToken).Result;
-            _folderContinuationToken = result.NextMarker;
+            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _nextMarker).Result;
+            _nextMarker = result.NextMarker;
 
             return new GetFoldersResult
             {
@@ -44,19 +44,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         protected override GetBackupFolderFilesResult GetBackupFilesInFolder(string folder, DateTime startDateOfRetentionRange)
         {
             var backupFiles = new GetBackupFolderFilesResult();
-            var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, maxResult: 2).Result;
-            backupFiles.FirstFile = blobs.ListBlob?.Select(x => x.Name).FirstOrDefault();
+            string blobsNextMarker = null;
+            bool firstFileSet = false;
 
-            blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false).Result;
-
-            foreach (var blob in blobs.ListBlob)
+            do
             {
-                if (RestorePointsBase.TryExtractDateFromFileName(blob.Name, out var lastModified) && lastModified > startDateOfRetentionRange)
+                var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker).Result;
+
+                foreach (var blob in blobs.ListBlob)
                 {
-                    backupFiles.LastFile = blob.Name;
-                    break;
+                    if (firstFileSet == false)
+                    {
+                        backupFiles.FirstFile = blob.Name;
+                        firstFileSet = true;
+                    }
+
+                    if (RestorePointsBase.TryExtractDateFromFileName(blob.Name, out var lastModified) && lastModified > startDateOfRetentionRange)
+                    {
+                        backupFiles.LastFile = blob.Name;
+                        return backupFiles;
+
+                    }
                 }
-            }
+
+                blobsNextMarker = blobs.NextMarker;
+                CancellationToken.ThrowIfCancellationRequested();
+            } while (blobsNextMarker != null);
 
             return backupFiles;
         }

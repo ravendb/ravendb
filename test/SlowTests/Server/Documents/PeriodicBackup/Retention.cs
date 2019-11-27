@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await Locker.WaitAsync();
 
             var containerName = Guid.NewGuid().ToString();
-            using var client = new RavenAzureClient(new AzureSettings {AccountName = AzureAccountName, AccountKey = AzureAccountKey, StorageContainer = containerName});
+            using var client = new RavenAzureClient(new AzureSettings { AccountName = AzureAccountName, AccountKey = AzureAccountKey, StorageContainer = containerName });
 
             try
             {
@@ -119,7 +119,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         using var c = new RavenAzureClient(GetAzureSettings(containerName, databaseName));
                         var folders = await c.ListBlobs($"{c.RemoteFolderName}/", delimiter: "/", listFolders: true);
-                        return folders.ListBlob.Count;
+                        return folders.ListBlob.Count();
                     }, timeout: 120000, checkIncremental);
             }
             finally

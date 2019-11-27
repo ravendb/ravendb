@@ -471,7 +471,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 NextMarker = nextMarker == "true" ? listBlobsResult.Root.Element("NextMarker")?.Value : null
             };
 
-            List<BlobProperties> GetResult()
+            IEnumerable<BlobProperties> GetResult()
             {
                 if (listFolders)
                 {
@@ -483,20 +483,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                         .Select(x => new BlobProperties
                         {
                             Name = x
-                        })
-                        .ToList();
+                        });
                 }
-                else
-                {
-                    return listBlobsResult
-                        .Descendants("Blob")
-                        .Select(x => new BlobProperties
-                        {
-                            Name = x.Element("Name")?.Value,
-                            LastModified = Convert.ToDateTime(x.Element("Properties")?.Element("Last-Modified")?.Value)
-                        })
-                        .ToList();
-                }
+
+                return listBlobsResult
+                    .Descendants("Blob")
+                    .Select(x => new BlobProperties
+                    {
+                        Name = x.Element("Name")?.Value,
+                    });
             }
         }
 
