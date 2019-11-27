@@ -105,11 +105,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
-        public IDisposable SetDocument(LazyStringValue key, object document, JsonOperationContext indexContext, out bool shouldSkip)
+        public IDisposable SetDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext, out bool shouldSkip)
         {
             Document.GetFields().Clear();
 
-            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext);
+            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, sourceDocumentId, document, indexContext);
             if (_fields.Count > 0)
             {
                 shouldSkip = _indexEmptyEntries == false && numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return Scope;
         }
 
-        protected abstract int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext) where T : ILuceneDocumentWrapper;
+        protected abstract int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext) where T : ILuceneDocumentWrapper;
 
         /// <summary>
         /// This method generate the fields for indexing documents in lucene from the values.
@@ -512,6 +512,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return GetOrCreateField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
             return GetOrCreateField(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+        }
+
+        protected Field GetOrCreateSourceDocumentIdField(LazyStringValue key)
+        {
+            return GetOrCreateField(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
         protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)

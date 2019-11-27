@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var workers = new List<IIndexingWork>
             {
-                //new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
+                new CleanupDocuments(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, null)
             };
 
             if (_referencedCollections.Count > 0)
@@ -84,21 +85,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            throw new NotSupportedException();
-
             //if (_referencedCollections.Count > 0)
             //    _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
-            //base.HandleDelete(tombstone, collection, writer, indexContext, stats);
-        }
-
-        public override long GetLastTombstoneEtagInCollection(DocumentsOperationContext databaseContext, string collection, bool isReference)
-        {
-            if (isReference)
-                return base.GetLastTombstoneEtagInCollection(databaseContext, collection, isReference);
-
-            // we do not process tombstones for timeseries, just for references
-            return 0;
+            writer.DeleteBySourceDocument(tombstone.LowerId, stats);
         }
 
         protected override IndexItem GetItemByEtag(DocumentsOperationContext databaseContext, long etag)
@@ -107,17 +97,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new IndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
-        }
-
-        protected override IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)
-        {
-            throw new NotSupportedException("We do not process tombstones for TimeSeries");
-        }
-
-        protected override bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, string collection, long start, long end)
-        {
-            throw new NotSupportedException("We do not process tombstones for TimeSeries");
+            return new IndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries, IndexItemType.TimeSeries);
         }
 
         protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)

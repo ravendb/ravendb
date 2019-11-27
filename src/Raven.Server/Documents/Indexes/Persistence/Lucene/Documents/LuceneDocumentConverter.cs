@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _blittableTraverser = reduceOutput ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, object doc, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext)
         {
             int newFields = 0;
 

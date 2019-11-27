@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 foreach (var output in result.GetOutputs())
                 {
-                    writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
+                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
                 }
 
                 _index.ReducesPerSec.MarkSingleThreaded(numberOfEntriesToReduce);
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 foreach (var output in result.GetOutputs())
                                 {
-                                    writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
+                                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
                                 }
                             }
                             else
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                                 foreach (var output in result.GetOutputs())
                                 {
-                                    writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
+                                    writer.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
                                 }
                             }
                             else

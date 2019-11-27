@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (doc == null)
                     return default;
 
-                return new IndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, null, doc.Data.Size, doc);
+                return new IndexItem(doc.Id, doc.LowerId, doc.Id, doc.LowerId, doc.Etag, doc.LastModified, null, doc.Data.Size, doc, IndexItemType.Document);
             }
         }
     }
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                     case ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
-                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection, isReference: true);
+                                            lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(databaseContext, collection);
 
                                         references = GetTombstoneReferences(databaseContext, referencedCollection, lastEtag, 0, pageSize);
                                         break;

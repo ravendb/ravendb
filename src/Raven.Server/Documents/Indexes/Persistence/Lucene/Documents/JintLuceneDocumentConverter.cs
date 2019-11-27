@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private const string CreatedFieldOptionsPropertyName = "$options";
         private const string CreatedFieldNamePropertyName = "$name";
 
-        protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
+        protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object document, JsonOperationContext indexContext)
         {
             if (!(document is ObjectInstance documentToProcess))
                 return 0;
