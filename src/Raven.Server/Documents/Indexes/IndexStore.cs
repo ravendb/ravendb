@@ -397,16 +397,15 @@ namespace Raven.Server.Documents.Indexes
                 switch (definition.SourceType)
                 {
                     case IndexSourceType.Documents:
-                        var documentsIndexDefinition = (IndexDefinition)definition;
                         switch (definition.Type)
                         {
                             case IndexType.Map:
                             case IndexType.JavaScriptMap:
-                                index = MapIndex.CreateNew(documentsIndexDefinition, _documentDatabase);
+                                index = MapIndex.CreateNew(definition, _documentDatabase);
                                 break;
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                var mapReduceIndex = MapReduceIndex.CreateNew(documentsIndexDefinition, _documentDatabase);
+                                var mapReduceIndex = MapReduceIndex.CreateNew(definition, _documentDatabase);
 
                                 if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
                                     mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
@@ -426,7 +425,12 @@ namespace Raven.Server.Documents.Indexes
                                 break;
                             case IndexType.MapReduce:
                             case IndexType.JavaScriptMapReduce:
-                                throw new InvalidOperationException("TODO ppekrol");
+                                var mapReduceIndex = MapReduceTimeSeriesIndex.CreateNew(definition, _documentDatabase);
+
+                                if (mapReduceIndex.OutputReduceToCollection != null && prefixesOfDocumentsToDelete.Count > 0)
+                                    mapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+
+                                index = mapReduceIndex;
                                 break;
                             default:
                                 throw new NotSupportedException($"Cannot create {definition.Type} index from TimeSeriesIndexDefinition");

@@ -18,7 +18,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         }
 
         [Fact]
-        public void BasicIndex()
+        public void BasicMapIndex()
         {
             using (var store = GetDocumentStore())
             {
@@ -262,6 +262,162 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "Employee", null));
                 Assert.Equal(0, terms.Length);
+            }
+        }
+
+        [Fact( Skip =  "TODO arek")]
+        public void BasicMapReduceIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var now1 = DateTime.Today; 
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User();
+                    session.Store(user, "users/1");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.TimeSeriesFor(user).Append("HeartRate", now1.AddHours(i), "abc", new double[] {180 + i});
+                    }
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                string indexName = "AverageHeartRateDaily/ByDateAndUser";
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = indexName,
+                    Maps = {
+                    "from ts in timeSeries.Users.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Value, " +
+                    "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                    "   User = ts.DocumentId, " +
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}"
+                }));
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForUserToContinueTheTest(store);
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                
+
+                //using (var session = store.OpenSession())
+                //{
+                //    var user = session.Load<User>("users/1");
+                //    session.TimeSeriesFor(user).Append("HeartRate", now2, "tag", new double[] { 3 });
+
+                //    session.SaveChanges();
+                //}
+
+                //staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                //Assert.True(staleness.IsStale);
+                //Assert.Equal(1, staleness.StalenessReasons.Count);
+                //Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                //store.Maintenance.Send(new StartIndexingOperation());
+
+                //WaitForIndexing(store);
+
+                //staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                //Assert.False(staleness.IsStale);
+
+                //store.Maintenance.Send(new StopIndexingOperation());
+
+                //Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
+
+                //var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                //Assert.Equal(2, terms.Length);
+                //Assert.Contains("7", terms);
+                //Assert.Contains("3", terms);
+
+                //terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
+                //Assert.Equal(1, terms.Length);
+                //Assert.Contains(now1.Date.GetDefaultRavenFormat(), terms);
+
+                //terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
+                //Assert.Equal(1, terms.Length);
+                //Assert.Contains("users/1", terms);
+
+                //// delete time series
+
+                //using (var session = store.OpenSession())
+                //{
+                //    var user = session.Load<User>("users/1");
+                //    session.TimeSeriesFor(user).Remove("HeartRate", now2);
+
+                //    session.SaveChanges();
+                //}
+
+                //staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                //Assert.True(staleness.IsStale);
+                //Assert.Equal(1, staleness.StalenessReasons.Count);
+                //Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                //store.Maintenance.Send(new StartIndexingOperation());
+
+                //WaitForIndexing(store);
+
+                //staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                //Assert.False(staleness.IsStale);
+
+                //terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                //Assert.Equal(1, terms.Length);
+                //Assert.Contains("7", terms);
+
+                //// delete document
+
+                //store.Maintenance.Send(new StopIndexingOperation());
+
+                //using (var session = store.OpenSession())
+                //{
+                //    session.Delete("users/1");
+                //    session.SaveChanges();
+                //}
+
+                //staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                //Assert.True(staleness.IsStale);
+                //Assert.Equal(1, staleness.StalenessReasons.Count);
+                //Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                //store.Maintenance.Send(new StartIndexingOperation());
+
+                //WaitForIndexing(store);
+
+                //staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                //Assert.False(staleness.IsStale);
+
+                //terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                //Assert.Equal(0, terms.Length);
             }
         }
     }
