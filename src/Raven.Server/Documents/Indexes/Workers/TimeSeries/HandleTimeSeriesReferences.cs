@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Extensions;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
@@ -23,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new IndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries, IndexItemType.TimeSeries);
+            return new TimeSeriesIndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
     }
 }
