@@ -721,6 +721,10 @@ namespace Raven.Server.Documents.TimeSeries
                         throw new ArgumentOutOfRangeException(nameof(tag),
                             $"Tag '{tag}' is too big (max 255 bytes) for document '{documentId}' in time series: {name}");
                 }
+                else
+                {
+                    TagSlice = Slices.Empty;
+                }
             }
 
             public void UpdateTagSlice(DocumentsOperationContext context, LazyStringValue tag)
