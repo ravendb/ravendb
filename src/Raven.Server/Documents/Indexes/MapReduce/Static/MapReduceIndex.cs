@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly StaticIndexBase _compiled;
+        protected internal readonly AbstractStaticIndexBase _compiled;
         private readonly ThreadLocal<bool> _ignoreStalenessDueToReduceOutputsToDelete = new ThreadLocal<bool>();
         private bool? _isSideBySide;
 
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public IPropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
-        protected MapReduceIndex(MapReduceIndexDefinition definition, StaticIndexBase compiled)
+        protected MapReduceIndex(MapReduceIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return _compiled.ReferencedCollections;
         }
 
-        private class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
+        public class AnonymousObjectToBlittableMapResultsEnumerableWrapper : IEnumerable<MapResult>
         {
             private IEnumerable _items;
             private TransactionOperationContext _indexContext;
@@ -460,7 +460,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private readonly HashSet<CompiledIndexField> _groupByFields;
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
-            private readonly StaticIndexBase _compiledIndex;
+            private readonly AbstractStaticIndexBase _compiledIndex;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
