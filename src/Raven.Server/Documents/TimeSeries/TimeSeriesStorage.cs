@@ -88,6 +88,9 @@ namespace Raven.Server.Documents.TimeSeries
             CollectionName collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             Table table = GetTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
+            from = EnsureMillisecondsPrecision(from);
+            to = EnsureMillisecondsPrecision(to);
+            
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
             using (Slice.From(context.Allocator, name, out Slice timeSeriesName))
             using (context.Allocator.Allocate(documentKeyPrefix.Size + timeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */,
@@ -263,6 +266,15 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        private static DateTime EnsureMillisecondsPrecision(DateTime dt)
+        {
+            var remainder = dt.Ticks % 10_000;
+            if (remainder != 0)
+                dt = dt.AddTicks(-remainder);
+
+            return dt;
+        }
+
         public void DeleteTimeSeriesForDocument(DocumentsOperationContext context, string documentId, CollectionName collection)
         {
             // this will be called as part of document's delete
@@ -300,10 +312,11 @@ namespace Raven.Server.Documents.TimeSeries
                 _context = context;
                 _documentId = documentId;
                 _name = name;
-                _from = from;
-                _to = to;
                 _table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
                 _tag = new LazyStringValue(null, null, 0, context);
+
+                _from = EnsureMillisecondsPrecision(from);
+                _to = EnsureMillisecondsPrecision(to);
             }
 
             internal bool Init()
@@ -991,6 +1004,8 @@ namespace Raven.Server.Documents.TimeSeries
                         retry = false;
                         var current = appendEnumerator.Current;
                         Debug.Assert(current != null);
+
+                        current.TimeStamp = EnsureMillisecondsPrecision(current.TimeStamp);
 
                         using (var slicer = new TimeSeriesSlicer(context, documentId, name, current.TimeStamp, current.Tag))
                         {
