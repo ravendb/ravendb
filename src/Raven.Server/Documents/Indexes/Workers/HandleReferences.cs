@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (doc == null)
                     return default;
 
-                return new IndexItem(doc.Id, doc.LowerId, doc.Id, doc.LowerId, doc.Etag, doc.LastModified, null, doc.Data.Size, doc, IndexItemType.Document);
+                return new DocumentIndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, doc.Data.Size, doc);
             }
         }
     }

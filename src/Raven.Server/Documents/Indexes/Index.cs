@@ -877,7 +877,7 @@ namespace Raven.Server.Documents.Indexes
             if (document == null)
                 return default;
 
-            return new IndexItem(document.Id, document.LowerId, document.Id, document.LowerId, document.Etag, document.LastModified, null, document.Data.Size, document, IndexItemType.Document);
+            return new DocumentIndexItem(document.Id, document.LowerId, document.Etag, document.LastModified, document.Data.Size, document);
         }
 
         protected virtual IndexItem GetTombstoneByEtag(DocumentsOperationContext databaseContext, long etag)
@@ -886,7 +886,7 @@ namespace Raven.Server.Documents.Indexes
             if (tombstone == null)
                 return default;
 
-            return new IndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, null, 0, tombstone, IndexItemType.Document);
+            return new DocumentIndexItem(tombstone.LowerId, tombstone.LowerId, tombstone.Etag, tombstone.LastModified, 0, tombstone);
         }
 
         protected virtual bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext databaseContext, string collection, long start, long end)
@@ -4104,55 +4104,5 @@ namespace Raven.Server.Documents.Indexes
                 return files.Length;
             }
         }
-    }
-
-    public class IndexItem : IDisposable
-    {
-        public readonly LazyStringValue Id;
-
-        public readonly LazyStringValue LowerId;
-
-        public readonly LazyStringValue SourceDocumentId;
-
-        public readonly LazyStringValue LowerSourceDocumentId;
-
-        public readonly long Etag;
-
-        public DateTime LastModified;
-
-        public readonly int Size;
-
-        public readonly object Item;
-
-        public readonly string IndexingKey;
-
-        public readonly IndexItemType ItemType;
-
-        public IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item, IndexItemType itemType)
-        {
-            Id = id;
-            LowerId = lowerId;
-            Etag = etag;
-            LastModified = lastModified;
-            Size = size;
-            Item = item;
-            IndexingKey = indexingKey;
-            SourceDocumentId = sourceDocumentId;
-            LowerSourceDocumentId = lowerSourceDocumentId;
-            ItemType = itemType;
-        }
-
-        public void Dispose()
-        {
-            if (Item is IDisposable disposable)
-                disposable.Dispose();
-        }
-    }
-
-    public enum IndexItemType
-    {
-        None,
-        Document,
-        TimeSeries,
     }
 }
