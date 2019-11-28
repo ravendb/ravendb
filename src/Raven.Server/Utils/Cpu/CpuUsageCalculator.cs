@@ -288,7 +288,7 @@ namespace Raven.Server.Utils.Cpu
 
         public void Dispose()
         {
-            
+
         }
     }
 }

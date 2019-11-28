@@ -58,29 +58,26 @@ namespace Raven.Server.Utils.Cpu
                 var retry = 2;
                 const int maxMinutesBetweenIssues = 15;
                 var lastRestart = DateTime.UtcNow;
-                var lastReceivedLine = DateTime.UtcNow;
                 while (retry-- > 0)
                 {
                     using (var cts = new CancellationTokenSource())
                     using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, ctk))
                     {
-                        var lineOutHandler = new Action<object, string>((p, l) =>
+                        var lineOutHandler = new Action<object, (string Line, bool IsTimedOut)>((p, l) =>
                         {
-                            if (l == null)
+                            if (l.IsTimedOut)
                             {
-                                if (DateTime.UtcNow - lastReceivedLine > TimeSpan.FromSeconds(60))
-                                {
-                                    _data = BadData;
-                                    NotifyWarning("Cpu usage process hanged (no output for 60 seconds), killing the process",
-                                        new TimeoutException("no output from process for 60 seconds"));
-                                    cts.Cancel();
-                                }
-
+                                _data = BadData;
+                                NotifyWarning("Cpu usage process hanged (no output for 60 seconds), killing the process",
+                                    new TimeoutException("no output from process for 60 seconds"));
+                                cts.Cancel();
                                 return;
                             }
 
-                            lastReceivedLine = DateTime.UtcNow;
-                            var errString = TryHandleInfoReceived(l);
+                            if (l.Line == null)
+                                return;
+
+                            var errString = TryHandleInfoReceived(l.Line);
                             if (errString != null)
                             {
                                 _data = BadData;
@@ -95,6 +92,7 @@ namespace Raven.Server.Utils.Cpu
                             60,
                             null,
                             lineOutHandler,
+                            60_000,
                             linkedCts.Token);
 
                         if (ctk.IsCancellationRequested)
