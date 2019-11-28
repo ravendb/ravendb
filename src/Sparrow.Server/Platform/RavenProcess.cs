@@ -30,13 +30,13 @@ namespace Sparrow.Server.Platform
             handler?.Invoke(this, e);
         }
 
-        public event Action<object, string> LineOutput;
-        private void OnLineOutput(string line, CancellationToken ctk)
+        public event Action<object, (string Line, bool IsTimedOut)> LineOutput;
+        private void OnLineOutput(string line, bool timedOut, CancellationToken ctk)
         {
             if (ctk.IsCancellationRequested == false)
             {
                 var handler = LineOutput;
-                handler?.Invoke(this, line);
+                handler?.Invoke(this, (line, timedOut));
             }
         }
 
@@ -110,22 +110,35 @@ namespace Sparrow.Server.Platform
             }
         }
 
-        private void ReadLines(StreamReader sr, Action<object, string> lineOutputHandler, CancellationToken ctk)
+        private void ReadLines(StreamReader sr, int timeoutMsec, CancellationToken ctk)
         {
             while (ctk.IsCancellationRequested == false)
             {
-                var lineTask = sr.ReadLineAsync();
-                if (lineTask.Wait(Timeout.Infinite, ctk) == false)
+                string line;
+                try
+                {
+                    var lineTask = sr.ReadLineAsync();
+                    if (lineTask.Wait(timeoutMsec, ctk) == false)
+                    {
+                        OnLineOutput(null, true, ctk);
+                        break;
+                    }
+                    line = lineTask.Result;
+                }
+                catch (OperationCanceledException)
+                {
                     break;
-                var line = lineTask.Result;
-                OnLineOutput(line, ctk);
+                }
+
+                OnLineOutput(line, false, ctk);
                 if (line == null)
                     break;
             }
         }
 
-        public static void Execute(string command, string arguments, int waitForExitTimeoutInSeconds, EventHandler<ProcessExitedEventArgs> exitHandler, Action<object, string> lineOutputHandler, CancellationToken ctk)
+        public static void Execute(string command, string arguments, int waitForExitTimeoutInSeconds, EventHandler<ProcessExitedEventArgs> exitHandler, Action<object, (string Line, bool IsTimedOut)> lineOutputHandler, int timeoutMs, CancellationToken ctk)
         {
+            // timeoutMs should be -1 for infinite blocking ReadLineAsync
             var startInfo = new ProcessStartInfo
             {
                 FileName = command,
@@ -143,7 +156,7 @@ namespace Sparrow.Server.Platform
                 {
                     try
                     {
-                        process.ReadLines(sr, lineOutputHandler, ctk);
+                        process.ReadLines(sr, timeoutMs, ctk);
                     }
                     catch
                     {
