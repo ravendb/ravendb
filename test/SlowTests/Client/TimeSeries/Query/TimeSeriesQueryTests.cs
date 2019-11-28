@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -5096,6 +5097,55 @@ select out(doc, c)
 
                     Assert.Equal(expectedFrom, val.From);
                     Assert.Equal(expectedTo, val.To);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowOnInvalidOperationInsideWhere()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Watch
+                    {
+                        EndOfWarranty = baseline.AddYears(1)
+                    }, "watches/fitbit");
+                    session.Store(new Person
+                    {
+                        Name = "Oren"
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        load Tag as src
+        where Values[0] > src.EndOfWarranty
+    group by '1 month' 
+    select max()
+}
+from People as p
+select out(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+
+                    var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
+                    Assert.Contains("Operator '>' cannot be applied to operands of type 'double' and 'Sparrow.Json.LazyStringValue'", ex.Message);
 
                 }
             }

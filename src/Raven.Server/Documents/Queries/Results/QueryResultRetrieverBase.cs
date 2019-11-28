@@ -780,7 +780,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     MaybeMoveToNextRange(cur.TimeStamp);
 
-                    if (ShouldFilter(timeSeriesFunction.Where, cur))
+                    if (ShouldFilter(cur, timeSeriesFunction.Where))
                         continue;
                     
                     count++;
@@ -816,7 +816,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var singleResult in reader.AllValues())
                 {
-                    if (ShouldFilter(timeSeriesFunction.Where, singleResult))
+                    if (ShouldFilter(singleResult, timeSeriesFunction.Where))
                         continue;
 
                     var vals = new DynamicJsonArray();
@@ -894,7 +894,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }, "timeseries/value");
             }
 
-            bool ShouldFilter(QueryExpression filter, SingleResult singleResult)
+            bool ShouldFilter(SingleResult singleResult, QueryExpression filter)
             {
                 if (filter == null)
                     return false;
@@ -904,39 +904,53 @@ namespace Raven.Server.Documents.Queries.Results
                     switch (be.Operator)
                     {
                         case OperatorType.And:
-                            return ShouldFilter(be.Left, singleResult) ||
-                                   ShouldFilter(be.Right, singleResult);
+                            return ShouldFilter(singleResult, be.Left) ||
+                                   ShouldFilter(singleResult, be.Right);
                         case OperatorType.Or:
-                            return ShouldFilter(be.Left, singleResult) &&
-                                   ShouldFilter(be.Right, singleResult);
+                            return ShouldFilter(singleResult, be.Left) &&
+                                   ShouldFilter(singleResult, be.Right);
                     }
 
                     var left = GetValue(be.Left, singleResult);
                     var right = GetValue(be.Right, singleResult);
                     bool result;
 
-                    switch (left)
+                    try
                     {
-                        case DateTime dt:
-                            result = CompareDateTimes(dt, right);
-                            break;
-                        case LazyNumberValue lnv:
-                            result = CompareNumbers(lnv, right);
-                            break;
-                        case LazyStringValue lsv:
-                            result = CompareStrings(lsv, right);
-                            break;
-                        default:
-                            result = CompareDynamic(left, right);
-                            break;
+                        switch (left)
+                        {
+                            case DateTime dt:
+                                result = CompareDateTimes(dt, right);
+                                break;
+                            case double d:
+                                result = CompareNumbers(d, right);
+                                break;
+                            case LazyNumberValue lnv:
+                                result = CompareLazyNumbers(lnv, right);
+                                break;
+                            case string s:
+                                result = CompareStrings(s, right);
+                                break;
+                            case LazyStringValue lsv:
+                                result = CompareLazyStrings(lsv, right);
+                                break;
+                            default:
+                                result = CompareDynamic(left, right);
+                                break;
+                        }
+
+                        return result == false;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute expression '{be}', got : left '{left}', right '{right}'", e);
                     }
 
-                    return result == false;
                 }
 
                 if (filter is NegatedExpression ne)
                 {
-                    return ShouldFilter(ne.Expression, singleResult) == false;
+                    return ShouldFilter(singleResult, ne.Expression) == false;
                 }
 
                 if (filter is InExpression inExpression)
@@ -952,9 +966,54 @@ namespace Raven.Server.Documents.Queries.Results
                 }
 
                 throw new InvalidQueryException($"Unsupported expression '{filter}' inside WHERE clause of TimeSeries function '{declaredFunction.Name}'. " +
-                                                "Supported expressions are : Binary Expressions (=, !=, <, >, <=, >=, AND, OR, NOT), IN expressions, BETWEEN expressions.");
+                                                "Supported expressions are : Binary Expressions (=, !=, <, >, <=, >=, AND, OR, NOT), IN expressions, BETWEEN expressions");
 
-                bool CompareNumbers(LazyNumberValue lnv, object right)
+                bool CompareNumbers(double d, object right)
+                {
+                    if (right is LazyNumberValue lnv)
+                    {
+                        var result = CompareLazyNumbers(lnv, d);
+                        if (be.Operator == OperatorType.Equal || be.Operator == OperatorType.NotEqual)
+                            return result;
+                        
+                        return result == false;
+                    }
+
+                    double rightAsDouble;
+                    if (right is double rd)
+                    {
+                        rightAsDouble = rd;
+                    }
+                    else if (right is long l)
+                    {
+                        rightAsDouble = l;
+                    }
+                    else
+                    {
+                        return CompareDynamic(d, right);
+                    }
+
+                    switch (be.Operator)
+                    {
+                        case OperatorType.Equal:
+                            return d.Equals(rightAsDouble);
+                        case OperatorType.NotEqual:
+                            return d.Equals(rightAsDouble) == false;
+                        case OperatorType.LessThan:
+                            return d.CompareTo(rightAsDouble) < 0;
+                        case OperatorType.GreaterThan:
+                            return d.CompareTo(rightAsDouble) > 0;
+                        case OperatorType.LessThanEqual:
+                            return d.CompareTo(rightAsDouble) <= 0;
+                        case OperatorType.GreaterThanEqual:
+                            return d.CompareTo(rightAsDouble) >= 0;
+                        default:
+                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function." +
+                                                            $"Operator '{be.Operator}' is not supported");
+                    }
+                }
+
+                bool CompareLazyNumbers(LazyNumberValue lnv, object right)
                 {
                     switch (be.Operator)
                     {
@@ -971,8 +1030,8 @@ namespace Raven.Server.Documents.Queries.Results
                         case OperatorType.GreaterThanEqual:
                             return lnv.CompareTo(right) >= 0;
                         default:
-                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
-                                                                $"Operator '{be.Operator}' is not supported.");
+                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function." +
+                                                            $"Operator '{be.Operator}' is not supported");
                     }
                 }
 
@@ -1000,12 +1059,12 @@ namespace Raven.Server.Documents.Queries.Results
                         case OperatorType.GreaterThanEqual:
                             return dateTime >= rightAsDt;
                         default:
-                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
-                                                                $"Operator '{be.Operator}' is not supported.");
+                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function." +
+                                                            $"Operator '{be.Operator}' is not supported");
                     }
                 }
 
-                bool CompareStrings(LazyStringValue lsv, object right)
+                bool CompareLazyStrings(LazyStringValue lsv, object right)
                 {
                     if (right is DateTime)
                     {
@@ -1028,8 +1087,43 @@ namespace Raven.Server.Documents.Queries.Results
                         case OperatorType.GreaterThanEqual:
                             return lsv.CompareTo(right) >= 0;
                         default:
-                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
-                                                                $"Operator '{be.Operator}' is not supported.");
+                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function." +
+                                                            $"Operator '{be.Operator}' is not supported");
+                    }
+                }
+
+                bool CompareStrings(string s, object right)
+                {
+                    if (right is DateTime)
+                    {
+                        var leftAsDt = ParseDateTime(s);
+                        return CompareDateTimes(leftAsDt, right);
+                    }
+
+                    string rightAsString;
+                    if (right is string rs)
+                        rightAsString = rs;
+                    
+                    else
+                        rightAsString = right.ToString();
+                    
+                    switch (be.Operator)
+                    {
+                        case OperatorType.Equal:
+                            return s == rightAsString;
+                        case OperatorType.NotEqual:
+                            return s != rightAsString;
+                        case OperatorType.LessThan:
+                            return string.Compare(s, rightAsString, StringComparison.Ordinal) < 0;
+                        case OperatorType.GreaterThan:
+                            return string.Compare(s, rightAsString, StringComparison.Ordinal) > 0;
+                        case OperatorType.LessThanEqual:
+                            return string.Compare(s, rightAsString, StringComparison.Ordinal) <= 0;
+                        case OperatorType.GreaterThanEqual:
+                            return string.Compare(s, rightAsString, StringComparison.Ordinal) >= 0;
+                        default:
+                            throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function." +
+                                                            $"Operator '{be.Operator}' is not supported");
                     }
                 }
 
@@ -1058,7 +1152,7 @@ namespace Raven.Server.Documents.Queries.Results
                             break;
                         default:
                             throw new InvalidQueryException($"Invalid binary expression '{be}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
-                                                            $"Operator '{be.Operator}' is not supported.");
+                                                            $"Operator '{be.Operator}' is not supported");
                     }
 
                     return result;
@@ -1068,39 +1162,45 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     dynamic src = GetValue(inExpression.Source, singleResult);
                     bool result = false;
-                    dynamic val;
+                    dynamic val = null;
 
                     if (inExpression.All)
                         throw new InvalidQueryException($"Invalid InExpression '{inExpression}' inside WHERE clause of time series function '{declaredFunction.Name}'." +
-                                                        "Operator 'ALL IN' is not supported in time series functions");
-
-                    if (src is LazyNumberValue lnv)
+                                                        "Operator 'ALL IN' is not supported for time series functions");
+                    try
                     {
-                        for (int i = 0; i < inExpression.Values.Count; i++)
+                        if (src is LazyNumberValue lnv)
                         {
-                            val = GetValue(inExpression.Values[i], singleResult);
-
-                            if (lnv.CompareTo(val) == 0)
+                            for (int i = 0; i < inExpression.Values.Count; i++)
                             {
-                                result = true;
-                                break;
+                                val = GetValue(inExpression.Values[i], singleResult);
+
+                                if (lnv.CompareTo(val) == 0)
+                                {
+                                    result = true;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    else
-                    {
-                        for (int i = 0; i < inExpression.Values.Count; i++)
+                        else
                         {
-                            val = GetValue(inExpression.Values[i], singleResult);
-                            if (src == val)
+                            for (int i = 0; i < inExpression.Values.Count; i++)
                             {
-                                result = true;
-                                break;
+                                val = GetValue(inExpression.Values[i], singleResult);
+                                if (src == val)
+                                {
+                                    result = true;
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    return result;
+                        return result;
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute InExpression '{inExpression}' on : source '{src}', value '{val}'", e);
+                    }
                 }
 
                 bool EvaluateBetweenExpression()
@@ -1110,22 +1210,30 @@ namespace Raven.Server.Documents.Queries.Results
                     dynamic src = GetValue(betweenExpression.Source, singleResult);
                     dynamic value = GetValue(betweenExpression.MinExpression, singleResult);
 
-                    if (src is LazyNumberValue lnv)
+                    try
                     {
-                        if (lnv.CompareTo(value) >= 0)
+                        if (src is LazyNumberValue lnv)
+                        {
+                            if (lnv.CompareTo(value) >= 0)
+                            {
+                                value = GetValue(betweenExpression.MaxExpression, singleResult);
+                                result = lnv.CompareTo(value) <= 0;
+                            }
+                        }
+
+                        else if (src >= value)
                         {
                             value = GetValue(betweenExpression.MaxExpression, singleResult);
-                            result = lnv.CompareTo(value) <= 0;
+                            result = src <= value;
                         }
-                    }
 
-                    else if (src >= value)
+                        return result;
+                    }
+                    catch (Exception e)
                     {
-                        value = GetValue(betweenExpression.MaxExpression, singleResult);
-                        result = src <= value;
+                        throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' failed to execute BetweenExpression '{betweenExpression}'", e);
                     }
 
-                    return result;
                 }
             }
 
@@ -1139,7 +1247,7 @@ namespace Raven.Server.Documents.Queries.Results
                         case "tag":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
-                            return singleResult.Tag.ToString();
+                            return singleResult.Tag?.ToString();
                         case "values":
                             if (fe.Compound.Count == 1)
                                 return singleResult.Values;
@@ -1309,7 +1417,7 @@ namespace Raven.Server.Documents.Queries.Results
             var tag = singleResult.Tag?.ToString();
             if (tag == null)
                 throw new InvalidQueryException("Unable to load document from 'Tag' property of time series entry. 'Tag' is null. " +
-                                                    $"Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
+                                                $"Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
 
             if (_loadedDocuments.TryGetValue(tag, out var document) == false)
                 _loadedDocuments[tag] = document = _database.DocumentsStorage.Get(_includeDocumentsCommand.Context, tag);
@@ -1319,7 +1427,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (document == null)
                 throw new InvalidQueryException($"Unable to load document '{tag}' from 'Tag' property of time series entry. " +
-                                                    $"Document '{tag}' does not exist. Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
+                                                $"Document '{tag}' does not exist. Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
 
             return GetFieldFromDocument(fe, document);
         }
