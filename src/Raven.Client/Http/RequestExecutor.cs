@@ -1585,6 +1585,7 @@ namespace Raven.Client.Http
 
                 try
                 {
+                    ServicePointManager.MaxServicePointIdleTime = -1;
                     var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
                     servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, 1024 * 10);
                 }
