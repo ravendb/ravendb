@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public LazyStringValue DocId;
 
-        public string Name;
+        public LazyStringValue Name;
 
         public LazyStringValue DocIdAndName;
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public int SegmentSize;
 
-        public string Collection;
+        public LazyStringValue Collection;
 
         public DateTime Baseline;
 
