@@ -2081,7 +2081,7 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
-                        if (DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTime()))
+                        if (DatabasesLandlord.UnloadDirectly(db, idleDbInstance.PeriodicBackupRunner.GetWakeDatabaseTimeUtc()))
                             IdleDatabases[idleDbInstance.Name] = dbIdEtagDictionary;
                     }
                 }

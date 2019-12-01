@@ -927,7 +927,7 @@ namespace Raven.Server.Documents
                 timer.Dispose();
             }
 
-            if (wakeup.HasValue == false || wakeup.Value == DateTime.MaxValue)
+            if (wakeup.HasValue == false || wakeup.Value == DateTime.MaxValue.ToUniversalTime())
                 return true;
 
             // if we have a small value or even a negative one, simply don't dispose the database.
