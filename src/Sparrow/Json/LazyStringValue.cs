@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -58,7 +59,7 @@ namespace Sparrow.Json
 
     // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
     public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
-        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable
+        IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IEnumerable<char>
     {
         internal readonly JsonOperationContext _context;
         private string _string;
@@ -261,6 +262,16 @@ namespace Sparrow.Json
                 return result;
 
             throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to float");
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public IEnumerator<char> GetEnumerator()
+        {
+            return ToString().GetEnumerator();
         }
 
         public override bool Equals(object other)
