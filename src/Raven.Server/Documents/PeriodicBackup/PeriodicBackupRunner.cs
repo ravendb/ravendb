@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly ConcurrentSet<Task> _inactiveRunningPeriodicBackupsTasks = new ConcurrentSet<Task>();
 
         private bool _disposed;
-        private readonly DateTime? _databaseWakeUpTime;
+        private readonly DateTime? _databaseWakeUpTimeUtc;
 
         // interval can be 2^32-2 milliseconds at most
         // this is the maximum interval acceptable in .Net's threading timer
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             // we pass wakeup-1 to ensure the backup will run right after DB woke up on wakeup time, and not on the next occurrence.
             // relevant only if it's the first backup after waking up
-            _databaseWakeUpTime = wakeup?.AddMinutes(-1);
+            _databaseWakeUpTimeUtc = wakeup?.AddMinutes(-1);
 
             _database.TombstoneCleaner.Subscribe(this);
             IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
-        private DateTime? GetNextWakeupTime(long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
+        private DateTime? GetNextWakeupTimeLocal(long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
         {
             // we will always wake up the database for a full backup.
             // but for incremental we will wake the database only if there were changes made.
@@ -107,21 +107,20 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (backupStatus == null)
             {
-                return GetNextBackupOccurrence(configuration.FullBackupFrequency, now, configuration, skipErrorLog: false);
+                return GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, now, configuration, skipErrorLog: false);
             }
 
             if (backupStatus.LastEtag != lastEtag)
             {
-                var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
-                var nextlastIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency,
-                    lastIncrementalBackup, configuration, skipErrorLog: false);
-                if (nextlastIncrementalBackup != null)
-                    return nextlastIncrementalBackup;
+                var lastIncrementalBackupUtc = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
+                var nextLastIncrementalBackupLocal = GetNextBackupOccurrenceLocal(configuration.IncrementalBackupFrequency, lastIncrementalBackupUtc, configuration, skipErrorLog: false);
+
+                if (nextLastIncrementalBackupLocal != null)
+                    return nextLastIncrementalBackupLocal;
             }
 
             var lastFullBackup = backupStatus.LastFullBackupInternal ?? now;
-            return GetNextBackupOccurrence(configuration.FullBackupFrequency,
-                lastFullBackup, configuration, skipErrorLog: false);
+            return GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false);
         }
 
         private NextBackup GetNextBackupDetails(
@@ -129,13 +128,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupStatus backupStatus,
             bool skipErrorLog = false)
         {
-            var now = SystemTime.UtcNow;
-            var lastFullBackup = backupStatus.LastFullBackupInternal ?? _databaseWakeUpTime ?? now;
-            var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? _databaseWakeUpTime ?? now;
-            var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency,
-                lastFullBackup, configuration, skipErrorLog: skipErrorLog);
-            var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency,
-                lastIncrementalBackup, configuration, skipErrorLog: skipErrorLog);
+            var nowUtc = SystemTime.UtcNow;
+            var lastFullBackupUtc = backupStatus.LastFullBackupInternal ?? _databaseWakeUpTimeUtc ?? nowUtc;
+            var lastIncrementalBackupUtc = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? _databaseWakeUpTimeUtc ?? nowUtc;
+            var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency,
+                lastFullBackupUtc, configuration, skipErrorLog: skipErrorLog);
+            var nextIncrementalBackup = GetNextBackupOccurrenceLocal(configuration.IncrementalBackupFrequency,
+                lastIncrementalBackupUtc, configuration, skipErrorLog: skipErrorLog);
 
             if (nextFullBackup == null && nextIncrementalBackup == null)
             {
@@ -218,7 +217,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return nextBackup;
         }
 
-        private DateTime? GetNextBackupOccurrence(string backupFrequency,
+        private DateTime? GetNextBackupOccurrenceLocal(string backupFrequency,
             DateTime lastBackupUtc, PeriodicBackupConfiguration configuration, bool skipErrorLog)
         {
             if (string.IsNullOrWhiteSpace(backupFrequency))
@@ -360,7 +359,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
         }
 
-        public DateTime GetWakeDatabaseTime()
+        public DateTime GetWakeDatabaseTimeUtc()
         {
             var wakeupDatabase = DateTime.MaxValue;
             long lastEtag;
@@ -373,13 +372,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             foreach (var backup in _periodicBackups)
             {
-                var nextBackup = GetNextWakeupTime(lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
+                var nextBackup = GetNextWakeupTimeLocal(lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
                 if (nextBackup == null)
                     continue;
                 if (nextBackup < wakeupDatabase)
                     wakeupDatabase = nextBackup.Value;
             }
-            return wakeupDatabase;
+
+            return wakeupDatabase.ToUniversalTime();
         }
 
         private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup, DateTime startTimeInUtc)
