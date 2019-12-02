@@ -76,6 +76,7 @@ namespace Raven.Server.NotificationCenter
                           $"Working set: {memoryInfo.WorkingSet}, " +
                           $"Available memory: {memoryInfo.AvailableMemory}, " +
                           $"Calculated Available memory: {memoryInfo.AvailableWithoutTotalCleanMemory}, " +
+                          $"Total Scratch Dirty memory: {memoryInfo.TotalScratchDirtyMemory}, " +
                           $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
                           $"Error: {exception}"
             };
