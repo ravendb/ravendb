@@ -45,5 +45,17 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Memory.UseTotalDirtyMemInsteadOfMemUsage", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseTotalDirtyMemInsteadOfMemUsage { get; set; }
+
+        [Description("The minimum amount of physical memory needed in order to operate 'High Dirty Memory' check mechanism. Default: 2048MB")]
+        [DefaultValue(2048)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Memory.MinimumAllowedUseInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MinimumAllowedUseInMb { get; set; }
+
+        [Description("Specifies the threshold percentage of physical memory for activating 'High Dirty Memory' mechanism (server will return 'Service Unavailable' for writes when scratch files dirty memory exeeds this threshold). Default: 25")]
+        [DefaultValue(25)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Memory.PercentageFromPhysicalMem", ConfigurationEntryScope.ServerWideOnly)]
+        public int PercentageFromPhysicalMem { get; set; }
     }
 }

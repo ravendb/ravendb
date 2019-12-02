@@ -35,6 +35,7 @@ namespace Sparrow.LowMemory
             public long CurrentCommitCharge { get; set; }
             public long PhysicalMem { get; set; }
             public long TotalUnmanaged { get; set; }
+            public long TotalScratchDirty { get; set; }
             public long LowMemThreshold { get; set; }
         }
 
@@ -211,6 +212,7 @@ namespace Sparrow.LowMemory
                 AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
                     availableMemForLog,
                     -2,
+                    memInfoForLog.TotalScratchDirtyMemory.GetValue(SizeUnit.Bytes),
                     memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                     memInfoForLog.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
             }
@@ -226,7 +228,7 @@ namespace Sparrow.LowMemory
             int timeout;
             bool isLowMemory;
             long totalUnmanagedAllocations;
-            (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
+            (Size AvailableMemory, Size TotalScratchDirtyMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
             try
             {
                 totalUnmanagedAllocations = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
@@ -235,7 +237,7 @@ namespace Sparrow.LowMemory
             catch (OutOfMemoryException)
             {
                 isLowMemory = true;
-                stats = (new Size(), new Size(), new Size());
+                stats = (new Size(), new Size(), new Size(),  new Size());
                 totalUnmanagedAllocations = -1;
             }
             if (isLowMemory)
@@ -253,6 +255,7 @@ namespace Sparrow.LowMemory
                         AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk,
                             stats.AvailableMemory.GetValue(SizeUnit.Bytes),
                             totalUnmanagedAllocations,
+                            stats.TotalScratchDirtyMemory.GetValue(SizeUnit.Bytes),
                             stats.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                             stats.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
                     }
@@ -275,6 +278,7 @@ namespace Sparrow.LowMemory
                     AddLowMemEvent(LowMemReason.BackToNormal,
                         stats.AvailableMemory.GetValue(SizeUnit.Bytes),
                         totalUnmanagedAllocations,
+                        stats.TotalScratchDirtyMemory.GetValue(SizeUnit.Bytes),
                         stats.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                         stats.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
                 }
@@ -286,7 +290,7 @@ namespace Sparrow.LowMemory
             return timeout;
         }
 
-        private bool GetLowMemory(out (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats, AbstractLowMemoryMonitor monitor)
+        private bool GetLowMemory(out (Size AvailableMemory, Size TotalScratchDirtyMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats, AbstractLowMemoryMonitor monitor)
         {
             if (++_clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
             {
@@ -298,7 +302,7 @@ namespace Sparrow.LowMemory
             var isLowMemory = IsLowMemory(memInfo, monitor, out _);
 
             // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
-            memStats = (memInfo.AvailableMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
+            memStats = (memInfo.AvailableMemory, memInfo.TotalScratchDirtyMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 
@@ -326,13 +330,14 @@ namespace Sparrow.LowMemory
             return memInfo.AvailableWithoutTotalCleanMemory < LowMemoryThreshold;
         }
 
-        private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long physicalMem, long currentcommitCharge)
+        private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long totalScratchDirty, long physicalMem, long currentcommitCharge)
         {
             var lowMemEventDetails = new LowMemEventDetails
             {
                 Reason = reason,
                 FreeMem = availableMem,
                 TotalUnmanaged = totalUnmanaged,
+                TotalScratchDirty = totalScratchDirty,
                 PhysicalMem = physicalMem,
                 LowMemThreshold = LowMemoryThreshold.GetValue(SizeUnit.Bytes),
                 CurrentCommitCharge = currentcommitCharge,

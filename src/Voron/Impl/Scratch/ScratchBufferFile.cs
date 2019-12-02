@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
@@ -35,6 +37,7 @@ namespace Voron.Impl.Scratch
         private long _allocatedPagesCount;
         private long _lastUsedPage;
         private long _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
+        private (string DebugInfo, string scratchNumber) _thisDebugInfo;
 
         public long LastUsedPage => _lastUsedPage;
 
@@ -43,6 +46,8 @@ namespace Voron.Impl.Scratch
             _scratchPager = scratchPager;
             _scratchNumber = scratchNumber;
             _allocatedPagesCount = 0;
+            _thisDebugInfo = (_scratchPager.DebugInfo, scratchNumber.ToString());
+            MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
 
             scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
 
@@ -60,6 +65,10 @@ namespace Voron.Impl.Scratch
             _allocatedPages.Clear();
             _freePagesBySizeAvailableImmediately.Clear();
             _freePagesBySize.Clear();
+            if (MemoryInformation.MemoryMappedAllocatedMemory.TryRemove(_thisDebugInfo, out _) == false)
+            {
+                Console.WriteLine("ADIADI::Cannot remove " + _thisDebugInfo.DebugInfo + "," + _thisDebugInfo.scratchNumber);
+            }
         }
 
         public void Reset()
@@ -75,10 +84,10 @@ namespace Voron.Impl.Scratch
                     // is a policy we implement inside the ScratchBufferFile only.
                     _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
                 }
-            }            
+            }
 #endif
             _scratchPager.DiscardWholeFile();
-            
+
 
 #if VALIDATE
             foreach (var free in _freePagesBySize)
@@ -97,6 +106,7 @@ namespace Voron.Impl.Scratch
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
             _lastUsedPage = 0;
             _allocatedPagesCount = 0;
+            MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
         }
 
         public PagerState PagerState => _scratchPager.PagerState;
@@ -124,8 +134,8 @@ namespace Voron.Impl.Scratch
             tx?.EnsurePagerStateReference(pagerState);
 
             var result = new PageFromScratchBuffer(_scratchNumber, _lastUsedPage, sizeToAllocate, numberOfPages);
-
             _allocatedPagesCount += numberOfPages;
+            MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
             _allocatedPages.Add(_lastUsedPage, result);
             _lastUsedPage += sizeToAllocate;
 
@@ -154,6 +164,7 @@ namespace Voron.Impl.Scratch
                 result = new PageFromScratchBuffer (_scratchNumber, freeAndAvailablePageNumber, size, numberOfPages);
 
                 _allocatedPagesCount += numberOfPages;
+                MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
 
                 return true;
@@ -181,6 +192,7 @@ namespace Voron.Impl.Scratch
             result = new PageFromScratchBuffer ( _scratchNumber, val.Page, size, numberOfPages );
 
             _allocatedPagesCount += numberOfPages;
+            MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
             _allocatedPages.Add(val.Page, result);
             return true;
         }
@@ -231,6 +243,7 @@ namespace Voron.Impl.Scratch
             }
 
             _allocatedPagesCount -= value.NumberOfPages;
+            MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
             _allocatedPages.Remove(page);
 
             Debug.Assert(value.Size > 0);
@@ -355,6 +368,7 @@ namespace Voron.Impl.Scratch
             _allocatedPages.Add(shrinked.PositionInScratchBuffer, shrinked);
 
             _allocatedPagesCount -= value.NumberOfPages - newNumberOfPages;
+            MemoryInformation.MemoryMappedAllocatedMemory[_thisDebugInfo] = _allocatedPagesCount * Constants.Storage.PageSize;
 
             return shrinked;
         }

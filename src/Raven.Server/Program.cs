@@ -392,7 +392,7 @@ namespace Raven.Server
         {
             var workingSetText = PlatformDetails.RunningOnPosix == false ? "working set" : "    RSS    ";
             Console.WriteLine("Showing stats, press any key to close...");
-            Console.WriteLine($"    {workingSetText}     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
+            Console.WriteLine($"    {workingSetText}     | native mem      | managed mem     | mmap size          | scratch dirty  | reqs/sec       | docs (all dbs)");
             var i = 0;
             while (Console.KeyAvailable == false)
             {
@@ -405,7 +405,7 @@ namespace Raven.Server
                 Console.Write($" | {stats.TotalUnmanagedAllocations,-14} ");
                 Console.Write($" | {stats.ManagedMemory,-14} ");
                 Console.Write($" | {stats.TotalMemoryMapped,-17} ");
-
+                Console.Write($" | {stats.TotalScratchDirty,-14} ");
                 Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1),-14:#,#.#;;0} ");
 
                 long allDocs = 0;

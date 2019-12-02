@@ -821,11 +821,31 @@ namespace Raven.Server.Documents
                     break;
 
                 pendingOps.Add(op);
-                meter.IncrementCounter(1);
-
-                meter.IncrementCommands(op.Execute(context, _recording.State));
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+
+                var now = DateTime.UtcNow;
+                if (now - _lastHighDirtyMemCheck > TimeSpan.FromSeconds(10)) // we do not need to test scratch dirty mem every write
+                {
+                    var minimumAllowedUseInBytes = _parent.Configuration.Memory.MinimumAllowedUseInMb.GetValue(SizeUnit.Bytes);
+                    var percentageFromPhysicalMem = _parent.Configuration.Memory.PercentageFromPhysicalMem;
+                    if (MemoryInformation.IsHighDirtyMemory(minimumAllowedUseInBytes, percentageFromPhysicalMem, out var details))
+                    {
+                        var highDirtyMemory = new HighDirtyMemoryException(
+                            $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
+                            $" This might be caused by a slow IO storage. Current memory usage: {details}");
+                        op.Exception = highDirtyMemory;
+                        var rejectedBuffer = GetBufferForPendingOps();
+                        rejectedBuffer.Add(op);
+                        NotifyOnThreadPool(op);
+                        continue;
+                    }
+                    _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
+                }
+
+                meter.IncrementCounter(1);
+                meter.IncrementCommands(op.Execute(context, _recording.State));
+
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
                 modifiedSize += llt.TotalEncryptionBufferSize.GetValue(SizeUnit.Bytes);
@@ -1083,6 +1103,7 @@ namespace Raven.Server.Documents
         }
 
         private RecordingTx _recording = default;
+        private DateTime _lastHighDirtyMemCheck = DateTime.UtcNow;
 
         private struct RecordingTx
         {
