@@ -88,7 +88,10 @@ namespace Raven.Server.Documents.Subscriptions
 
             var subscriptionConnection = Interlocked.CompareExchange(ref _currentConnection, incomingConnection, null);
             if (subscriptionConnection != null && subscriptionConnection != incomingConnection)
+            {
+                await Task.Delay(timeToWait);
                 throw new TimeoutException();
+            }
 
             ConnectionInUse.Reset();
 
