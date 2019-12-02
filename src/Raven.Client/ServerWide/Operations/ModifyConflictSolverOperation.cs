@@ -53,7 +53,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         var solver = EntityToBlittable.ConvertCommandToBlittable(new ConflictSolver
                         {

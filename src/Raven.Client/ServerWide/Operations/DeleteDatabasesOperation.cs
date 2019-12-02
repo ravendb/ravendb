@@ -48,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
 
         private class DeleteDatabaseCommand : RavenCommand<DeleteDatabaseResult>, IRaftCommand
         {
-            private readonly BlittableJsonReaderObject _parameters;
+            private readonly Parameters _parameters;
 
             public DeleteDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
             {
@@ -58,20 +58,20 @@ namespace Raven.Client.ServerWide.Operations
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
-
-                _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters, context);
+                _parameters = parameters;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases";
+                var parameters = EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx);
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Delete,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _parameters);
+                        ctx.Write(stream, parameters);
                     })
                 };
 

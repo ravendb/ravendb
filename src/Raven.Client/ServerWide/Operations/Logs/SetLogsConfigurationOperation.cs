@@ -47,7 +47,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
 
                 return new HttpRequestMessage(HttpMethod.Post, url)
                 {
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx));
                     })

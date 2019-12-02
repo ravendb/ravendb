@@ -138,7 +138,7 @@ namespace SlowTests.Issues
 
             private class PutStudioConfigurationCommand : RavenCommand, IRaftCommand
             {
-                private readonly BlittableJsonReaderObject _configuration;
+                private readonly StudioConfiguration _configuration;
 
                 public PutStudioConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, StudioConfiguration configuration)
                 {
@@ -148,21 +148,21 @@ namespace SlowTests.Issues
                         throw new ArgumentNullException(nameof(configuration));
                     if (context == null)
                         throw new ArgumentNullException(nameof(context));
-
-                    _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    _configuration = configuration;
                 }
 
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}/admin/configuration/studio";
+                    var configuration = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
 
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(stream =>
+                        Content = new BlittableJsonContent(this, stream =>
                         {
-                            ctx.Write(stream, _configuration);
+                            ctx.Write(stream, configuration);
                         })
                     };
                 }
@@ -187,7 +187,7 @@ namespace SlowTests.Issues
 
             private class PutServerWideStudioConfigurationCommand : RavenCommand, IRaftCommand
             {
-                private readonly BlittableJsonReaderObject _configuration;
+                private readonly ServerWideStudioConfiguration _configuration;
 
                 public PutServerWideStudioConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ServerWideStudioConfiguration configuration)
                 {
@@ -197,21 +197,21 @@ namespace SlowTests.Issues
                         throw new ArgumentNullException(nameof(configuration));
                     if (context == null)
                         throw new ArgumentNullException(nameof(context));
-
-                    _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                    _configuration = configuration;
                 }
 
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/admin/configuration/studio";
+                    var configuration = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
 
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(stream =>
+                        Content = new BlittableJsonContent(this, stream =>
                         {
-                            ctx.Write(stream, _configuration);
+                            ctx.Write(stream, configuration);
                         })
                     };
                 }

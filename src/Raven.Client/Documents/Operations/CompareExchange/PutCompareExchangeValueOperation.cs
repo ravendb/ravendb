@@ -55,17 +55,18 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={Uri.EscapeDataString(_key)}&index={_index}";
-                var djv = new DynamicJsonValue
-                {
-                    ["Object"] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null, removeIdentityProperty: false)
-                };
-               var blittable = ctx.ReadObject(djv,_key);
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
+                        var djv = new DynamicJsonValue
+                        {
+                            ["Object"] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null, removeIdentityProperty: false)
+                        };
+                        var blittable = ctx.ReadObject(djv, _key);
+
                         ctx.Write(stream, blittable);
                     })
                 };

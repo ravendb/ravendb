@@ -2597,14 +2597,16 @@ namespace Raven.Server.ServerWide
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/rachis/send?source={_source}&commandType={_commandType}";
+                var cloned = _command.Clone(ctx);
+                
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
-                            writer.WriteObject(_command);
+                            writer.WriteObject(cloned);
                         }
                     })
                 };

@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private class SetIndexPriorityCommand : RavenCommand, IRaftCommand
         {
-            private readonly BlittableJsonReaderObject _parameters;
+            private readonly Parameters _parameters;
 
             public SetIndexPriorityCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
             {
@@ -54,20 +54,21 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
-
-                _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters, context);
+                _parameters = parameters;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/set-priority";
 
+                var parameters = EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx);
+
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _parameters);
+                        ctx.Write(stream, parameters);
                     })
                 };
             }

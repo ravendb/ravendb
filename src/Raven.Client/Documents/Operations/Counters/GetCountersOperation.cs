@@ -137,7 +137,7 @@ namespace Raven.Client.Documents.Operations.Counters
                         }
                     };
 
-                    request.Content = new BlittableJsonContent(stream =>
+                    request.Content = new BlittableJsonContent(this, stream =>
                     {
                         var config = EntityToBlittable.ConvertCommandToBlittable(batch, ctx);
 

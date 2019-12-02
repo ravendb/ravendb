@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                         {
                             ctx.Write(stream, ctx.ReadObject(_pullReplicationDefinition.ToJson(), "update-pull-replication-definition"));
                         })

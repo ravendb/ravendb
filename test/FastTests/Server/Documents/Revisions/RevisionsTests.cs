@@ -1102,7 +1102,7 @@ namespace FastTests.Server.Documents.Revisions
 
             private class DeleteRevisionsCommand : RavenCommand
             {
-                private readonly BlittableJsonReaderObject _parameters;
+                private readonly AdminRevisionsHandler.Parameters _parameters;
 
                 public DeleteRevisionsCommand(DocumentConventions conventions, JsonOperationContext context, AdminRevisionsHandler.Parameters parameters)
                 {
@@ -1112,22 +1112,20 @@ namespace FastTests.Server.Documents.Revisions
                         throw new ArgumentNullException(nameof(context));
                     if (parameters == null)
                         throw new ArgumentNullException(nameof(parameters));
-
-                    _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters, context);
+                    _parameters = parameters;
                 }
-
-                
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}/admin/revisions";
+                    var parameters = EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx);
 
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Delete,
-                        Content = new BlittableJsonContent(stream =>
+                        Content = new BlittableJsonContent(this, stream =>
                         {
-                            ctx.Write(stream, _parameters);
+                            ctx.Write(stream, parameters);
                         })
                     };
                 }

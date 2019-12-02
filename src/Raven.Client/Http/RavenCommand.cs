@@ -119,7 +119,7 @@ namespace Raven.Client.Http
                     // in the command, any associated memory will be released on context reset
                     var json = await context.ReadForMemoryAsync(stream, "response/object").ConfigureAwait(false);
 
-                    await FirstSuccessfulAction(() =>
+                    await SetFirstSuccessfulResult(() =>
                     {
                         if (cache != null) //precaution
                         {
@@ -134,7 +134,7 @@ namespace Raven.Client.Http
                 // We do not cache the stream response.
                 using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
                 {
-                    await FirstSuccessfulAction(() =>
+                    await SetFirstSuccessfulResult(() =>
                     {
                         SetResponseRaw(response, uncompressedStream, context);
                     }).ConfigureAwait(false);
@@ -150,7 +150,7 @@ namespace Raven.Client.Http
             Timeout = timeout;
         }
 
-        private async Task FirstSuccessfulAction(Action action)
+        private async Task SetFirstSuccessfulResult(Action action)
         {
             TaskCompletionSource<bool> tcs;
             while (true)

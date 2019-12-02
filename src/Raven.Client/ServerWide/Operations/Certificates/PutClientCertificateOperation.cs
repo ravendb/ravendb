@@ -53,7 +53,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {

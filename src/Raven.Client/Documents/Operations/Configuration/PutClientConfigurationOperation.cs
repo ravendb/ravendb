@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         ctx.Write(stream, _configuration);
                     })

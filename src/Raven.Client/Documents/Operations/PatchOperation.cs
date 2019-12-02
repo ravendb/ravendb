@@ -63,7 +63,8 @@ namespace Raven.Client.Documents.Operations
         {
             private readonly string _id;
             private readonly string _changeVector;
-            private readonly BlittableJsonReaderObject _patch;
+            private readonly PatchRequest _patch;
+            private readonly PatchRequest _patchIfMissing;
             private readonly bool _skipPatchIfChangeVectorMismatch;
             private readonly bool _returnDebugInformation;
             private readonly bool _test;
@@ -82,11 +83,8 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(context));
                 _id = id ?? throw new ArgumentNullException(nameof(id));
                 _changeVector = changeVector;
-                _patch = EntityToBlittable.ConvertCommandToBlittable(new
-                {
-                    Patch = patch,
-                    PatchIfMissing = patchIfMissing
-                },context);
+                _patch = patch;
+                _patchIfMissing = patchIfMissing;
                 _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
                 _returnDebugInformation = returnDebugInformation;
                 _test = test;
@@ -104,12 +102,18 @@ namespace Raven.Client.Documents.Operations
                 if (_test)
                     url += "&test=true";
 
+                var patch = EntityToBlittable.ConvertCommandToBlittable(new
+                {
+                    Patch = _patch,
+                    PatchIfMissing = _patchIfMissing
+                }, ctx);
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _patch);
+                        ctx.Write(stream, patch);
                     })
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);

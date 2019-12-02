@@ -38,12 +38,13 @@ namespace Raven.Client.Documents.Operations.Counters
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/counters";
+                // TODO: to avoid putting twice on retry it should have some kind of a guid
 
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
 
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         var config = EntityToBlittable.ConvertCommandToBlittable(_counterBatch, ctx);
                         ctx.Write(stream, config);

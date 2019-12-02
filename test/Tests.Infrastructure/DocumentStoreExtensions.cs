@@ -374,14 +374,15 @@ namespace FastTests
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}{_url}";
+                    var clone = _payload.Clone(ctx);
 
                     var request = new HttpRequestMessage
                     {
                         Method = _method,
-                        Content = new BlittableJsonContent(stream =>
+                        Content = new BlittableJsonContent(this, stream =>
                         {
                             if (_payload != null)
-                                ctx.Write(stream, _payload);
+                                ctx.Write(stream, clone);
                         })
                     };
 

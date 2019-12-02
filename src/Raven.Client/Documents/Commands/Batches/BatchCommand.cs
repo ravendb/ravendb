@@ -70,15 +70,21 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            var clone = new BlittableJsonReaderObject[_commands.Length];
+            for (var index = 0; index < _commands.Length; index++)
+            {
+                clone[index] = _commands[index].Clone(ctx);
+            }
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(stream =>
+                Content = new BlittableJsonContent(this, stream =>
                 {
                     using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
-                        writer.WriteArray("Commands", _commands);
+                        writer.WriteArray("Commands", clone);
                         if (_mode == TransactionMode.ClusterWide)
                         {
                             writer.WriteComma();

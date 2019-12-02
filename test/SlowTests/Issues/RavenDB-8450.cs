@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {

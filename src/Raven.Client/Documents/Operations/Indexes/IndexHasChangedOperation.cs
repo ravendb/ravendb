@@ -46,12 +46,14 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/has-changed";
 
+                var cloned = _definition.Clone(ctx);
+
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _definition);
+                        ctx.Write(stream, cloned);
                     })
                 };
             }

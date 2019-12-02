@@ -33,16 +33,17 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/transactions/start-recording";
+                
+                var jsonReaderObject = EntityToBlittable.ConvertCommandToBlittable(
+                    new Parameters { File = _filePath },
+                    ctx
+                );
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        var jsonReaderObject = EntityToBlittable.ConvertCommandToBlittable(
-                                new Parameters{ File = _filePath },
-                                ctx
-                            );
                         ctx.Write(stream, jsonReaderObject);
                     })
                 };

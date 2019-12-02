@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations
 
         private class CompactDatabaseCommand : RavenCommand<OperationIdResult>
         {
-            private readonly BlittableJsonReaderObject _compactSettings;
+            private readonly CompactSettings _compactSettings;
 
             public CompactDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, CompactSettings compactSettings)
             {
@@ -36,20 +36,20 @@ namespace Raven.Client.ServerWide.Operations
                     throw new ArgumentNullException(nameof(compactSettings));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-
-                _compactSettings = EntityToBlittable.ConvertCommandToBlittable(compactSettings, context);
+                _compactSettings = compactSettings;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/compact";
+                var compactSettings = EntityToBlittable.ConvertCommandToBlittable(_compactSettings, ctx);
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _compactSettings);
+                        ctx.Write(stream, compactSettings);
                     })
 
                 };

@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Patch,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                         {
                             using (var writer = new BlittableJsonTextWriter(ctx, stream))
                             {

@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         var json = new DynamicJsonValue
                         {

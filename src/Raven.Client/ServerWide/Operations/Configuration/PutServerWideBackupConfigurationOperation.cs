@@ -27,7 +27,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
         private class PutServerWideClientConfigurationCommand : RavenCommand<PutServerWideBackupConfigurationResponse>, IRaftCommand
         {
-            private readonly BlittableJsonReaderObject _configuration;
+            private readonly ServerWideBackupConfiguration _configuration;
 
             public PutServerWideClientConfigurationCommand(JsonOperationContext context, ServerWideBackupConfiguration configuration)
             {
@@ -35,8 +35,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                     throw new ArgumentNullException(nameof(configuration));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-
-                _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                _configuration = configuration;
             }
 
             public override bool IsReadRequest => false;
@@ -47,12 +46,14 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             {
                 url = $"{node.Url}/admin/configuration/server-wide/backup";
 
+                var configuration = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
+
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _configuration);
+                        ctx.Write(stream, configuration);
                     })
                 };
             }

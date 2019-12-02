@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Revisions
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         var config = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
                         ctx.Write(stream, config);

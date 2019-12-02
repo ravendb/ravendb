@@ -270,7 +270,7 @@ namespace Raven.Client.Documents.Smuggler
 
         private class ExportCommand : RavenCommand
         {
-            private readonly BlittableJsonReaderObject _options;
+            private readonly DatabaseSmugglerExportOptions _options;
             private readonly Func<Stream, Task> _handleStreamResponse;
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
@@ -283,8 +283,8 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(options));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
+                _options = options;
                 _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
-                _options = EntityToBlittable.ConvertCommandToBlittable(options, context);
                 _operationId = operationId;
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
             }
@@ -297,13 +297,14 @@ namespace Raven.Client.Documents.Smuggler
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/export?operationId={_operationId}";
+                var options = EntityToBlittable.ConvertCommandToBlittable(_options, ctx);
 
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _options);
+                        ctx.Write(stream, options);
                         _tcs.TrySetResult(null);
                     })
                 };
@@ -322,7 +323,7 @@ namespace Raven.Client.Documents.Smuggler
 
         private class ImportCommand : RavenCommand
         {
-            private readonly BlittableJsonReaderObject _options;
+            private readonly DatabaseSmugglerImportOptions _options;
             private readonly Stream _stream;
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
@@ -338,9 +339,10 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(options));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-                _options = EntityToBlittable.ConvertCommandToBlittable(options, context);
                 _operationId = operationId;
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
+                _options = options;
+
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)
@@ -352,10 +354,21 @@ namespace Raven.Client.Documents.Smuggler
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
 
+                var options = EntityToBlittable.ConvertCommandToBlittable(_options, ctx);
+
+                _stream.Position = 0;
+
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), "importOptions"},
-                    {new StreamContentWithConfirmation(_stream, _tcs), "file", "name"}
+                    {
+                        new BlittableJsonContent(this, stream =>
+                        {
+                            ctx.Write(stream, options);
+                        }), "importOptions"
+                    },
+                    {
+                        new StreamContentWithConfirmation(_stream, _tcs), "file", "name"
+                    }
                 };
 
                 return new HttpRequestMessage

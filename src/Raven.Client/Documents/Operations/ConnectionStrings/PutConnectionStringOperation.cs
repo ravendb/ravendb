@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         var config = EntityToBlittable.ConvertCommandToBlittable(_connectionString, ctx);
                         ctx.Write(stream, config);

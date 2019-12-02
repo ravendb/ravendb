@@ -56,7 +56,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Method = HttpMethod.Post
                 };
 
-                request.Content = new BlittableJsonContent(stream =>
+                request.Content = new BlittableJsonContent(this, stream =>
                 {
                     using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {

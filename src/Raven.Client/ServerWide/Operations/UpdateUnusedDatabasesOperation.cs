@@ -52,7 +52,7 @@ namespace Raven.Client.ServerWide.Operations
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
                         ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx));
                     })

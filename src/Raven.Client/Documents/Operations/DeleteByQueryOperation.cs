@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Delete,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                         {
                             using (var writer = new BlittableJsonTextWriter(ctx, stream))
                             {

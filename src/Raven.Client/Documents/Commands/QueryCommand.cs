@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(stream =>
+                Content = new BlittableJsonContent(this, stream =>
                     {
                         // this is here to catch people closing the session before the ToListAsync() completes
                         _session.AssertNotDisposed();

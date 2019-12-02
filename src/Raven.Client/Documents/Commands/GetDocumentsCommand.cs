@@ -141,7 +141,7 @@ namespace Raven.Client.Documents.Commands
             return request;
         }
 
-        public static void PrepareRequestWithMultipleIds(StringBuilder pathBuilder, HttpRequestMessage request, string[] ids, JsonOperationContext context)
+        public void PrepareRequestWithMultipleIds(StringBuilder pathBuilder, HttpRequestMessage request, string[] ids, JsonOperationContext context)
         {
             var uniqueIds = new HashSet<string>(ids);
             // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
@@ -157,7 +157,7 @@ namespace Raven.Client.Documents.Commands
                 pathBuilder.Append("&loadHash=").Append(calculateHash);
                 request.Method = HttpMethod.Post;
 
-                request.Content = new BlittableJsonContent(stream =>
+                request.Content = new BlittableJsonContent(this, stream =>
                 {
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     {

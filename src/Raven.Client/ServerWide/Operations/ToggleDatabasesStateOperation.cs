@@ -51,8 +51,8 @@ namespace Raven.Client.ServerWide.Operations
 
         private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>, IRaftCommand
         {
+            private readonly Parameters _parameters;
             private readonly bool _disable;
-            private readonly BlittableJsonReaderObject _parameters;
 
             public ToggleDatabaseStateCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters, bool disable)
             {
@@ -63,21 +63,22 @@ namespace Raven.Client.ServerWide.Operations
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
 
+                _parameters = parameters;
                 _disable = disable;
-                _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters,context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 var toggle = _disable ? "disable" : "enable";
                 url = $"{node.Url}/admin/databases/{toggle}";
+                var parameters = EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx);
 
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _parameters);
+                        ctx.Write(stream, parameters);
                     })
                 };
             }
