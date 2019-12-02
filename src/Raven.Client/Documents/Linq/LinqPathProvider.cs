@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
@@ -97,6 +98,11 @@ namespace Raven.Client.Documents.Linq
                     return CreateCounterResult(callExpression);
                 }
 
+                if (IsTimeSeriesCall(callExpression))
+                {
+                    return CreateTimeSeriesResult(callExpression);
+                }
+
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
             }
 
@@ -155,6 +161,201 @@ namespace Raven.Client.Documents.Linq
                 MemberType = typeof(long?),
                 IsNestedPath = false,
                 Path = "counter",
+                Args = args
+            };
+        }
+
+        internal class TimeSeriesWhereClauseModifier : ExpressionVisitor
+        {
+            private string _parameter;
+
+            public TimeSeriesWhereClauseModifier(string parameter)
+            {
+                _parameter = parameter;
+            }
+
+            public Expression Modify(Expression expression)
+            {
+                return Visit(expression);
+            }
+
+/*            protected override Expression VisitBinary(BinaryExpression b)
+            {
+                Expression left = this.Visit(b.Left);
+                Expression right = this.Visit(b.Right);
+
+                // Make this binary expression an OrElse operation instead of an AndAlso operation.  
+                return Expression.MakeBinary(ExpressionType.OrElse, left, right, b.IsLiftedToNull, b.Method);
+
+                //return base.VisitBinary(b);
+            }*/
+
+            protected override Expression VisitMember(MemberExpression node)
+            {
+                if (node.Expression is ParameterExpression p && p.Name == _parameter)
+                    return Expression.Parameter(node.Type, node.Member.Name);
+
+                return base.VisitMember(node);
+            }
+        }
+
+        internal static Result CreateTimeSeriesResult(MethodCallExpression callExpression)
+        {
+            MethodCallExpression mce = callExpression;
+            string tsName = null;
+            string where = null;
+            string groupBy = null;
+            string select = null;
+
+            while (mce != null)
+            {
+                if (mce.Arguments.Count == 0)
+                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+
+                if (mce.Arguments[0] is MethodCallExpression inner)
+                {
+                    var operand = (mce.Arguments[1] as UnaryExpression)?.Operand;
+                    if (!(operand is LambdaExpression lambda))
+                        throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+                    var body = lambda.Body; 
+
+                    switch (mce.Method.Name)
+                    {
+                        case "Where":
+                            // turn where ts.Tag = 'tag' into where Tag = 'tag'
+                            var parameter = lambda?.Parameters[0].Name;
+                            var filterExpression = new TimeSeriesWhereClauseModifier(parameter).Modify(body);
+
+                            where = $" where {filterExpression}";
+                            break;
+                        case "GroupBy":
+                            groupBy = $" group by '{body}'";
+                            break;
+                        case "Select":
+                            string selectArgs = null;
+
+                            switch (body.NodeType)
+                            {
+                                case ExpressionType.New:
+                                    var newExp = (NewExpression)body;
+
+                                    foreach (var c in newExp.Arguments)
+                                    {
+                                        if (!(c is MethodCallExpression selectCall))
+                                            throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+                                        switch (selectCall.Method.Name)
+                                        {
+                                            case "Max":
+                                            case "Min":
+                                            case "Sum":
+                                            case "Count":
+                                                if (selectArgs != null)
+                                                    selectArgs += ", ";
+                                                selectArgs += $"{selectCall.Method.Name.ToLower()}()";
+                                                break;
+                                            case "Average":
+                                                if (selectArgs != null)
+                                                    selectArgs += ", ";
+                                                selectArgs += "avg()";
+                                                break;
+                                            default:
+                                                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+                                        }
+                                    }
+                                    break;
+                                case ExpressionType.MemberInit:
+                                    var initExp = (MemberInitExpression)body;
+
+                                    foreach (var c in initExp.Bindings)
+                                    {
+/*                                        if (!(c.Member. is MethodCallExpression selectCall))
+                                            throw new InvalidOperationException("Cannot understand how to translate " + callExpression);*/
+                                        switch (c.Member.Name)
+                                        {
+                                            case "Max":
+                                            case "Min":
+                                            case "Sum":
+                                            case "Count":
+                                                if (selectArgs != null)
+                                                    selectArgs += ", ";
+                                                selectArgs += $"{c.Member.Name.ToLower()}()";
+                                                break;
+                                            case "Average":
+                                                if (selectArgs != null)
+                                                    selectArgs += ", ";
+                                                selectArgs += "avg()";
+                                                break;
+                                            default:
+                                                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+                                        }
+                                    }
+                                    break;
+                                case ExpressionType.Call:
+                                    var call = (MethodCallExpression)body;
+                                    switch (call.Method.Name)
+                                    {
+                                        case "Max":
+                                        case "Min":
+                                        case "Sum":
+                                        case "Count":
+                                            selectArgs = $"{call.Method.Name.ToLower()}()";
+                                            break;
+                                        case "Average":
+                                            selectArgs = "avg()";
+                                            break;
+                                        default:
+                                            throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+                                    }
+                                    break;
+                                default:
+                                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+
+                            }
+
+                            select = $" select {selectArgs}";
+
+                            break;
+                    }
+
+                    mce = inner;
+                    continue;
+                }
+
+                tsName = (mce.Arguments[mce.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
+                if (mce.Arguments.Count == 2)
+                {
+                    var path = mce.Arguments[0].ToString();
+                    //tsName = path + "." + tsName;
+                }
+
+                break;
+
+            }
+
+            if (tsName == default)
+                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+
+            var expressionBuilder = new StringBuilder();
+
+            expressionBuilder.Append("from ").Append(tsName);
+
+            if (where != null)
+                expressionBuilder.Append(where);
+            if (groupBy != null)
+                expressionBuilder.Append(groupBy);
+            if (select != null)
+                expressionBuilder.Append(select);
+
+            string[] args =
+            {
+                expressionBuilder.ToString()
+            };
+
+            return new Result
+            {
+                MemberType = typeof(IRavenQueryable<TimeSeriesValue>),
+                IsNestedPath = false,
+                Path = "timeseries",
                 Args = args
             };
         }
@@ -489,6 +690,28 @@ namespace Raven.Client.Documents.Linq
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Counter"
                    || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == "Get";
+        }
+
+        public static bool IsTimeSeriesCall(MethodCallExpression mce)
+        {
+            MethodCallExpression methodCallExpression = mce;
+            while (methodCallExpression != null)
+            {
+                if (methodCallExpression.Arguments.Count > 0)
+                {
+                    if (methodCallExpression.Arguments[0] is MethodCallExpression inner)
+                    {
+                        methodCallExpression = inner;
+                        continue;
+                    }
+
+                    return methodCallExpression.Method.DeclaringType == typeof(RavenQuery) && methodCallExpression.Method.Name == "TimeSeries";
+                }
+
+                break;
+            }
+
+            return false;
         }
 
     }
