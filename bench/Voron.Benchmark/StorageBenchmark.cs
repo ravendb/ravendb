@@ -54,7 +54,7 @@ namespace Voron.Benchmark
                 {
                     Environment =
                     {
-                        Runtime = Runtime.Core,
+                        Runtime = CoreRuntime.Core22,
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
                     },
