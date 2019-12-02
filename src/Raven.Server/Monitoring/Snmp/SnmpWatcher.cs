@@ -363,13 +363,16 @@ namespace Raven.Server.Monitoring.Snmp
         {
             await _locker.WaitAsync();
 
+            List<string> databases = null;
+            List<string> missingDatabases = null;
+
             try
             {
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();
 
-                    var databases = _server
+                    databases = _server
                         .ServerStore
                         .Cluster
                         .ItemKeysStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue)
@@ -381,7 +384,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                     var mapping = GetMapping(_server.ServerStore, context);
 
-                    var missingDatabases = new List<string>();
+                    missingDatabases = new List<string>();
                     foreach (var database in databases)
                     {
                         if (mapping.ContainsKey(database) == false)
@@ -399,7 +402,7 @@ namespace Raven.Server.Monitoring.Snmp
                         }
                         catch (Exception e) when (e is TimeoutException || e is OperationCanceledException)
                         {
-                            // we will do the update in AddDatabaseIfNecessary
+                            // we will update it in the OnDatabaseLoaded event
                             return;
                         }
 
@@ -414,8 +417,14 @@ namespace Raven.Server.Monitoring.Snmp
             }
             catch (Exception e)
             {
+                var msg = "Failed to update the SNMP mapping";
+                if (databases?.Count > 0)
+                    msg += $" databases to update: {string.Join(", ", databases)}";
+                if (missingDatabases?.Count > 0)
+                    msg += $" missing databases: {string.Join(", ", missingDatabases)}";
+
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to update the SNMP mapping", e);
+                    Logger.Operations(msg, e);
             }
             finally
             {
