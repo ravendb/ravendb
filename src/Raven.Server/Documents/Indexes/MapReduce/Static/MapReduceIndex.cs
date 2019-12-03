@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
 
-            return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
+            return PutMapResults(indexItem.LowerSourceDocumentId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
         }
 
         private IDisposable IgnoreStalenessDueToReduceOutputsToDelete()
