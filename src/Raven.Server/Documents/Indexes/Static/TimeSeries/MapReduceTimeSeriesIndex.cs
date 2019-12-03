@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.MapReduce.Workers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -38,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         {
             var workers = new List<IIndexingWork>();
 
-            // TODO arek workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
+            workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
                 workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
@@ -52,6 +55,23 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
+        }
+
+        public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
+        {
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+                throw new InvalidOperationException("TODO arek");
+
+            return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(databaseContext, collection);
+        }
+
+        protected override IndexItem GetItemByEtag(DocumentsOperationContext databaseContext, long etag)
+        {
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(databaseContext, etag);
+            if (timeSeries == null)
+                return default;
+
+            return new TimeSeriesIndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, timeSeries.Baseline, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
