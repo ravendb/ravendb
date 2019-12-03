@@ -23,6 +23,7 @@ using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
@@ -2118,6 +2119,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
 
+                    if (_declareBuilder != null)
+                    {
+                        AddReturnStatementToOutputFunction(memberExpression);
+                        break;
+                    }
+
                     var selectPath = GetSelectPath(memberExpression);
                     AddToFieldsToFetch(selectPath, selectPath);
 
@@ -2310,7 +2317,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddToFieldsToFetch(counterInfo.Path, GetSelectPath(member));
         }
 
-        private static void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)
+        private void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)
         {
             alias = null;
             var args = mceArgs[0];
@@ -2319,7 +2326,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
-            alias = mceArgs[mceArgs.Length - 1];
+            if (path == "timeseries")
+            {
+                alias = "__timeSeriesAggregationFunction" + FieldsToFetch.Count;
+            }
+            else
+            {
+                alias = mceArgs[mceArgs.Length - 1];
+            }
 
             path = $"{path}({args})";
         }
@@ -2640,6 +2654,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     var name = GetSelectPath(field.Member);
                     AddJsProjection(name, field.Expression, sb, index != 0);
                 }
+            }
+
+            if (expression is MemberExpression me)
+            {
+                var name = GetSelectPath(me.Member);
+                AddJsProjection(name, me, sb, false);
             }
 
             sb.Append(" }");

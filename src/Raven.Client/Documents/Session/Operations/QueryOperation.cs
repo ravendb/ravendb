@@ -206,7 +206,8 @@ namespace Raven.Client.Documents.Session.Operations
                     if (document.TryGetMember(projectionField, out object inner) == false)
                         return default;
 
-                    if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
+                    if (fieldsToFetch.FieldsToFetch != null && 
+                        (fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0] || fieldsToFetch.Projections[0].StartsWith("__timeSeriesAggregationFunction")))
                     {
                         if (inner is BlittableJsonReaderObject innerJson)
                         {
