@@ -18,6 +18,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -193,10 +194,10 @@ namespace Raven.Client.Documents.Linq
         {
             MethodCallExpression mce = callExpression;
             string tsName = null;
+            string between = null;
             string where = null;
             string groupBy = null;
             string select = null;
-
 
             while (mce != null)
             {
@@ -211,8 +212,9 @@ namespace Raven.Client.Documents.Linq
                     switch (mce.Method.Name)
                     {
                         case "Where":
-                            // turn where ts.Tag = 'tag' into where Tag = 'tag'
                         {
+                            // turn where ts.Tag into where Tag
+
                             if (!(mce.Arguments[0] is UnaryExpression unary && 
                                   unary.Operand is LambdaExpression lambda))
                                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
@@ -224,11 +226,14 @@ namespace Raven.Client.Documents.Linq
                         }
 
                         case "GroupBy":
+                        {
                             if (mce.Arguments[0] is ConstantExpression constantExpression)
                                 groupBy = $" group by '{constantExpression.Value}'";
                             else //todo aviv
                                 groupBy = $" group by '{mce.Arguments[0]}'";
                             break;
+                        }
+
                         case "Select":
                         {
                             if (!(mce.Arguments[0] is UnaryExpression unary &&
@@ -273,8 +278,6 @@ namespace Raven.Client.Documents.Linq
 
                                     foreach (var c in initExp.Bindings)
                                     {
-                                        /*                                        if (!(c.Member. is MethodCallExpression selectCall))
-                                                                                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);*/
                                         switch (c.Member.Name)
                                         {
                                             case "Max":
@@ -329,148 +332,28 @@ namespace Raven.Client.Documents.Linq
                     continue;
                 }
 
-                tsName = (mce.Arguments[mce.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
-                if (mce.Arguments.Count == 2)
+                if (mce.Arguments.Count == 1)
                 {
+                    tsName = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                }
+
+                else
+                {
+                    tsName = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
                     var path = mce.Arguments[0].ToString();
                     // todo aviv : add from alias to query if needed
                     //tsName = path + "." + tsName;
                 }
 
+                if (mce.Arguments.Count == 4)
+                {
+                    var from = GetDateValue(mce.Arguments[2]);
+                    var to = GetDateValue(mce.Arguments[3]);
+                    between = $" between '{from}' and '{to}'";
+                }
                 break;
 
             }
-
-
-            /*
-
-                        while (mce != null)
-                        {
-                            if (mce.Arguments.Count == 0)
-                                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-
-                            if (mce.Arguments[0] is MethodCallExpression inner)
-                            {
-                                var operand = (mce.Arguments[1] as UnaryExpression)?.Operand;
-                                if (!(operand is LambdaExpression lambda))
-                                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-                                var body = lambda.Body; 
-
-                                switch (mce.Method.Name)
-                                {
-                                    case "Where":
-                                        // turn where ts.Tag = 'tag' into where Tag = 'tag'
-                                        var parameter = lambda?.Parameters[0].Name;
-                                        var filterExpression = new TimeSeriesWhereClauseModifier(parameter).Modify(body);
-
-                                        where = $" where {filterExpression}";
-                                        break;
-                                    case "GroupBy":
-                                        if (body is ConstantExpression constantExpression)
-                                            groupBy = $" group by '{constantExpression.Value}'";
-                                        else //todo aviv
-                                            groupBy = $" group by '{body}'"; 
-                                        break;
-                                    case "Select":
-                                        string selectArgs = null;
-
-                                        switch (body.NodeType)
-                                        {
-                                            case ExpressionType.New:
-                                                var newExp = (NewExpression)body;
-
-                                                foreach (var c in newExp.Arguments)
-                                                {
-                                                    if (!(c is MethodCallExpression selectCall))
-                                                        throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-                                                    switch (selectCall.Method.Name)
-                                                    {
-                                                        case "Max":
-                                                        case "Min":
-                                                        case "Sum":
-                                                        case "Count":
-                                                            if (selectArgs != null)
-                                                                selectArgs += ", ";
-                                                            selectArgs += $"{selectCall.Method.Name.ToLower()}()";
-                                                            break;
-                                                        case "Average":
-                                                            if (selectArgs != null)
-                                                                selectArgs += ", ";
-                                                            selectArgs += "avg()";
-                                                            break;
-                                                        default:
-                                                            throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-                                                    }
-                                                }
-                                                break;
-                                            case ExpressionType.MemberInit:
-                                                var initExp = (MemberInitExpression)body;
-
-                                                foreach (var c in initExp.Bindings)
-                                                {
-            /*                                        if (!(c.Member. is MethodCallExpression selectCall))
-                                                        throw new InvalidOperationException("Cannot understand how to translate " + callExpression);#1#
-                                                    switch (c.Member.Name)
-                                                    {
-                                                        case "Max":
-                                                        case "Min":
-                                                        case "Sum":
-                                                        case "Count":
-                                                            if (selectArgs != null)
-                                                                selectArgs += ", ";
-                                                            selectArgs += $"{c.Member.Name.ToLower()}()";
-                                                            break;
-                                                        case "Average":
-                                                            if (selectArgs != null)
-                                                                selectArgs += ", ";
-                                                            selectArgs += "avg()";
-                                                            break;
-                                                        default:
-                                                            throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-                                                    }
-                                                }
-                                                break;
-                                            case ExpressionType.Call:
-                                                var call = (MethodCallExpression)body;
-                                                switch (call.Method.Name)
-                                                {
-                                                    case "Max":
-                                                    case "Min":
-                                                    case "Sum":
-                                                    case "Count":
-                                                        selectArgs = $"{call.Method.Name.ToLower()}()";
-                                                        break;
-                                                    case "Average":
-                                                        selectArgs = "avg()";
-                                                        break;
-                                                    default:
-                                                        throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-                                                }
-                                                break;
-                                            default:
-                                                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-
-                                        }
-
-                                        select = $" select {selectArgs}";
-
-                                        break;
-                                }
-
-                                mce = inner;
-                                continue;
-                            }
-
-                            tsName = (mce.Arguments[mce.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
-                            if (mce.Arguments.Count == 2)
-                            {
-                                var path = mce.Arguments[0].ToString();
-                                //tsName = path + "." + tsName;
-                            }
-
-                            break;
-
-                        }*/
 
             if (tsName == default)
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
@@ -479,6 +362,8 @@ namespace Raven.Client.Documents.Linq
 
             expressionBuilder.Append("from ").Append(tsName);
 
+            if (between != null)
+                expressionBuilder.Append(between);
             if (where != null)
                 expressionBuilder.Append(where);
             if (groupBy != null)
@@ -493,11 +378,28 @@ namespace Raven.Client.Documents.Linq
 
             return new Result
             {
-                MemberType = typeof(IRavenQueryable<TimeSeriesValue>),
+                MemberType = typeof(ITimeSeriesQuery<TimeSeriesAggregation>),
                 IsNestedPath = false,
                 Path = "timeseries",
                 Args = args
             };
+        }
+
+        private static string GetDateValue(Expression exp)
+        {
+            if (exp is ConstantExpression constant)
+                return constant.Value.ToString();
+
+            GetValueFromExpressionWithoutConversion(exp, out var value);
+
+            if (value is string s)
+                return s;
+
+            if (!(value is DateTime d))
+                throw new InvalidOperationException("failed "); //todo aviv
+
+            return d.GetDefaultRavenFormat();
+
         }
 
         private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name)
