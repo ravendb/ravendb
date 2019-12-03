@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -834,10 +835,11 @@ namespace Raven.Server.Documents
                         var highDirtyMemory = new HighDirtyMemoryException(
                             $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
                             $" This might be caused by a slow IO storage. Current memory usage: {details}");
-                        op.Exception = highDirtyMemory;
-                        var rejectedBuffer = GetBufferForPendingOps();
-                        rejectedBuffer.Add(op);
-                        NotifyOnThreadPool(op);
+
+                        foreach (var pendingOp in pendingOps)
+                            pendingOp.Exception = highDirtyMemory;
+
+                        NotifyOnThreadPool(pendingOps);
                         continue;
                     }
                     _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
