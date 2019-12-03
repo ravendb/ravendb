@@ -267,8 +267,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                     // when there is conflict, we need to apply same behavior as if the document would not exist
                     var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
 
-                    if (doc != null && doc.Etag <= lastIndexedEtag)
-                        yield return doc;
+                    if (doc == null)
+                        continue;
+
+                    if (doc.Etag > lastIndexedEtag)
+                    {
+                        doc.Dispose();
+                        continue;
+                    }
+
+                    yield return doc;
                 }
 
                 unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetLower(out Slice loweredKey)
