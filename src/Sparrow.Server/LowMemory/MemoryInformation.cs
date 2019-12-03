@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -59,7 +60,6 @@ namespace Sparrow.LowMemory
             TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
             TotalCommittableMemory = new Size(384, SizeUnit.Megabytes),// also include "page file"
             CurrentCommitCharge = new Size(256, SizeUnit.Megabytes),
-            TotalScratchDirtyMemory = new Size(0, SizeUnit.Bytes), 
             InstalledMemory = new Size(256, SizeUnit.Megabytes)
         };
 
@@ -100,7 +100,7 @@ namespace Sparrow.LowMemory
             public Size TotalDirty;
         }
 
-        public static ConcurrentDictionary<(string, string), long> MemoryMappedAllocatedMemory = new ConcurrentDictionary<(string, string), long>();
+        public static ConcurrentSet<Func<long>> DirtyMemoryObjects = new ConcurrentSet<Func<long>>();
 
         public static void SetFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep, Size lowMemoryCommitLimitInMb)
         {
@@ -346,8 +346,8 @@ namespace Sparrow.LowMemory
         public static long GetTotalScratchAllocatedMemory()
         {
             long totalScratchAllocated = 0;
-            foreach (var scratchFileMem in MemoryMappedAllocatedMemory)
-                totalScratchAllocated += scratchFileMem.Value;
+            foreach (var scratchGetAllocated in DirtyMemoryObjects)
+                totalScratchAllocated += scratchGetAllocated.Invoke();
 
             return totalScratchAllocated;
         }
@@ -401,14 +401,13 @@ namespace Sparrow.LowMemory
                 fromProcMemInfo.AvailableWithoutTotalCleanMemory,
                 fromProcMemInfo.SharedCleanMemory,
                 workingSet,
-                GetTotalScratchAllocatedMemory(),
                 extended);
         }
 
         private static MemoryInfoResult BuildPosixMemoryInfoResult(
             Size availableRam, Size totalPhysicalMemory, Size commitedMemory,
             Size commitLimit, Size availableWithoutTotalCleanMemory,
-            Size sharedCleanMemory, Size workingSet, long totoalScratchDirtyMemory, bool extended)
+            Size sharedCleanMemory, Size workingSet, bool extended)
         {
             SetMemoryRecords(availableRam.GetValue(SizeUnit.Bytes));
 
@@ -420,7 +419,6 @@ namespace Sparrow.LowMemory
                 AvailableMemory = availableRam,
                 AvailableWithoutTotalCleanMemory = availableWithoutTotalCleanMemory,
                 SharedCleanMemory = sharedCleanMemory,
-                TotalScratchDirtyMemory = totalPhysicalMemory,
                 TotalPhysicalMemory = totalPhysicalMemory,
                 InstalledMemory = totalPhysicalMemory,
                 WorkingSet = workingSet,
@@ -485,7 +483,7 @@ namespace Sparrow.LowMemory
             var availableWithoutTotalCleanMemory = availableRamInBytes; // mac (unlike other linux distros) does calculate accurate available memory
             var workingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes);
 
-            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, availableWithoutTotalCleanMemory, Size.Zero, workingSet, GetTotalScratchAllocatedMemory(), extended);
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, availableWithoutTotalCleanMemory, Size.Zero, workingSet, extended);
         }
 
         private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process, bool extended)
@@ -519,7 +517,6 @@ namespace Sparrow.LowMemory
                 AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
                 AvailableWithoutTotalCleanMemory = new Size((long)memoryStatus.ullAvailPhys + sharedClean, SizeUnit.Bytes),
                 SharedCleanMemory = new Size(sharedClean, SizeUnit.Bytes),
-                TotalScratchDirtyMemory = new Size(GetTotalScratchAllocatedMemory(), SizeUnit.Bytes),
                 TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                 InstalledMemory = fetchedInstalledMemory ?
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :

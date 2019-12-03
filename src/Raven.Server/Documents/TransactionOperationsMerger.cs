@@ -825,10 +825,10 @@ namespace Raven.Server.Documents
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
 
                 var now = DateTime.UtcNow;
-                if (now - _lastHighDirtyMemCheck > TimeSpan.FromSeconds(10)) // we do not need to test scratch dirty mem every write
+                if (now - _lastHighDirtyMemCheck > TimeSpan.FromSeconds(_parent.Configuration.Memory.HighDirtyMemoryChecksPeriod)) // we do not need to test scratch dirty mem every write
                 {
-                    var minimumAllowedUseInBytes = _parent.Configuration.Memory.MinimumAllowedUseInMb.GetValue(SizeUnit.Bytes);
-                    var percentageFromPhysicalMem = _parent.Configuration.Memory.PercentageFromPhysicalMem;
+                    var minimumAllowedUseInBytes = _parent.Configuration.Memory.HighMemoryMinimumAllowedUseInMb.GetValue(SizeUnit.Bytes);
+                    var percentageFromPhysicalMem = _parent.Configuration.Memory.HighDirtyMemoryPercentageThreshold;
                     if (MemoryInformation.IsHighDirtyMemory(minimumAllowedUseInBytes, percentageFromPhysicalMem, out var details))
                     {
                         var highDirtyMemory = new HighDirtyMemoryException(
