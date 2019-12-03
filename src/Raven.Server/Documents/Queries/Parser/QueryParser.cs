@@ -2061,31 +2061,31 @@ namespace Raven.Server.Documents.Queries.Parser
         private TimeSeriesBetweenExpression ReadTimeSeriesBetweenExpression(FieldExpression field)
         {
             QueryExpression minExpression, maxExpression;
-            if (Field(out var f) == false)
+            if (Value(out var val) == false)
             {
-                if (Value(out var val) == false)
+                if (Field(out var f) == false)
                     ThrowParseException("parsing Between, expected value or field (1st)");
 
-                minExpression = val;
+                minExpression = f;
             }
             else
             {
-                minExpression = f;
+                minExpression = val;
             }
 
             if (Scanner.TryScan("AND") == false)
                 ThrowParseException("parsing Between, expected AND");
 
-            if (Field(out f) == false)
+            if (Value(out val) == false)
             {
-                if (Value(out var val) == false)
+                if (Field(out var f) == false)
                     ThrowParseException("parsing Between, expected value or field (2nd)");
 
-                maxExpression = val;
+                maxExpression = f;
             }
             else
             {
-                maxExpression = f;
+                maxExpression = val;
             }
 
             if (minExpression.Type != maxExpression.Type)
