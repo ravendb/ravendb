@@ -9,6 +9,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Sparrow.Server;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         // we should have two locks: one lock for a connection and one lock for operations
         // remember to catch ArgumentOutOfRangeException for timeout problems
-        public async Task<IDisposable> RegisterSubscriptionConnection(
+        public async Task<DisposeOnce<SingleAttempt>> RegisterSubscriptionConnection(
             SubscriptionConnection incomingConnection,
             TimeSpan timeToWait)
         {
@@ -95,7 +96,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             ConnectionInUse.Reset();
 
-            return new DisposableAction(() =>
+            return new DisposeOnce<SingleAttempt>(() =>
             {
                 while (_recentConnections.Count > 10)
                 {

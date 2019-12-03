@@ -26,6 +26,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public SubscriptionWorkerOptions Options => _options;
 
-        public IDisposable DisposeOnDisconnect;
+        public DisposeOnce<SingleAttempt> DisposeOnDisconnect;
 
         public SubscriptionException ConnectionException;
 
@@ -192,6 +193,7 @@ namespace Raven.Server.Documents.TcpHandlers
             catch
             {
                 DisposeOnDisconnect.Dispose();
+                throw;
             }
         }
 
