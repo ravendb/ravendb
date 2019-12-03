@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -15,21 +17,6 @@ namespace SlowTests.Client.TimeSeries.Query
     {
         public TimeSeriesQueryClientApi(ITestOutputHelper output) : base(output)
         {
-        }
-
-        public class TimeSeriesRangeAggregation
-        {
-#pragma warning disable 649
-            public long[] Count;
-            public double?[] Max, Min, Last, First, Avg;
-            public DateTime To, From;
-#pragma warning restore 649
-        }
-
-        public class TimeSeriesAggregation
-        {
-            public long Count { get; set; }
-            public TimeSeriesRangeAggregation[] Results { get; set; }
         }
 
         private class PeopleIndex : AbstractIndexCreationTask<Person>
@@ -80,7 +67,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
-        public void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery()
+        public void CanQueryTimeSeriesAggregation_UsingClientApi()
         {
             using (var store = GetDocumentStore())
             {
@@ -103,12 +90,12 @@ namespace SlowTests.Client.TimeSeries.Query
                         .Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
 
                     session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/fitbit", new[] { 59d });
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/fitbit", new[] { 159d });
                     session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 79d });
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
 
                     session.TimeSeriesFor("users/ayende")
-                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 69d });
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
 
 
                     session.SaveChanges();
@@ -118,27 +105,31 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Where(u => u.Age < 21)
+                        .Where(u => u.Age > 21)
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
-                            .GroupBy(ts => "1 month")
+                            .GroupBy("1 month")
                             .Select(g => new
                             {
                                 Avg = RavenQuery.TimeSeriesAggregations.Average(),
                                 Max = RavenQuery.TimeSeriesAggregations.Max()
                             }));
 
+                    var result = query.ToList();
 
-                    var query2 = session.Query<User>()
-                        .Where(u => u.Age < 21)
-                        .Select(u => RavenQuery.TimeSeries(
-@"from u.Heartrate 
-where Tag != 'watches/fitbit'
-group by '1 month'
-select avg(), max()
-"));
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(6, result[0].Count);
 
-                    var agg = query.First();
+                    var agg = result[0].Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(79, agg[0].Max[0]);
+                    Assert.Equal(69, agg[0].Avg[0]);
+
+                    Assert.Equal(179, agg[1].Max[0]);
+                    Assert.Equal(169, agg[1].Avg[0]);
+
 
 
                 }
