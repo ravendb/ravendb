@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -23,12 +24,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using ServerVersion = Raven.Server.Monitoring.Snmp.Objects.Server.ServerVersion;
+using TimeoutException = System.TimeoutException;
 
 namespace Raven.Server.Monitoring.Snmp
 {
     public class SnmpWatcher
     {
-        private readonly Dictionary<string, SnmpDatabase> _loadedDatabases = new Dictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, SnmpDatabase> _loadedDatabases = new ConcurrentDictionary<string, SnmpDatabase>(StringComparer.OrdinalIgnoreCase);
 
         private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
@@ -128,6 +130,9 @@ namespace Raven.Server.Monitoring.Snmp
             if (string.IsNullOrWhiteSpace(databaseName))
                 return;
 
+            if (_loadedDatabases.ContainsKey(databaseName))
+                return;
+
             Task.Factory.StartNew(async () =>
             {
                 await _locker.WaitAsync();
@@ -156,6 +161,11 @@ namespace Raven.Server.Monitoring.Snmp
 
                         LoadDatabase(databaseName, mapping[databaseName]);
                     }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to update the SNMP mapping for database: {databaseName}", e);
                 }
                 finally
                 {
@@ -353,13 +363,16 @@ namespace Raven.Server.Monitoring.Snmp
         {
             await _locker.WaitAsync();
 
+            List<string> databases = null;
+            List<string> missingDatabases = null;
+
             try
             {
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();
 
-                    var databases = _server
+                    databases = _server
                         .ServerStore
                         .Cluster
                         .ItemKeysStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue)
@@ -371,7 +384,7 @@ namespace Raven.Server.Monitoring.Snmp
 
                     var mapping = GetMapping(_server.ServerStore, context);
 
-                    var missingDatabases = new List<string>();
+                    missingDatabases = new List<string>();
                     foreach (var database in databases)
                     {
                         if (mapping.ContainsKey(database) == false)
@@ -382,8 +395,16 @@ namespace Raven.Server.Monitoring.Snmp
                     {
                         context.CloseTransaction();
 
-                        var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, RaftIdGenerator.NewId()));
-                        await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+                        try
+                        {
+                            var result = await _server.ServerStore.SendToLeaderAsync(new UpdateSnmpDatabasesMappingCommand(missingDatabases, RaftIdGenerator.NewId()));
+                            await _server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+                        }
+                        catch (Exception e) when (e is TimeoutException || e is OperationCanceledException)
+                        {
+                            // we will update it in the OnDatabaseLoaded event
+                            return;
+                        }
 
                         context.OpenReadTransaction();
 
@@ -393,6 +414,17 @@ namespace Raven.Server.Monitoring.Snmp
                     foreach (var database in databases)
                         LoadDatabase(database, mapping[database]);
                 }
+            }
+            catch (Exception e)
+            {
+                var msg = "Failed to update the SNMP mapping";
+                if (databases?.Count > 0)
+                    msg += $" databases to update: {string.Join(", ", databases)}";
+                if (missingDatabases?.Count > 0)
+                    msg += $" missing databases: {string.Join(", ", missingDatabases)}";
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg, e);
             }
             finally
             {
