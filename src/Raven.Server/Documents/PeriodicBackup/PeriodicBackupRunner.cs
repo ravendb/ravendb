@@ -359,27 +359,36 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
         }
 
-        public DateTime GetWakeDatabaseTimeUtc()
+        public DateTime? GetWakeDatabaseTimeUtc()
         {
-            var wakeupDatabase = DateTime.MaxValue;
             long lastEtag;
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenReadTransaction())
             {
+                using var tx = context.OpenReadTransaction();
                 lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
 
+            DateTime? wakeupDatabase = null;
             foreach (var backup in _periodicBackups)
             {
                 var nextBackup = GetNextWakeupTimeLocal(lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
                 if (nextBackup == null)
                     continue;
-                if (nextBackup < wakeupDatabase)
+
+                if (wakeupDatabase == null)
+                {
+                    // first time
+                    wakeupDatabase = nextBackup;
+                }
+                else if (nextBackup < wakeupDatabase)
+                {
+                    // next backup is earlier than the current one
                     wakeupDatabase = nextBackup.Value;
+                }
             }
 
-            return wakeupDatabase.ToUniversalTime();
+            return wakeupDatabase?.ToUniversalTime();
         }
 
         private long CreateBackupTask(PeriodicBackup periodicBackup, bool isFullBackup, DateTime startTimeInUtc)

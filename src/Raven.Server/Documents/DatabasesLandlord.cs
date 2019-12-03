@@ -42,6 +42,9 @@ namespace Raven.Server.Documents
         private readonly SemaphoreSlim _databaseSemaphore;
         private readonly ServerStore _serverStore;
 
+        // used in ServerWideBackupStress
+        internal static bool SkipShouldContinueDisposeCheck = false;
+
         public DatabasesLandlord(ServerStore serverStore)
         {
             _serverStore = serverStore;
@@ -915,7 +918,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool ShouldContinueDispose(string name, DateTime? wakeup, out int dueTime)
+        private bool ShouldContinueDispose(string name, DateTime? wakeupUtc, out int dueTime)
         {
             dueTime = 0;
 
@@ -927,11 +930,15 @@ namespace Raven.Server.Documents
                 timer.Dispose();
             }
 
-            if (wakeup.HasValue == false || wakeup.Value == DateTime.MaxValue.ToUniversalTime())
+            if (wakeupUtc.HasValue == false)
                 return true;
 
             // if we have a small value or even a negative one, simply don't dispose the database.
-            dueTime = (int)(wakeup - DateTime.Now).Value.TotalMilliseconds;
+            dueTime = (int)(wakeupUtc - DateTime.UtcNow).Value.TotalMilliseconds;
+
+            if (SkipShouldContinueDisposeCheck)
+                return true;
+
             return dueTime > TimeSpan.FromMinutes(5).TotalMilliseconds;
         }
 
