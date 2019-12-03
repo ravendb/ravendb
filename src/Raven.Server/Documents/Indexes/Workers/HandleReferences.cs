@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -210,10 +211,17 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                             }
-                                            catch (Exception e)
+                                            catch (Exception e) when (e.IsIndexError())
                                             {
+                                                docsEnumerator.OnError();
+                                                _index.ErrorIndexIfCriticalException(e);
+
+                                                collectionStats.RecordMapError();
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
+
+                                                collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
+                                                                                        $"Exception: {e}");
                                             }
 
                                             _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
