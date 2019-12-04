@@ -12,9 +12,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Query
 {
-    public class TimeSeriesQueryTests : RavenTestBase
+    public class TimeSeriesQueryRaw : RavenTestBase
     {
-        public TimeSeriesQueryTests(ITestOutputHelper output) : base(output)
+        public TimeSeriesQueryRaw(ITestOutputHelper output) : base(output)
         {
         }
 
