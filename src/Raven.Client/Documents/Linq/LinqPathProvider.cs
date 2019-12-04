@@ -10,7 +10,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
@@ -191,14 +190,14 @@ namespace Raven.Client.Documents.Linq
 
         internal Result CreateTimeSeriesResult(MethodCallExpression callExpression)
         {
-            var builder = new TimeSeriesQueryBuilder(callExpression, this);
-            var tsQuery = builder.BuildQuery();
+            var visitor = new TimeSeriesQueryVisitor(callExpression, this);
+            var tsQuery = visitor.VisitExpression();
 
             return new Result
             {
                 MemberType = typeof(ITimeSeriesQueryable),
                 IsNestedPath = false,
-                Path = "timeseries",
+                Path = Constants.TimeSeries.SelectFieldName,
                 Args = new[] { tsQuery }
             };
         }

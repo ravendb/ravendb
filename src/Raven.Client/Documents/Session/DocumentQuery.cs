@@ -9,6 +9,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
@@ -40,6 +41,17 @@ namespace Raven.Client.Documents.Session
             {
                 IsProjectInto = true
             });
+        }
+
+        public IDocumentQuery<TimeSeriesAggregation> SelectTimeSeries(Action<ITimeSeriesQueryBuilder> timeSeriesQuery)
+        {
+            var builder = new TimeSeriesQueryBuilder();
+            timeSeriesQuery.Invoke(builder);
+
+            var fields = new[] {$"{Constants.TimeSeries.SelectFieldName}({builder.Query})"};
+            var projections = new[] { Constants.TimeSeries.AggregationFunction };
+
+            return SelectFields<TimeSeriesAggregation>(new QueryData(fields, projections));
         }
 
         /// <inheritdoc />
