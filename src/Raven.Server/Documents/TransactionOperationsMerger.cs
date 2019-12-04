@@ -826,10 +826,10 @@ namespace Raven.Server.Documents
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
 
                 var now = DateTime.UtcNow;
-                if (now - _lastHighDirtyMemCheck > TimeSpan.FromSeconds(_parent.Configuration.Memory.HighDirtyMemoryChecksPeriod)) // we do not need to test scratch dirty mem every write
+                if (now - _lastHighDirtyMemCheck > TimeSpan.FromSeconds(_parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod)) // we do not need to test scratch dirty mem every write
                 {
-                    var minimumAllowedUseInBytes = _parent.Configuration.Memory.HighMemoryMinimumAllowedUseInMb.GetValue(SizeUnit.Bytes);
-                    var percentageFromPhysicalMem = _parent.Configuration.Memory.HighDirtyMemoryPercentageThreshold;
+                    var minimumAllowedUseInBytes = _parent.Configuration.Memory.MinimumTemporaryDirtyMemoryUseAllowedInMb.GetValue(SizeUnit.Bytes);
+                    var percentageFromPhysicalMem = _parent.Configuration.Memory.TemporaryDirtyMemoryAllowedOutOfPhysicalMemoryInPercents;
                     if (MemoryInformation.IsHighDirtyMemory(minimumAllowedUseInBytes, percentageFromPhysicalMem, out var details))
                     {
                         var highDirtyMemory = new HighDirtyMemoryException(
@@ -840,7 +840,15 @@ namespace Raven.Server.Documents
                             pendingOp.Exception = highDirtyMemory;
 
                         NotifyOnThreadPool(pendingOps);
-                        continue;
+
+                        var rejectedBuffer = GetBufferForPendingOps();
+                        while (_operations.TryDequeue(out var operationToReject))
+                        {
+                            operationToReject.Exception = highDirtyMemory;
+                            rejectedBuffer.Add(operationToReject);
+                        }
+                        NotifyOnThreadPool(rejectedBuffer);
+                        break;
                     }
                     _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
                 }
