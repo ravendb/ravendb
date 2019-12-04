@@ -60,7 +60,13 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
 
+            if (_configuration.MapBatchSize.HasValue && count >= _configuration.MapBatchSize.Value)
+                return false;
+
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
+                return false;
+
+            if (_index.ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
 
             if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriteOperation, count) == false)
@@ -69,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             return true;
         }
 
-        private unsafe bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private bool HandleDocuments(ActionType actionType, DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, int pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
