@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -37,6 +38,7 @@ namespace Voron.Impl.Scratch
         private long _allocatedPagesCount;
         private long _lastUsedPage;
         private long _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
+        private StrongReference<Func<long>> _strongRefToAllocateInBytesFunc;
 
         public long LastUsedPage => _lastUsedPage;
 
@@ -47,14 +49,18 @@ namespace Voron.Impl.Scratch
             _allocatedPagesCount = 0;
 
             scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
-            MemoryInformation.DirtyMemoryObjects.TryAdd(scratchPager.AllocatedInBytesFunc);
+            _strongRefToAllocateInBytesFunc = new StrongReference<Func<long>> {Value = scratchPager.AllocatedInBytesFunc};
+            MemoryInformation.DirtyMemoryObjects.TryAdd(_strongRefToAllocateInBytesFunc);
 
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
+                _strongRefToAllocateInBytesFunc.Value = null; // remove ref (so if there's a left over refs in DirtyMemoryObjects but also function as _disposed = true for racy func invoke)
+                MemoryInformation.DirtyMemoryObjects.TryRemove(_strongRefToAllocateInBytesFunc);
+                _strongRefToAllocateInBytesFunc = null;
+
                 _scratchPager.PagerState.DiscardOnTxCopy = true;
                 _scratchPager.Dispose();
                 ClearDictionaries();
-                MemoryInformation.DirtyMemoryObjects.TryRemove(scratchPager.AllocatedInBytesFunc);
             });
         }
 
