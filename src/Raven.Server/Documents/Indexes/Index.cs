@@ -3365,6 +3365,37 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private DateTime _lastCheckedFlushLock;
+
+        public bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
+        {
+            if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
+                return false;
+
+            var now = DateTime.UtcNow;
+            if ((now - _lastCheckedFlushLock).TotalSeconds < 1)
+                return false;
+
+            _lastCheckedFlushLock = now;
+
+            var gotLock = _indexStorage.Environment().FlushInProgressLock.TryEnterReadLock(0);
+            try
+            {
+                if (gotLock == false)
+                {
+                    stats.RecordMapCompletedReason("Environment flush was waiting for us and global flusher was about to use all free flushing resources");
+                    return true;
+                }
+            }
+            finally
+            {
+                if (gotLock)
+                    _indexStorage.Environment().FlushInProgressLock.ExitReadLock();
+            }
+
+            return false;
+        }
+
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
