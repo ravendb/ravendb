@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
@@ -55,6 +56,18 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
         {
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, _compiled.Maps[collection], collection, stats, type);
+        }
+
+        public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            if (_enumerationWrappers.TryGetValue(CurrentIndexingScope.Current.SourceCollection, out AnonymousObjectToBlittableMapResultsEnumerableWrapper wrapper) == false)
+            {
+                _enumerationWrappers[CurrentIndexingScope.Current.SourceCollection] = wrapper = new AnonymousObjectToBlittableMapResultsEnumerableWrapper(this, indexContext);
+            }
+
+            wrapper.InitializeForEnumeration(mapResults, indexContext, stats);
+
+            return PutMapResults(indexItem.LowerSourceDocumentId, indexItem.SourceDocumentId, wrapper, indexContext, stats);
         }
 
         public override long GetLastItemEtagInCollection(DocumentsOperationContext databaseContext, string collection)
