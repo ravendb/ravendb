@@ -4,7 +4,6 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-
     public interface ITimeSeriesQuery<T>
     {
         ITimeSeriesQuery<T> Where(Expression<Func<TimeSeriesValue, bool>> predicate);

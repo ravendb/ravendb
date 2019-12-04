@@ -10,14 +10,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 {
     internal class TimeSeriesQueryBuilder
     {
-        private MethodCallExpression _expression;
-        private LinqPathProvider _provider;
-        private string _tsName;
-        private string _between;
-        private string _where;
-        private string _groupBy;
-        private StringBuilder _selectFields;
+        private readonly MethodCallExpression _expression;
+        private readonly LinqPathProvider _provider;
         private LinqPathProvider.TimeSeriesWhereClauseModifier _modifier;
+        private StringBuilder _selectFields;
+        private string _name, _between, _where, _groupBy;
 
         public TimeSeriesQueryBuilder(MethodCallExpression methodCallExpression, LinqPathProvider provider)
         {
@@ -136,12 +133,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             if (mce.Arguments.Count == 1)
             {
-                _tsName = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                _name = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
             }
 
             else
             {
-                _tsName = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
+                _name = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
                 var path = mce.Arguments[0].ToString();
                 // todo aviv : add from alias to query if needed
                 //tsName = path + "." + tsName;
@@ -165,9 +162,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public void WhereIn(MethodCallExpression mce)
         {
             Debug.Assert(_modifier != null);
+
             var exp = _modifier.Modify(mce.Arguments[0]);
+
             string path;
             Type type;
+
             if (exp is ParameterExpression p)
             {
                 path = p.Name;
@@ -181,6 +181,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
 
             var objects = (IEnumerable)_provider.GetValueFromExpression(_modifier.Modify(mce.Arguments[1]), type);
+
             StringBuilder values = new StringBuilder();
             bool first = true;
             foreach (var v in objects)
@@ -198,7 +199,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             var expressionBuilder = new StringBuilder();
 
-            expressionBuilder.Append("from ").Append(_tsName);
+            expressionBuilder.Append("from ").Append(_name);
 
             if (_between != null)
                 expressionBuilder.Append(_between);
