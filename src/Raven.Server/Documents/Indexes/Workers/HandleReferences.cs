@@ -7,8 +7,10 @@ using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -180,17 +182,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     batchCount++;
 
-                                    var items = new List<IndexItem>();
-                                    foreach (var key in _indexStorage
-                                        .GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
-                                    {
-                                        var item = GetItem(databaseContext, key);
-
-                                        if (item.Item != null && item.Etag <= lastIndexedEtag)
-                                            items.Add(item);
-                                        else
-                                            item.Dispose();
-                                    }
+                                    var items = GetItemsFromCollectionThatReference(databaseContext, indexContext, collection, referencedDocument, lastIndexedEtag);
 
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
@@ -212,10 +204,17 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                             }
-                                            catch (Exception e)
+                                            catch (Exception e) when (e.IsIndexError())
                                             {
+                                                itemsEnumerator.OnError();
+                                                _index.ErrorIndexIfCriticalException(e);
+
+                                                collectionStats.RecordMapError();
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
+
+                                                collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
+                                                                                        $"Exception: {e}");
                                             }
 
                                             _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
@@ -261,6 +260,25 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
+        }
+
+        private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, string collection, Reference referencedDocument, long lastIndexedEtag)
+        {
+            foreach (var key in _indexStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
+            {
+                var item = GetItem(databaseContext, key);
+
+                if (item == null)
+                    continue;
+
+                if (item.Etag > lastIndexedEtag)
+                {
+                    item.Dispose();
+                    continue;
+                }
+
+                yield return item;
+            }
         }
 
         protected IEnumerable<Reference> GetItemReferences(DocumentsOperationContext databaseContext, CollectionName referencedCollection, long lastEtag, int start, int pageSize)

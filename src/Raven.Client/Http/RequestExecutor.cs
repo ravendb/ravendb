@@ -1107,8 +1107,10 @@ namespace Raven.Client.Http
                 try
                 {
                     disposable = ContextPool.AllocateOperationContext(out var tmpCtx);
-                    var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
+                    var request = CreateRequest(tmpCtx, nodes[i], command, out _);
                     Interlocked.Increment(ref NumberOfServerRequests);
+
+                    var copy = disposable;
                     tasks[i] = command.SendAsync(HttpClient, request, token).ContinueWith(x =>
                     {
                         try
@@ -1126,7 +1128,7 @@ namespace Raven.Client.Http
                         }
                         finally
                         {
-                            disposable?.Dispose();
+                            copy.Dispose();
                         }
                     }, token);
                 }
@@ -1594,6 +1596,7 @@ namespace Raven.Client.Http
                 {
                     var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
                     servicePoint.ConnectionLimit = Math.Max(servicePoint.ConnectionLimit, 1024 * 10);
+                    servicePoint.MaxIdleTime = -1;
                 }
                 catch (Exception e)
                 {
