@@ -152,6 +152,11 @@ namespace Raven.Server.Documents.Handlers.Streaming
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
                         }
+                        catch (Exception e)
+                        {
+                            writer.WriteError($"Failed to execute stream query. Error: {e}");
+                            throw;
+                        }
                     }
                 }
             }
