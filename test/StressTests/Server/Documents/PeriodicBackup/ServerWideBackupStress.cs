@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,15 +17,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         public async Task ServerWideBackupShouldBackupIdleDatabaseStress(int rounds)
         {
             await using var stress = new SlowTests.Issues.RavenDB_14292(Output);
-            try
-            {
-                DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
-                await stress.ServerWideBackupShouldBackupIdleDatabase(rounds);
-            }
-            finally
-            {
-                DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
-            }
+            await stress.ServerWideBackupShouldBackupIdleDatabase(rounds);
         }
     }
 }
