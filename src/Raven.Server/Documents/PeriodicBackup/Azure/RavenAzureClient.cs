@@ -511,7 +511,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 Headers =
                 {
-                    { xMsDate, SystemTime.UtcNow.ToString("R") }, { "x-ms-version", AzureStorageVersion }
+                    { xMsDate, now }, { "x-ms-version", AzureStorageVersion }
                 }
             };
 
