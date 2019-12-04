@@ -100,7 +100,7 @@ namespace Sparrow.LowMemory
             public Size TotalDirty;
         }
 
-        public static ConcurrentSet<Func<long>> DirtyMemoryObjects = new ConcurrentSet<Func<long>>();
+        public static ConcurrentSet<StrongReference<Func<long>>> DirtyMemoryObjects = new ConcurrentSet<StrongReference<Func<long>>>();
 
         public static void SetFreeCommittedMemory(float minimumFreeCommittedMemoryPercentage, Size maxFreeCommittedMemoryToKeep, Size lowMemoryCommitLimitInMb)
         {
@@ -347,7 +347,10 @@ namespace Sparrow.LowMemory
         {
             long totalScratchAllocated = 0;
             foreach (var scratchGetAllocated in DirtyMemoryObjects)
-                totalScratchAllocated += scratchGetAllocated.Invoke();
+            {
+                if (scratchGetAllocated.Value != null)
+                    totalScratchAllocated += scratchGetAllocated.Value.Invoke();
+            }
 
             return totalScratchAllocated;
         }
@@ -658,6 +661,7 @@ namespace Sparrow.LowMemory
         {
             details = null;
             var totalScratchMemory = GetTotalScratchAllocatedMemory();
+            
             if (totalScratchMemory <= (TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * percentageFromPhysicalMem) / 100)
                 return false;
 
