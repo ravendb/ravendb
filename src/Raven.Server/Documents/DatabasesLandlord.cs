@@ -43,7 +43,7 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
 
         // used in ServerWideBackupStress
-        internal static bool SkipShouldContinueDisposeCheck = false;
+        internal bool SkipShouldContinueDisposeCheck = false;
 
         public DatabasesLandlord(ServerStore serverStore)
         {

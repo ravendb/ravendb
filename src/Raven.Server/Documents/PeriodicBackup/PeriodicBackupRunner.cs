@@ -364,8 +364,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             long lastEtag;
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenReadTransaction())
             {
-                using var tx = context.OpenReadTransaction();
                 lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
 

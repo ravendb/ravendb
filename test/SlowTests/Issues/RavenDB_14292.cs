@@ -36,85 +36,96 @@ namespace SlowTests.Issues
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
                 }
             });
-            var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
-            var dbName = store.Database;
-            store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("Test")));
-
-            using (var session = store.OpenAsyncSession())
+            try
             {
-                await session.StoreAsync(new User { Name = "EGOR" }, "su");
-                await session.SaveChangesAsync();
-            }
-            using (var session = store.OpenAsyncSession("Test"))
-            {
-                await session.StoreAsync(new User { Name = "egor" }, "susu");
-                await session.StoreAsync(new User { Name = "egor2" }, "sususu");
-                await session.SaveChangesAsync();
-            }
+                var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var first = true;
-            long backupTaskId = 0;
+                server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
 
-            for (int i = 0; i < rounds; i++)
-            {
-                // let db get idle
-                var now = DateTime.Now;
-                var nextNow = now + TimeSpan.FromSeconds(60);
-                while (now < nextNow && server.ServerStore.IdleDatabases.Count < 1)
+                using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+                var dbName = store.Database;
+
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("Test")));
+
+                using (var session = store.OpenAsyncSession())
                 {
-                    Thread.Sleep(3000);
-                    await store.Maintenance.ForDatabase("Test").SendAsync(new GetStatisticsOperation());
-                    now = DateTime.Now;
+                    await session.StoreAsync(new User { Name = "EGOR" }, "su");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = store.OpenAsyncSession("Test"))
+                {
+                    await session.StoreAsync(new User { Name = "egor" }, "susu");
+                    await session.StoreAsync(new User { Name = "egor2" }, "sususu");
+                    await session.SaveChangesAsync();
                 }
 
-                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+                var first = true;
+                long backupTaskId = 0;
 
-                if (first)
+                for (int i = 0; i < rounds; i++)
                 {
-                    var putConfiguration = new ServerWideBackupConfiguration
+                    // let db get idle
+                    var now = DateTime.Now;
+                    var nextNow = now + TimeSpan.FromSeconds(60);
+                    while (now < nextNow && server.ServerStore.IdleDatabases.Count < 1)
                     {
-                        FullBackupFrequency = "*/2 * * * *",
-                        LocalSettings = new LocalSettings { FolderPath = backupPath },
-                    };
+                        Thread.Sleep(3000);
+                        await store.Maintenance.ForDatabase("Test").SendAsync(new GetStatisticsOperation());
+                        now = DateTime.Now;
+                    }
 
-                    var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
-                    var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
-                    Assert.NotNull(serverWideConfiguration);
                     Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
 
-                    // the configuration is applied to existing databases
-                    var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                    var backups1 = record1.PeriodicBackups;
-                    Assert.Equal(1, backups1.Count);
-                    backupTaskId = backups1.First().TaskId;
+                    if (first)
+                    {
+                        var putConfiguration = new ServerWideBackupConfiguration
+                        {
+                            FullBackupFrequency = "*/2 * * * *",
+                            LocalSettings = new LocalSettings { FolderPath = backupPath },
+                        };
 
-                    first = false;
+                        var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                        var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+                        Assert.NotNull(serverWideConfiguration);
+                        Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+
+                        // the configuration is applied to existing databases
+                        var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                        var backups1 = record1.PeriodicBackups;
+                        Assert.Equal(1, backups1.Count);
+                        backupTaskId = backups1.First().TaskId;
+
+                        first = false;
+                    }
+
+                    //Wait for backup occurrence
+                    nextNow = DateTime.Now + TimeSpan.FromSeconds(122);
+                    while (now < nextNow && server.ServerStore.IdleDatabases.Count > 0)
+                    {
+                        Thread.Sleep(2000);
+                        store.Maintenance.ForDatabase("Test").Send(new GetStatisticsOperation());
+                        now = DateTime.Now;
+                    }
+
+                    Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
+
+                    var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                    var value = WaitForValue(() =>
+                    {
+                        var status = store.Maintenance.Send(operation).Status;
+                        return status?.LastEtag;
+                    }, 1);
+                    Assert.Equal(1, value);
+
+                    Assert.True(2 == Directory.GetDirectories(backupPath).Length, "2 == Directory.GetDirectories(backupPath).Length");
+                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length, @"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, ""Test"")).Length");
+                    Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length, "i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length");
                 }
-
-                //Wait for backup occurrence
-                nextNow = DateTime.Now + TimeSpan.FromSeconds(122);
-                while (now < nextNow && server.ServerStore.IdleDatabases.Count > 0)
-                {
-                    Thread.Sleep(2000);
-                    store.Maintenance.ForDatabase("Test").Send(new GetStatisticsOperation());
-                    now = DateTime.Now;
-                }
-
-                Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
-
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                var value = WaitForValue(() =>
-                {
-                    var status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 1);
-                Assert.Equal(1, value);
-
-                Assert.True(2 == Directory.GetDirectories(backupPath).Length, "2 == Directory.GetDirectories(backupPath).Length");
-                Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, "Test")).Length, @"i + 1 == Directory.GetDirectories(Path.Combine(backupPath, ""Test"")).Length");
-                Assert.True(i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length, "i + 1 == Directory.GetDirectories(Path.Combine(backupPath, dbName)).Length");
+            }
+            finally
+            {
+                server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
             }
         }
     }
