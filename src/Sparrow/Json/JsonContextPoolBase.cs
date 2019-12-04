@@ -13,6 +13,7 @@ namespace Sparrow.Json
         where T : JsonOperationContext
     {
         private ConcurrentDictionary<int, ContextStack> _contextStacksByThreadId;
+        private readonly StrongReference<ConcurrentDictionary<int, ContextStack>> _contextStacksByThreadIdStrongRef;
         private NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
@@ -24,32 +25,22 @@ namespace Sparrow.Json
         [ThreadStatic]
         private static ContextStackThreadReleaser _releaser;
 
-        private StrongReference<ConcurrentDictionary<int, ContextStack>> _contextStacksByThreadIdStrongRef;
-
         private class ContextStackThreadReleaser
         {
             private readonly int _ownerThread;
-            private readonly HashSet<StrongReference<ConcurrentDictionary<int, ContextStack>>> _parents = new HashSet<StrongReference<ConcurrentDictionary<int, ContextStack>>>();
+            private readonly StrongReference<ConcurrentDictionary<int, ContextStack>> _contextStacksByThreadId;
 
-            public ContextStackThreadReleaser(int ownerThread)
+            public ContextStackThreadReleaser(int ownerThread, StrongReference<ConcurrentDictionary<int, ContextStack>> contextStacksByThreadId)
             {
                 _ownerThread = ownerThread;
+                _contextStacksByThreadId = contextStacksByThreadId;
             }
 
             ~ContextStackThreadReleaser()
             {
-                foreach (var parent in _parents)
-                    parent?.Value?.TryRemove(_ownerThread, out _);
-            }
-
-            public void AddContextPool(StrongReference<ConcurrentDictionary<int, ContextStack>> parent)
-            {
-                _parents.Add(parent);
-            }
-
-            public void RemoveContextPool(StrongReference<ConcurrentDictionary<int, ContextStack>> parent)
-            {
-                _parents.Remove(parent);
+                var current = _contextStacksByThreadId.Value;
+                if (current != null) // may have already been finalized
+                    current.TryRemove(_ownerThread, out _);
             }
         }
 
@@ -57,11 +48,9 @@ namespace Sparrow.Json
         {
             if (_releaser == null)
             {
-                var contextStackThreadReleaser = new ContextStackThreadReleaser(currentThreadId);
+                var contextStackThreadReleaser = new ContextStackThreadReleaser(currentThreadId, _contextStacksByThreadIdStrongRef);
                 _releaser = contextStackThreadReleaser;
             }
-
-            _releaser.AddContextPool(_contextStacksByThreadIdStrongRef);
         }
 
         private class ContextStack : StackHeader<T>, IDisposable
@@ -145,10 +134,6 @@ namespace Sparrow.Json
             catch (ObjectDisposedException)
             {
                 // nothing to do here
-            }
-            finally
-            {
-                _releaser?.RemoveContextPool(_contextStacksByThreadIdStrongRef);
             }
         }
 
@@ -317,7 +302,7 @@ namespace Sparrow.Json
                 }
                 _contextStacksByThreadId?.Clear();
                 _contextStacksByThreadId = null;
-                _contextStacksByThreadIdStrongRef = null;
+                _contextStacksByThreadIdStrongRef.Value = null;
             }
         }
 
