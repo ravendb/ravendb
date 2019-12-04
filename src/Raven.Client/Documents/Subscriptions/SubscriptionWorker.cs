@@ -362,12 +362,9 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]\nReasons:{string.Join("\n",reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}"
-                    )
-                    {
-                        AppropriateNode = appropriateNode,
-                        Reasons = reasonsDictionary
-                    };
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine,reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}",
+                        appropriateNode,
+                        reasonsDictionary);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
                     throw new SubscriptionChangeVectorUpdateConcurrencyException(connectionStatus.Message);
                 default:
@@ -609,7 +606,7 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
-                    while (_recentExceptions.Count > 10)
+                    while (_recentExceptions.Count >= 10)
                         _recentExceptions.TryDequeue(out _);
 
                     _recentExceptions.Enqueue(ex);

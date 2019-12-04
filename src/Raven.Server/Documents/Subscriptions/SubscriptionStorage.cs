@@ -148,13 +148,14 @@ namespace Raven.Server.Documents.Subscriptions
                     var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
 
                     string generalState = string.Empty;
-                    if (_serverStore.Engine.CurrentState == RachisState.Candidate || _serverStore.Engine.CurrentState == RachisState.Passive)
+                    RachisState currentState = _serverStore.Engine.CurrentState;
+                    if (currentState == RachisState.Candidate || _serverStore.Engine.CurrentState == RachisState.Passive)
                     {
                         generalState = $"Current node ({_serverStore.NodeTag}) is in {_serverStore.Engine.CurrentState.ToString()} state therefore, we can't answer who's task is it and returning null";
                     }
                     else
                     {
-                        generalState = _serverStore.Engine.CurrentState.ToString();
+                        generalState = currentState.ToString();
                     }
                     databaseTopologyAvailabilityExplanation["NodeState"] = generalState;                    
 
@@ -184,11 +185,10 @@ namespace Raven.Server.Documents.Subscriptions
                             databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology but was not chosen to run the subscription, we didn't find any other match either";
                         }
                     }
-                    throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
-                    {
-                        AppropriateNode = whoseTaskIsIt,
-                        Reasons = databaseTopologyAvailabilityExplanation
-                    };
+                    throw new SubscriptionDoesNotBelongToNodeException(
+                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",                    
+                        whoseTaskIsIt,
+                        databaseTopologyAvailabilityExplanation);
                 }
                 if (subscription.Disabled)
                     throw new SubscriptionClosedException($"The subscription with id {id} and name {name} is disabled and cannot be used until enabled");
