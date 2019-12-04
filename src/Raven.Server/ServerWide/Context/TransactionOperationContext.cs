@@ -59,7 +59,7 @@ namespace Raven.Server.ServerWide.Context
                 ThrowTransactionAlreadyOpened();
 
             Transaction = CreateReadTransaction();
-
+            
             return Transaction;
         }
 
@@ -93,7 +93,7 @@ namespace Raven.Server.ServerWide.Context
                 return 2;
             if (value < 0)
                 return (short)-value;
-
+            
             return value;
         }
 
@@ -133,7 +133,7 @@ namespace Raven.Server.ServerWide.Context
             Transaction?.Dispose();
             Transaction = null;
         }
-
+        
         public override void Dispose()
         {
             base.Dispose();
