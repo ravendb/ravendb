@@ -59,7 +59,7 @@ namespace Raven.Server.ServerWide.Context
                 ThrowTransactionAlreadyOpened();
 
             Transaction = CreateReadTransaction();
-            
+
             return Transaction;
         }
 

@@ -128,7 +128,6 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                // Console.WriteLine("Entered JOC's MPB dispose");
                 if (_disposed)
                     return;
                 _disposed = true;
@@ -157,7 +156,6 @@ namespace Sparrow.Json
 
             ~ManagedPinnedBuffer()
             {
-                // Console.WriteLine("Enter ~ManagedPinnedBuffer");
                 if (_handle.IsAllocated)
                     _handle.Free();
             }
@@ -314,7 +312,6 @@ namespace Sparrow.Json
             Debug.Assert(lowMemoryFlag != null);
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
-                // Console.WriteLine("Entered _disposeOnceRunner of JOC");
 #if MEM_GUARD_STACK
                 ElectricFencedMemory.DecrementConext();
                 ElectricFencedMemory.UnRegisterContextAllocation(this);

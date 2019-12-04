@@ -73,13 +73,23 @@ namespace Sparrow.LowMemory
                     }
                     else
                     {
-                        _lowMemoryHandlers.TryRemove(lowMemoryHandler);
+                        // make sure that we aren't allocating here, we reserve 128 items
+                        // and worst case we'll get it in the next run
+                        if (_inactiveHandlers.Count < _inactiveHandlers.Capacity)
+                            _inactiveHandlers.Add(lowMemoryHandler);
                     }
-                }                
+                }
+                foreach (var x in _inactiveHandlers)
+                {
+                    if (x == null)
+                        continue;
+                    _lowMemoryHandlers.TryRemove(x);
+                }
             }
             finally
             {
-                _wasLowMemory = isLowMemory;                
+                _wasLowMemory = isLowMemory;
+                _inactiveHandlers.Clear();
             }
         }
 
@@ -136,7 +146,8 @@ namespace Sparrow.LowMemory
         }
 
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
-        private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);        
+        private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
+        private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
         private AbstractLowMemoryMonitor _lowMemoryMonitor;
         private bool _initialized;
 
