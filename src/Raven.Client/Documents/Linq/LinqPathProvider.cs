@@ -192,31 +192,15 @@ namespace Raven.Client.Documents.Linq
         internal Result CreateTimeSeriesResult(MethodCallExpression callExpression)
         {
             var builder = new TimeSeriesQueryBuilder(callExpression, this);
+            var tsQuery = builder.BuildQuery();
 
-            while (callExpression != null)
+            return new Result
             {
-                if (callExpression.Arguments.Count == 0)
-                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-
-                if (callExpression.Object != null)
-                {
-                    if (!(callExpression.Object is MethodCallExpression inner))
-                        throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-
-                    builder.VisitMethod(callExpression);
-                    callExpression = inner;
-                    continue;
-                }
-
-                builder.TimeSeriesName(callExpression);
-
-                if (callExpression.Arguments.Count == 4)
-                    builder.Between(callExpression);
-
-                break;
-            }
-
-            return builder.GetQuery();
+                MemberType = typeof(ITimeSeriesQueryable),
+                IsNestedPath = false,
+                Path = "timeseries",
+                Args = new[] { tsQuery }
+            };
         }
 
 
@@ -554,28 +538,7 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)
         {
-
-            return mce.Method.DeclaringType == typeof(ITimeSeriesQuery<TimeSeriesAggregation>);
-
-
-            /*            MethodCallExpression methodCallExpression = mce;
-                        while (methodCallExpression != null)
-                        {
-                            if (methodCallExpression.Arguments.Count > 0)
-                            {
-                                if (methodCallExpression.Arguments[0] is MethodCallExpression inner)
-                                {
-                                    methodCallExpression = inner;
-                                    continue;
-                                }
-
-                                return methodCallExpression.Method.DeclaringType == typeof(RavenQuery) && methodCallExpression.Method.Name == "TimeSeries";
-                            }
-
-                            break;
-                        }
-
-                        return false;*/
+            return mce.Method.DeclaringType == typeof(ITimeSeriesQueryable);
         }
 
     }

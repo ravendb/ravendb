@@ -353,7 +353,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesQueryTests.RawQueryResult>(rawQuery)
+                    var query = session.Advanced.RawQuery<TimeSeriesRawQuery.RawQueryResult>(rawQuery)
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddDays(1));
 
@@ -393,7 +393,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     NoCaching = true
                 }))
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesQueryTests.RawQueryResult>(rawQuery)
+                    var query = session.Advanced.RawQuery<TimeSeriesRawQuery.RawQueryResult>(rawQuery)
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddDays(1));
 

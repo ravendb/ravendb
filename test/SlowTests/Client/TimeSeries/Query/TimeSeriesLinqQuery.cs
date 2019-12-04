@@ -194,23 +194,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
-                    var q = session.Advanced.DocumentQuery<Person>()
-                        //.WhereGreaterThan("Age", 18) 
-                        .SelectFields<TimeSeriesAggregation>(new QueryData(
-                            fields: new[]
-                            {
-                                @"timeseries(
-from Heartrate between $start and $end
-group by '1 month'
-select min(), max(), first(), last())"
-                            },
-                            projections: new[] { "alias" },
-                            fromAlias: "u"))
-                        .AddParameter("start", baseline)
-                        .AddParameter("end", baseline.AddMonths(3));
-
-                    var res = q.ToList();
-
                     var query = session.Query<Person>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
@@ -222,20 +205,20 @@ select min(), max(), first(), last())"
                                 Max = RavenQuery.TimeSeriesAggregations.Max()
                             }));
 
-                    var result = query.ToList();
+                    var result = query.First();
 
-                    Assert.Equal(1, result.Count);
-                    Assert.Equal(6, result[0].Count);
+                    Assert.Equal(5, result.Count);
 
-                    var agg = result[0].Results;
+                    var agg = result.Results;
 
                     Assert.Equal(2, agg.Length);
 
                     Assert.Equal(79, agg[0].Max[0]);
                     Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(3, agg[0].Count[0]);
 
-                    Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Max[0]);
+                    Assert.Equal(164, agg[1].Avg[0]);
 
                 }
             }
