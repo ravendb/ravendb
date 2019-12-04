@@ -4,13 +4,13 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    public interface ITimeSeriesQuery<T>
+    public interface ITimeSeriesQueryable
     {
-        ITimeSeriesQuery<T> Where(Expression<Func<TimeSeriesValue, bool>> predicate);
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesValue, bool>> predicate);
 
-        ITimeSeriesQuery<T> GroupBy(string s);
+        ITimeSeriesQueryable GroupBy(string s);
 
-        T Select(Expression<Func<ITimeSeriesQuery<T>, object>> selector);
+        TimeSeriesAggregation Select(Expression<Func<ITimeSeriesQueryable, object>> selector);
     }
 
 }

@@ -49,13 +49,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             // removes the lambda parameter
             // from filter expression, e.g. : 'x.Tag' => 'Tag'
-
             _modifier = new LinqPathProvider.TimeSeriesWhereClauseModifier(lambda.Parameters[0].Name);
 
-            if (lambda.Body is MethodCallExpression call)
+            if (lambda.Body is BinaryExpression be)
+                WhereBinary(be);
+            else if (lambda.Body is MethodCallExpression call)
                 WhereMethod(call);
             else
-                WhereExpression(lambda.Body);
+                throw new InvalidOperationException("Cannot understand how to translate " + _expression);
         }
 
         private void GroupBy(MethodCallExpression mce)
@@ -149,13 +150,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             var from = GetDateValue(mce.Arguments[2]);
             var to = GetDateValue(mce.Arguments[3]);
+
             _between = $" between '{from}' and '{to}'";
         }
 
-        public void WhereExpression(Expression expression)
+        public void WhereBinary(BinaryExpression expression)
         {
             Debug.Assert(_modifier != null);
             var filterExpression = _modifier.Modify(expression);
+
             _where = $" where {filterExpression}";
         }
 
@@ -188,15 +191,51 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             {
                 if (first == false)
                     values.Append(",");
+
                 first = false;
-                values.Append(v);
+
+                if (v is string s)
+                    values.Append('\'').Append(v).Append('\'');
+                else
+                    values.Append(v);
             }
 
             _where = $" where {path} in ({values})";
         }
 
-        public LinqPathProvider.Result GetQuery()
+
+        private void VisitExpression()
         {
+            var callExpression = _expression;
+            while (callExpression != null)
+            {
+                if (callExpression.Arguments.Count == 0)
+                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+
+                if (callExpression.Object != null)
+                {
+                    if (!(callExpression.Object is MethodCallExpression inner))
+                        throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+
+                    VisitMethod(callExpression);
+                    callExpression = inner;
+                    continue;
+                }
+
+                TimeSeriesName(callExpression);
+
+                if (callExpression.Arguments.Count == 4)
+                    Between(callExpression);
+
+                return;
+            }
+        }
+
+
+        public string BuildQuery()
+        {
+            VisitExpression();
+
             var expressionBuilder = new StringBuilder();
 
             expressionBuilder.Append("from ").Append(_name);
@@ -208,15 +247,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_groupBy != null)
                 expressionBuilder.Append(_groupBy);
             if (_selectFields != null)
-                expressionBuilder.Append(" select").Append(_selectFields);
+                expressionBuilder.Append(" select ").Append(_selectFields);
 
-            return new LinqPathProvider.Result
-            {
-                MemberType = typeof(ITimeSeriesQuery<TimeSeriesAggregation>),
-                IsNestedPath = false,
-                Path = "timeseries",
-                Args = new []{ expressionBuilder.ToString() }
-            };
+            return expressionBuilder.ToString();
         }
 
         private void AddSelectField(string name)
@@ -255,7 +288,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 throw new InvalidOperationException("failed "); //todo aviv
 
             return d.GetDefaultRavenFormat();
-
         }
     }
 
