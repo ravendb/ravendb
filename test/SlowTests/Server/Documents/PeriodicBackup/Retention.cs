@@ -101,7 +101,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await Locker.WaitAsync();
 
             var containerName = Guid.NewGuid().ToString();
-            using var client = new RavenAzureClient(new AzureSettings { AccountName = AzureAccountName, AccountKey = AzureAccountKey, StorageContainer = containerName });
+            using var client = new RavenAzureClient(new AzureSettings { AccountName = Azure.AzureAccountName, AccountKey = Azure.AzureAccountKey, StorageContainer = containerName });
 
             try
             {
@@ -277,15 +277,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             };
         }
 
-        private const string AzureAccountName = "devstoreaccount1";
-        private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-
         private static AzureSettings GetAzureSettings(string containerName, string databaseName, [CallerMemberName] string remoteFolderName = null)
         {
             return new AzureSettings
             {
-                AccountName = AzureAccountName,
-                AccountKey = AzureAccountKey,
+                AccountName = Azure.AzureAccountName,
+                AccountKey = Azure.AzureAccountKey,
                 StorageContainer = containerName,
                 RemoteFolderName = $"{remoteFolderName}/{databaseName}"
             };
