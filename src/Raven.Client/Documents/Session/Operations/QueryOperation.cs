@@ -201,13 +201,16 @@ namespace Raven.Client.Documents.Session.Operations
                         : value;
                 }
 
-                if (isProjectInto == false)
+                var isTimeSeriesField = fieldsToFetch.Projections[0].StartsWith(Constants.TimeSeries.AggregationFunction);
+
+                if (isProjectInto == false || isTimeSeriesField)
                 {
                     if (document.TryGetMember(projectionField, out object inner) == false)
                         return default;
 
-                    if (fieldsToFetch.FieldsToFetch != null && 
-                        (fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0] || fieldsToFetch.Projections[0].StartsWith("__timeSeriesAggregationFunction")))
+                    if (isTimeSeriesField || 
+                        fieldsToFetch.FieldsToFetch != null && 
+                        fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                     {
                         if (inner is BlittableJsonReaderObject innerJson)
                         {
@@ -217,7 +220,7 @@ namespace Raven.Client.Documents.Session.Operations
                         else if (inner is BlittableJsonReaderArray bjra &&
                                  JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
                         {
-                            return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
+                            return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch?[0], session, bjra);
                         }
                     }
                 }

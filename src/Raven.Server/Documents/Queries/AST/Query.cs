@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Exceptions;
 using Sparrow;
 using Raven.Server.Documents.TimeSeries;
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (DeclaredFunctions == null)
                 DeclaredFunctions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase);
 
-            func.Name = "__timeSeriesAggregationFunction" + DeclaredFunctions.Count;
+            func.Name = Constants.TimeSeries.AggregationFunction + DeclaredFunctions.Count;
 
             return DeclaredFunctions.TryAdd(func.Name, func);
         }
