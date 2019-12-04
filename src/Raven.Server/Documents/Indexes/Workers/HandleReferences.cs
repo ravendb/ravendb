@@ -94,15 +94,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (lastIndexedEtag == 0) // we haven't indexed yet, so we are skipping references for now
                     continue;
 
+                var totalProcessedCount = 0;
+
                 foreach (var referencedCollection in referencedCollections)
                 {
                     var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
 
                     using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index.Name}'. Collection: {referencedCollection.Name}. Type: {actionType}.");
-
                         long lastReferenceEtag;
 
                         switch (actionType)
@@ -118,10 +117,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                         }
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index.Name}'. LastReferenceEtag: {lastReferenceEtag}.");
+                            _logger.Info($"Executing handle references for '{_index.Name}'. LastReferenceEtag: {lastReferenceEtag}. Collection: {referencedCollection.Name}. Type: {actionType}.");
 
                         var lastEtag = lastReferenceEtag;
-                        var count = 0;
+                        var resultsCount = 0;
 
                         var sw = new Stopwatch();
                         IndexWriteOperation indexWriter = null;
@@ -130,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         var lastCollectionEtag = -1L;
                         while (keepRunning)
                         {
-                            var batchCount = 0;
+                            var hasChanges = false;
 
                             using (databaseContext.OpenReadTransaction())
                             {
@@ -180,9 +179,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         _logger.Info($"Executing handle references for '{_index.Name}'. Processing reference: {referencedDocument.Key}.");
 
                                     lastEtag = referencedDocument.Etag;
+                                    hasChanges = true;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
-                                    count++;
-                                    batchCount++;
 
                                     var documents = GetDocumentFromCollectionThatReference(databaseContext, indexContext, collection, referencedDocument, lastIndexedEtag);
 
@@ -191,6 +189,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         while (docsEnumerator.MoveNext(out IEnumerable mapResults))
                                         {
                                             token.ThrowIfCancellationRequested();
+
+                                            totalProcessedCount++;
 
                                             var current = docsEnumerator.Current;
 
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             try
                                             {
                                                 var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults, indexWriter, indexContext, collectionStats);
-
+                                                resultsCount += numberOfResults;
                                                 _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                             }
                                             catch (Exception e) when (e.IsIndexError())
@@ -223,7 +223,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    {
+                                        keepRunning = false;
+                                        break;
+                                    }
+
+                                    if (totalProcessedCount >= pageSize)
                                     {
                                         keepRunning = false;
                                         break;
@@ -233,16 +239,22 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
                                 }
 
-                                if (batchCount == 0 || batchCount >= pageSize)
+                                if (hasChanges == false)
                                     break;
                             }
                         }
 
-                        if (count == 0)
+                        if (lastReferenceEtag == lastEtag)
+                        {
+                            // the last referenced etag hasn't changed
                             continue;
+                        }
+
+                        moreWorkFound = true;
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index} ({_index.Name})'. Processed {count} references in '{referencedCollection.Name}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                            _logger.Info($"Executed handle references for '{_index.Name}' index and '{referencedCollection.Name}' collection. " +
+                                         $"Got {resultsCount:#,#;;0} map results in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                         switch (actionType)
                         {
@@ -255,8 +267,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                             default:
                                 throw new NotSupportedException();
                         }
-
-                        moreWorkFound = true;
                     }
                 }
             }
