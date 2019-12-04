@@ -50,18 +50,18 @@ namespace Raven.Server.Config.Categories
         [Description("The minimum amount of physical memory needed in order to operate 'High Dirty Memory' check mechanism. Default: 2048MB")]
         [DefaultValue(2048)]
         [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Memory.HighMemoryMinimumAllowedUseInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size HighMemoryMinimumAllowedUseInMb { get; set; }
+        [ConfigurationEntry("Memory.MinimumTemporaryDirtyMemoryUseAllowedInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MinimumTemporaryDirtyMemoryUseAllowedInMb { get; set; }
 
         [Description("Specifies the threshold percentage of physical memory for activating 'High Dirty Memory' mechanism (server will return 'Service Unavailable' for writes when scratch files dirty memory exeeds this threshold). Default: 25")]
         [DefaultValue(25)]
-        [ConfigurationEntry("Memory.HighDirtyMemoryPercentageThreshold", ConfigurationEntryScope.ServerWideOnly)]
-        public int HighDirtyMemoryPercentageThreshold { get; set; }
+        [ConfigurationEntry("Memory.TemporaryDirtyMemoryAllowedOutOfPhysicalMemoryInPercents", ConfigurationEntryScope.ServerWideOnly)]
+        public int TemporaryDirtyMemoryAllowedOutOfPhysicalMemoryInPercents { get; set; }
 
         [Description("Period in seconds between 'High Dirty Memory' checks. Default: 30 Seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Memory.HighDirtyMemoryChecksPeriod", ConfigurationEntryScope.ServerWideOnly)]
-        public int HighDirtyMemoryChecksPeriod { get; set; }
+        [ConfigurationEntry("Memory.TemporaryDirtyMemoryChecksPeriod", ConfigurationEntryScope.ServerWideOnly)]
+        public int TemporaryDirtyMemoryChecksPeriod { get; set; }
     }
 }
