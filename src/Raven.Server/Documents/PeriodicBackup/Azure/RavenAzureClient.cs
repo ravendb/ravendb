@@ -423,7 +423,79 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             throw StorageException.FromResponseMessage(response);
         }
 
-        public async Task<ListBlobResult> ListBlobs(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
+        public ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
+        {
+            var url = GetBaseServerUrl() + $"/{_containerName}?restype=container&comp=list";
+            if (prefix != null)
+                url += $"&prefix={Uri.EscapeDataString(prefix)}";
+
+            if (delimiter != null)
+                url += $"&delimiter={delimiter}";
+
+            if (maxResult != null)
+                url += $"&maxresults={maxResult}";
+
+            if (marker != null)
+                url += $"&marker={marker}";
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", SystemTime.UtcNow.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+
+            var response = client.SendAsync(requestMessage, CancellationToken).Result;
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return new ListBlobResult
+                {
+                    ListBlob = new List<BlobProperties>()
+                };
+
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
+
+            var responseStream = response.Content.ReadAsStreamAsync().Result;
+            var listBlobsResult = XDocument.Load(responseStream);
+            var result = GetResult();
+
+            var nextMarker = listBlobsResult.Root.Element("NextMarker")?.Value;
+
+            return new ListBlobResult
+            {
+                ListBlob = result,
+                NextMarker = nextMarker == "true" ? listBlobsResult.Root.Element("NextMarker")?.Value : null
+            };
+
+            IEnumerable<BlobProperties> GetResult()
+            {
+                if (listFolders)
+                {
+                    return listBlobsResult
+                        .Descendants("Blobs")
+                        .Descendants("Name")
+                        .Select(x => RestorePointsBase.GetDirectoryName(x.Value))
+                        .Distinct()
+                        .Select(x => new BlobProperties
+                        {
+                            Name = x
+                        });
+                }
+
+                return listBlobsResult
+                    .Descendants("Blob")
+                    .Select(x => new BlobProperties
+                    {
+                        Name = x.Element("Name")?.Value,
+                    });
+            }
+        }
+
+        public async Task<ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
         {
             var url = GetBaseServerUrl() + $"/{_containerName}?restype=container&comp=list";
             if (prefix != null)
@@ -495,7 +567,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public async Task DeleteMultipleBlobs(List<string> blobs)
+        public void DeleteMultipleBlobs(List<string> blobs)
         {
             if (blobs.Count == 0)
                 return;
@@ -526,24 +598,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 var clientRequestId = Guid.NewGuid().ToString();
                 blobsWithIds[clientRequestId] = blobs[i];
 
-                await writer.WriteLineAsync($"{HttpMethods.Delete} /{_containerName}/{blobs[i]} HTTP/1.1");
-                await writer.WriteLineAsync($"{xMsDate}: {now}");
-                await writer.WriteLineAsync($"{xMsClientRequestId}: {clientRequestId}");
-                await writer.WriteLineAsync($"{xMsReturnClientRequestId}: true");
+                writer.WriteLine($"{HttpMethods.Delete} /{_containerName}/{blobs[i]} HTTP/1.1");
+                writer.WriteLine($"{xMsDate}: {now}");
+                writer.WriteLine($"{xMsClientRequestId}: {clientRequestId}");
+                writer.WriteLine($"{xMsReturnClientRequestId}: true");
 
                 using (var hash = new HMACSHA256(_accountKey))
                 {
                     var uri = new Uri($"{GetBaseServerUrl()}/{_containerName}/{blobs[i]}", UriKind.Absolute);
                     var hashStr = $"{HttpMethods.Delete}\n\n\n\n\n\n\n\n\n\n\n\n{xMsClientRequestId}:{clientRequestId}\n{xMsDate}:{now}\n{xMsReturnClientRequestId}:true\n/{_accountName}{uri.AbsolutePath}";
-                    await writer.WriteLineAsync($"Authorization: SharedKey {_accountName}:{Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(hashStr)))}");
+                    writer.WriteLine($"Authorization: SharedKey {_accountName}:{Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(hashStr)))}");
                 }
 
-                await writer.WriteLineAsync("Content-Length: 0");
-                await writer.FlushAsync();
+                writer.WriteLine("Content-Length: 0");
+                writer.Flush();
 
                 batchContent.Add(new ByteArrayContent(ms.ToArray())
                 {
-                    Headers = { { "Content-Type", "application/http" }, { "Content-Transfer-Encoding", "binary" }, { "Content-ID", $"{i}" } }
+                    Headers =
+                    {
+                        { "Content-Type", "application/http" },
+                        { "Content-Transfer-Encoding", "binary" },
+                        { "Content-ID", $"{i}" }
+                    }
                 });
             }
 
@@ -589,20 +666,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     break;
 
                 string[] res = line.Split(" ");
-                var dic = new Dictionary<string, string> { { statusCode, res[1] }, { status, res[1] == "202" ? res[res.Length - 1] : string.Join(" ", res, 2, res.Length - 2) } };
+                var responseDictionary = new Dictionary<string, string>
+                {
+                    { statusCode, res[1] },
+                    { status, res[1] == "202" ? res[res.Length - 1] : string.Join(" ", res, 2, res.Length - 2) }
+                };
 
                 line = reader.ReadLine();
 
                 while (string.IsNullOrEmpty(line) == false)
                 {
                     var r = line.Split(": ");
-                    dic[r.First()] = r.Last();
+                    responseDictionary[r.First()] = r.Last();
                     line = reader.ReadLine();
 
                 }
-                result[blobsWithIds[dic["x-ms-client-request-id"]]] = dic;
+                result[blobsWithIds[responseDictionary["x-ms-client-request-id"]]] = responseDictionary;
 
-                if (dic.TryGetValue("x-ms-error-code", out _))
+                if (responseDictionary.TryGetValue("x-ms-error-code", out _))
                 {
                     // read the error message body
                     line = reader.ReadLine();

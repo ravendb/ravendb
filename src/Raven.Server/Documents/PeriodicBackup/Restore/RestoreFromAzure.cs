@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task<List<string>> GetFilesForRestore()
         {
             var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName;
-            var allObjects = await _client.ListBlobs(prefix, string.Empty, false);
+            var allObjects = await _client.ListBlobsAsync(prefix, string.Empty, false);
             return allObjects.ListBlob.Select(x => x.Name).ToList();
         }
 
