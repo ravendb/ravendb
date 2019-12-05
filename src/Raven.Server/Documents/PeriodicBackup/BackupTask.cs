@@ -115,7 +115,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 IsFull = _isFullBackup,
                 LocalBackup = _previousBackupStatus.LocalBackup,
                 LastOperationId = _previousBackupStatus.LastOperationId,
-                FolderName = _previousBackupStatus.FolderName
+                FolderName = _previousBackupStatus.FolderName,
+                LastDatabaseChangeVector = _previousBackupStatus.LastDatabaseChangeVector
             };
 
             try
@@ -141,13 +142,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _previousBackupStatus.LastRaftIndex = new LastRaftIndex();
 
                     // no-op if nothing has changed
-                    var currentLastEtag = _database.ReadLastEtag();
+                    var (currentLastEtag, currentChangeVector) = _database.ReadLastEtagAndChangeVector();
 
                     // if we come from old version the _previousBackupStatus won't have LastRaftIndex
                     if (_previousBackupStatus.LastRaftIndex == null)
                         _previousBackupStatus.LastRaftIndex = new LastRaftIndex();
 
                     if (currentLastEtag == _previousBackupStatus.LastEtag
+                        && currentChangeVector == _previousBackupStatus.LastDatabaseChangeVector
                         && currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.LastEtag)
                     {
                         var message = $"Skipping incremental backup because no changes were made from last full backup on {_previousBackupStatus.LastFullBackup}.";
@@ -200,6 +202,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = internalBackupResult.LastDocumentEtag;
+                runningBackupStatus.LastDatabaseChangeVector = internalBackupResult.LastDatabaseChangeVector;
                 runningBackupStatus.LastRaftIndex.LastEtag = internalBackupResult.LastRaftIndex;
                 runningBackupStatus.FolderName = folderName;
 
@@ -535,6 +538,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private class InternalBackupResult
         {
             public long LastDocumentEtag { get; set; }
+            public string LastDatabaseChangeVector { get; set; }
             public long LastRaftIndex { get; set; }
         }
 
@@ -581,9 +585,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                         }
                         else
                         {
-                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag && _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
+                            if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag && 
+                                _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
                             {
                                 internalBackupResult.LastDocumentEtag = startDocumentEtag ?? 0;
+                                internalBackupResult.LastDatabaseChangeVector = _previousBackupStatus.LastDatabaseChangeVector;
                                 internalBackupResult.LastRaftIndex = startRaftIndex ?? 0;
                             }
                             else
@@ -599,7 +605,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         ValidateFreeSpaceForSnapshot(tempBackupFilePath);
 
-                        internalBackupResult.LastDocumentEtag = _database.ReadLastEtag();
+                        (internalBackupResult.LastDocumentEtag, internalBackupResult.LastDatabaseChangeVector) = _database.ReadLastEtagAndChangeVector();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
                         var databaseSummary = _database.GetDatabaseSummary();
                         var indexesCount = _database.IndexStore.Count;
@@ -762,6 +768,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 currentBackupResults.LastDocumentEtag = smugglerSource.LastEtag;
+                currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
                 currentBackupResults.LastRaftIndex = smugglerSource.LastRaftIndex;
 
                 return currentBackupResults;
