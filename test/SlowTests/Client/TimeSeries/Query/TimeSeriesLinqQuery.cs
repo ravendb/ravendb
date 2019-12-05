@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
-        public void CanQueryTimeSeriesUsingLinq()
+        public void CanQueryTimeSeriesAggregation_UsingLinq()
         {
             using (var store = GetDocumentStore())
             {
@@ -69,7 +70,8 @@ namespace SlowTests.Client.TimeSeries.Query
                             {
                                 Avg = RavenQuery.TimeSeriesAggregations.Average(),
                                 Max = RavenQuery.TimeSeriesAggregations.Max()
-                            }));
+                            })
+                            .ToList());
 
                     var result = query.ToList();
 
@@ -91,7 +93,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
-        public void WithFromAndToDates()
+        public void CanQueryTimeSeriesAggregation_WithFromAndToDates()
         {
             using (var store = GetDocumentStore())
             {
@@ -143,7 +145,8 @@ namespace SlowTests.Client.TimeSeries.Query
                             {
                                 Avg = RavenQuery.TimeSeriesAggregations.Average(),
                                 Max = RavenQuery.TimeSeriesAggregations.Max()
-                            }));
+                            })
+                            .ToList());
 
                     var result = query.ToList();
 
@@ -165,7 +168,7 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
-        public void WhereIn()
+        public void CanQueryTimeSeriesAggregation_WhereIn()
         {
             using (var store = GetDocumentStore())
             {
@@ -202,7 +205,8 @@ namespace SlowTests.Client.TimeSeries.Query
                             {
                                 Avg = RavenQuery.TimeSeriesAggregations.Average(), 
                                 Max = RavenQuery.TimeSeriesAggregations.Max()
-                            }));
+                            })
+                            .ToList());
 
                     var result = query.First();
 
@@ -223,8 +227,76 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingLinq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Oren",
+                        Age = 35
+                    }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Age > 21)
+                        .Select(u => RavenQuery.TimeSeriesRaw(u, "Heartrate")
+                            .Where(ts => ts.Tag == "watches/fitbit")
+                            .ToList());
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(5, result[0].Count);
+
+                    var timeSeriesValues = result[0].Results;
+
+                    Assert.Equal(59, timeSeriesValues[0].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(61), timeSeriesValues[0].Timestamp);
+
+                    Assert.Equal(79, timeSeriesValues[1].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(62), timeSeriesValues[1].Timestamp);
+
+                    Assert.Equal(69, timeSeriesValues[2].Values[0]);
+                    Assert.Equal(baseline.AddMinutes(63), timeSeriesValues[2].Timestamp);
+
+                    Assert.Equal(179, timeSeriesValues[3].Values[0]);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(62), timeSeriesValues[3].Timestamp);
+
+                    Assert.Equal(169, timeSeriesValues[4].Values[0]);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[4].Timestamp);
+
+                }
+            }
+        }
+
         [Fact (Skip = "todo aviv ")]
-        public void FromLoadedDocument()
+        public void CanQueryTimeSeriesAggregation_FromLoadedDocument()
         {
             using (var store = GetDocumentStore())
             {
@@ -267,7 +339,8 @@ namespace SlowTests.Client.TimeSeries.Query
                                     {
                                         Avg = RavenQuery.TimeSeriesAggregations.Average(),
                                         Max = RavenQuery.TimeSeriesAggregations.Max()
-                                    });
+                                    })
+                                    .ToList();
 
 
                     var result = query.ToList();

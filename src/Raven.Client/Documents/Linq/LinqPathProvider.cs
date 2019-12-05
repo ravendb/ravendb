@@ -195,7 +195,7 @@ namespace Raven.Client.Documents.Linq
 
             return new Result
             {
-                MemberType = typeof(ITimeSeriesQueryable),
+                MemberType = typeof(ITimeSeriesQueryable<>),
                 IsNestedPath = false,
                 Path = Constants.TimeSeries.SelectFieldName,
                 Args = new[] { tsQuery }
@@ -537,7 +537,8 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)
         {
-            return mce.Method.DeclaringType == typeof(ITimeSeriesQueryable);
+            return mce.Method.DeclaringType == typeof(ITimeSeriesQueryable<TimeSeriesAggregation>) ||
+                   mce.Method.DeclaringType == typeof(ITimeSeriesQueryable<TimeSeriesRaw>);
         }
 
     }

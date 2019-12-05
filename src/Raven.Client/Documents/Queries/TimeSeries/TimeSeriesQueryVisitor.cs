@@ -15,11 +15,13 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private LinqPathProvider.TimeSeriesWhereClauseModifier _modifier;
         private StringBuilder _selectFields;
         private string _name, _between, _where, _groupBy;
+        private Type _queryType;
 
         public TimeSeriesQueryVisitor(MethodCallExpression expression, LinqPathProvider provider)
         {
             _expression = expression;
             _provider = provider;
+            _queryType = typeof(TimeSeriesRaw);
         }
 
         private void VisitMethod(MethodCallExpression mce)
@@ -34,6 +36,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     break;
                 case "Select":
                     Select(mce.Arguments[0]);
+                    break;
+                case "ToList":
                     break;
                 default:
                     throw new InvalidOperationException("Cannot understand how to translate " + _expression);
@@ -61,6 +65,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void GroupBy(MethodCallExpression mce)
         {
+            _queryType = typeof(TimeSeriesAggregation);
+
             if (mce.Arguments[0] is ConstantExpression constantExpression)
                 _groupBy = $" group by '{constantExpression.Value}'";
             else 
@@ -129,14 +135,26 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-
         private void TimeSeriesName(MethodCallExpression mce)
         {
+            switch (mce.Method.Name)
+            {
+                case nameof(RavenQuery.TimeSeriesRaw):
+                    if (_queryType == typeof(TimeSeriesAggregation))
+                        throw new InvalidOperationException("Cannot use GroupBy or Select on RavenQuery.TimeSeriesRaw(). In order to perform aggregations, use RavenQuery.TimeSeries()");
+                    break;
+                case nameof(RavenQuery.TimeSeries):
+                    if (_queryType == typeof(TimeSeriesRaw))
+                        throw new InvalidOperationException("Must use GroupBy and Select on RavenQuery.TimeSeries(). In order to get non-aggregated results, use RavenQuery.TimeSeriesRaw()");
+                    break;
+                default:
+                    throw new InvalidOperationException("Cannot understand how to translate " + _expression);
+            }
+
             if (mce.Arguments.Count == 1)
             {
                 _name = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
             }
-
             else
             {
                 _name = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
@@ -203,15 +221,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _where = $" where {path} in ({values})";
         }
 
-
         public string VisitExpression()
         {
             var callExpression = _expression;
             while (callExpression != null)
             {
-                if (callExpression.Arguments.Count == 0)
-                    throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
-
                 if (callExpression.Object != null)
                 {
                     if (!(callExpression.Object is MethodCallExpression inner))
@@ -232,7 +246,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             return BuildQuery();
         }
-
 
         private string BuildQuery()
         {
