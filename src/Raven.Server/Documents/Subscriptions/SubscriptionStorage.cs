@@ -149,9 +149,9 @@ namespace Raven.Server.Documents.Subscriptions
 
                     string generalState = string.Empty;
                     RachisState currentState = _serverStore.Engine.CurrentState;
-                    if (currentState == RachisState.Candidate || _serverStore.Engine.CurrentState == RachisState.Passive)
+                    if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
                     {
-                        generalState = $"Current node ({_serverStore.NodeTag}) is in {_serverStore.Engine.CurrentState.ToString()} state therefore, we can't answer who's task is it and returning null";
+                        generalState = $"Current node ({_serverStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";
                     }
                     else
                     {
