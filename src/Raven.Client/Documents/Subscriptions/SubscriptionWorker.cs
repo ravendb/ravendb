@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -353,6 +354,7 @@ namespace Raven.Client.Documents.Subscriptions
                         {
                             if (item is BlittableJsonReaderObject itemAsBlittable)
                             {
+                                Debug.Assert(itemAsBlittable.Count == 1);
                                 if (itemAsBlittable.Count == 1)
                                 {
                                     var tagName = itemAsBlittable.GetPropertyNames()[0];
