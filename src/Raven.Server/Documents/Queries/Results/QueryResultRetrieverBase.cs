@@ -593,7 +593,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 if (TryGetFieldValueFromDocument(doc, fieldToFetch, out var val))
                 {
-                    if (val is string == false && val is System.Collections.IEnumerable items && val is LazyStringValue == false)
+                    if (val is string == false && val is LazyStringValue == false && val is System.Collections.IEnumerable items)
                     {
                         // we flatten arrays in projections
                         foreach (var item in items)
