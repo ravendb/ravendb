@@ -139,6 +139,34 @@ namespace Raven.Client.Http
             }
         }
 
+        private TimeSpan? _defaultBroadcastTimeout;
+
+        public TimeSpan? DefaultBroadcastTimeout
+        {
+            get => _defaultBroadcastTimeout;
+            set
+            {
+                if (value.HasValue && value.Value > GlobalHttpClientTimeout)
+                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+
+                _defaultBroadcastTimeout = value;
+            }
+        }
+
+        private TimeSpan? _initialRaftRequestTimeout;
+
+        public TimeSpan? InitialRaftRequestTimeout
+        {
+            get => _initialRaftRequestTimeout;
+            set
+            {
+                if (value.HasValue && value.Value > GlobalHttpClientTimeout)
+                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+
+                _initialRaftRequestTimeout = value;
+            }
+        }
+
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
         private class FailedRequestTranslator
@@ -303,6 +331,8 @@ namespace Raven.Client.Http
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
+            DefaultBroadcastTimeout = conventions.RequestBroadcastTimeout;
+            InitialRaftRequestTimeout = conventions.InitialRaftRequestTimeout;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
@@ -1195,7 +1225,7 @@ namespace Raven.Client.Http
 
                 if (command.Timeout.HasValue == false)
                 {
-                    command.SetTimeout(TimeSpan.FromSeconds(3));
+                    command.SetTimeout(InitialRaftRequestTimeout ?? TimeSpan.FromSeconds(5));
                 }
             }
 
@@ -1361,7 +1391,7 @@ namespace Raven.Client.Http
 
             var tasks = new Dictionary<Task, CancellationTokenSource>();
 
-            command.SetTimeout(TimeSpan.FromSeconds(30)); //TODO configurable broadcast timeout 
+            command.SetTimeout(_defaultBroadcastTimeout ?? TimeSpan.FromSeconds(30));
 
             for (var index = 0; index < _nodeSelector.Topology.Nodes.Count; index++)
             {
