@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Subscriptions
                         {
                             if (whoseTaskIsIt == subscription.MentorNode && member == subscription.MentorNode)
                             {
-                                databaseTopologyAvailabilityExplanation[member] = "Is the mentor node and a valid member of the topology, it should be the mento node";
+                                databaseTopologyAvailabilityExplanation[member] = "Is the mentor node and a valid member of the topology, it should be the mentor node";
                             }
                             else if (whoseTaskIsIt != null && whoseTaskIsIt != member)
                             {
