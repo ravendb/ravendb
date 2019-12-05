@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
         protected override GetFoldersResult GetSortedFolders()
         {
             var prefix = $"{_client.RemoteFolderName}{Delimiter}";
-            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _nextMarker).Result;
+            var result = _client.ListBlobs(prefix, Delimiter, listFolders: true, marker: _nextMarker);
             _nextMarker = result.NextMarker;
 
             return new GetFoldersResult
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
             do
             {
-                var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker).Result;
+                var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker);
 
                 foreach (var blob in blobs.ListBlob)
                 {
@@ -85,13 +85,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
 
                 do
                 {
-                    var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker).Result;
+                    var blobs = _client.ListBlobs(folder, delimiter: null, listFolders: false, marker: blobsNextMarker);
 
                     foreach (var blob in blobs.ListBlob)
                     {
                         if (blobsToDelete.Count == numberOfObjectsInBatch)
                         {
-                            _client.DeleteMultipleBlobs(blobsToDelete).Wait();
+                            _client.DeleteMultipleBlobs(blobsToDelete);
                             blobsToDelete.Clear();
                         }
 
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Retention
             }
 
             if (blobsToDelete.Count > 0)
-                _client.DeleteMultipleBlobs(blobsToDelete).Wait();
+                _client.DeleteMultipleBlobs(blobsToDelete);
         }
     }
 }

@@ -152,7 +152,7 @@ namespace Raven.Server.Web.Studio
 
                         using (var client = new RavenAzureClient(azureSettings))
                         {
-                            var folders = (await client.ListBlobs(azureSettings.RemoteFolderName, "/", true));
+                            var folders = (await client.ListBlobsAsync(azureSettings.RemoteFolderName, "/", true));
 
                             foreach (var folder in folders.ListBlob)
                             {

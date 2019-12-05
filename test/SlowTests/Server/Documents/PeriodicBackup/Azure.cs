@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         internal const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
         [AzureStorageEmulatorFact(Skip = "Batch operations are not supported in emulator")]
-        public async Task CanRemoveBlobsInBatch()
+        public void CanRemoveBlobsInBatch()
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
@@ -51,7 +51,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     blobs.Add(key);
                 }
 
-                await client.DeleteMultipleBlobs(blobs);
+                client.DeleteMultipleBlobs(blobs);
             }
             finally
             {
@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [AzureStorageEmulatorFact(Skip = "Batch operations are not supported in emulator")]
-        public async Task RemoveNonExistingBlobsInBatchShouldThrow()
+        public void RemoveNonExistingBlobsInBatchShouldThrow()
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    await client.DeleteMultipleBlobs(blobs);
+                    client.DeleteMultipleBlobs(blobs);
                 }
                 catch (Exception e)
                 {
