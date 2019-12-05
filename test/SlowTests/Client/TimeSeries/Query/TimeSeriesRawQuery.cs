@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
@@ -18,6 +19,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
         }
 
+/*
         public class TimeSeriesRangeAggregation
         {
 #pragma warning disable 649
@@ -32,6 +34,7 @@ namespace SlowTests.Client.TimeSeries.Query
             public long Count { get; set; }
             public TimeSeriesRangeAggregation[] Results { get; set; }
         }
+*/
 
         private class PeopleIndex : AbstractIndexCreationTask<Person>
         {
@@ -125,11 +128,11 @@ namespace SlowTests.Client.TimeSeries.Query
             public string Name { get; set; }
         }
 
-        private class TimeSeriesRaw
+/*        private class TimeSeriesRaw
         {
             public long Count { get; set; }
             public TimeSeriesValue[] Results { get; set; }
-        }
+        }*/
 
         [Fact]
         public unsafe void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery()

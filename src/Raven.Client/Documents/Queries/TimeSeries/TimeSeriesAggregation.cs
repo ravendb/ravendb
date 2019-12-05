@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
@@ -13,5 +14,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     {
         public long Count { get; set; }
         public TimeSeriesRangeAggregation[] Results { get; set; }
+    }
+
+    public class TimeSeriesRaw
+    {
+        public long Count { get; set; }
+        public TimeSeriesValue[] Results { get; set; }
     }
 }
