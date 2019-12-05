@@ -154,8 +154,7 @@ namespace Raven.Server.Json
                 return true;
             }
 
-            if (value is string == false &&
-                value is IEnumerable items)
+            if (value is string == false && value is LazyStringValue == false && value is IEnumerable items)
             {
                 value = ReadNestedComputed(blittableJsonTraverser, items, leftPath);
                 return true;
