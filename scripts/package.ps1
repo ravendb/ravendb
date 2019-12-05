@@ -74,9 +74,8 @@ function LayoutToolsPackage ( $packageDir, $projectDir, $packOpts ) {
 }
 
 function CopyDirectoryContents ( $tag, $src, $dst ) {
-    $contents = [io.path]::combine($src, "*")
-    write-host "Copy $tag files: $contents -> $dst"
-    Copy-Item -Recurse "$contents" -Destination "$dst" -Force 
+    write-host "Copy $tag files: $src -> $dst"
+    Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -Throw
 }
 
 function CopyStudioPackageToServerOutputDirectory ( $packOpts ) {

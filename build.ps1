@@ -38,6 +38,8 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\docker.ps1'
 . '.\scripts\schemaInfo.ps1'
 . '.\scripts\runtime.ps1'
+. '.\scripts\Get-DestinationFilePath.ps1'
+. '.\scripts\Copy-FileHash.ps1'
 
 if ($Help) {
     Help
