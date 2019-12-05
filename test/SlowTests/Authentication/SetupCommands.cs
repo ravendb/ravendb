@@ -37,12 +37,14 @@ namespace SlowTests.Authentication
             {
                 url = $"{node.Url}/setup/dns-n-cert?action=claim";
 
+                var clone = _payload.Clone(ctx);
+
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _payload);
+                        ctx.Write(stream, clone);
                     })
                 };
             }
@@ -99,12 +101,14 @@ namespace SlowTests.Authentication
             {
                 url = $"{node.Url}/setup/letsencrypt";
 
+                var clone = _payload.Clone(ctx);
+
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(this, stream =>
                     {
-                        ctx.Write(stream, _payload);
+                        ctx.Write(stream, clone);
                     })
                 };
             }

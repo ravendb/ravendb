@@ -82,7 +82,7 @@ namespace FastTests.Server
                     Method = HttpMethod.Put
                 };
                 
-                var clone = databaseDocument.Clone(ctx);
+                var clone = databaseDocument.Clone(ctx, forceCloning: false);
 
                 message.Headers.Add("ETag", "0");
                 message.Content = new BlittableJsonContent(this,stream => clone.WriteJsonTo(stream));

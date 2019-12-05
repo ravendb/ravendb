@@ -1223,7 +1223,8 @@ namespace Raven.Client.Http
                 var raftRequestString = "raft-request-id=" + raftCommand.RaftUniqueRequestId;
                 builder.Query = builder.Query?.Length > 1 ? $"{builder.Query.Substring(1)}&{raftRequestString}" : raftRequestString;
 
-                if (command.Timeout.HasValue == false)
+                if (command.Timeout.HasValue == false && 
+                    TopologyNodes?.Count > 1)
                 {
                     command.SetTimeout(InitialRaftRequestTimeout ?? TimeSpan.FromSeconds(5));
                 }
@@ -1350,7 +1351,7 @@ namespace Raven.Client.Http
 
             await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
-            if (command is IRaftCommand && _nodeSelector.Topology.Nodes.Count > 1)
+            if (command is IRaftCommand && TopologyNodes?.Count > 1)
             {
                 await Broadcast(command, sessionInfo, token).ConfigureAwait(false);
                 return true;

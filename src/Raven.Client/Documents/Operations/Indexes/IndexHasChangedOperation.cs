@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/has-changed";
 
-                var cloned = _definition.Clone(ctx);
+                var cloned = _definition.Clone(ctx, forceCloning: false);
 
                 return new HttpRequestMessage
                 {

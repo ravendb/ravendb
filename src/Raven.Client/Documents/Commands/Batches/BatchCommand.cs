@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Commands.Batches
             var clone = new BlittableJsonReaderObject[_commands.Length];
             for (var index = 0; index < _commands.Length; index++)
             {
-                clone[index] = _commands[index].Clone(ctx);
+                clone[index] = _commands[index].Clone(ctx, forceCloning: false);
             }
 
             var request = new HttpRequestMessage

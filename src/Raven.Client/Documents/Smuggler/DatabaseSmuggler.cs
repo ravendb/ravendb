@@ -356,8 +356,6 @@ namespace Raven.Client.Documents.Smuggler
 
                 var options = EntityToBlittable.ConvertCommandToBlittable(_options, ctx);
 
-                _stream.Position = 0;
-
                 var form = new MultipartFormDataContent
                 {
                     {

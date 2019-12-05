@@ -61,7 +61,7 @@ namespace Raven.Client.ServerWide.Operations
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases/reorder?name={_databaseName}";
-                var clone = _orderBlittable.Clone(ctx);
+                var clone = _orderBlittable.Clone(ctx, forceCloning: false);
 
                 var request = new HttpRequestMessage
                 {

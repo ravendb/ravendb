@@ -137,7 +137,7 @@ namespace SlowTests.Cluster
                 result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
                 Assert.Equal(2, result);
                 sp.Stop();
-                Assert.True(sp.Elapsed < TimeSpan.FromSeconds(5));
+                Assert.True(sp.Elapsed < TimeSpan.FromSeconds(10));
             }
         }
 
