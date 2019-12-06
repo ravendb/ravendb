@@ -1421,14 +1421,13 @@ namespace Raven.Server.Documents.TimeSeries
 
             var key = new LazyStringValue(null, keyPtr, keySize, context);
 
-            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize,  context, out var docId, out var name, out var baseline, out var docIdAndName);
+            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize,  context, out var docId, out var name, out var baseline);
 
             return new TimeSeriesSegmentEntry
             {
                 Key = key,
                 DocId = docId,
                 Name = name,
-                DocIdAndName = docIdAndName,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                 SegmentSize = segmentSize,
