@@ -78,7 +78,7 @@ function Copy-FileHash {
         $Force,
 
         [switch]
-        $Throw
+        $ThrowForDlls
     )
     Begin {
         Try {
@@ -105,6 +105,7 @@ function Copy-FileHash {
             $SourceFiles = (Get-ChildItem -Path $Source -Recurse:$Recurse -File).FullName
 
             ForEach ($SourceFile in $SourceFiles) {
+                $SourceExtension = [System.IO.Path]::GetExtension("$SourceFile")
                 $DestFile = Get-DestinationFilePath -File $SourceFile -Source $SourcePath -Destination $Destination
                 $SourceHash = (Get-FileHash $SourceFile -Algorithm $Algorithm).hash
 
@@ -122,7 +123,7 @@ function Copy-FileHash {
                 }
 
                 If (($SourceHash -ne $DestHash) -and $PSCmdlet.ShouldProcess($SourceFile, 'Copy-Item')) {
-                    If ($Throw -eq $true -and $DestHash -ne $null) {
+                    If ($ThrowForDlls -eq $true -and $SourceExtension -eq ".dll" -and $DestHash -ne $null) {
                         Throw "Could not copy file $SourceFile to $DestFile. Source hash: $SourceHash. Destination hash: $DestHash"
                     }
                     Else {

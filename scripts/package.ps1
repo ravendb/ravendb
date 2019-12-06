@@ -75,7 +75,7 @@ function LayoutToolsPackage ( $packageDir, $projectDir, $packOpts ) {
 
 function CopyDirectoryContents ( $tag, $src, $dst ) {
     write-host "Copy $tag files: $src -> $dst"
-    Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -Throw
+    Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
 }
 
 function CopyStudioPackageToServerOutputDirectory ( $packOpts ) {
