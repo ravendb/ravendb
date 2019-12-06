@@ -114,7 +114,10 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="System.Collections.Immutable" Version="1.7.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.0" />
+    <PackageReference Include="System.Reflection.Metadata" Version="1.8.0" />
+    <PackageReference Include="System.Security.Cryptography.Cng" Version="4.7.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.7.0" />
   </ItemGroup>
   <ItemGroup>
