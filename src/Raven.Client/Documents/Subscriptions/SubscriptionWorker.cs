@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
@@ -14,6 +16,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -43,6 +46,8 @@ namespace Raven.Client.Documents.Subscriptions
         private bool _disposed;
         private Task _subscriptionTask;
         private Stream _stream;
+        private int _forcedTopologyUpdateAttempts = 0;
+
 
         /// <summary>
         /// allows the user to define stuff that happens after the confirm was received from the server (this way we know we won't
@@ -190,6 +195,8 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                         tcpInfo = command.Result;
+
+                        _redirectNode = requestExecutor.Topology.Nodes.Where(x => tcpInfo.Urls.Contains(x.Url)).FirstOrDefault();
                     }
                     catch (ClientVersionMismatchException)
                     {
@@ -339,12 +346,27 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
                     var appropriateNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]?.ToString();
-                    throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}"
-                    )
+                    var rawReasons = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)];
+                    Dictionary<string, string> reasonsDictionary = new Dictionary<string, string>();
+                    if (rawReasons != null && rawReasons is BlittableJsonReaderArray rawReasonsArray)
                     {
-                        AppropriateNode = appropriateNode
-                    };
+                        foreach(var item in rawReasonsArray)
+                        {
+                            if (item is BlittableJsonReaderObject itemAsBlittable)
+                            {
+                                Debug.Assert(itemAsBlittable.Count == 1);
+                                if (itemAsBlittable.Count == 1)
+                                {
+                                    var tagName = itemAsBlittable.GetPropertyNames()[0];
+                                    reasonsDictionary[tagName] = itemAsBlittable[tagName].ToString();
+                                }
+                            }
+                        }
+                    }
+                    throw new SubscriptionDoesNotBelongToNodeException(
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}]{Environment.NewLine}Reasons:{string.Join(Environment.NewLine,reasonsDictionary.Select(x=>$"{x.Key}:{x.Value}"))}",
+                        appropriateNode,
+                        reasonsDictionary);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
                     throw new SubscriptionChangeVectorUpdateConcurrencyException(connectionStatus.Message);
                 default:
@@ -586,6 +608,10 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
+                    while (_recentExceptions.Count >= 10)
+                        _recentExceptions.TryDequeue(out _);
+
+                    _recentExceptions.Enqueue(ex);
                     try
                     {
                         if (_processingCts.Token.IsCancellationRequested)
@@ -603,6 +629,20 @@ namespace Raven.Client.Documents.Subscriptions
                         if (ShouldTryToReconnect(ex))
                         {
                             await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+
+                            if (_redirectNode == null)
+                            {
+                                var reqEx = _store.GetRequestExecutor(_dbName);
+                                var curTopology = reqEx.TopologyNodes;
+                                var nextNodeIndex = (_forcedTopologyUpdateAttempts++) % curTopology.Count;
+                                _redirectNode = curTopology[nextNodeIndex];
+                                if (_logger.IsInfoEnabled)
+                                {
+                                    _logger.Info(
+                                        $"Subscription '{_options.SubscriptionName}'. Will modify redirect node from null to {_redirectNode.ClusterTag}", ex);
+                                }
+                            }
+
                             var onSubscriptionConnectionRetry = OnSubscriptionConnectionRetry;
                             onSubscriptionConnectionRetry?.Invoke(ex);
                         }
@@ -619,7 +659,7 @@ namespace Raven.Client.Documents.Subscriptions
                         if (e == ex)
                             throw;
 
-                        throw new AggregateException(e, ex);
+                        throw new AggregateException(new[] { e }.Concat(_recentExceptions));
                     }
                 }
             }
@@ -627,6 +667,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private DateTime? _lastConnectionFailure;
         private TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
+        private ConcurrentQueue<Exception> _recentExceptions = new ConcurrentQueue<Exception>();
 
         private void AssertLastConnectionFailure()
         {
@@ -656,7 +697,10 @@ namespace Raven.Client.Documents.Subscriptions
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
 
                     if (se.AppropriateNode == null)
+                    {
+                        _redirectNode = null;
                         return true;
+                    }
 
                     var nodeToRedirectTo = requestExecutor.TopologyNodes
                         .FirstOrDefault(x => x.ClusterTag == se.AppropriateNode);
@@ -664,6 +708,13 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
 
                     return true;
+                case NodeIsPassiveException e:
+                    {
+                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // redirect us to the current node
+                        _redirectNode = null;
+                        return true;
+                    }
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
                 case SubscriptionInUseException _:

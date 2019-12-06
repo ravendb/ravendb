@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
-using FastTests;
 using SlowTests.Client.Attachments;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
-    public class AttachmentsStreamStressFromSlow : NoDisposalNeeded
+    public class AttachmentsStreamStressFromSlow : NoDisposalNoOutputNeeded
     {
         public AttachmentsStreamStressFromSlow(ITestOutputHelper output) : base(output)
         {

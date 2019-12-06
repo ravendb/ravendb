@@ -140,18 +140,83 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
                 var topology = _serverStore.Cluster.ReadDatabaseTopology(serverStoreContext, _db.Name);
+                
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
+                
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
-                    throw new SubscriptionDoesNotBelongToNodeException($"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
+                    var databaseTopologyAvailabilityExplanation = new Dictionary<string, string>();
+
+                    string generalState = string.Empty;
+                    RachisState currentState = _serverStore.Engine.CurrentState;
+                    if (currentState == RachisState.Candidate || currentState == RachisState.Passive)
                     {
-                        AppropriateNode = whoseTaskIsIt
-                    };
+                        generalState = $"Current node ({_serverStore.NodeTag}) is in {currentState.ToString()} state therefore, we can't answer who's task is it and returning null";
+                    }
+                    else
+                    {
+                        generalState = currentState.ToString();
+                    }
+                    databaseTopologyAvailabilityExplanation["NodeState"] = generalState;                    
+
+                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup:topology.Rehabs, stateName:"rehab");
+                    FillNodesAvailabilityReportForState(subscription, topology, databaseTopologyAvailabilityExplanation, stateGroup: topology.Promotables, stateName: "promotable");
+
+                    //whoseTaskIsIt!= null && whoseTaskIsIt == subscription.MentorNode 
+                    foreach (var member in topology.Members)
+                    {
+                        if (whoseTaskIsIt != null)
+                        {
+                            if (whoseTaskIsIt == subscription.MentorNode && member == subscription.MentorNode)
+                            {
+                                databaseTopologyAvailabilityExplanation[member] = "Is the mentor node and a valid member of the topology, it should be the mentor node";
+                            }
+                            else if (whoseTaskIsIt != null && whoseTaskIsIt != member)
+                            {
+                                databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology, but not chosen to be the node running the subscription";
+                            }
+                            else if (whoseTaskIsIt == member)
+                            {
+                                databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology and is chosen to be running the subscription";
+                            }
+                        }                        
+                        else
+                        {
+                            databaseTopologyAvailabilityExplanation[member] = "Is a valid member of the topology but was not chosen to run the subscription, we didn't find any other match either";
+                        }
+                    }
+                    throw new SubscriptionDoesNotBelongToNodeException(
+                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",                    
+                        whoseTaskIsIt,
+                        databaseTopologyAvailabilityExplanation);
                 }
                 if (subscription.Disabled)
                     throw new SubscriptionClosedException($"The subscription with id {id} and name {name} is disabled and cannot be used until enabled");
 
                 return subscription;
+            }
+
+            void FillNodesAvailabilityReportForState(SubscriptionGeneralDataAndStats subscription, DatabaseTopology topology, Dictionary<string, string> databaseTopologyAvailabilityExplenation, List<string> stateGroup, string stateName)
+            {
+                foreach (var nodeInGroup in stateGroup)
+                {
+                    var rehabMessage = string.Empty;
+                    if (subscription.MentorNode == nodeInGroup)
+                    {
+                        rehabMessage = $"Although this node is a mentor, it's state is {stateName} and can't run the subscription";
+                    }
+                    else
+                    {
+                        rehabMessage = $"Node's state is {stateName}, can't run subscription";
+                    }
+
+                    if (topology.DemotionReasons.TryGetValue(nodeInGroup, out var demotionReason))
+                    {
+                        rehabMessage = rehabMessage + ". Reason:" + demotionReason;
+                    }
+
+                    databaseTopologyAvailabilityExplenation[nodeInGroup] = rehabMessage;
+                }
             }
         }
 

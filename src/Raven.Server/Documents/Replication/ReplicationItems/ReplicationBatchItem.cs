@@ -65,7 +65,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 case ReplicationItemType.RevisionTombstone:
                     return new RevisionTombstoneReplicationItem {Type = type, Reader = reader};
                 case ReplicationItemType.LegacyCounter:
+#pragma warning disable CS0618 // Type or member is obsolete
                 case ReplicationItemType.CounterTombstone:
+#pragma warning restore CS0618 // Type or member is obsolete
                     throw new InvalidOperationException($"Received an item of type '{type}'. Replication of counters and counter tombstones between 4.1.x and {ServerVersion.Version} is not supported.");
                 case ReplicationItemType.CounterGroup:
                     return new CounterReplicationItem {Type = type, Reader = reader};

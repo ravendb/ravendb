@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
@@ -77,6 +79,12 @@ namespace Raven.Server.Web.System
             var remoteTask = GetStringQueryString("remote-task");
             var database = GetStringQueryString("database");
             var verifyDatabase = GetBoolValueQueryString("verify-database", false);
+
+            if (ServerStore.IsPassive())
+            {
+                throw new NodeIsPassiveException($"Can't fetch Tcp info from a passive node in url {this.HttpContext.Request.GetFullUrl()}");
+            }
+
             if (verifyDatabase.HasValue && verifyDatabase.Value)
             {
                 await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
