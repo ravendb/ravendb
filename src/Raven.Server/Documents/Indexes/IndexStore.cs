@@ -1824,7 +1824,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var indexCount = _command.Static.Count + _command.Auto.Count;
                     var operationTimeout = _store._serverStore.Engine.OperationTimeout;
-                    var timeout = TimeSpan.FromSeconds((indexCount / 50.0) * operationTimeout.TotalSeconds);
+                    var timeout = TimeSpan.FromSeconds((indexCount / 10.0) * operationTimeout.TotalSeconds);
                     if (operationTimeout > timeout)
                         timeout = operationTimeout;
 
