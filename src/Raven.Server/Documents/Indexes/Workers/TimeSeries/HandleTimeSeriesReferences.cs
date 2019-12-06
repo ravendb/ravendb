@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
             if (timeSeries == null)
                 return default;
 
-            return new TimeSeriesIndexItem(timeSeries.DocIdAndName, timeSeries.DocIdAndName, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
+            return new TimeSeriesIndexItem(timeSeries.Key, timeSeries.Key, timeSeries.DocId, timeSeries.DocId, timeSeries.Etag, default, timeSeries.Name, timeSeries.SegmentSize, timeSeries);
         }
     }
 }

@@ -432,11 +432,10 @@ namespace Raven.Server.Documents.TimeSeries
             Name,
             BaseLine
         }
-        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine, out LazyStringValue docIdAndName)
+        public static void ParseTimeSeriesKey(byte* ptr, int size, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine)
         {
             docId = null;
             name = null;
-            docIdAndName = null;
 
             var bytes = new Span<byte>(ptr, size);
             var order = ParsingOrder.Id;
@@ -450,12 +449,11 @@ namespace Raven.Server.Documents.TimeSeries
                 switch (order)
                 {
                     case ParsingOrder.Id:
-                        docId = new LazyStringValue(null, ptr, i, context);
+                        docId = new LazyStringValue(null, ptr, i, context); // TODO arek - RavenDB-14322
                         break;
 
                     case ParsingOrder.Name:
-                        name = new LazyStringValue(null, ptr + next, i - next, context);
-                        docIdAndName = new LazyStringValue(null, ptr, i, context);
+                        name = new LazyStringValue(null, ptr + next, i - next, context); // TODO arek - RavenDB-14322
                         break;
 
                     default:
@@ -469,9 +467,9 @@ namespace Raven.Server.Documents.TimeSeries
             baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
         }
 
-        public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine, out LazyStringValue docIdAndName)
+        public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name, out DateTime baseLine)
         {
-            ParseTimeSeriesKey(key.Content.Ptr, key.Size, context, out docId, out name, out baseLine, out docIdAndName);
+            ParseTimeSeriesKey(key.Content.Ptr, key.Size, context, out docId, out name, out baseLine);
         }
 
         public struct TagPointer

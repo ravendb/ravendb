@@ -131,7 +131,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                             var key = reader._tvr.Read(0, out var size);
 
-                            TimeSeriesValuesSegment.ParseTimeSeriesKey(key, size, ctx, out var docId, out var name, out DateTime baseline2, out _);
+                            TimeSeriesValuesSegment.ParseTimeSeriesKey(key, size, ctx, out var docId, out var name, out DateTime baseline2);
 
                             Assert.Equal("users/ayende", docId);
                             Assert.Equal("Heartrate", name);

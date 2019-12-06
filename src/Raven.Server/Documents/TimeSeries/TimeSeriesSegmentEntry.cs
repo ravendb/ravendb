@@ -11,8 +11,6 @@ namespace Raven.Server.Documents.TimeSeries
 
         public LazyStringValue Name;
 
-        public LazyStringValue DocIdAndName;
-
         public string ChangeVector;
 
         public TimeSeriesValuesSegment Segment;
