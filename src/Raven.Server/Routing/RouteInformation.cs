@@ -81,6 +81,8 @@ namespace Raven.Server.Routing
         public Task CreateDatabase(RequestHandlerContext context)
         {
             var databaseName = context.RouteMatch.GetCapture();
+
+            // todo: think if we need to pass this check to the landlord
             if (context.RavenServer.ServerStore.IsPassive())
             {
                 throw new NodeIsPassiveException($"Can't perform actions on the database '{databaseName}' while the node is passive.");

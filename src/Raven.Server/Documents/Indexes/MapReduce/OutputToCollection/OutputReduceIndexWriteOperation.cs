@@ -28,8 +28,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
         public override void Commit(IndexingStatsScope stats)
         {
-            _outputReduceToCollectionCommand.SetIndexingStatsScope(stats);
-
             var enqueue = DocumentDatabase.TxMerger.Enqueue(_outputReduceToCollectionCommand);
 
             using (_txHolder.AcquireTransaction(out _))
@@ -54,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         {
             base.IndexDocument(key, document, stats, indexContext);
 
-            _outputReduceToCollectionCommand.AddReduce(key, document);
+            _outputReduceToCollectionCommand.AddReduce(key, document, stats);
         }
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
