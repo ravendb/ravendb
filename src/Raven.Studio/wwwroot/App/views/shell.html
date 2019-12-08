@@ -13,9 +13,7 @@
                 Mozilla Firefox
             </a>
         </div>
-        
         <button class="btn btn-default" data-bind="click: browserAlertContinue">Continue</button>
-
         <div class="checkbox">
             <input id="dontShowAgainBrowser" class="styled" type="checkbox" data-bind="checked: dontShowBrowserAlertAgain">
             <label for="dontShowAgainBrowser">
@@ -85,7 +83,6 @@
                     </div>
                 </div>
             </div>
-            
             <div class="search-container" data-bind="visible: $root.activeDatabase">
                 <input type="search" class="form-control omnisearch on-base-background" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
                 <div class="icon-search"></div>
@@ -161,7 +158,6 @@
                     </div>
                 </div>-->
             </div>
-            
         </div>
         <ul class="nav navbar-nav navbar-right">
             <li>
@@ -205,8 +201,9 @@
         <!-- /ko -->
     </li>
     <hr data-bind="visible: $root.collectionsTracker.collections().length > 1" />
-    <h3 data-bind="visible: $root.collectionsTracker.collections().length > 1">Collections</h3>
-
+    <h3 data-bind="visible: $root.collectionsTracker.collections().length > 1, attr: { title: $root.collectionsCountText() + ' collections'}">        
+        Collections (<span data-bind="text: $root.collectionsCountText"></span>)
+    </h3>    
     <li class="scroll collections-list">
         <ul>
             <!-- ko foreach: $root.collectionsTracker.collections -->
@@ -250,7 +247,6 @@
             <h2>
                 <a class="back" title="back"
                    data-bind="click: menu.back.bind(menu)"></a>
-
                 <!-- ko text: item.title --><!-- /ko -->
             </h2>
             <ul data-bind="foreach: item.children">
@@ -285,7 +281,6 @@
             </ul>
         </div>
     </nav>
-
     <div id="page-host-root" class="content-container">
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
