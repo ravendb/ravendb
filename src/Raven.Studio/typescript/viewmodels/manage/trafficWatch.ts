@@ -264,7 +264,7 @@ class trafficWatch extends viewModelBase {
             } else if (column.header === "Timestamp") {
                 onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
             } else if (column.header === "Custom Info") {
-                onValue(generalUtils.escapeHtml(item.CustomInfo));
+                onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
             }
         });
 
