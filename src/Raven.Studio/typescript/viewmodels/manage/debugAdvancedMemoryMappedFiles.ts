@@ -123,7 +123,7 @@ class memoryMappedFiles extends viewModelBase {
                 onValue(html, json);
             } else {
                 const value = column.getCellValue(entry);
-                onValue(generalUtils.escapeHtml(value));
+                onValue(generalUtils.escapeHtml(value), value);
             }
         });
     }
