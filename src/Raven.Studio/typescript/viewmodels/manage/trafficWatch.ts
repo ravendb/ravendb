@@ -110,16 +110,11 @@ class trafficWatch extends viewModelBase {
     }
 
     private matchesFilters(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
-        const textFilter = this.filter();
+        const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
         const uri = item.RequestUri.toLocaleLowerCase();
         const customInfo = item.CustomInfo;
-
-        let textFilterMatch = false;
-        if (textFilter) {
-            const textFilterLower = textFilter.toLocaleLowerCase();
-            textFilterMatch = uri.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower));
-        }
-
+        
+        const textFilterMatch = textFilterLower ? uri.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) : true;
         const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
         const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
         
@@ -247,7 +242,8 @@ class trafficWatch extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "Custom Info", "8%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", {
                     extraClass: rowHighlightRules,
