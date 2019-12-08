@@ -14,7 +14,7 @@
             </div>
             <div class="flex-horizontal flex-wrap margin-right">
                 <div>
-                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
+                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter" title="Filter 'Custom Info' & 'URI' columns">
                 </div>
                 <div class="flex-horizontal">
                     <div class="btn-group">
@@ -29,7 +29,6 @@
             </div>
         </div>
         <div class="panel margin-bottom margin-sm flex-grow">
-
             <div class="panel-addon">
                 <div class="flex-horizontal flex-wrap">
                     <div class="properties-container flex-horizontal">
@@ -44,16 +43,13 @@
                         <div class="property" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="bottom">
                             <h5><i class="icon-average"></i> Average duration</h5>
                             <strong data-bind="text: stats.avg"></strong>
-
                         </div>
                         <div class="property">
                             <h5><i class="icon-arrow-filled-up"></i> Maximum duration</h5>
                             <strong data-bind="text: stats.max"></strong>
                         </div>
                     </div>
-
                     <div class="flex-separator"></div>
-
                     <div class="properties-container percentiles-container" data-label="Percentiles" data-toggle="tooltip" title="Percentiles" data-placement="top">
                         <div class="property">
                             <h5>90%</h5>
@@ -78,7 +74,6 @@
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
                 <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
             </button>
-
             <button class="btn btn-sm btn-danger" data-bind="click: clear">
                 <i class="icon-cancel"></i><span>Clear</span>
             </button>
