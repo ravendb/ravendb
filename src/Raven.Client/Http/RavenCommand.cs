@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -38,7 +39,7 @@ namespace Raven.Client.Http
     {
         public CancellationToken CancellationToken = CancellationToken.None;
 
-        public Dictionary<ServerNode, Exception> FailedNodes;
+        public ConcurrentDictionary<ServerNode, Exception> FailedNodes;
 
         public TResult Result;
         public abstract bool IsReadRequest { get; }

@@ -1267,7 +1267,7 @@ namespace Raven.Client.Http
                         _nodeSelector.OnFailedRequest(nodeIndex.Value);
 
                     if (command.FailedNodes == null)
-                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+                        command.FailedNodes = new ConcurrentDictionary<ServerNode, Exception>();
 
                     if (command.IsFailedWithNode(chosenNode) == false)
                         command.FailedNodes[chosenNode] = new UnsuccessfulRequestException($"Request to '{request.RequestUri}' ({request.Method}) is not relevant for this node anymore.");
@@ -1340,16 +1340,17 @@ namespace Raven.Client.Http
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
+            if (command.FailedNodes == null)
+                command.FailedNodes = new ConcurrentDictionary<ServerNode, Exception>();
+
+            var exception = await CaptureExceptionFromServer(context, request, response, e).ConfigureAwait(false);
+            command.FailedNodes[chosenNode] = exception;
+
             if (nodeIndex.HasValue == false)
             {
                 // we executed request over a node not in the topology. This means no failover...
                 return false;
             }
-
-            if (command.FailedNodes == null)
-                command.FailedNodes = new Dictionary<ServerNode, Exception>();
-
-            await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
             if (command is IRaftCommand && TopologyNodes?.Count > 1)
             {
@@ -1539,8 +1540,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
-        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestMessage request, HttpResponseMessage response, Exception e)
+        private static async Task<Exception> CaptureExceptionFromServer(JsonOperationContext context, HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (response != null)
             {
@@ -1552,14 +1552,14 @@ namespace Raven.Client.Http
                     ms.Position = 0;
                     using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
                     {
-                        command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
+                        return ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
                     }
                 }
                 catch
                 {
                     // we failed to parse the error
                     ms.Position = 0;
-                    command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
+                    return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
                     {
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
@@ -1567,10 +1567,9 @@ namespace Raven.Client.Http
                         Type = "Unparseable Server Response"
                     }, response.StatusCode, e);
                 }
-                return;
             }
             //this would be connections that didn't have response, such as "couldn't connect to remote server"
-            command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
+            return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {
                 Url = request.RequestUri.ToString(),
                 Message = e.Message,

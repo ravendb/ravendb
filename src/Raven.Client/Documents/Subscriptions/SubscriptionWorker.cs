@@ -196,7 +196,7 @@ namespace Raven.Client.Documents.Subscriptions
                         await requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                         tcpInfo = command.Result;
 
-                        _redirectNode = requestExecutor.Topology.Nodes.Where(x => tcpInfo.Urls.Contains(x.Url)).FirstOrDefault();
+                        _redirectNode = requestExecutor.Topology.Nodes.FirstOrDefault(x => tcpInfo.Urls.Contains(x.Url));
                     }
                     catch (ClientVersionMismatchException)
                     {
@@ -228,7 +228,7 @@ namespace Raven.Client.Documents.Subscriptions
                 if (_supportedFeatures.ProtocolVersion <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
+                        $"{SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
