@@ -1015,7 +1015,7 @@ namespace Sparrow.Json
             return Clone(_context);
         }
 
-        public BlittableJsonReaderObject Clone(JsonOperationContext context)
+        public BlittableJsonReaderObject Clone(JsonOperationContext context, bool forceCloning = true)
         {
             AssertContextNotDisposed();
 
@@ -1024,6 +1024,10 @@ namespace Sparrow.Json
 
             if (Modifications == null)
             {
+                if (forceCloning == false && 
+                    context == _context)
+                    return this;
+
                 var mem = context.GetMemory(Size);
                 CopyTo(mem.Address);
                 return new BlittableJsonReaderObject(mem.Address, Size, context, mem);
