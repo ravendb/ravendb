@@ -95,7 +95,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             // if script isn't empty and we have addAttachment() calls there we send DELETE doc command before sending transformation results (docs and attachments)
 
-            return Transformation.IsEmptyScript;
+            return ShouldTrackAttachmentTombstones(Transformation);
+        }
+
+        public static bool ShouldTrackAttachmentTombstones(Transformation transformation)
+        {
+            return transformation.IsEmptyScript;
         }
 
         public override bool ShouldTrackCounters()
