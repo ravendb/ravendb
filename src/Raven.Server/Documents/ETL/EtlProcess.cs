@@ -39,7 +39,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlProcess : IDisposable, ITombstoneAware
+    public abstract class EtlProcess : IDisposable
     {
         public string Tag { get; protected set; }
 
@@ -74,10 +74,6 @@ namespace Raven.Server.Documents.ETL
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
         public abstract EtlStatsAggregator GetLatestPerformanceStats();
-
-        public string TombstoneCleanerIdentifier => $"ETL '{Name}'";
-
-        public abstract Dictionary<string, long> GetLastProcessedTombstonesPerCollection();
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
@@ -814,7 +810,7 @@ namespace Raven.Server.Documents.ETL
             _threadAllocations = NativeMemory.CurrentThreadStats;
         }
 
-        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        /*public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             var lastProcessedEtag = GetProcessState(Database, Configuration.Name, Transformation.Name).GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
@@ -837,7 +833,7 @@ namespace Raven.Server.Documents.ETL
                 lastProcessedTombstones[AttachmentsStorage.AttachmentsTombstones] = lastProcessedEtag;
 
             return lastProcessedTombstones;
-        }
+        }*/
 
         private void AddPerformanceStats(EtlStatsAggregator stats)
         {
