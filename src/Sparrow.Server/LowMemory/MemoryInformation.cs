@@ -348,8 +348,7 @@ namespace Sparrow.LowMemory
             long totalScratchAllocated = 0;
             foreach (var scratchGetAllocated in DirtyMemoryObjects)
             {
-                if (scratchGetAllocated.Value != null)
-                    totalScratchAllocated += scratchGetAllocated.Value.Invoke();
+                    totalScratchAllocated += scratchGetAllocated.Value?.Invoke() ?? 0;
             }
 
             return totalScratchAllocated;
@@ -657,18 +656,16 @@ namespace Sparrow.LowMemory
             LowLastFiveMinutes = lowLastFiveMinutes;
         }
 
-        public static bool IsHighDirtyMemory(long minimumAllowedUseInBytes, int percentageFromPhysicalMem, out string details)
+        public static bool IsHighDirtyMemory(double percentageFromPhysicalMem, out string details)
         {
             details = null;
             var totalScratchMemory = GetTotalScratchAllocatedMemory();
             
-            if (totalScratchMemory <= (TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * percentageFromPhysicalMem) / 100)
+            if (totalScratchMemory <= TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * percentageFromPhysicalMem)
                 return false;
 
             var memInfo = GetMemoryInfo();
 
-            if (minimumAllowedUseInBytes > memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes))
-                return false;
 
             details =
                 $"Total Physical Mem={memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)}, Total Scratch Allocated Memory={totalScratchMemory} (which is above {percentageFromPhysicalMem}% physical {TotalPhysicalMemory.GetValue(SizeUnit.Bytes)} memory), Available Memory={memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)}";

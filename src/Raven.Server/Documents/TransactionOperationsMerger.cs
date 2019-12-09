@@ -61,6 +61,7 @@ namespace Raven.Server.Documents
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
             _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
+            _timeToCheckHighDirtyMemory = TimeSpan.FromSeconds(_parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod);
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(DatabasePerformanceMetrics.MetricType.GeneralWait, 256, 1);
@@ -808,6 +809,7 @@ namespace Raven.Server.Documents
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
+                    var percentageFromPhysicalMem = _parent.Configuration.Memory.PercentageOfTemporaryDirtyMemoryAllowed;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
             var sp = Stopwatch.StartNew();
             do
@@ -825,32 +827,33 @@ namespace Raven.Server.Documents
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
 
-                var now = DateTime.UtcNow;
-                if (now - _lastHighDirtyMemCheck > TimeSpan.FromSeconds(_parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod)) // we do not need to test scratch dirty mem every write
+                if (_parent.Configuration.Memory.EnableHighTemporaryDirtyMemoryUse)
                 {
-                    var minimumAllowedUseInBytes = _parent.Configuration.Memory.MinimumTemporaryDirtyMemoryUseAllowedInMb.GetValue(SizeUnit.Bytes);
-                    var percentageFromPhysicalMem = _parent.Configuration.Memory.TemporaryDirtyMemoryAllowedOutOfPhysicalMemoryInPercents;
-                    if (MemoryInformation.IsHighDirtyMemory(minimumAllowedUseInBytes, percentageFromPhysicalMem, out var details))
+                    var now = DateTime.UtcNow;
+                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory) // we do not need to test scratch dirty mem every write
                     {
-                        var highDirtyMemory = new HighDirtyMemoryException(
-                            $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
-                            $" This might be caused by a slow IO storage. Current memory usage: {details}");
-
-                        foreach (var pendingOp in pendingOps)
-                            pendingOp.Exception = highDirtyMemory;
-
-                        NotifyOnThreadPool(pendingOps);
-
-                        var rejectedBuffer = GetBufferForPendingOps();
-                        while (_operations.TryDequeue(out var operationToReject))
+                        if (MemoryInformation.IsHighDirtyMemory(percentageFromPhysicalMem, out var details))
                         {
-                            operationToReject.Exception = highDirtyMemory;
-                            rejectedBuffer.Add(operationToReject);
+                            var highDirtyMemory = new HighDirtyMemoryException(
+                                $"Operation was cancelled by the transaction merger for transaction #{llt.Id} due to high dirty memory in scratch files." +
+                                $" This might be caused by a slow IO storage. Current memory usage: {details}");
+
+                            foreach (var pendingOp in pendingOps)
+                                pendingOp.Exception = highDirtyMemory;
+
+                            NotifyOnThreadPool(pendingOps);
+
+                            var rejectedBuffer = GetBufferForPendingOps();
+                            while (_operations.TryDequeue(out var operationToReject))
+                            {
+                                operationToReject.Exception = highDirtyMemory;
+                                rejectedBuffer.Add(operationToReject);
+                            }
+                            NotifyOnThreadPool(rejectedBuffer);
+                            break;
                         }
-                        NotifyOnThreadPool(rejectedBuffer);
-                        break;
+                        _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
                     }
-                    _lastHighDirtyMemCheck = now; // reset timer for next check only if no errors (otherwise check every single write until back to normal)
                 }
 
                 meter.IncrementCounter(1);
@@ -1114,6 +1117,7 @@ namespace Raven.Server.Documents
 
         private RecordingTx _recording = default;
         private DateTime _lastHighDirtyMemCheck = DateTime.UtcNow;
+        private readonly TimeSpan _timeToCheckHighDirtyMemory;
 
         private struct RecordingTx
         {
