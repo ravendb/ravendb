@@ -810,31 +810,6 @@ namespace Raven.Server.Documents.ETL
             _threadAllocations = NativeMemory.CurrentThreadStats;
         }
 
-        /*public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
-        {
-            var lastProcessedEtag = GetProcessState(Database, Configuration.Name, Transformation.Name).GetLastProcessedEtagForNode(_serverStore.NodeTag);
-
-            if (Transformation.ApplyToAllDocuments)
-            {
-                return new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
-                {
-                    [Constants.Documents.Collections.AllDocumentsCollection] = lastProcessedEtag
-                };
-            }
-
-            var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var collection in Transformation.Collections)
-            {
-                lastProcessedTombstones[collection] = lastProcessedEtag;
-            }
-
-            if (ShouldTrackAttachmentTombstones())
-                lastProcessedTombstones[AttachmentsStorage.AttachmentsTombstones] = lastProcessedEtag;
-
-            return lastProcessedTombstones;
-        }*/
-
         private void AddPerformanceStats(EtlStatsAggregator stats)
         {
             _lastEtlStats.Enqueue(stats);
