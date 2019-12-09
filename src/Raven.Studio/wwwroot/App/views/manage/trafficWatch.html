@@ -8,29 +8,27 @@
                 <button class="btn btn-primary" data-bind="click: resume, visible: !liveClient()">
                     <i class="icon-play"></i> <span>Resume</span>
                 </button>
-                <button class="btn btn-default" data-bind="click: exportToFile">
-                    <i class="icon-export"></i><span>Export</span>
-                </button>
             </div>
             <div class="flex-horizontal flex-wrap margin-right">
-                <div>
-                    <input class="form-control" placeholder="Filter" data-bind="textInput: filter" title="Filter 'Custom Info' & 'URI' columns">
-                </div>
                 <div class="flex-horizontal">
                     <div class="btn-group">
                         <select id="visibleTypesSelector" size="5" multiple="multiple"
                                 data-bind="options: filteredTypeData, selectedOptions: selectedTypeNames, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
                     </div>
+                    <div id="trafficFilter">
+                        <input class="form-control" placeholder="Filter 'Custon Info' & 'URI' Columns" data-bind="textInput: filter" title="Filter 'Custom Info' & 'URI' Columns">
+                    </div>
                     <div class="checkbox">
                         <input class="styled" id="onlyErrors" type="checkbox" data-bind="checked: onlyErrors">
-                        <label for="onlyErrors">Only errors</label>
+                        <label for="onlyErrors" id="errorsOnly">Errors Only</label>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="flex-separator"></div>
         <div class="panel margin-bottom margin-sm flex-grow">
             <div class="panel-addon">
-                <div class="flex-horizontal flex-wrap">
+                <div class="flex-horizontal flex-wrap margin-top">
                     <div class="properties-container flex-horizontal">
                         <div class="property">
                             <h5><i class="icon-running-tasks"></i> Requests</h5>
@@ -76,6 +74,9 @@
             </button>
             <button class="btn btn-sm btn-danger" data-bind="click: clear">
                 <i class="icon-cancel"></i><span>Clear</span>
+            </button>
+            <button class="btn btn-sm btn-default" data-bind="click: exportToFile">
+                <i class="icon-export"></i><span>Export</span>
             </button>
         </div>
     </div>

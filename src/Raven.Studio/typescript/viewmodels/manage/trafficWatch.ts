@@ -91,8 +91,8 @@ class trafficWatch extends viewModelBase {
         awesomeMultiselect.build($("#visibleTypesSelector"), opts => {
             opts.enableHTML = true;
             opts.includeSelectAllOption = true;
-            opts.nSelectedText = " types selected";
-            opts.allSelectedText = "All types selected";
+            opts.nSelectedText = " Types Selected";
+            opts.allSelectedText = "All Types Selected";
             opts.optionLabel = (element: HTMLOptionElement) => {
                 const propertyName = $(element).text();
                 const typeItem = this.filteredTypeData.find(x => x.propertyName === propertyName);
