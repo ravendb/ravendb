@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Handlers.Debugging;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -16,6 +17,8 @@ namespace Raven.Server.Config.Categories
                 MemoryInformation.TotalPhysicalMemory / 10);
 
             UseTotalDirtyMemInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
+
+            EnableHighTemporaryDirtyMemoryUse = MemoryInformation.TotalPhysicalMemory.GetValue(SizeUnit.Gigabytes) >= 2;
         }
 
         [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
@@ -47,16 +50,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Memory.UseTotalDirtyMemInsteadOfMemUsage", ConfigurationEntryScope.ServerWideOnly)]
         public bool UseTotalDirtyMemInsteadOfMemUsage { get; set; }
 
-        [Description("The minimum amount of physical memory needed in order to operate 'High Dirty Memory' check mechanism. Default: 2048MB")]
-        [DefaultValue(2048)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Memory.MinimumTemporaryDirtyMemoryUseAllowedInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MinimumTemporaryDirtyMemoryUseAllowedInMb { get; set; }
+        [Description("EXPERT: Whether the high temporary dirty memory check is enabled. Default: true if the system has more than 2GB RAM")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Memory.EnableHighTemporaryDirtyMemoryUse", ConfigurationEntryScope.ServerWideOnly)]
+        public bool EnableHighTemporaryDirtyMemoryUse { get; set; }
 
-        [Description("Specifies the threshold percentage of physical memory for activating 'High Dirty Memory' mechanism (server will return 'Service Unavailable' for writes when scratch files dirty memory exeeds this threshold). Default: 25")]
-        [DefaultValue(25)]
-        [ConfigurationEntry("Memory.TemporaryDirtyMemoryAllowedOutOfPhysicalMemoryInPercents", ConfigurationEntryScope.ServerWideOnly)]
-        public int TemporaryDirtyMemoryAllowedOutOfPhysicalMemoryInPercents { get; set; }
+        [Description("Threshold percentage of memory for activating 'High Dirty Memory' mechanism (server will return 'Service Unavailable' for writes when scratch files dirty memory exeeds this threshold). Default: 25%")]
+        [DefaultValue(0.25d)]
+        [ConfigurationEntry("Memory.PercentageOfTemporaryDirtyMemoryAllowed", ConfigurationEntryScope.ServerWideOnly)]
+        public double PercentageOfTemporaryDirtyMemoryAllowed { get; set; }
 
         [Description("Period in seconds between 'High Dirty Memory' checks. Default: 30 Seconds")]
         [DefaultValue(30)]
