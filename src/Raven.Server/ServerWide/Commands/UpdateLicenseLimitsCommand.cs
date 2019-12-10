@@ -40,16 +40,24 @@ namespace Raven.Server.ServerWide.Commands
             if (licenseLimits.NodeLicenseDetails.TryGetValue(Value.NodeTag, out var currentDetailsPerNode) == false)
                 return null;
 
-            var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
-            var availableCoresToDistribute = Value.LicensedCores - utilizedCores + currentDetailsPerNode.UtilizedCores;
+            if (Value.DetailsPerNode.NumberOfCores == currentDetailsPerNode.NumberOfCores)
+            {
+                // the number of cores on this node hasn't changed, keep the old value
+                Value.DetailsPerNode.UtilizedCores = currentDetailsPerNode.UtilizedCores;
+            }
+            else
+            {
+                var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
+                var availableCoresToDistribute = Value.LicensedCores - utilizedCores + currentDetailsPerNode.UtilizedCores;
 
-            // nodes that aren't in yet in license limits, need to "reserve" cores for them
-            var nodesThatArentRegistered = licenseLimits.NodeLicenseDetails.Keys.Except(Value.AllNodes).Count();
-            availableCoresToDistribute -= nodesThatArentRegistered;
+                // nodes that aren't in yet in license limits, need to "reserve" cores for them
+                var nodesThatArentRegistered = licenseLimits.NodeLicenseDetails.Keys.Except(Value.AllNodes).Count();
+                availableCoresToDistribute -= nodesThatArentRegistered;
 
-            Value.DetailsPerNode.UtilizedCores = availableCoresToDistribute > 0 
-                ? Math.Min(Value.DetailsPerNode.NumberOfCores, availableCoresToDistribute) 
-                : 1;
+                Value.DetailsPerNode.UtilizedCores = availableCoresToDistribute > 0
+                    ? Math.Min(Value.DetailsPerNode.NumberOfCores, availableCoresToDistribute)
+                    : 1;
+            }
 
             licenseLimits.NodeLicenseDetails[Value.NodeTag] = Value.DetailsPerNode;
 
