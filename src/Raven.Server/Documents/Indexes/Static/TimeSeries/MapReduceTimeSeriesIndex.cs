@@ -89,32 +89,36 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)
         {
-            if (documentDatabase == null)
-                return;
+            base.SubscribeToChanges(documentDatabase);
 
-            if (_referencedCollections.Count > 0)
-                documentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
-
-            documentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
+            if (documentDatabase != null)
+                documentDatabase.Changes.OnTimeSeriesChange += HandleTimeSeriesChange;
         }
 
         protected override void UnsubscribeFromChanges(DocumentDatabase documentDatabase)
         {
-            if (documentDatabase == null)
-                return;
+            base.UnsubscribeFromChanges(documentDatabase);
 
-            if (_referencedCollections.Count > 0)
-                documentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
-
-            documentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
+            if (documentDatabase != null)
+                documentDatabase.Changes.OnTimeSeriesChange -= HandleTimeSeriesChange;
         }
 
         protected override void HandleDocumentChange(DocumentChange change)
         {
-            if (_referencedCollections.Contains(change.CollectionName) == false)
-                return;
+            // TODO arek handle all docs
 
-            _mre.Set();
+            if (change.Type == DocumentChangeTypes.Delete && Collections.Contains(change.CollectionName))
+            {
+                // in time series we need to subscribe only to deletions of source documents
+
+                _mre.Set();
+                return;
+            }
+
+            if (_referencedCollections.Count > 0 && _referencedCollections.Contains(change.CollectionName))
+            {
+                _mre.Set();
+            }
         }
 
         private void HandleTimeSeriesChange(TimeSeriesChange change)
