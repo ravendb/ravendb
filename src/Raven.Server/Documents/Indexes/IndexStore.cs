@@ -89,38 +89,53 @@ namespace Raven.Server.Documents.Indexes
             HandleSorters(record, raftIndex);
             HandleDeletes(record, raftIndex);
 
-            try
+            HandleChangesForStaticIndexes(record, raftIndex, indexesToStart);
+            HandleChangesForAutoIndexes(record, raftIndex, indexesToStart);
+
+            if (indexesToStart.Count <= 0)
+                return;
+
+            var sp = Stopwatch.StartNew();
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Starting {indexesToStart.Count} indexes");
+
+            Parallel.ForEach(indexesToStart, index =>
             {
-                HandleChangesForStaticIndexes(record, raftIndex, indexesToStart);
-                HandleChangesForAutoIndexes(record, raftIndex, indexesToStart);
-            }
-            finally
-            {
-                if (indexesToStart.Count > 0)
+                SemaphoreSlim indexLock;
+
+                try
                 {
-                    var sp = Stopwatch.StartNew();
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Starting {indexesToStart.Count} indexes");
-
-                    Parallel.ForEach(indexesToStart, index =>
-                    {
-                        try
-                        {
-                            StartIndex(index);
-                        }
-                        catch (Exception e)
-                        {
-                            _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Could not start index `{index.Name}`", e);
-                        }
-                    });
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Started {indexesToStart.Count} indexes, took: {sp.ElapsedMilliseconds}ms");
+                    indexLock = GetIndexLock(index.Name);
+                    indexLock.Wait(_documentDatabase.DatabaseShutdown);
                 }
-            }
+                catch (OperationCanceledException e)
+                {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                    return;
+                }
+
+                try
+                {
+                    if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                        return;
+
+                    StartIndex(index);
+                }
+                catch (Exception e)
+                {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Could not start index `{index.Name}`", e);
+                }
+                finally
+                {
+                    indexLock.Release();
+                }
+            });
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Started {indexesToStart.Count} indexes, took: {sp.ElapsedMilliseconds}ms");
         }
 
         private void HandleSorters(DatabaseRecord record, long index)
