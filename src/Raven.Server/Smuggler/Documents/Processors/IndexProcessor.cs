@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Json;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Smuggler.Documents.Processors
 {

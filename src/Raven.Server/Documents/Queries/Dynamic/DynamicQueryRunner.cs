@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Utils;
+using Index = Raven.Server.Documents.Indexes.Index;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries.Dynamic

@@ -497,6 +497,20 @@ namespace System.Linq
             return Enumerable.Zip<TFirst, TSecond, TResult>(first, second, resultSelector);
         }
 
+#if NETCOREAPP3_1
+        [Obsolete("This method is one of the 'System.Linq.Enumerable' extensions and the query will be materialized before execution of this method. It will be applied to in-memory results. If you want to get rid of this message please use '.ToList()' before execution of this method.")]
+        public static IEnumerable<ValueTuple<TFirst, TSecond>> Zip<TFirst, TSecond>(this IDocumentQuery<TFirst> first, IEnumerable<TSecond> second)
+        {
+            return Enumerable.Zip<TFirst, TSecond>(first, second);
+        }
+
+        [Obsolete("This method is one of the 'System.Linq.Enumerable' extensions and the query will be materialized before execution of this method. It will be applied to in-memory results. If you want to get rid of this message please use '.ToList()' before execution of this method.")]
+        public static IEnumerable<ValueTuple<TFirst, TSecond>> Zip<TFirst, TSecond>(this IRawDocumentQuery<TFirst> first, IEnumerable<TSecond> second)
+        {
+            return Enumerable.Zip<TFirst, TSecond>(first, second);
+        }
+#endif
+
         [Obsolete("This method is one of the 'System.Linq.Enumerable' extensions and the query will be materialized before execution of this method. It will be applied to in-memory results. If you want to get rid of this message please use '.ToList()' before execution of this method.")]
         public static IEnumerable<TResult> Join<TOuter, TInner, TKey, TResult>(this IDocumentQuery<TOuter> outer, IEnumerable<TInner> inner, Func<TOuter, TKey> outerKeySelector, Func<TInner, TKey> innerKeySelector, Func<TOuter, TInner, TResult> resultSelector)
         {

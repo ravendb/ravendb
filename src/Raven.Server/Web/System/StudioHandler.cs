@@ -290,7 +290,7 @@ namespace Raven.Server.Web.System
             if (await ServeFromCache(serverRelativeFileName))
                 return;
 
-            var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
+            var env = (IWebHostEnvironment)HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment));
             var basePath = Server.Configuration.Studio.Path ?? env.ContentRootPath;
 
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "ZipFile";
@@ -325,7 +325,7 @@ namespace Raven.Server.Web.System
                     return;
                 }
 
-                var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
+                var env = (IWebHostEnvironment)HttpContext.RequestServices.GetService(typeof(IWebHostEnvironment));
                 var basePath = Server.Configuration.Studio.Path ?? env.ContentRootPath;
 
                 AddPathsToCache(basePath);
