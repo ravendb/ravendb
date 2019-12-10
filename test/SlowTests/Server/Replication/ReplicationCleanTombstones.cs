@@ -4,18 +4,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Lextm.SharpSnmpLib.Messaging;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Server;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -142,15 +136,12 @@ namespace SlowTests.Server.Replication
         public async Task EtlTombstonesInTheCluster()
         {
             var cluster = await CreateRaftCluster(3);
-            var database = GetDatabaseName();
-            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
 
             using (var store = GetDocumentStore(new Options
             {
-                CreateDatabase = false,
                 Server = cluster.Leader,
-                ModifyDatabaseName = _ => database,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions() 
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions() ,
+                ReplicationFactor = 3
             }))
             using (var dest = GetDocumentStore())
             {

@@ -58,6 +58,11 @@ namespace FastTests
 
         private RavenServer _localServer;
 
+        protected bool IsGlobalOrLocalServer(RavenServer server)
+        {
+            return _globalServer == server || _localServer == server;
+        }
+
         protected List<RavenServer> Servers = new List<RavenServer>();
 
         private static readonly object ServerLocker = new object();
@@ -283,7 +288,6 @@ namespace FastTests
                         runInMemory = bool.Parse(_customServerSettings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)]);
 
                     UseNewLocalServer(runInMemory: runInMemory);
-                    Servers.Add(_localServer);
                     _doNotReuseServer = false;
 
                     return _localServer;
@@ -295,7 +299,6 @@ namespace FastTests
                         throw new ObjectDisposedException("Someone disposed the global server!");
                     _localServer = _globalServer;
 
-                    Servers.Add(_localServer);
                     return _localServer;
                 }
                 lock (ServerLocker)
@@ -313,7 +316,6 @@ namespace FastTests
                         _globalServer = globalServer;
                     }
                     _localServer = _globalServer;
-                    Servers.Add(_localServer);
                 }
                 return _globalServer;
             }
@@ -393,9 +395,9 @@ namespace FastTests
 
         public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null)
         {
-            _localServer?.Dispose();
-            if (_localServer != null)
-                Servers.Remove(_localServer);
+            if (_localServer != _globalServer && _globalServer != null)
+                _localServer?.Dispose();
+
             var co = new ServerCreationOptions
             {
                 CustomSettings = customSettings ?? _customServerSettings,
