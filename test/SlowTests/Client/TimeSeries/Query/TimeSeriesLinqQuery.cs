@@ -68,8 +68,8 @@ namespace SlowTests.Client.TimeSeries.Query
                             .GroupBy("1 month")
                             .Select(g => new
                             {
-                                Avg = RavenQuery.TimeSeriesAggregations.Average(),
-                                Max = RavenQuery.TimeSeriesAggregations.Max()
+                                Avg = g.Average(),
+                                Max = g.Max()
                             })
                             .ToList());
 
@@ -91,6 +91,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 }
             }
         }
+/*
 
         [Fact]
         public void CanQueryTimeSeriesAggregation_WithFromAndToDates()
@@ -360,7 +361,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 }
             }
-        }
+        }*/
 
 
     }
