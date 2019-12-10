@@ -22,7 +22,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         {
             using (var store = GetDocumentStore())
             {
-                var now1 = DateTime.Today; // DateTime.Now; - RavenDB-14242
+                var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
 
                 using (var session = store.OpenSession())
@@ -142,6 +142,39 @@ namespace FastTests.Client.Indexing.TimeSeries
                 Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
 
                 store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
+
+
+                // delete document - this time don't stop indexing to make sure doc deletion will be noticed by the index
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/2");
+                    session.TimeSeriesFor(company).Append("HeartRate", now1, "tag", new double[] { 9 });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("9", terms);
+
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/2");
+                    session.SaveChanges();
+                }
 
                 WaitForIndexing(store);
 
