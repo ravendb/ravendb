@@ -46,7 +46,8 @@ namespace Raven.Server.Documents.Handlers
 
                     var features = new FeatureCollection(HttpContext.Features);
                     var responseStream = new MultiGetHttpResponseStream(ResponseBodyStream());
-                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature(responseStream));
+                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
+                    features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(responseStream));
                     var httpContext = new DefaultHttpContext(features);
                     var host = HttpContext.Request.Host;
                     var scheme = HttpContext.Request.Scheme;
@@ -129,7 +130,8 @@ namespace Raven.Server.Documents.Handlers
                                 httpContext.Request.Body = requestBody;
                                 httpContext.Request.Body.Position = 0;
                             }
-                        } else if (method == HttpMethod.Get.Method && trafficWatchStringBuilder != null)
+                        }
+                        else if (method == HttpMethod.Get.Method && trafficWatchStringBuilder != null)
                         {
                             content = request.ToString();
                         }
@@ -211,9 +213,8 @@ namespace Raven.Server.Documents.Handlers
 
         private class MultiGetHttpResponseFeature : IHttpResponseFeature
         {
-            public MultiGetHttpResponseFeature(Stream body)
+            public MultiGetHttpResponseFeature()
             {
-                Body = body;
                 Headers = new HeaderDictionary();
             }
 
@@ -229,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
             public string ReasonPhrase { get; set; }
             public IHeaderDictionary Headers { get; set; }
             public Stream Body { get; set; }
-            public bool HasStarted { get; private set; }
+            public bool HasStarted { get; }
         }
 
         private class MultiGetHttpResponseStream : Stream
@@ -243,9 +244,25 @@ namespace Raven.Server.Documents.Handlers
                 _stream = stream;
             }
 
-            public override void Flush()
+            public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             {
-                _stream.Flush();
+                throw new NotImplementedException();
+            }
+
+            public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            {
+                BytesWritten += count;
+                return _stream.BeginWrite(buffer, offset, count, callback, state);
+            }
+
+            public override void Close()
+            {
+                _stream.Close();
+            }
+
+            public override void CopyTo(Stream destination, int bufferSize)
+            {
+                throw new NotSupportedException();
             }
 
             public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -258,9 +275,39 @@ namespace Raven.Server.Documents.Handlers
                 _stream.Dispose();
             }
 
+            public override ValueTask DisposeAsync()
+            {
+                return _stream.DisposeAsync();
+            }
+
+            public override int EndRead(IAsyncResult asyncResult)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void EndWrite(IAsyncResult asyncResult)
+            {
+                _stream.EndWrite(asyncResult);
+            }
+
+            public override void Flush()
+            {
+                _stream.Flush();
+            }
+
             public override Task FlushAsync(CancellationToken cancellationToken)
             {
                 return _stream.FlushAsync(cancellationToken);
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotSupportedException();
+            }
+
+            public override int Read(Span<byte> buffer)
+            {
+                throw new NotSupportedException();
             }
 
             public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
@@ -268,28 +315,12 @@ namespace Raven.Server.Documents.Handlers
                 throw new NotSupportedException();
             }
 
-            public override int ReadByte()
+            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
             {
                 throw new NotSupportedException();
             }
 
-            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                BytesWritten += count;
-                return _stream.WriteAsync(buffer, offset, count, cancellationToken);
-            }
-
-            public override void WriteByte(byte value)
-            {
-                BytesWritten += 1;
-                _stream.WriteByte(value);
-            }
-
-            public override bool CanTimeout => _stream.CanTimeout;
-            public override int ReadTimeout => _stream.ReadTimeout;
-            public override int WriteTimeout => _stream.WriteTimeout;
-
-            public override int Read(byte[] buffer, int offset, int count)
+            public override int ReadByte()
             {
                 throw new NotSupportedException();
             }
@@ -310,14 +341,52 @@ namespace Raven.Server.Documents.Handlers
                 _stream.Write(buffer, offset, count);
             }
 
+            public override void Write(ReadOnlySpan<byte> buffer)
+            {
+                BytesWritten += buffer.Length;
+                _stream.Write(buffer);
+            }
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                BytesWritten += count;
+                return _stream.WriteAsync(buffer, offset, count, cancellationToken);
+            }
+
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
+            {
+                BytesWritten += buffer.Length;
+                return _stream.WriteAsync(buffer, cancellationToken);
+            }
+
+            public override void WriteByte(byte value)
+            {
+                BytesWritten += 1;
+                _stream.WriteByte(value);
+            }
+
             public override bool CanRead => _stream.CanRead;
             public override bool CanSeek => _stream.CanRead;
+            public override bool CanTimeout => _stream.CanTimeout;
             public override bool CanWrite => _stream.CanRead;
             public override long Length => _stream.Length;
+
             public override long Position
             {
                 get { return _stream.Position; }
                 set { _stream.Position = value; }
+            }
+
+            public override int ReadTimeout
+            {
+                get { return _stream.ReadTimeout; }
+                set { _stream.ReadTimeout = value; }
+            }
+
+            public override int WriteTimeout
+            {
+                get { return _stream.WriteTimeout; }
+                set { _stream.WriteTimeout = value; }
             }
         }
     }

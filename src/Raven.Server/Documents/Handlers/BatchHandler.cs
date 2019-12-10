@@ -34,6 +34,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Constants = Raven.Client.Constants;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers
 {

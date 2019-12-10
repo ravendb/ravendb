@@ -125,7 +125,6 @@ namespace Raven.Server.Utils
 
         internal class PooledThread
         {
-            private static readonly FieldInfo RuntimeThreadField;
             private static readonly FieldInfo ThreadFieldName;
 
             private readonly ManualResetEvent _waitForWork = new ManualResetEvent(false);
@@ -145,11 +144,7 @@ namespace Raven.Server.Utils
 
             static PooledThread()
             {
-                var t = Thread.CurrentThread;
-                RuntimeThreadField = typeof(Thread).GetField("_runtimeThread", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                Debug.Assert(RuntimeThreadField != null);
-                var runtimeThread = RuntimeThreadField.GetValue(t);
-                ThreadFieldName = runtimeThread.GetType().GetField("m_Name", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                ThreadFieldName = typeof(Thread).GetField("_name", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
                 Debug.Assert(ThreadFieldName != null);
             }
 
@@ -350,8 +345,7 @@ namespace Raven.Server.Utils
             public static void ResetCurrentThreadName()
             {
                 var t = Thread.CurrentThread;
-                var runtimeThread = RuntimeThreadField.GetValue(t);
-                ThreadFieldName.SetValue(runtimeThread, null);
+                ThreadFieldName.SetValue(t, null);
             }
 
             internal void SetThreadAffinity(int numberOfCoresToReduce, long? threadMask)

@@ -21,7 +21,7 @@ namespace Sparrow.Json.Parsing
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
         private readonly string _debugTag;
-        private UnmanagedWriteBuffer _unmanagedWriteBuffer;        
+        private UnmanagedWriteBuffer _unmanagedWriteBuffer;
         private int _currentStrStart;
         private readonly JsonOperationContext _ctx;
         private readonly JsonParserState _state;
@@ -153,7 +153,7 @@ namespace Sparrow.Json.Parsing
             if (state.Continuation != JsonParserTokenContinuation.None || _maybeBeforePreamble)
                 goto ReadContinuation;
 
-MainLoop:
+            MainLoop:
 
             byte b;
             byte* currentBuffer = _inputBuffer;
@@ -214,7 +214,7 @@ MainLoop:
                 goto ReturnFalse;
             }
 
-ParseString:
+        ParseString:
             {
                 state.EscapePositions.Clear();
                 _unmanagedWriteBuffer.Clear();
@@ -230,7 +230,7 @@ ParseString:
                 goto ReturnTrue;
             }
 
-ParseNumber:
+        ParseNumber:
             {
                 _unmanagedWriteBuffer.Clear();
                 state.EscapePositions.Clear();
@@ -256,19 +256,19 @@ ParseNumber:
                 goto ReturnTrue;
             }
 
-Error:
+        Error:
             ThrowCannotHaveCharInThisPosition(b);
 
-ReturnTrue:
+        ReturnTrue:
             _pos = pos;
             return true;
 
-ReturnFalse:
+        ReturnFalse:
             _pos = pos;
             return false;
 
 
-ReadContinuation: // PERF: This is a "manual procedure"
+        ReadContinuation: // PERF: This is a "manual procedure"
             if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
             {
                 return ContinueParsingValue();
@@ -624,10 +624,10 @@ ReadContinuation: // PERF: This is a "manual procedure"
                 ThrowWhenMalformed("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
             }
 
-IsANumber:
+        IsANumber:
             return true;
 
-NotANumber:
+        NotANumber:
             return false; // Will never execute.
         }
 
@@ -827,10 +827,10 @@ NotANumber:
             }
 
 
-ReturnTrue:
+        ReturnTrue:
             return true;
 
-ReturnFalse:
+        ReturnFalse:
             return false;
         }
 
@@ -915,11 +915,14 @@ ReturnFalse:
         public void ValidateFloat()
         {
             _unmanagedWriteBuffer.EnsureSingleChunk(out var buffer, out var size);
-            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(buffer, size), out double _, out var consumed) && 
-                size == consumed)
-                return;
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(buffer, size), out double value, out var consumed) && size == consumed)
+            {
+                // we do not support numeric values greater than double.MaxValue - RavenDB_10876.ShouldNotSupportRawNumbersBiggerThenDoubleMaxVal
+                if (double.IsInfinity(value) == false)
+                    return;
+            }
 
-            ThrowException("Could not parse double: " +Encoding.UTF8.GetString(buffer, size));
+            ThrowException("Could not parse double: " + Encoding.UTF8.GetString(buffer, size));
         }
 
 

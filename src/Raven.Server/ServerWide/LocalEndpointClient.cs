@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
@@ -9,13 +10,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Http.Internal;
 using Microsoft.Extensions.ObjectPool;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Exceptions;
 using Sparrow.Json;
-using AuthenticationManager = Microsoft.AspNetCore.Http.Authentication.AuthenticationManager;
 
 namespace Raven.Server.ServerWide
 {
@@ -123,10 +122,6 @@ namespace Raven.Server.ServerWide
             public override HttpResponse Response { get; }
             public override ConnectionInfo Connection { get; } = null;
             public override WebSocketManager WebSockets { get; } = null;
-
-            [Obsolete]
-            public override AuthenticationManager Authentication { get; } = null;
-
             public override ClaimsPrincipal User { get; set; }
             public override IDictionary<object, object> Items { get; set; }
             public override IServiceProvider RequestServices { get; set; }
@@ -143,7 +138,7 @@ namespace Raven.Server.ServerWide
                     HttpContext = httpContext;
                     Headers = new HeaderDictionary();
                     // ReSharper disable once VirtualMemberCallInConstructor
-                    Cookies = new ResponseCookies(Headers, new DefaultObjectPool<StringBuilder>(new DefaultPooledObjectPolicy<StringBuilder>()));
+                    //Cookies = new ResponseCookies(Headers, new DefaultObjectPool<StringBuilder>(new DefaultPooledObjectPolicy<StringBuilder>())); // TODO [ppekrol]
                     Body = new MemoryStream();
                     HasStarted = false;
                     StatusCode = 200;
@@ -168,6 +163,11 @@ namespace Raven.Server.ServerWide
                 public override int StatusCode { get; set; }
                 public override IHeaderDictionary Headers { get; }
 
+                public override Task StartAsync(CancellationToken cancellationToken = new CancellationToken())
+                {
+                    return Task.CompletedTask;
+                }
+
                 public override Stream Body
                 {
                     get
@@ -177,6 +177,8 @@ namespace Raven.Server.ServerWide
                     }
                     set => _body = value;
                 }
+
+                public override PipeWriter BodyWriter { get; }
 
                 public override long? ContentLength { get; set; }
                 public override string ContentType { get; set; }
@@ -203,6 +205,7 @@ namespace Raven.Server.ServerWide
                 public override string Protocol { get; set; }
                 public override IHeaderDictionary Headers { get; } = new HeaderDictionary();
                 public override IRequestCookieCollection Cookies { get; set; }
+                public override PipeReader BodyReader { get; }
                 public override long? ContentLength { get; set; }
                 public override string ContentType { get; set; }
                 public override Stream Body { get; set; }

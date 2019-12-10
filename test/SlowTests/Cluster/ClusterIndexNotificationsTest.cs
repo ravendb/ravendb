@@ -14,6 +14,7 @@ using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Index = SlowTests.Issues.Index;
 
 namespace SlowTests.Cluster
 {

@@ -8,6 +8,7 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Xunit;
 using Xunit.Abstractions;
+using Index = SlowTests.Issues.Index;
 
 namespace SlowTests.Server.Documents.ETL
 {

@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using IAsyncDisposable = Raven.Client.Util.IAsyncDisposable;
 
 namespace Raven.Client.Documents.Subscriptions
 {
