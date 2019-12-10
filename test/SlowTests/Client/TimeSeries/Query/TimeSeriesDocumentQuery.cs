@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,13 +10,6 @@ namespace SlowTests.Client.TimeSeries.Query
     {
         public TimeSeriesDocumentQuery(ITestOutputHelper output) : base(output)
         {
-        }
-
-        private class Person
-        {
-            public int Age { get; set; }
-
-            public string WorksAt { get; set; }
         }
 
         [Fact]

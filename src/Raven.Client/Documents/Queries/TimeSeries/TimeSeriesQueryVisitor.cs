@@ -29,10 +29,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             switch (mce.Method.Name)
             {
                 case "Where":
-                    Where(mce);
+                    Where(mce.Arguments[0]);
                     break;
                 case "GroupBy":
-                    GroupBy(mce);
+                    GroupBy(mce.Arguments[0]);
                     break;
                 case "Select":
                     Select(mce.Arguments[0]);
@@ -45,9 +45,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
         }
 
-        private void Where(MethodCallExpression mce)
+        private void Where(Expression expression)
         {
-            if (!(mce.Arguments[0] is UnaryExpression unary &&
+            if (!(expression is UnaryExpression unary &&
                   unary.Operand is LambdaExpression lambda))
                 throw new InvalidOperationException("Cannot understand how to translate " + _expression);
 
@@ -63,15 +63,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 throw new InvalidOperationException("Cannot understand how to translate " + _expression);
         }
 
-        private void GroupBy(MethodCallExpression mce)
+        private void GroupBy(Expression expression)
         {
             _queryType = typeof(TimeSeriesAggregation);
 
-            if (mce.Arguments[0] is ConstantExpression constantExpression)
+            if (expression is ConstantExpression constantExpression)
                 _groupBy = $" group by '{constantExpression.Value}'";
             else 
                 //todo aviv
-                _groupBy = $" group by '{mce.Arguments[0]}'";
+                _groupBy = $" group by '{expression}'";
         }
 
         private void WhereMethod(MethodCallExpression call)

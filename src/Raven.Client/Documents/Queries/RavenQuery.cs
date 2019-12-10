@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Queries
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        public static class TimeSeriesAggregations
+/*        public static class TimeSeriesAggregations
         {
             public static double?[] Max()
             {
@@ -119,6 +119,6 @@ namespace Raven.Client.Documents.Queries
             {
                 throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
             }
-        }
+        }*/
     }
 }

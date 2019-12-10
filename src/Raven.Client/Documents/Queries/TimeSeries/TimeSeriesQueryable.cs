@@ -10,9 +10,27 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable<T> GroupBy(string s);
 
-        ITimeSeriesQueryable<T> Select(Expression<Func<ITimeSeriesQueryable<T>, object>> selector);
+        ITimeSeriesQueryable<T> Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
         T ToList();
+
+    }
+
+    public interface ITimeSeriesGrouping
+    {
+        double?[] Max();
+
+        double?[] Min();
+
+        double?[] Sum();
+
+        double?[] Average();
+
+        double?[] First();
+
+        double?[] Last();
+
+        double?[] Count();
     }
 
 }
