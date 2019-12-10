@@ -41,7 +41,7 @@
                 </div>
                 <div>
                     <button class="btn btn-default" data-bind="click: enforceConfiguration, 
-                         disable: perCollectionConfigurations().length === 0 && !defaultConfiguration() || isSaveEnabled(),
+                         disable: isSaveEnabled(),
                          attr: { title: enforceButtonTitle }">
                         <i class="icon-revisions"></i><span>Enforce Configuration</span>
                     </button>
