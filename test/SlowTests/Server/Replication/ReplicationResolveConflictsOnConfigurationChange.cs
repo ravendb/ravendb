@@ -126,7 +126,7 @@ namespace SlowTests.Server.Replication
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store2"));
 
 
-                var database = Servers.Single(s => s.WebUrl == store2.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                var database = await GetDatabase(store1.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {

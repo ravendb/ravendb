@@ -228,11 +228,15 @@ namespace FastTests
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
-                        var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                        AsyncHelpers.RunSync(async () =>
+
+                        if (IsGlobalOrLocalServer(serverToUse) == false)
                         {
-                            await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
-                        });
+                            var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
+                            AsyncHelpers.RunSync(async () =>
+                            {
+                                await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
+                            });
+                        }
                     }
 
                     store.BeforeDispose += (sender, args) =>
@@ -240,73 +244,16 @@ namespace FastTests
                         if (CreatedStores.TryRemove(store) == false)
                             return; // can happen if we are wrapping the store inside sharded one
 
-                        foreach (var server in Servers)
+                        DeleteDatabaseResult result = null;
+                        if (options.DeleteDatabaseOnDispose)
                         {
-                            if (server.Disposed)
-                                continue;
-                            var serverUrl = UseFiddler(server.WebUrl);
-                            if (store.Urls.Any(url => serverUrl.Contains(url)) == false)
-                                continue;
+                            result = DeleteDatabase(options, serverToUse, name, hardDelete, store);
+                        }
 
-                            try
-                            {
-                                var databaseTask = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name, ignoreDisabledDatabase: options.IgnoreDisabledDatabase);
-                                if (databaseTask != null && databaseTask.IsCompleted == false)
-                                    // if we are disposing store before database had chance to load then we need to wait
-                                    databaseTask.Wait();
-                            }
-                            catch (DatabaseDisabledException)
-                            {
-                                // ignoring
-                            }
-                            catch (DatabaseNotRelevantException)
-                            {
-                                continue;
-                            }
-
-                            if (options.DeleteDatabaseOnDispose)
-                            {
-                                DeleteDatabaseResult result;
-                                try
-                                {
-                                    if (options.AdminCertificate != null)
-                                    {
-                                        using (var adminStore = new DocumentStore
-                                        {
-                                            Urls = UseFiddler(serverToUse.WebUrl),
-                                            Database = name,
-                                            Certificate = options.AdminCertificate
-                                        }.Initialize())
-                                        {
-                                            result = adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
-                                        }
-                                    }
-                                    else
-                                    {
-                                        result = store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
-                                    }
-
-                                    AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(5)));
-                                }
-                                catch (OperationCanceledException)
-                                {
-                                    //failed to delete in time
-                                    continue;
-                                }
-                                catch (TimeoutException)
-                                {
-                                    //failed to delete in time
-                                    continue;
-                                }
-                                catch (DatabaseDoesNotExistException)
-                                {
-                                    continue;
-                                }
-                                catch (NoLeaderException)
-                                {
-                                    continue;
-                                }
-                            }
+                        if (IsGlobalOrLocalServer(serverToUse) == false && 
+                            result !=null)
+                        {
+                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, TimeSpan.FromSeconds(5)));
                         }
                     };
                     CreatedStores.Add(store);
@@ -318,6 +265,54 @@ namespace FastTests
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
             }
+        }
+
+        private DeleteDatabaseResult DeleteDatabase(Options options, RavenServer serverToUse, string name, bool hardDelete, DocumentStore store)
+        {
+            try
+            {
+                if (options.AdminCertificate != null)
+                {
+                    using (var adminStore =
+                        new DocumentStore {Urls = UseFiddler(serverToUse.WebUrl), Database = name, Certificate = options.AdminCertificate}.Initialize())
+                    {
+                        return adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
+                    }
+                }
+
+                return store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
+            }
+            catch (OperationCanceledException)
+            {
+                //failed to delete in time
+            }
+            catch (TimeoutException)
+            {
+                //failed to delete in time
+            }
+            catch (DatabaseDoesNotExistException)
+            {
+            }
+            catch (NoLeaderException)
+            {
+            }
+            catch
+            {
+                if (IsGlobalOrLocalServer(serverToUse))
+                {
+                    if (serverToUse.Disposed)
+                        return null;
+                }
+
+                if (Servers.Contains(serverToUse))
+                {
+                    if (Servers.All(s => s.Disposed))
+                        return null;
+                }
+
+                throw;
+            }
+            return null;
         }
 
         private void SetupForEncryptedDatabase(Options options, string dbName, RavenServer mainServer, DatabaseRecord doc)
