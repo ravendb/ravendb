@@ -117,7 +117,7 @@ namespace Tests.Infrastructure
 
                 return new TestResources
                 {
-                    TestName = context.MethodName,
+                    TestName = context.UniqueTestName,
                     TimeStamp = timeStamp.ToString("o"),
                     Comment = comment,
                     MachineCpuUsage = (long)cpuUsage.MachineCpuUsage,
