@@ -35,6 +35,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -62,13 +63,14 @@ namespace Raven.Server.Documents.Indexes
 
         private const int PathLengthLimit = 259; // Roslyn's MetadataWriter.PathLengthLimit = 259 
 
+
         internal static int MaxIndexNameLength = PathLengthLimit -
                                                  IndexCompiler.IndexNamePrefix.Length -
                                                  1 - // "."
                                                  36 - // new Guid()
                                                  IndexCompiler.IndexExtension.Length -
-                                                 4; // ".dll" 
-            
+                                                 4; // ".dll"
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -100,42 +102,58 @@ namespace Raven.Server.Documents.Indexes
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Starting {indexesToStart.Count} indexes");
 
-            Parallel.ForEach(indexesToStart, index =>
-            {
-                SemaphoreSlim indexLock;
+            Parallel.ForEach(indexesToStart,
+                GetParallelIndexesStartOptions(),
+                index =>
+                {
+                    SemaphoreSlim indexLock;
 
-                try
-                {
-                    indexLock = GetIndexLock(index.Name);
-                    indexLock.Wait(_documentDatabase.DatabaseShutdown);
-                }
-                catch (OperationCanceledException e)
-                {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                    return;
-                }
-
-                try
-                {
-                    if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                    try
+                    {
+                        indexLock = GetIndexLock(index.Name);
+                        indexLock.Wait(_documentDatabase.DatabaseShutdown);
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                         return;
+                    }
 
-                    StartIndex(index);
-                }
-                catch (Exception e)
-                {
-                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not start index `{index.Name}`", e);
-                }
-                finally
-                {
-                    indexLock.Release();
-                }
-            });
+                    try
+                    {
+                        StartIndex(index);
+                    }
+                    catch (Exception e)
+                    {
+                        _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Could not start index `{index.Name}`", e);
+                    }
+                    finally
+                    {
+                        indexLock.Release();
+                    }
+                });
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Started {indexesToStart.Count} indexes, took: {sp.ElapsedMilliseconds}ms");
+        }
+
+        private ParallelOptions GetParallelIndexesStartOptions()
+        {
+            using (_documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
+                int numberOfUtilizedCores = licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode) ? 
+                    detailsPerNode.UtilizedCores : 
+                    ProcessorInfo.ProcessorCount;
+
+                return new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Math.Max(1, numberOfUtilizedCores / 2)
+                };
+            }
         }
 
         private void HandleSorters(DatabaseRecord record, long index)
