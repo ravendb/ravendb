@@ -1,4 +1,4 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
     <Version></Version>
     <LangVersion>latest</LangVersion>
@@ -23,6 +23,7 @@
     <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
 
+    <NoWarn>CS0419,CS1591,CS1572,CS1573,CS1574,CS1723</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1' OR '$(TargetFramework)' == 'netcoreapp2.2'">
     <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>

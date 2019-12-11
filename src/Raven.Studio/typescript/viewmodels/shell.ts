@@ -58,7 +58,10 @@ class shell extends viewModelBase {
     static studioConfigDocumentId = "Raven/StudioConfig";
 
     notificationCenter = notificationCenter.instance;
+    
     collectionsTracker = collectionsTracker.default;
+    collectionsCountText: KnockoutObservable<string>;
+    
     footer = footer.default;
     clusterManager = clusterTopologyManager.default;
     accessManager = accessManager.default;
@@ -120,6 +123,12 @@ class shell extends viewModelBase {
         autoCompleteBindingHandler.install();
         helpBindingHandler.install();
 
+        this.collectionsCountText = ko.pureComputed(() => {
+            // One collection is 'All Documents' - so we must subtract 1 ...
+            // Value shows in UI only if there is at least 1 collection other than 'All Documents' 
+            return (this.collectionsTracker.collections().length - 1).toLocaleString();
+        });
+        
         this.clientBuildVersion.subscribe(v =>
             viewModelBase.clientVersion(v.Version));
 

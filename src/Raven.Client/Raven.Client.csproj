@@ -13,6 +13,7 @@
     <Title>RavenDB Client</Title>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
@@ -34,8 +35,16 @@
       <PackagePath>lib/netstandard2.0/</PackagePath>
       <Pack>true</Pack>
     </Content>
+    <Content Include="..\Sparrow\bin\Release\netstandard2.0\Sparrow.xml">
+      <PackagePath>lib/netstandard2.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
     <!-- this is required for the nuget build to properly include the right files -->
     <Content Include="..\Sparrow\bin\Release\netcoreapp2.1\Sparrow.dll">
+      <PackagePath>lib/netcoreapp2.1/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\Sparrow\bin\Release\netcoreapp2.1\Sparrow.xml">
       <PackagePath>lib/netcoreapp2.1/</PackagePath>
       <Pack>true</Pack>
     </Content>
