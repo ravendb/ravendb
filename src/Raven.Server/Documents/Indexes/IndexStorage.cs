@@ -600,6 +600,35 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void RemoveReferencesByPrefix(Slice prefixKey, string collection, HashSet<Slice> referenceKeysToSkip, RavenTransaction tx)
+        {
+            var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
+
+            using (var it = referencesTree.Iterate(false))
+            {
+                it.SetRequiredPrefix(prefixKey);
+
+                if (it.Seek(prefixKey) == false)
+                    return;
+
+                do
+                {
+                    var key = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
+
+                    try
+                    {
+                        RemoveReferences(key, collection, referenceKeysToSkip, tx);
+                    }
+                    finally
+                    {
+                        key.Release(tx.InnerTransaction.Allocator);
+                    }
+                }
+                while (it.MoveNext());
+            }
+        }
+
+
         public void Rename(string name)
         {
             if (_index.Definition.Name == name)
@@ -612,6 +641,20 @@ namespace Raven.Server.Documents.Indexes
 
                 tx.Commit();
             }
+        }
+
+        internal (long ReferenceTableCount, long CollectionTableCount) GetReferenceTablesCount(string collection, RavenTransaction tx)
+        {
+            var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
+
+            var referencesCount = referencesTree.State.NumberOfEntries;
+
+            var collectionTree = tx.InnerTransaction.ReadTree("#" + collection);
+
+            if (collectionTree != null)
+                return (referencesCount, collectionTree.State.NumberOfEntries);
+
+            return (referencesCount, 0);
         }
 
         private class IndexSchema
