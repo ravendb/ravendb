@@ -113,7 +113,7 @@ namespace Raven.Server.Utils
 
             var collectionOfIds = value as IEnumerable;
 
-            if (collectionOfIds != null)
+            if (collectionOfIds != null && value is LazyStringValue == false)
             {
                 foreach (var item in collectionOfIds)
                 {

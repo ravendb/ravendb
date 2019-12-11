@@ -256,7 +256,8 @@ namespace Raven.Server.Json
                 {
                     if (BlittableJsonTraverserHelper.TryRead(this, arrayObject, pathSegment, out var result))
                     {
-                        if (result is IEnumerable enumerable && result is string == false)
+                        // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                        if (result is IEnumerable enumerable && result is LazyStringValue == false && result is string == false)
                         {
                             foreach (var nestedItem in enumerable)
                             {

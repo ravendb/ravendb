@@ -135,7 +135,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     onValue(moment.utc(entry.StartingTime), entry.StartingTime);
                 } else {
                     const value = column.getCellValue(entry);
-                    onValue(generalUtils.escapeHtml(value));
+                    onValue(generalUtils.escapeHtml(value), value);
                 }
             });
     }

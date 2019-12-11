@@ -91,8 +91,8 @@ class trafficWatch extends viewModelBase {
         awesomeMultiselect.build($("#visibleTypesSelector"), opts => {
             opts.enableHTML = true;
             opts.includeSelectAllOption = true;
-            opts.nSelectedText = " types selected";
-            opts.allSelectedText = "All types selected";
+            opts.nSelectedText = " Types Selected";
+            opts.allSelectedText = "All Types Selected";
             opts.optionLabel = (element: HTMLOptionElement) => {
                 const propertyName = $(element).text();
                 const typeItem = this.filteredTypeData.find(x => x.propertyName === propertyName);
@@ -110,16 +110,11 @@ class trafficWatch extends viewModelBase {
     }
 
     private matchesFilters(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
-        const textFilter = this.filter();
+        const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
         const uri = item.RequestUri.toLocaleLowerCase();
         const customInfo = item.CustomInfo;
-
-        let textFilterMatch = false;
-        if (textFilter) {
-            const textFilterLower = textFilter.toLocaleLowerCase();
-            textFilterMatch = uri.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower));
-        }
-
+        
+        const textFilterMatch = textFilterLower ? uri.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) : true;
         const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
         const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
         
@@ -247,7 +242,8 @@ class trafficWatch extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "Custom Info", "8%", {
-                    extraClass: rowHighlightRules
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", {
                     extraClass: rowHighlightRules,
@@ -264,7 +260,7 @@ class trafficWatch extends viewModelBase {
             } else if (column.header === "Timestamp") {
                 onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
             } else if (column.header === "Custom Info") {
-                onValue(generalUtils.escapeHtml(item.CustomInfo));
+                onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
             }
         });
 
