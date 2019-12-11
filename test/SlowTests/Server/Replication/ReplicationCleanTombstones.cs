@@ -78,7 +78,8 @@ namespace SlowTests.Server.Replication
                     {
                         FolderPath = backupPath
                     },
-                    Name = "full",
+                    Name = "incremental",
+                    IncrementalBackupFrequency = "* * */6 * *",
                     FullBackupFrequency = "* */6 * * *",
                     BackupType = BackupType.Backup
                 };
@@ -107,6 +108,20 @@ namespace SlowTests.Server.Replication
                     await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
                 }
 
+                var total = 0L;
+                foreach (var server in cluster.Nodes)
+                {
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    await storage.TombstoneCleaner.ExecuteCleanup();
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                    }
+                }
+
+                Assert.Equal(3, total);
+
                 await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, result.TaskId));
 
                 Assert.True(await WaitForValueAsync(() =>
@@ -115,6 +130,73 @@ namespace SlowTests.Server.Replication
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, true));
+
+                total = 0L;
+                foreach (var server in cluster.Nodes)
+                {
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    await storage.TombstoneCleaner.ExecuteCleanup();
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                    }
+                }
+
+                Assert.Equal(0, total);
+            }
+        }
+
+        [Fact]
+        public async Task CleanTombstonesInTheClusterWithOnlyFullBackup()
+        {
+            var cluster = await CreateRaftCluster(3);
+            var database = GetDatabaseName();
+            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore(new Options
+            {
+                CreateDatabase = false,
+                Server = cluster.Leader,
+                ModifyDatabaseName = _ => database
+            }))
+            {
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    Name = "full",
+                    FullBackupFrequency = "* */6 * * *",
+                    BackupType = BackupType.Backup
+                };
+
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Store(new User { Name = "Karmel" }, "marker");
+                    session.SaveChanges();
+
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                }
 
                 var total = 0L;
                 foreach (var server in cluster.Nodes)

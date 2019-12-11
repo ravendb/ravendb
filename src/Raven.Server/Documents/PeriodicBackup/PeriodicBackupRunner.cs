@@ -660,6 +660,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name);
                 foreach (var taskId in record.GetPeriodicBackupsTaskIds())
                 {
+                    var config = record.GetPeriodicBackupConfiguration(taskId);
+                    if (config.IncrementalBackupFrequency == null)
+                        continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
+
                     var status = GetBackupStatusFromCluster(context, taskId);
                     var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
                     min = Math.Min(etag, min);
