@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly IndexIdentities Identities = new IndexIdentities();
 
-        public Logger Logger { get; }
+        public readonly Logger Logger;
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
 
