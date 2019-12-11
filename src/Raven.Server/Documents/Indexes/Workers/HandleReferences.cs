@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -22,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
         }
 
-        protected unsafe override IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
+        protected override unsafe IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
         {
             using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
             {
@@ -34,6 +33,14 @@ namespace Raven.Server.Documents.Indexes.Workers
                 return new DocumentIndexItem(doc.Id, doc.LowerId, doc.Etag, doc.LastModified, doc.Data.Size, doc);
             }
         }
+
+        public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            var tx = indexContext.Transaction.InnerTransaction;
+
+            using (Slice.External(tx.Allocator, tombstone.LowerId, out Slice tombstoneKeySlice))
+                _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
+        }
     }
 
     public abstract class HandleReferences : IIndexingWork
@@ -44,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         private readonly Dictionary<string, HashSet<CollectionName>> _referencedCollections;
         protected readonly DocumentsStorage _documentsStorage;
         private readonly IndexingConfiguration _configuration;
-        private readonly IndexStorage _indexStorage;
+        protected readonly IndexStorage _indexStorage;
 
         protected readonly Reference _reference = new Reference();
 
@@ -309,13 +316,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
-        public unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
-        {
-            var tx = indexContext.Transaction.InnerTransaction;
-            var loweredKey = tombstone.LowerId;
-            using (Slice.External(tx.Allocator, loweredKey, out Slice tombstoneKeySlice))
-                _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
-        }
+        public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext,
+            IndexingStatsScope stats);
 
         private enum ActionType
         {

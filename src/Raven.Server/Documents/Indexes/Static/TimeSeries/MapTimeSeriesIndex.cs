@@ -89,8 +89,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            //if (_referencedCollections.Count > 0)
-            //    _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
+            if (_referencedCollections.Count > 0)
+                _handleReferences.HandleDelete(tombstone, collection, writer, indexContext, stats);
 
             writer.DeleteBySourceDocument(tombstone.LowerId, stats);
         }

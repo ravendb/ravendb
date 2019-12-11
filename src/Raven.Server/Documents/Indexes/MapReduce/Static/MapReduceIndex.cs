@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly ThreadLocal<bool> _ignoreStalenessDueToReduceOutputsToDelete = new ThreadLocal<bool>();
         private bool? _isSideBySide;
 
-        private HandleReferences _handleReferences;
+        protected HandleReferences _handleReferences;
 
         protected readonly Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper> _enumerationWrappers = new Dictionary<string, AnonymousObjectToBlittableMapResultsEnumerableWrapper>();
 

@@ -22,8 +22,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected internal readonly StaticTimeSeriesIndexBase _compiled;
 
-        private HandleReferences _handleReferences;
-
         public MapReduceTimeSeriesIndex(MapReduceIndexDefinition definition, StaticTimeSeriesIndexBase compiled) : base(definition, compiled)
         {
             _compiled = compiled;
@@ -45,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             workers.Add(new CleanupDocumentsForMapReduce(this, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration, MapReduceWorkContext));
 
             if (_referencedCollections.Count > 0)
-                workers.Add(_handleReferences = new HandleDocumentReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
+                workers.Add(_handleReferences = new HandleTimeSeriesReferences(this, _compiled.ReferencedCollections, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, DocumentDatabase.DocumentsStorage, _indexStorage, Configuration));
 
             workers.Add(new MapTimeSeries(this, DocumentDatabase.DocumentsStorage.TimeSeriesStorage, _indexStorage, MapReduceWorkContext, Configuration));
             workers.Add(new ReduceMapResultsOfStaticIndex(this, _compiled.Reduce, Definition, _indexStorage, DocumentDatabase.Metrics, MapReduceWorkContext));
