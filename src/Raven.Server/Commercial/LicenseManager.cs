@@ -47,6 +47,7 @@ namespace Raven.Server.Commercial
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private LicenseStatus _licenseStatus = new LicenseStatus();
+        private int _previousLicenseCores = 0;
         private Timer _leaseLicenseTimer;
         private bool _disableCalculatingLicenseLimits;
         private RSAParameters? _rsaParameters;
@@ -497,6 +498,8 @@ namespace Raven.Server.Commercial
 
         private void ResetLicense(string error)
         {
+            _previousLicenseCores = _licenseStatus.MaxCores;
+
             _licenseStatus = new LicenseStatus
             {
                 FirstServerStartDate = _licenseStatus.FirstServerStartDate,
@@ -506,6 +509,8 @@ namespace Raven.Server.Commercial
 
         private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
+            _previousLicenseCores = _licenseStatus.MaxCores;
+
             _licenseStatus = new LicenseStatus
             {
                 Id = id,
@@ -943,7 +948,7 @@ namespace Raven.Server.Commercial
                 return;
             }
 
-            if (licenseChanged)
+            if (licenseChanged && _licenseStatus.MaxCores > _previousLicenseCores)
             {
                 changedNodes = detailsPerNode.Select(x => x.Key).ToList();
             }
