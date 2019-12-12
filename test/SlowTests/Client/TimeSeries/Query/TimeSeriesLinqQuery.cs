@@ -379,8 +379,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-
-        [Fact (Skip = "todo aviv")]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_WhereOnLoadedTag()
         {
             using (var store = GetDocumentStore())
@@ -455,7 +454,6 @@ namespace SlowTests.Client.TimeSeries.Query
                 }
             }
         }
-
 
     }
 }
