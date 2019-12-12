@@ -83,7 +83,7 @@ namespace SlowTests.Issues
             {
                 await leader.ServerStore.LicenseManager.ChangeLicenseLimits(tag, 1, Guid.NewGuid().ToString());
                 var license = leader.ServerStore.LoadLicenseLimits();
-                Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode));
+                Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
                 Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
             }
 
@@ -99,11 +99,11 @@ namespace SlowTests.Issues
                     {
                         ctx.OpenReadTransaction();
                         var topology = leader.ServerStore.GetClusterTopology(ctx);
-                        Assert.True(topology.Watchers.ContainsKey(tag));
+                        Assert.True(topology.Watchers.ContainsKey(tag), "topology.Watchers.ContainsKey(tag)");
                     }
 
                     var license = leader.ServerStore.LoadLicenseLimits();
-                    Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode));
+                    Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
                     Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
 
                     re.Execute(new PromoteClusterNodeCommand(tag), context);
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                     }
 
                     license = leader.ServerStore.LoadLicenseLimits();
-                    Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out detailsPerNode));
+                    Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out detailsPerNode)");
                     Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
                 }
             }
