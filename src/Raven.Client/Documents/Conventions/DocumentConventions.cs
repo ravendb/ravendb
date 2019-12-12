@@ -199,6 +199,8 @@ namespace Raven.Client.Documents.Conventions
         private Action<JsonSerializer> _customizeJsonSerializer;
         private Action<JsonSerializer> _customizeJsonDeserializer;
         private TimeSpan? _requestTimeout;
+        private TimeSpan? _raftBroadcastTimeout;
+        private TimeSpan? _initialRaftRequestTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;        
@@ -226,6 +228,26 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _requestTimeout = value;
+            }
+        }
+
+        public TimeSpan? RaftBroadcastTimeout
+        {
+            get => _raftBroadcastTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _raftBroadcastTimeout = value;
+            }
+        }
+
+        public TimeSpan? InitialRaftRequestTimeout
+        {
+            get => _initialRaftRequestTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _initialRaftRequestTimeout = value;
             }
         }
 

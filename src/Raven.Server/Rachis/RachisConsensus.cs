@@ -99,6 +99,9 @@ namespace Raven.Server.Rachis
 
         public override Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
         {
+            if (_serverStore.Initialized == false)
+                throw new InvalidOperationException("Server store isn't initialized.");
+
             return StateMachine.ConnectToPeer(url, tag, certificate);
         }
 
