@@ -4,17 +4,33 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    public interface ITimeSeriesQueryable<out T>
+    public interface ITimeSeriesQueryable
     {
-        ITimeSeriesQueryable<T> LoadTag<T2>(out T2 alias);
+        ITimeSeriesLoadQueryable<T2> LoadTag<T2>();
 
-        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesValue, bool>> predicate);
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesValue, bool>> predicate);
 
-        ITimeSeriesQueryable<T> GroupBy(string s);
+        ITimeSeriesGroupByQueryable GroupBy(string s);
 
-        ITimeSeriesQueryable<T> Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+        TimeSeriesRaw ToList();
 
-        T ToList();
+    }
+
+    public interface ITimeSeriesLoadQueryable<T>
+    {
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesValue, T, bool>> predicate);
+
+        ITimeSeriesGroupByQueryable GroupBy(string s);
+
+        TimeSeriesRaw ToList();
+
+    }
+
+    public interface ITimeSeriesGroupByQueryable
+    {
+        ITimeSeriesGroupByQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+
+        TimeSeriesAggregation ToList();
 
     }
 

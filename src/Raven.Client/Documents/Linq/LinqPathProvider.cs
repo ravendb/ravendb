@@ -191,14 +191,14 @@ namespace Raven.Client.Documents.Linq
         internal Result CreateTimeSeriesResult(MethodCallExpression callExpression)
         {
             var visitor = new TimeSeriesQueryVisitor(callExpression, this);
-            var tsQuery = visitor.VisitExpression();
+            var args = visitor.VisitExpression();
 
             return new Result
             {
-                MemberType = typeof(ITimeSeriesQueryable<>),
+                MemberType = typeof(ITimeSeriesQueryable),
                 IsNestedPath = false,
                 Path = Constants.TimeSeries.SelectFieldName,
-                Args = new[] { tsQuery }
+                Args = args
             };
         }
 
@@ -537,8 +537,8 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)
         {
-            return mce.Method.DeclaringType == typeof(ITimeSeriesQueryable<TimeSeriesAggregation>) ||
-                   mce.Method.DeclaringType == typeof(ITimeSeriesQueryable<TimeSeriesRaw>);
+            return mce.Method.DeclaringType == typeof(ITimeSeriesQueryable) ||
+                   mce.Method.DeclaringType == typeof(ITimeSeriesGroupByQueryable);
         }
 
     }
