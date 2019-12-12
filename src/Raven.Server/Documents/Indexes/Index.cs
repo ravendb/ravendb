@@ -2221,6 +2221,13 @@ namespace Raven.Server.Documents.Indexes
                     stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
                     stats.LastQueryingTime = _lastQueryingTime;
 
+                    if (Type == IndexType.MapReduce)
+                    {
+                        var mapReduceIndex = this as MapReduceIndex;
+                        stats.ReduceOutputCollection = mapReduceIndex.OutputReduceToCollection?.GetCollectionOfReduceOutput();
+                        stats.ReduceOutputReferencePattern = mapReduceIndex.OutputReduceToCollection?.GetPattern();
+                    }
+
                     if (calculateStaleness || calculateLag)
                     {
                         if (documentsContext == null)

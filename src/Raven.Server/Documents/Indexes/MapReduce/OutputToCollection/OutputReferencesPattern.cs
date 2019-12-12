@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReferencesPattern
     {
+        public string Pattern => _builder?.Pattern; 
+        
         private static readonly Regex FieldsRegex = new Regex(@"\{([^\:}]*)\:?([^}]*)\}", RegexOptions.Compiled);
 
         private readonly DocumentIdBuilder _builder;
@@ -72,6 +74,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             private readonly int _countOfFields;
             private int _addedFields;
 
+            public string Pattern => _pattern;
+            
             public DocumentIdBuilder(string pattern, string formattedPattern, Dictionary<string, int> fieldToFormatPosition)
             {
                 _pattern = pattern;

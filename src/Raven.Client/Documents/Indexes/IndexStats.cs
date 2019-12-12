@@ -46,6 +46,16 @@ namespace Raven.Client.Documents.Indexes
         /// Indicates how many reducing attempts failed.
         /// </summary>
         public int? ReduceErrors { get; set; }
+        
+        /// <summary>
+        /// The reduce output collection.
+        /// </summary>
+        public string ReduceOutputCollection { get; set; }
+        
+        /// <summary>
+        /// Indicates how many reducing attempts failed.
+        /// </summary>
+        public string ReduceOutputReferencePattern { get; set; }
 
         /// <summary>
         /// The value of docs/sec rate for the index over the last minute
