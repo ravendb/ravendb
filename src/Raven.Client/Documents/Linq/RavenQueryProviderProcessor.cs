@@ -2311,7 +2311,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
             }
 
-            alias = "__timeSeriesAggregationFunction" + FieldsToFetch.Count;
+            alias = Constants.TimeSeries.AggregationFunction + FieldsToFetch.Count;
 
             path = $"{path}({expressionInfo.Args[expressionInfo.Args.Length - 1]})";
         }
