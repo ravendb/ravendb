@@ -534,7 +534,7 @@ class editIndex extends viewModelBase {
         const indexName = this.originalIndexName;
         if (indexName) {
             const db = this.activeDatabase();
-            const deleteViewModel = new deleteIndexesConfirm([indexName], db);
+            const deleteViewModel = new deleteIndexesConfirm([this.editedIndex()], db);
             deleteViewModel.deleteTask.done((can: boolean) => {
                 if (can) {
                     this.dirtyFlag().reset(); // Resync Changes

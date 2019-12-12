@@ -1,6 +1,5 @@
 <div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
-
         <div class="toolbar">
             <div class="row">
                 <div class="col-lg-6">
@@ -17,13 +16,13 @@
                     <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
                 </div>
                 <div class="btn-group">
-                    <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i> <span>Copy C#</span></a>
-                    <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
-                    <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
+                    <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
+                    <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
+                    <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
+                    <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }"><i class="icon-trash"></i><span>Delete</span></button>
                 </div>
             </div>
         </div>
-
         <div class="row">
             <div class="col-sm-2">
                 <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background">Maps</h2>
@@ -117,7 +116,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="tabs margin-top margin-top-lg">
             <ul class="nav nav-tabs" role="tablist" id="tabsId">
                 <li role="presentation" class="active" id="fieldsTab">
@@ -156,7 +154,6 @@
                 <div role="tabpanel" class="tab-pane fade" id="configure">
                     <div class="row">
                         <div class="col-sm-2 text-right-sm"><label class="control-label">Customized options</label></div>
-
                         <div class="col-sm-10">
                             <div class="form-horizontal">
                                 <div data-bind="foreach: editedIndex().configuration">
@@ -220,7 +217,6 @@
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ START AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 <div data-bind="if: isAutoIndex, css: { 'content-margin': isAutoIndex }">
     <div class="flex-vertical edit-index auto-index">
-
         <div class="toolbar">
             <div class="row">
                 <div class="col-lg-8 col-xl-6 flex-horizontal">
@@ -228,20 +224,17 @@
                         <div class="input-group-addon">Index name</div>
                         <input class="form-control" data-bind="textInput: editedIndex().name" disabled>
                     </div>
-                    <div>
-                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
-                    </div>
                 </div>
                 <div class="col-lg-4 col-xl-6 flex-horizontal">
                     <div class="flex-separator"></div>
                     <div class="btn-group">
-                        <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
-                        <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
+                        <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
+                        <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
+                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex" title="Delete this Auto-Index"><i class="icon-trash"></i><span>Delete</span></button>
                     </div>
                 </div>
             </div>
         </div>
-
         <div>
             <h2 class="label-margin" data-bind="visible: editedIndex().hasReduce">Map-Reduce</h2>
             <h2 class="label-margin" data-bind="visible: !editedIndex().hasReduce()">Map</h2>
@@ -260,14 +253,12 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="label-margin flex-horizontal">
                     <hr class="flex-grow" />
                     <i class="icon-arrow-down text-success"></i>
                     <hr class="flex-grow" />
                 </div>
             </div>
-
             <div data-bind="if: editedIndex().reduceFields().length != 0">
                 <div class="flex-horizontal">
                     <div class="label">
@@ -282,14 +273,12 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="label-margin flex-horizontal">
                     <hr class="flex-grow" />
                     <i class="icon-arrow-down text-success"></i>
                     <hr class="flex-grow" />
                 </div>
             </div>
-
             <div class="flex-horizontal">
                 <div class="label">
                     <h3>Result</h3>
@@ -352,7 +341,6 @@
             </div>
             <div class="col-xs-12 col-sm-12 col-xl-7">
                 <div class="properties-container">
-
                     <div class="properties-item">
                         <span class="properties-label">Store</span>
                         <div class="btn-group properties-value">
@@ -366,7 +354,6 @@
                             </ul>
                         </div>
                     </div>
-
                     <div class="properties-item">
                         <span class="properties-label">Full-Text Search</span>
                         <div class="btn-group properties-value">
@@ -380,7 +367,6 @@
                             </ul>
                         </div>
                     </div>
-
                     <div class="properties-item">
                         <span class="properties-label">Highlighting</span>
                         <div class="btn-group properties-value">
@@ -394,7 +380,6 @@
                             </ul>
                         </div>
                     </div>
-
                     <div class="properties-item">
                         <span class="properties-label">Suggestions</span>
                         <div class="btn-group properties-value">
@@ -408,7 +393,6 @@
                             </ul>
                         </div>
                     </div>
-
                     <div class="properties-item" data-bind="visible: !isDefaultOptions(), if: !isDefaultOptions()">
                         <div class="toggle toggle-right">
                             <input class="styled" type="checkbox" data-bind="checked: hasSpatialOptions, attr: { id: 'spatial_toggle_' + $index() }">
@@ -418,13 +402,11 @@
                         </div>
                     </div>
                 </div>
-
                 <div>
                     <div class="hr-title" data-bind="visible: hasSpatialOptions()">
                         <strong><h5>Spatial</h5></strong>
                         <hr/>
                     </div>
-    
                     <div class="properties-container" data-bind="with: spatial, visible: hasSpatialOptions()">
                         <div class="properties-item">
                             <span class="properties-label">Type</span>
@@ -439,7 +421,6 @@
                                 </ul>
                             </div>
                         </div>
-    
                         <div class="properties-item">
                             <span class="properties-label">Strategy</span>
                             <div class="btn-group properties-value">
@@ -453,7 +434,6 @@
                                 </ul>
                             </div>
                         </div>
-    
                         <div class="properties-item" data-bind="style: { visibility: canSpecifyUnits() ? 'visible' : 'hidden' } ">
                             <span class="properties-label">Radius Units</span>
                             <div class="btn-group properties-value">
@@ -467,42 +447,36 @@
                                 </ul>
                             </div>
                         </div>
-    
                         <div class="properties-item">
                             <span class="properties-label">Min X</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: minX, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
-    
                         <div class="properties-item">
                             <span class="properties-label">Min Y</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: minY, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
-    
                         <div class="properties-item" data-bind="style: { visibility: canSpecifyTreeLevel() ? 'visible' : 'hidden' }, validationElement: maxTreeLevel">
                             <span class="properties-label">Max Tree Level</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: maxTreeLevel" />
                             </div>
                         </div>
-    
                         <div class="properties-item">
                             <span class="properties-label">Max X</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: maxX, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
-    
                         <div class="properties-item">
                             <span class="properties-label">Max Y</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" type="number" data-bind="numericInput: maxY, enable: canSpecifyCoordinates" />
                             </div>
                         </div>
-    
                         <div class="properties-item grow-2" data-bind="visible: showPrecision">
                             <span class="properties-label">Precision:</span>
                             <div class="properties-value">
@@ -513,13 +487,11 @@
                         </div>
                     </div>
                 </div>
-
                 <div>
                     <div class="hr-title" data-bind="visible: showAdvancedOptions()">
                         <strong><h5>Advanced</h5></strong>
                         <hr/>
                     </div>
-    
                     <div class="properties-container" data-bind="visible: showAdvancedOptions()">
                         <div class="properties-item">
                             <span class="properties-label">TermVector</span>
@@ -535,7 +507,6 @@
                                 </ul>
                             </div>
                         </div>
-    
                         <div class="properties-item">
                             <span class="properties-label">Indexing</span>
                             <div class="btn-group properties-value">
@@ -550,7 +521,6 @@
                                 </ul>
                             </div>
                         </div>
-
                         <div class="properties-item" data-bind="visible: canProvideAnalyzer">
                             <span class="properties-label">Analyzer</span>
                             <div class="btn-group properties-value">
@@ -567,7 +537,6 @@
                                 </ul>
                             </div>
                         </div>
-                        
                     </div>
                 </div>
             </div>

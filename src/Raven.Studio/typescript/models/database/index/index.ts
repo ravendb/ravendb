@@ -28,10 +28,15 @@ class index {
     priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
     state = ko.observable<Raven.Client.Documents.Indexes.IndexState>();
     status = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
+    
     reduceAttempts = ko.observable<number>();
     reduceErrors = ko.observable<number>();
     reduceSuccesses = ko.observable<number>();
+    reduceOutputCollection = ko.observable<string>();
+    reduceOutputReferencePattern = ko.observable<string>();
+    
     type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
+    typeForUI: KnockoutComputed<string>;
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     badgeClass: KnockoutComputed<string>;
@@ -58,7 +63,6 @@ class index {
     canBeResumed: KnockoutComputed<boolean>;
     canBeEnabled: KnockoutComputed<boolean>;
     canBeDisabled: KnockoutComputed<boolean>;
-    typeForUI: KnockoutComputed<string>;
 
     replacement = ko.observable<index>();
     progress = ko.observable<indexProgress>();
@@ -84,6 +88,8 @@ class index {
         this.reduceAttempts(dto.ReduceAttempts);
         this.reduceErrors(dto.ReduceErrors);
         this.reduceSuccesses(dto.ReduceSuccesses);
+        this.reduceOutputCollection(dto.ReduceOutputCollection);
+        this.reduceOutputReferencePattern(dto.ReduceOutputReferencePattern);
         this.type(dto.Type);
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;

@@ -501,7 +501,7 @@ class indexes extends viewModelBase {
 
     private promptDeleteIndexes(indexes: index[]) {
         if (indexes.length > 0) {
-            const deleteIndexesVm = new deleteIndexesConfirm(indexes.map(i => i.name), this.activeDatabase());
+            const deleteIndexesVm = new deleteIndexesConfirm(indexes, this.activeDatabase());
             app.showBootstrapDialog(deleteIndexesVm); 
             deleteIndexesVm.deleteTask
                 .done((deleted: boolean) => {

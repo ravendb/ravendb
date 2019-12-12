@@ -35,6 +35,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
+        public string GetCollectionOfReduceOutput()
+        {
+            return _collectionOfReduceOutputs;
+        }
+        
+        public string GetPattern()
+        {
+            return _patternForOutputReduceToCollectionReferences?.Pattern;
+        }
+        
         public OutputReduceToCollectionActions(MapReduceIndex index)
         {
             _index = index;
