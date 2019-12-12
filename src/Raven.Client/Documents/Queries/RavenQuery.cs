@@ -53,32 +53,17 @@ namespace Raven.Client.Documents.Queries
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        public static ITimeSeriesQueryable<TimeSeriesAggregation> TimeSeries(string name)
+        public static ITimeSeriesQueryable TimeSeries(string name)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        public static ITimeSeriesQueryable<TimeSeriesAggregation> TimeSeries(object documentInstance, string name)
+        public static ITimeSeriesQueryable TimeSeries(object documentInstance, string name)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        public static ITimeSeriesQueryable<TimeSeriesAggregation> TimeSeries(object documentInstance, string name, DateTime from, DateTime to)
-        {
-            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-        }
-
-        public static ITimeSeriesQueryable<TimeSeriesRaw> TimeSeriesRaw(string name)
-        {
-            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-        }
-
-        public static ITimeSeriesQueryable<TimeSeriesRaw> TimeSeriesRaw(object documentInstance, string name)
-        {
-            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-        }
-
-        public static ITimeSeriesQueryable<TimeSeriesRaw> TimeSeriesRaw(object documentInstance, string name, DateTime from, DateTime to)
+        public static ITimeSeriesQueryable TimeSeries(object documentInstance, string name, DateTime from, DateTime to)
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }

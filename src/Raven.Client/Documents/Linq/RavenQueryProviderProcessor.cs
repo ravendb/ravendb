@@ -2277,12 +2277,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (expressionInfo.Args != null)
                     {
-                        if (expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+                        if (expressionInfo.Type == typeof(ITimeSeriesQueryable))
                         {
-                            AddFromAliasOrRenameArgument(ref expressionInfo.Args[0]);
+                            CreateTimeSeriesPath(expressionInfo, ref path, out alias);
                         }
 
-                        AddCallArgumentsToPath(expressionInfo.Args, ref path, out alias);
+                        else
+                        {
+                            AddCallArgumentsToPath(expressionInfo.Args, lambdaExpression?.Parameters[0].Name, ref path, out alias);
+                        }
                     }
 
                     AddToFieldsToFetch(path, alias);
@@ -2291,6 +2294,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private void CreateTimeSeriesPath(ExpressionInfo expressionInfo, ref string path, out string alias)
+        {
+            if (expressionInfo.Args.Length == 2)
+            {
+                if (_fromAlias == null)
+                {
+                    AddFromAlias(expressionInfo.Args[0]);
+                }
+                else
+                {
+                    // todo aviv need to rename x.Heartrate to y.Heartrate
+                    //arg = _fromAlias;
+                }
+            }
+
+            alias = "__timeSeriesAggregationFunction" + FieldsToFetch.Count;
+
+            path = $"{path}({expressionInfo.Args[expressionInfo.Args.Length - 1]})";
         }
 
         private void AddFromAliasOrRenameArgument(ref string arg)
@@ -2308,32 +2331,25 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private void HandleSelectCounter(MethodCallExpression methodCallExpression, LambdaExpression lambdaExpression, MemberInfo member)
         {
             var counterInfo = LinqPathProvider.CreateCounterResult(methodCallExpression);
-            if (counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
-            {
-                AddFromAliasOrRenameArgument(ref counterInfo.Args[0]);
-            }
 
-            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
+            AddCallArgumentsToPath(counterInfo.Args, lambdaExpression?.Parameters[0].Name, ref counterInfo.Path, out _);
             AddToFieldsToFetch(counterInfo.Path, GetSelectPath(member));
         }
 
-        private void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)
+        private void AddCallArgumentsToPath(string[] mceArgs, string parameter, ref string path, out string alias)
         {
-            alias = null;
+            if (mceArgs[0] == parameter)
+            {
+                AddFromAliasOrRenameArgument(ref mceArgs[0]);
+            }
+
             var args = mceArgs[0];
             if (mceArgs.Length == 2)
             {
                 args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
-            if (path == "timeseries")
-            {
-                alias = "__timeSeriesAggregationFunction" + FieldsToFetch.Count;
-            }
-            else
-            {
-                alias = mceArgs[mceArgs.Length - 1];
-            }
+            alias = mceArgs[mceArgs.Length - 1];
 
             path = $"{path}({args})";
         }

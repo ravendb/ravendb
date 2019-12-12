@@ -14,14 +14,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly LinqPathProvider _provider;
         private LinqPathProvider.TimeSeriesWhereClauseModifier _modifier;
         private StringBuilder _selectFields;
-        private string _name, _between, _where, _groupBy;
-        private Type _queryType;
+        private string _name, _between, _where, _groupBy, _srcAlias;
+        //private Type _queryType;
 
         public TimeSeriesQueryVisitor(MethodCallExpression expression, LinqPathProvider provider)
         {
             _expression = expression;
             _provider = provider;
-            _queryType = typeof(TimeSeriesRaw);
+            //_queryType = typeof(TimeSeriesRaw);
         }
 
         private void VisitMethod(MethodCallExpression mce)
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void GroupBy(Expression expression)
         {
-            _queryType = typeof(TimeSeriesAggregation);
+            //_queryType = typeof(TimeSeriesAggregation);
 
             if (expression is ConstantExpression constantExpression)
                 _groupBy = $" group by '{constantExpression.Value}'";
@@ -137,20 +137,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void TimeSeriesName(MethodCallExpression mce)
         {
-            switch (mce.Method.Name)
-            {
-                case nameof(RavenQuery.TimeSeriesRaw):
-                    if (_queryType == typeof(TimeSeriesAggregation))
-                        throw new InvalidOperationException("Cannot use GroupBy or Select on RavenQuery.TimeSeriesRaw(). In order to perform aggregations, use RavenQuery.TimeSeries()");
-                    break;
-                case nameof(RavenQuery.TimeSeries):
-                    if (_queryType == typeof(TimeSeriesRaw))
-                        throw new InvalidOperationException("Must use GroupBy and Select on RavenQuery.TimeSeries(). In order to get non-aggregated results, use RavenQuery.TimeSeriesRaw()");
-                    break;
-                default:
-                    throw new InvalidOperationException("Cannot understand how to translate " + _expression);
-            }
-
             if (!(mce.Arguments[1] is ConstantExpression constantExpression))
                 throw new InvalidOperationException("Cannot understand how to translate " + _expression);
 
@@ -160,10 +146,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                var path = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+                _srcAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
 
                 // todo aviv : add from alias to query if needed
-                _name = $"{path}.{constantExpression.Value}";
+                _name = $"{_srcAlias}.{constantExpression.Value}";
             }
         }
 
@@ -224,7 +210,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _where = $" where {path} in ({values})";
         }
 
-        public string VisitExpression()
+        public string[] VisitExpression()
         {
             var callExpression = _expression;
             while (callExpression != null)
@@ -250,7 +236,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return BuildQuery();
         }
 
-        private string BuildQuery()
+        private string[] BuildQuery()
         {
             var expressionBuilder = new StringBuilder();
 
@@ -265,7 +251,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_selectFields != null)
                 expressionBuilder.Append(" select ").Append(_selectFields);
 
-            return expressionBuilder.ToString();
+            var queryString = expressionBuilder.ToString();
+            var args = _srcAlias != null 
+                ? new[] {_srcAlias, queryString} 
+                : new[] {queryString};
+
+            return args;
         }
 
         private void AddSelectField(string name)

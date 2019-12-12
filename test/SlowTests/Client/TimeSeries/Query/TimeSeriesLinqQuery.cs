@@ -3,7 +3,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,6 +22,24 @@ namespace SlowTests.Client.TimeSeries.Query
             public int Age { get; set; }
 
             public string WorksAt { get; set; }
+        }
+
+        private class Watch
+        {
+            public string Manufacturer { get; set; }
+
+            public double Accuracy { get; set; }
+
+            //public AdditionalData AdditionalData { get; set; }
+
+            public long Min { get; set; }
+
+            public long Max { get; set; }
+
+            public bool IsoCompliant;
+
+            public DateTime EndOfWarranty { get; set; }
+
         }
 
         [Fact]
@@ -265,7 +282,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var query = session.Query<User>()
                         .Where(u => u.Age > 21)
-                        .Select(u => RavenQuery.TimeSeriesRaw(u, "Heartrate")
+                        .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
                             .ToList());
 
@@ -357,6 +374,83 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(13.69, agg[1].Max[0]);
                     Assert.Equal(13.64, agg[1].Avg[0]);
+
+                }
+            }
+        }
+
+
+        [Fact (Skip = "todo aviv")]
+        public void CanQueryTimeSeriesAggregation_WhereOnLoadedTag()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Age = 25
+                    }, "people/1");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 70
+                    }, "watches/fitbit");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 90
+                    }, "watches/apple");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 180
+                    }, "watches/sony");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Where(p => p.Age > 21)
+                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                            .LoadTag<Watch>()
+                            .Where((ts, src) => ts.Values[0] <= src.Accuracy)
+                            .GroupBy("1 month")
+                            .Select(g => new
+                            {
+                                Avg = g.Average(),
+                                Max = g.Max()
+                            })
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(4, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(79, agg[0].Max[0]);
+                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(3, agg[0].Count[0]);
+
+                    Assert.Equal(179, agg[1].Max[0]);
+                    Assert.Equal(179, agg[1].Avg[0]);
 
                 }
             }
