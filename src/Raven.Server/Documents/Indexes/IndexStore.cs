@@ -139,15 +139,11 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
         {
-            int numberOfUtilizedCores;
-            using (_documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
-                numberOfUtilizedCores = licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode) ?
-                    detailsPerNode.UtilizedCores :
-                    ProcessorInfo.ProcessorCount;
-            }
+            var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
+            int numberOfUtilizedCores = licenseLimits != null && 
+                                        licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
+                ? detailsPerNode.UtilizedCores
+                : ProcessorInfo.ProcessorCount;
 
             Parallel.ForEach(indexes, new ParallelOptions
                 {
