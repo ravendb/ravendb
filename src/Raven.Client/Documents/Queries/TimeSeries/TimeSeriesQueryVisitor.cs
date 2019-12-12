@@ -14,14 +14,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly LinqPathProvider _provider;
         private LinqPathProvider.TimeSeriesWhereClauseModifier _modifier;
         private StringBuilder _selectFields;
-        private string _name, _between, _where, _groupBy, _srcAlias;
-        //private Type _queryType;
+        private string _name, _between, _where, _groupBy, _srcAlias, _loadTag;
 
         public TimeSeriesQueryVisitor(MethodCallExpression expression, LinqPathProvider provider)
         {
             _expression = expression;
             _provider = provider;
-            //_queryType = typeof(TimeSeriesRaw);
         }
 
         private void VisitMethod(MethodCallExpression mce)
@@ -36,6 +34,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     break;
                 case "Select":
                     Select(mce.Arguments[0]);
+                    break;
+                case "LoadTag":
+                    if (_loadTag == null)
+                        throw new InvalidOperationException("Cannot understand how to translate " + _expression);
                     break;
                 case "ToList":
                     break;
@@ -55,6 +57,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             // from filter expression, e.g. : 'x.Tag' => 'Tag'
             _modifier = new LinqPathProvider.TimeSeriesWhereClauseModifier(lambda.Parameters[0].Name);
 
+            if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
+                LoadTag(lambda.Parameters[1].Name);
+            
             if (lambda.Body is BinaryExpression be)
                 WhereBinary(be);
             else if (lambda.Body is MethodCallExpression call)
@@ -63,14 +68,16 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 throw new InvalidOperationException("Cannot understand how to translate " + _expression);
         }
 
+        private void LoadTag(string alias)
+        {
+            _loadTag = $" load Tag as {alias}";
+        }
+
         private void GroupBy(Expression expression)
         {
-            //_queryType = typeof(TimeSeriesAggregation);
-
             if (expression is ConstantExpression constantExpression)
                 _groupBy = $" group by '{constantExpression.Value}'";
             else 
-                //todo aviv
                 _groupBy = $" group by '{expression}'";
         }
 
@@ -147,8 +154,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             else
             {
                 _srcAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
-
-                // todo aviv : add from alias to query if needed
                 _name = $"{_srcAlias}.{constantExpression.Value}";
             }
         }
@@ -238,25 +243,26 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private string[] BuildQuery()
         {
-            var expressionBuilder = new StringBuilder();
+            var queryBuilder = new StringBuilder();
 
-            expressionBuilder.Append("from ").Append(_name);
+            queryBuilder.Append("from ").Append(_name);
 
             if (_between != null)
-                expressionBuilder.Append(_between);
+                queryBuilder.Append(_between);
+            if (_loadTag != null)
+                queryBuilder.Append(_loadTag);
             if (_where != null)
-                expressionBuilder.Append(_where);
+                queryBuilder.Append(_where);
             if (_groupBy != null)
-                expressionBuilder.Append(_groupBy);
+                queryBuilder.Append(_groupBy);
             if (_selectFields != null)
-                expressionBuilder.Append(" select ").Append(_selectFields);
+                queryBuilder.Append(" select ").Append(_selectFields);
 
-            var queryString = expressionBuilder.ToString();
-            var args = _srcAlias != null 
+            var queryString = queryBuilder.ToString();
+
+            return _srcAlias != null 
                 ? new[] {_srcAlias, queryString} 
                 : new[] {queryString};
-
-            return args;
         }
 
         private void AddSelectField(string name)
