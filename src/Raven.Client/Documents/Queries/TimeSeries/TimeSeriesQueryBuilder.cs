@@ -2,17 +2,16 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 {
     public interface ITimeSeriesQueryBuilder
     {
-        ITimeSeriesQueryBuilder Raw(string queryText);
-
+        T Raw<T>(string queryText) where T : TimeSeriesQueryResult;
     }
 
     internal class TimeSeriesQueryBuilder : ITimeSeriesQueryBuilder
     {
         private string _query;
-        public ITimeSeriesQueryBuilder Raw(string queryText)
+        public T Raw<T>(string queryText) where T : TimeSeriesQueryResult
         {
             _query = queryText;
-            return this;
+            return default;
         }
 
         public string Query => _query;

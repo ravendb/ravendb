@@ -43,15 +43,16 @@ namespace Raven.Client.Documents.Session
             });
         }
 
-        public IDocumentQuery<TimeSeriesAggregation> SelectTimeSeries(Action<ITimeSeriesQueryBuilder> timeSeriesQuery)
+
+        public IDocumentQuery<TTs> SelectTimeSeries<TTs>(Func<ITimeSeriesQueryBuilder, TTs> timeSeriesQuery)
         {
             var builder = new TimeSeriesQueryBuilder();
             timeSeriesQuery.Invoke(builder);
 
-            var fields = new[] {$"{Constants.TimeSeries.SelectFieldName}({builder.Query})"};
+            var fields = new[] { $"{Constants.TimeSeries.SelectFieldName}({builder.Query})" };
             var projections = new[] { Constants.TimeSeries.AggregationFunction };
 
-            return SelectFields<TimeSeriesAggregation>(new QueryData(fields, projections));
+            return SelectFields<TTs>(new QueryData(fields, projections));
         }
 
         /// <inheritdoc />

@@ -139,7 +139,7 @@ namespace Raven.Client
         public static class TimeSeries
         {
             public const string SelectFieldName = "timeseries";
-            public const string AggregationFunction = "__timeSeriesAggregationFunction";
+            public const string QueryFunction = "__timeSeriesQueryFunction";
         }
 
         public class Documents

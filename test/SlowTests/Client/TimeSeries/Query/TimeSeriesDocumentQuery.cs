@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +58,7 @@ select min(), max(), avg()
 
                     var query = session.Advanced.DocumentQuery<User>()
                         .WhereGreaterThan(u => u.Age, 21)
-                        .SelectTimeSeries(builder => builder.Raw(tsQueryText))
+                        .SelectTimeSeries(builder => builder.Raw<TimeSeriesAggregation>(tsQueryText))
                         .AddParameter("start", baseline)
                         .AddParameter("end", baseline.AddMonths(3));
 
