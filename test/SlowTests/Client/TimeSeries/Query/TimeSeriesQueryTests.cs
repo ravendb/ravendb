@@ -5092,7 +5092,7 @@ select out(doc, c)
                     Assert.Equal(179, val.Max[0]);
                     Assert.Equal(169, val.Avg[0]);
 
-                    expectedFrom = new DateTime(baseline.Year, baseline.Month + 1, 1, 0, 0, 0);
+                    expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0).AddMonths(1);
                     expectedTo = expectedFrom.AddMonths(1);
 
                     Assert.Equal(expectedFrom, val.From);
