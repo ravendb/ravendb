@@ -107,10 +107,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults,
                                             indexWriter, indexContext, collectionStats);
 
-                                        _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
-
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
+                                        _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                     }
                                     catch (Exception e) when (e.IsIndexError())
                                     {
