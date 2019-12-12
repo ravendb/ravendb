@@ -539,12 +539,16 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (expression is FieldExpression fe)
                 {
-                    switch (fe.Compound[0].Value.ToLower())
+                    switch (fe.Compound[0].Value)
                     {
+                        case "TAG":
+                        case "Tag":
                         case "tag":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
                             return singleResult.Tag?.ToString();
+                        case "VALUES":
+                        case "Values":
                         case "values":
                             if (fe.Compound.Count == 1)
                                 return singleResult.Values;
@@ -559,6 +563,9 @@ namespace Raven.Server.Documents.Queries.Results
                                 return null;
 
                             return singleResult.Values.Span[index];
+                        case "TIMESTAMP":
+                        case "TimeStamp":
+                        case "Timestamp":
                         case "timestamp":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
