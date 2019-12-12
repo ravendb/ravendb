@@ -11,8 +11,11 @@ namespace Raven.Server.Documents.Indexes
     public class IndexingRunStats
     {
         public int MapAttempts;
+        public int MapReferenceAttempts;
         public int MapSuccesses;
+        public int MapReferenceSuccesses;
         public int MapErrors;
+        public int MapReferenceErrors;
 
         public int ReduceAttempts;
         public int ReduceSuccesses;
@@ -43,6 +46,11 @@ namespace Raven.Server.Documents.Indexes
         public void AddMapError(string key, string message)
         {
             AddError(key, message, "Map");
+        }
+
+        public void AddMapReferenceError(string key, string message)
+        {
+            AddError(key, message, "MapReference");
         }
 
         public void AddReduceError(string message)

@@ -191,6 +191,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             token.ThrowIfCancellationRequested();
 
                                             totalProcessedCount++;
+                                            collectionStats.RecordMapReferenceAttempt();
 
                                             var current = docsEnumerator.Current;
 
@@ -203,7 +204,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             try
                                             {
                                                 var numberOfResults = _index.HandleMap(current.LowerId, current.Id, mapResults, indexWriter, indexContext, collectionStats);
+                                                
                                                 resultsCount += numberOfResults;
+                                                collectionStats.RecordMapReferenceSuccess();
                                                 _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                             }
                                             catch (Exception e) when (e.IsIndexError())
@@ -211,12 +214,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 docsEnumerator.OnError();
                                                 _index.ErrorIndexIfCriticalException(e);
 
-                                                collectionStats.RecordMapError();
+                                                collectionStats.RecordMapReferenceError();
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
 
-                                                collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
-                                                                                        $"Exception: {e}");
+                                                collectionStats.AddMapReferenceError(current.Id, 
+                                                    $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                             }
 
                                             _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);

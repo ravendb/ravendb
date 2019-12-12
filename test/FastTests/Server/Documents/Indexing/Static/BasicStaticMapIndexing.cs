@@ -490,5 +490,129 @@ namespace FastTests.Server.Documents.Indexing.Static
                 }
             }
         }
+
+        [Theory]
+        [InlineData(200, 1000)]
+        [InlineData(1000, 2000)]
+        [InlineData(128, 2048)]
+        [InlineData(null, 1000)]
+        public void CanSetMapBatchSize(int? mapBatchSize, int numberOfDocs)
+        {
+            var indexDefinition = new IndexDefinition
+            {
+                Name = "NewIndex",
+                Maps = new HashSet<string>
+                {
+                    "from p in docs.Orders select new { CompanyName = LoadDocument(p.Company, \"Companies\").Name }"
+                },
+                Configuration = new IndexConfiguration
+                {
+                    {
+                        RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize), mapBatchSize?.ToString()
+                    }
+                }
+            };
+
+            using (var database = CreateDocumentDatabase())
+            using (var index = MapIndex.CreateNew(indexDefinition, database))
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+            {
+                Assert.Equal(mapBatchSize, index.Configuration.MapBatchSize);
+
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    for (var i = 0; i < numberOfDocs; i++)
+                    {
+                        var orderDocumentId = $"orders/{i}";
+                        var companyDocumentId = $"companies/{i}";
+                        using (var doc = CreateDocument(context, orderDocumentId, new DynamicJsonValue
+                        {
+                            ["Name"] = "John",
+                            ["Company"] = companyDocumentId,
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                            {
+                                [Constants.Documents.Metadata.Collection] = "Orders"
+                            }
+                        }))
+                        {
+                            database.DocumentsStorage.Put(context, orderDocumentId, null, doc);
+                        }
+                    }
+
+                    tx.Commit();
+                }
+
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    for (var i = 0; i < numberOfDocs; i++)
+                    {
+                        var companyDocumentId = $"companies/{i}";
+                        using (var doc = CreateDocument(context, companyDocumentId, new DynamicJsonValue
+                        {
+                            ["Name"] = "RavenDB",
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                            {
+                                [Constants.Documents.Metadata.Collection] = "Companies"
+                            }
+                        }))
+                        {
+                            database.DocumentsStorage.Put(context, companyDocumentId, null, doc);
+                        }
+                    }
+
+                    tx.Commit();
+                }
+
+                var numberOfBatches = numberOfDocs / mapBatchSize;
+                var batchStats = new IndexingRunStats();
+                var stats = new IndexingStatsScope(batchStats);
+
+                for (var i = 0; i < numberOfBatches; i++)
+                {
+                    index.DoIndexingWork(stats, CancellationToken.None);
+                    Assert.Equal((i + 1) * mapBatchSize, stats.MapAttempts);
+                }
+
+                index.DoIndexingWork(stats, CancellationToken.None);
+                Assert.Equal(numberOfDocs, stats.MapAttempts);
+
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    for (var i = 0; i < numberOfDocs; i++)
+                    {
+                        var companyDocumentId = $"companies/{i}";
+                        using (var doc = CreateDocument(context, companyDocumentId, new DynamicJsonValue
+                        {
+                            ["Name"] = "Hibernating Rhinos",
+                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                            {
+                                [Constants.Documents.Metadata.Collection] = "Companies"
+                            }
+                        }))
+                        {
+                            database.DocumentsStorage.Put(context, companyDocumentId, null, doc);
+                        }
+                    }
+
+
+                    tx.Commit();
+                }
+
+                batchStats = new IndexingRunStats();
+                stats = new IndexingStatsScope(batchStats);
+
+                for (var i = 0; i < numberOfBatches; i++)
+                {
+                    index.DoIndexingWork(stats, CancellationToken.None);
+                    Assert.Equal((i + 1) * mapBatchSize, stats.MapReferenceAttempts);
+                }
+
+                index.DoIndexingWork(stats, CancellationToken.None);
+                Assert.Equal(numberOfDocs, stats.MapReferenceAttempts);
+
+                using (context.OpenReadTransaction())
+                    Assert.False(index.IsStale(context));
+            }
+        }
     }
 }
