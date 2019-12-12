@@ -604,15 +604,15 @@ namespace Raven.Server.Documents.Indexes
         {
             var referencesTree = tx.InnerTransaction.ReadTree(IndexSchema.References);
 
-            using (var it = referencesTree.Iterate(false))
+            while (true)
             {
-                it.SetRequiredPrefix(prefixKey);
-
-                if (it.Seek(prefixKey) == false)
-                    return;
-
-                do
+                using (var it = referencesTree.Iterate(false))
                 {
+                    it.SetRequiredPrefix(prefixKey);
+
+                    if (it.Seek(prefixKey) == false)
+                        return;
+
                     var key = it.CurrentKey.Clone(tx.InnerTransaction.Allocator);
 
                     try
@@ -624,7 +624,6 @@ namespace Raven.Server.Documents.Indexes
                         key.Release(tx.InnerTransaction.Allocator);
                     }
                 }
-                while (it.MoveNext());
             }
         }
 
