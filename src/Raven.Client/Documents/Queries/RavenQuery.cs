@@ -82,43 +82,5 @@ namespace Raven.Client.Documents.Queries
         {
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
-
-/*        public static class TimeSeriesAggregations
-        {
-            public static double?[] Max()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-
-            public static double?[] Min()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-
-            public static double?[] Sum()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-
-            public static double?[] Average()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-
-            public static double?[] First()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-
-            public static double?[] Last()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-
-            public static double?[] Count()
-            {
-                throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-            }
-        }*/
     }
 }

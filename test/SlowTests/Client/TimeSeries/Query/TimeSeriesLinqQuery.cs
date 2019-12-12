@@ -91,7 +91,6 @@ namespace SlowTests.Client.TimeSeries.Query
                 }
             }
         }
-/*
 
         [Fact]
         public void CanQueryTimeSeriesAggregation_WithFromAndToDates()
@@ -144,8 +143,8 @@ namespace SlowTests.Client.TimeSeries.Query
                             .GroupBy("1 month")
                             .Select(g => new
                             {
-                                Avg = RavenQuery.TimeSeriesAggregations.Average(),
-                                Max = RavenQuery.TimeSeriesAggregations.Max()
+                                Avg = g.Average(),
+                                Max = g.Max()
                             })
                             .ToList());
 
@@ -204,8 +203,8 @@ namespace SlowTests.Client.TimeSeries.Query
                             .GroupBy("1 month")
                             .Select(g => new
                             {
-                                Avg = RavenQuery.TimeSeriesAggregations.Average(), 
-                                Max = RavenQuery.TimeSeriesAggregations.Max()
+                                Avg = g.Average(), 
+                                Max = g.Max()
                             })
                             .ToList());
 
@@ -296,7 +295,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact (Skip = "todo aviv ")]
+        [Fact]
         public void CanQueryTimeSeriesAggregation_FromLoadedDocument()
         {
             using (var store = GetDocumentStore())
@@ -305,25 +304,26 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 using (var session = store.OpenSession())
                 {
+                    var companyId = "companies/1";
                     session.Store(new Person
                     {
                         Age = 25,
-                        WorksAt = "comapnies/1"
-                    }, "people/1");
+                        WorksAt = companyId
+                    });
                     session.Store(new Company
                     {
                         Name = "HR",
-                    }, "comapnies/1");
+                    }, companyId);
 
-                    var tsf = session.TimeSeriesFor("people/1");
+                    var tsf = session.TimeSeriesFor(companyId);
 
-                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/fitbit", new[] { 79d });
-                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+                    tsf.Append("Stock", baseline.AddMinutes(61), "tags/1", new[] { 12.59d });
+                    tsf.Append("Stock", baseline.AddMinutes(62), "tags/1", new[] { 12.79d });
+                    tsf.Append("Stock", baseline.AddMinutes(63), "tags/2", new[] { 12.69d });
 
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/fitbit", new[] { 159d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
-                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+                    tsf.Append("Stock", baseline.AddMonths(1).AddMinutes(61), "tags/1", new[] { 13.59d });
+                    tsf.Append("Stock", baseline.AddMonths(1).AddMinutes(62), "tags/2", new[] { 13.79d });
+                    tsf.Append("Stock", baseline.AddMonths(1).AddMinutes(63), "tags/1", new[] { 13.69d });
 
                     session.SaveChanges();
                 }
@@ -331,37 +331,36 @@ namespace SlowTests.Client.TimeSeries.Query
                 using (var session = store.OpenSession())
                 {
                     var query = from p in session.Query<Person>()
+                                where p.Age > 21
                                 let company = RavenQuery.Load<Company>(p.WorksAt)
-                                where p.Age > 25
-                                select RavenQuery.TimeSeries(company, "Heartrate", baseline, baseline.AddMonths(2))
-                                    .Where(ts => ts.Tag == "watches/fitbit")
+                                select RavenQuery.TimeSeries(company, "Stock", baseline, baseline.AddMonths(2))
+                                    .Where(ts => ts.Tag == "tags/1")
                                     .GroupBy("1 month")
                                     .Select(g => new
                                     {
-                                        Avg = RavenQuery.TimeSeriesAggregations.Average(),
-                                        Max = RavenQuery.TimeSeriesAggregations.Max()
+                                        Avg = g.Average(),
+                                        Max = g.Max()
                                     })
                                     .ToList();
-
 
                     var result = query.ToList();
 
                     Assert.Equal(1, result.Count);
-                    Assert.Equal(6, result[0].Count);
+                    Assert.Equal(4, result[0].Count);
 
                     var agg = result[0].Results;
 
                     Assert.Equal(2, agg.Length);
 
-                    Assert.Equal(79, agg[0].Max[0]);
-                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(12.79, agg[0].Max[0]);
+                    Assert.Equal(12.69, agg[0].Avg[0]);
 
-                    Assert.Equal(179, agg[1].Max[0]);
-                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(13.69, agg[1].Max[0]);
+                    Assert.Equal(13.64, agg[1].Avg[0]);
 
                 }
             }
-        }*/
+        }
 
 
     }

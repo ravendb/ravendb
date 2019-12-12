@@ -151,16 +151,19 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     throw new InvalidOperationException("Cannot understand how to translate " + _expression);
             }
 
+            if (!(mce.Arguments[1] is ConstantExpression constantExpression))
+                throw new InvalidOperationException("Cannot understand how to translate " + _expression);
+
             if (mce.Arguments.Count == 1)
             {
-                _name = (mce.Arguments[0] as ConstantExpression)?.Value.ToString();
+                _name = constantExpression.Value.ToString();
             }
             else
             {
-                _name = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
-                var path = mce.Arguments[0].ToString();
+                var path = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+
                 // todo aviv : add from alias to query if needed
-                //tsName = path + "." + tsName;
+                _name = $"{path}.{constantExpression.Value}";
             }
         }
 

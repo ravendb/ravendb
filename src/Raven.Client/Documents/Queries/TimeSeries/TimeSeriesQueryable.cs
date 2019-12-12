@@ -4,8 +4,10 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    public interface ITimeSeriesQueryable<T>
+    public interface ITimeSeriesQueryable<out T>
     {
+        ITimeSeriesQueryable<T> LoadTag<T2>(out T2 alias);
+
         ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesValue, bool>> predicate);
 
         ITimeSeriesQueryable<T> GroupBy(string s);
@@ -31,6 +33,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         double?[] Last();
 
         double?[] Count();
+
     }
 
 }
