@@ -4,6 +4,7 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Lucene.Net.Documents;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -15,8 +16,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class JintLuceneDocumentConverter : LuceneDocumentConverterBase
     {
-        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
-            : base(fields, indexImplicitNull, indexEmptyEntries, reduceOutput)
+        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(fields, indexImplicitNull, indexEmptyEntries, storeValue, storeValueFieldName)
         {
         }
 
@@ -36,13 +37,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
-            if (_reduceOutput)
+            if (_storeValue)
             {
-                var reduceResult = JsBlittableBridge.Translate(indexContext,
+                var storedValue = JsBlittableBridge.Translate(indexContext,
                     documentToProcess.Engine,
                     documentToProcess);
 
-                instance.Add(GetReduceResultValueField(reduceResult));
+                instance.Add(GetStoredValueField(storedValue));
                 newFields++;
             }
 

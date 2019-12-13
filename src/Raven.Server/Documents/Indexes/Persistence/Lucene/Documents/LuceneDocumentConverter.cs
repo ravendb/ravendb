@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
@@ -12,10 +13,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly BlittableJsonTraverser _blittableTraverser;
 
-        public LuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = true, bool reduceOutput = false)
-            : base(fields, indexImplicitNull, indexEmptyEntries, reduceOutput)
+        public LuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = true, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(fields, indexImplicitNull, indexEmptyEntries, storeValue, storeValueFieldName)
         {
-            _blittableTraverser = reduceOutput ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+            _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
         protected override int GetFields<T>(T instance, LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext)
@@ -31,9 +32,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
-            if (_reduceOutput)
+            if (_storeValue)
             {
-                instance.Add(GetReduceResultValueField(document.Data));
+                instance.Add(GetStoredValueField(document.Data));
                 newFields++;
             }
 

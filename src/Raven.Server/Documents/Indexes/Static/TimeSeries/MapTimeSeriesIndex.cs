@@ -5,13 +5,16 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Results.TimeSeries;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -36,6 +39,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 foreach (var referencedCollection in collection.Value)
                     _referencedCollections.Add(referencedCollection.Name);
             }
+        }
+
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+        {
+            return new TimeSeriesQueryResultRetriever(DocumentDatabase, query, queryTimings, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
         }
 
         protected override void SubscribeToChanges(DocumentDatabase documentDatabase)

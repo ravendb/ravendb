@@ -241,6 +241,8 @@ namespace Raven.Client
 
                     public const string ReduceKeyValueFieldName = "key()";
 
+                    public const string ValueFieldName = "value()";
+
                     public const string AllFields = "__all_fields";
 
                     public const string AllStoredFields = "__all_stored_fields";
