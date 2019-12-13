@@ -107,6 +107,8 @@ namespace Raven.Client.Extensions
                 if (curValue == "$Value" && i != stackLength - 1)
                 {
                     // Dictionary[].$Value.PropertyName => Dictionary[].PropertyName
+                    if (builder.Length > 0 && builder[builder.Length - 1] == '.')
+                        builder.Length--; // Dictionary[]..PropertyName => Dictionary[].PropertyName 
                     continue;
                 }
 
