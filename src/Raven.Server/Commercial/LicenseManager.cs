@@ -1183,7 +1183,7 @@ namespace Raven.Server.Commercial
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var databaseRecord in _serverStore.Cluster.ReadAllDatabases(context))
+                foreach (var databaseRecord in _serverStore.Cluster.GetAllDatabases(context))
                 {
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;
