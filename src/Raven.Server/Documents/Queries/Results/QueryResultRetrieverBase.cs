@@ -20,9 +20,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage.Reader;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 using Sparrow.Extensions;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
@@ -124,6 +122,7 @@ namespace Raven.Server.Documents.Queries.Results
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                                    && x.Name != Constants.Documents.Indexing.Fields.ValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));

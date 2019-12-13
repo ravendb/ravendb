@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal const string FalseString = "false";
 
-        private readonly Field _reduceValueField = new Field(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, new byte[0], 0, 0, Field.Store.YES);
+        private readonly Field _storeValueField;
 
         protected readonly ConversionScope Scope = new ConversionScope();
 
@@ -73,9 +73,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly Dictionary<string, IndexField> _fields;
         private readonly bool _indexImplicitNull;
         private readonly bool _indexEmptyEntries;
-        protected readonly bool _reduceOutput;
+        protected readonly bool _storeValue;
 
-        private byte[] _reduceValueBuffer;
+        private byte[] _storeValueBuffer;
         protected IndexField _allFields;
 
         public void Clean()
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull, bool indexEmptyEntries, bool reduceOutput)
+        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull, bool indexEmptyEntries, bool storeValue, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
         {
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
@@ -98,10 +98,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
-            _reduceOutput = reduceOutput;
+            _storeValue = storeValue;
+            _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
-            if (reduceOutput)
-                _reduceValueBuffer = new byte[0];
+            if (storeValue)
+                _storeValueBuffer = new byte[0];
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -508,7 +509,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
         {
-            if (_reduceOutput == false)
+            if (_storeValue == false)
                 return GetOrCreateField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
             return GetOrCreateField(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
@@ -646,27 +647,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return true;
         }
 
-        protected AbstractField GetReduceResultValueField(BlittableJsonReaderObject reduceResult)
+        protected AbstractField GetStoredValueField(BlittableJsonReaderObject value)
         {
-            _reduceValueField.SetValue(GetReduceResult(reduceResult), 0, reduceResult.Size);
+            _storeValueField.SetValue(GetStoredValue(value), 0, value.Size);
 
-            return _reduceValueField;
+            return _storeValueField;
         }
 
-        private byte[] GetReduceResult(BlittableJsonReaderObject reduceResult)
+        private byte[] GetStoredValue(BlittableJsonReaderObject value)
         {
-            var necessarySize = Bits.PowerOf2(reduceResult.Size);
+            var necessarySize = Bits.PowerOf2(value.Size);
 
-            if (_reduceValueBuffer.Length < necessarySize)
-                _reduceValueBuffer = new byte[necessarySize];
+            if (_storeValueBuffer.Length < necessarySize)
+                _storeValueBuffer = new byte[necessarySize];
 
             unsafe
             {
-                fixed (byte* v = _reduceValueBuffer)
-                    reduceResult.CopyTo(v);
+                fixed (byte* v = _storeValueBuffer)
+                    value.CopyTo(v);
             }
 
-            return _reduceValueBuffer;
+            return _storeValueBuffer;
         }
 
         public void Dispose()

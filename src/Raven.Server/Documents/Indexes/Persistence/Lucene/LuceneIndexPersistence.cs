@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
@@ -83,19 +84,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, indexEmptyEntries: true);
                     break;
                 case IndexType.AutoMapReduce:
-                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, indexEmptyEntries: true, reduceOutput: true);
+                    _converter = new LuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, indexEmptyEntries: true, storeValue: true);
                     break;
                 case IndexType.MapReduce:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, reduceOutput: true);
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, storeValue: true);
                     break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
+                    _converter = _index.SourceType == IndexSourceType.TimeSeries
+                        ? new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
+                        : new TimeSeriesAnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
                     break;
                 case IndexType.JavaScriptMap:
-                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
+                    _converter = _index.SourceType == IndexSourceType.TimeSeries
+                        ? new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries)
+                        : new TimeSeriesJintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries);
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, reduceOutput: true);
+                    _converter = new JintLuceneDocumentConverter(fields, index.Configuration.IndexMissingFieldsAsNull, index.Configuration.IndexEmptyEntries, storeValue: true);
                     break;
                 case IndexType.Faulty:
                     _converter = null;

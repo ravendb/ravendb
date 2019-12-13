@@ -4,11 +4,12 @@
     {
         public static string EscapeIfNecessary(string name)
         {
-            if (string.IsNullOrEmpty(name) || 
-                name == Constants.Documents.Indexing.Fields.DocumentIdFieldName || 
-                name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName || 
-                name == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName || 
-                name == Constants.Documents.Indexing.Fields.SpatialShapeFieldName )
+            if (string.IsNullOrEmpty(name) ||
+                name == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
+                name == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName ||
+                name == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName ||
+                name == Constants.Documents.Indexing.Fields.ValueFieldName ||
+                name == Constants.Documents.Indexing.Fields.SpatialShapeFieldName)
                 return name;
 
             var escape = false;

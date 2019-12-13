@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -7,13 +8,13 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public sealed class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
+    public class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
     {
         private readonly bool _isMultiMap;
         private IPropertyAccessor _propertyAccessor;
 
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool reduceOutput = false)
-            : base(fields, indexImplicitNull, indexEmptyEntries, reduceOutput)
+        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(fields, indexImplicitNull, indexEmptyEntries, storeValue, storeValueFieldName)
         {
             _isMultiMap = isMultiMap;
         }
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             else
                 accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
-            var reduceResult = _reduceOutput ? new DynamicJsonValue() : null;
+            var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
             foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
             {
@@ -75,15 +76,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     }
                 }
 
-                if (reduceResult != null && numberOfCreatedFields > 0)
+                if (storedValue != null && numberOfCreatedFields > 0)
                 {
-                    reduceResult[property.Key] = TypeConverter.ToBlittableSupportedType(value, flattenArrays: true);
+                    storedValue[property.Key] = TypeConverter.ToBlittableSupportedType(value, flattenArrays: true);
                 }
             }
 
-            if (_reduceOutput)
+            if (_storeValue)
             {
-                instance.Add(GetReduceResultValueField(Scope.CreateJson(reduceResult, indexContext)));
+                instance.Add(GetStoredValueField(Scope.CreateJson(storedValue, indexContext)));
                 newFields++;
             }
 
