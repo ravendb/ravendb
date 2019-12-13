@@ -977,7 +977,7 @@ namespace Raven.Server.ServerWide
 
                 var tasks = new List<Func<Task>>();
 
-                foreach (var record in ReadAllDatabases(context))
+                foreach (var record in GetAllDatabases(context))
                 {
                     using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
                     using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
@@ -2425,9 +2425,11 @@ namespace Raven.Server.ServerWide
             return index;
         }
 
-        public IEnumerable<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        public List<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, int start, int take)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            var results = new List<string>();
 
             var dbKey = prefix.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
@@ -2435,16 +2437,20 @@ namespace Raven.Server.ServerWide
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
                 {
                     if (take-- <= 0)
-                        yield break;
+                        break;
 
-                    yield return GetCurrentItemKey(result.Value);
+                    results.Add(GetCurrentItemKey(result.Value));
                 }
             }
+
+            return results;
         }
 
-        public IEnumerable<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        public List<string> GetDatabaseNames(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            var names = new List<string>();
 
             const string dbKey = "db/";
             using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
@@ -2452,16 +2458,20 @@ namespace Raven.Server.ServerWide
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     if (take-- <= 0)
-                        yield break;
+                        break;
 
-                    yield return GetCurrentItemKey(result.Value).Substring(3);
+                    names.Add(GetCurrentItemKey(result.Value).Substring(3));
                 }
             }
+
+            return names;
         }
 
-        public IEnumerable<DatabaseRecord> ReadAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        public List<DatabaseRecord> GetAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            var records = new List<DatabaseRecord>();
 
             const string dbKey = "db/";
             using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
@@ -2469,15 +2479,17 @@ namespace Raven.Server.ServerWide
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     if (take-- <= 0)
-                        yield break;
+                        break;
 
                     var doc = Read(context, GetCurrentItemKey(result.Value));
                     if (doc == null)
                         continue;
 
-                    yield return JsonDeserializationCluster.DatabaseRecord(doc);
+                    records.Add(JsonDeserializationCluster.DatabaseRecord(doc));
                 }
             }
+
+            return records;
         }
 
         public static unsafe string GetCurrentItemKey(Table.TableValueHolder result)
