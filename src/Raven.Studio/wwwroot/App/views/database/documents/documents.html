@@ -2,19 +2,19 @@
     <div class="flex-window stretch">
         <div class="flex-window-head">
             <div class="clearfix">
-            <div class="btn-group">
-                <button type="button" class="btn btn-primary" data-bind="click: newDocument">
-                    <i class="icon-new-document"></i>
-                    <span>New document</span>
-                </button>
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bind="enable: inSpecificCollection">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a href="#" data-bind="click: newDocumentInCollection.bind($root)"><i class="icon-new-document"></i> <span>New document in current collection</span></a></li>
-                </ul>
-            </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" data-bind="click: newDocument">
+                        <i class="icon-new-document"></i>
+                        <span>New document</span>
+                    </button>
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bind="enable: inSpecificCollection">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" data-bind="click: newDocumentInCollection.bind($root)"><i class="icon-new-document"></i> <span>New document in current collection</span></a></li>
+                    </ul>
+                </div>
                 <div class="btn-group-label" data-bind="css: { active: selectedItemsCount }" data-label="Selection" role="group">
                     <button type="button" class="btn btn-danger" data-bind="click: deleteSelected, css: { 'btn-spinner': spinners.delete() }, enable: deleteEnabled">
                         <span class="icon-trash"></span> <span>Delete</span>

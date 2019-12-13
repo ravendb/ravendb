@@ -21,7 +21,7 @@ import downloader = require("common/downloader");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
 
-type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent";
+type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
 
 interface connectedDocumentItem { 
     id: string;
@@ -56,6 +56,7 @@ class connectedDocuments {
     attachmentsInReadOnlyModeColumns: virtualColumn[];
     countersColumns: virtualColumn[];
     revisionCountersColumns: virtualColumn[];
+    timeSeriesColumns: virtualColumn[];
     
     private downloader = new downloader();
     currentDocumentIsStarred = ko.observable<boolean>(false);
@@ -66,14 +67,15 @@ class connectedDocuments {
     isAttachmentsActive = ko.pureComputed(() => connectedDocuments.currentTab() === "attachments");
     isRecentActive = ko.pureComputed(() => connectedDocuments.currentTab() === "recent");
     isRevisionsActive = ko.pureComputed(() => connectedDocuments.currentTab() === "revisions");
-    isCountersActive = ko.pureComputed(() => connectedDocuments.currentTab() === "counters");        
-    
+    isCountersActive = ko.pureComputed(() => connectedDocuments.currentTab() === "counters");
+    isTimeSeriesActive = ko.pureComputed(() => connectedDocuments.currentTab() === "timeSeries");
+
     isUploaderActive: KnockoutComputed<boolean>;
     
     isArtificialDocument: KnockoutComputed<boolean>;
     isHiloDocument: KnockoutComputed<boolean>;  
 
-    gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem | counterItem>>();
+    gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem>>();
     uploader: editDocumentUploader;
 
     constructor(document: KnockoutObservable<document>,
@@ -127,10 +129,10 @@ class connectedDocuments {
             {
                 extraClass: item => item.deletedRevision ? "deleted-revision" : ""
             });
-        const revisionCompareColumn = new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", x => `<i title="Compare document with this revision" class="icon-diff"></i>`, "25%",
+        const revisionCompareColumn = new actionColumn<connectedRevisionDocumentItem>(this.gridController() as virtualGridController<any>, (x, idx, e) => this.compareRevision(x, idx, e), "Diff", () => `<i title="Compare document with this revision" class="icon-diff"></i>`, "25%",
             {
                 extraClass: doc => doc.deletedRevision ? 'deleted-revision-compare' : '',
-                title: (item: connectedRevisionDocumentItem) => "Compare current document with this revision"
+                title: () => "Compare current document with this revision"
             }); 
         
         const isDeleteRevision = this.document().__metadata.hasFlag("DeleteRevision");
@@ -185,6 +187,19 @@ class connectedDocuments {
             new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Counter total value", "40%",
                 { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() })
         ];
+        
+        this.timeSeriesColumns = [
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Name", "200px",
+                { title: () => "Time Series Name" }),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.numberOfEntries, "Items count", "100px",
+                { title: (x) => "Series items count: " + x.numberOfEntries.toLocaleString() }),
+            new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
+                x => this.goToTimeSeriesEdit(x),
+                "Details",
+                `<i class="icon-edit"></i>`,
+                "70px",
+                { title: () => 'Go to time series details' })
+        ]
     }
 
     compositionComplete() {
@@ -195,6 +210,7 @@ class connectedDocuments {
             if (connectedDocuments.currentTab() === "attachments") {
                 return this.inReadOnlyMode() ? this.attachmentsInReadOnlyModeColumns : this.attachmentsColumns;
             }
+            
             if (connectedDocuments.currentTab() === "counters") {
                 const doc = this.document();
                 if (doc && doc.__metadata && doc.__metadata.hasFlag("Revision")) {
@@ -206,6 +222,11 @@ class connectedDocuments {
             if (connectedDocuments.currentTab() === "revisions") {
                 return this.revisionsColumns;
             }
+
+            if (connectedDocuments.currentTab() === "timeSeries") {
+                return this.timeSeriesColumns;
+            }
+            
             return this.docsColumns;
         });
 
@@ -217,10 +238,10 @@ class connectedDocuments {
         this.gridResetSubscription.dispose();
     }
 
-    private fetchCurrentTabItems(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem | attachmentItem | counterItem>> {
+    private fetchCurrentTabItems(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem>> {
         const doc = this.document();
         if (!doc) {
-            return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem | counterItem>();
+            return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem>();
         }
 
         switch (connectedDocuments.currentTab()) {
@@ -234,7 +255,9 @@ class connectedDocuments {
                 return this.fetchRevisionDocs(skip, take);
             case "counters": 
                 return this.crudActionsProvider().fetchCounters(this.searchInput().toLocaleLowerCase(), skip, take); 
-            default: return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem | counterItem>();
+            case "timeSeries":
+                return this.crudActionsProvider().fetchTimeSeries(this.searchInput().toLocaleLowerCase(), skip, take);
+            default: return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem>();
         }
     }
 
@@ -389,6 +412,10 @@ class connectedDocuments {
     activateCounters() {
         connectedDocuments.currentTab("counters");
     }
+
+    activateTimeSeries() {
+        connectedDocuments.currentTab("timeSeries");
+    }
     
     onDocumentDeleted() {
         this.recentDocuments.documentRemoved(this.db(), this.document().getId());
@@ -438,6 +465,10 @@ class connectedDocuments {
             href: appUrl.forEditDoc(docId, this.db()),
             deletedRevision: false
         }
+    }
+
+    goToTimeSeriesEdit(item: timeSeriesItem) { 
+        router.navigate(appUrl.forEditTimeSeries(item.name, this.document().getId(), this.db()));
     }
 }
 

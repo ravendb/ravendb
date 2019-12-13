@@ -20,7 +20,65 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TimeSeriesHandler : DatabaseRequestHandler
     {
+        
+        [RavenAction("/databases/*/timeseries/stats", "GET", AuthorizationStatus.ValidUser)]
+        public Task Stats()
+        {
+            var documentId = GetStringQueryString("docId");
+            
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    
+                    writer.WritePropertyName(nameof(TimeSeriesStats.DocumentId));
+                    writer.WriteString(documentId);
+                    writer.WriteComma();
+                    
+                    writer.WritePropertyName(nameof(TimeSeriesStats.TimeSeries));
+                    
+                    writer.WriteStartArray();
+                    
+                    var timeSeriesNames = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, documentId);
+                    
+                    var first = true;
+                    for (var i = 0; i < timeSeriesNames.Count; i++)
+                    {
+                        if (first == false)
+                        {
+                            writer.WriteComma();
+                        }
+                        first = false;
+                        
+                        var tsName = (string)timeSeriesNames.Items[i];
+                        var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, documentId, tsName, DateTime.MinValue, DateTime.MaxValue);
+                        var entries = reader.GetNumberOfEntries();
+                        
+                        writer.WriteStartObject();
+                        
+                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.Name));
+                        writer.WriteString(tsName);
+                        
+                        writer.WriteComma();
+                        
+                        writer.WritePropertyName(nameof(TimeSeriesItemDetail.NumberOfEntries));
+                        writer.WriteInteger(entries);
+                        
+                        writer.WriteEndObject();
+                    }
+                    
+                    writer.WriteEndArray();
 
+                    writer.WriteEndObject();
+                }    
+            }
+            
+            return Task.CompletedTask;
+        }
+        
+        
         [RavenAction("/databases/*/timeseries", "GET", AuthorizationStatus.ValidUser)]
         public Task Read()
         {

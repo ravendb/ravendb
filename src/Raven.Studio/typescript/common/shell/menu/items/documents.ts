@@ -63,6 +63,14 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             itemRouteToHighlight: "databases/documents"
         }),
+
+        new leafMenuItem({
+            route: "databases/ts/edit",
+            title: "Edit Time Series",
+            moduleId: "viewmodels/database/timeSeries/editTimeSeries",
+            nav: false,
+            itemRouteToHighlight: "databases/documents"
+        }),
         
         new leafMenuItem({
             route: "databases/cmpXchg/edit",

@@ -28,6 +28,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Refresh;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
@@ -461,6 +462,10 @@ namespace TypingsGenerator
             
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
+            
+            // time series
+            scripter.AddType(typeof(TimeSeriesStats));
+            scripter.AddType(typeof(TimeSeriesDetails));
             
             // studio configuration
             scripter.AddType(typeof(ServerWideStudioConfiguration));

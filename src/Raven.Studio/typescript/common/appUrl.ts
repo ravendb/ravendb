@@ -206,6 +206,19 @@ class appUrl {
         return "#databases/edit?" + collectionPart + databaseUrlPart + docIdUrlPart;
     }
 
+    static forCreateTimeSeries(docId: string, db: database | databaseInfo): string {
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const docIdUrlPart = docId ? "&docId=" + encodeURIComponent(docId) : "";
+        return "#databases/ts/edit?" + databaseUrlPart + docIdUrlPart;
+    }
+    
+    static forEditTimeSeries(tsName: string, docId: string, db: database | databaseInfo): string {
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const docIdUrlPart = docId ? "&docId=" + encodeURIComponent(docId) : "";
+        const tsNameUrlPart = tsName ? "&name=" + encodeURIComponent(tsName) : "";
+        return "#databases/ts/edit?" + databaseUrlPart + docIdUrlPart + tsNameUrlPart;
+    }
+
     static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);        

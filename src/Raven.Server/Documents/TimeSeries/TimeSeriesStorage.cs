@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             return new Reader(context, documentId, name, from, to);
         }
-
+        
         public class Reader
         {
             private readonly DocumentsOperationContext _context;
@@ -361,7 +361,6 @@ namespace Raven.Server.Documents.TimeSeries
 
             }
 
-
             internal class SeriesSummary
             {
                 public SeriesSummary(int numberOfValues)
@@ -375,7 +374,6 @@ namespace Raven.Server.Documents.TimeSeries
                 public double[] Min { get; set; }
 
                 public double[] Max { get; set; }
-
             }
 
             internal SeriesSummary GetSummary()
@@ -391,7 +389,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     if (_currentSegment.NumberOfEntries == 0)
                         continue;
-
+                    
                     for (int i = 0; i < _currentSegment.NumberOfValues; i++)
                     {
                         if (result.Count == 0)
@@ -412,7 +410,29 @@ namespace Raven.Server.Documents.TimeSeries
                         }
                     }
 
-                    result.Count += _currentSegment.SegmentValues.Span[0].Count;
+                    result.Count += _currentSegment.SegmentValues.Span[0].Count; //TODO or currentSegment.NumberOfEntries ??
+
+                } while (NextSegment(out _));
+
+                return result;
+            }
+            
+            public long GetNumberOfEntries()
+            {
+                if (Init() == false)
+                    return 0;
+
+                InitializeSegment(out _, out _currentSegment);
+
+                var result = 0L;
+
+                do
+                {
+                    
+                    if (_currentSegment.NumberOfEntries == 0)
+                        continue;
+                    
+                    result += _currentSegment.SegmentValues.Span[0].Count;
 
                 } while (NextSegment(out _));
 

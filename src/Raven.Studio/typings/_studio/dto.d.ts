@@ -92,6 +92,7 @@ interface documentMetadataDto {
     '@change-vector'?: string;
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
+    '@timeseries': Array<string>;
     '@expires'?: string;
     '@refresh'?: string;
 }
@@ -111,6 +112,18 @@ interface counterItem {
     counterName: string;
     totalCounterValue: number;
     counterValuesPerNode: Array<nodeCounterValue>;
+}
+
+interface attachmentItem {
+    documentId: string;
+    name: string;
+    contentType: string;
+    size: number;
+}
+
+interface timeSeriesItem {
+    name: string;
+    numberOfEntries: number;
 }
 
 interface documentAttachmentDto {
@@ -560,13 +573,6 @@ interface virtualColumnDto {
     serializedValue: string;
 }
 
-interface attachmentItem {
-    documentId: string;
-    name: string;
-    contentType: string;
-    size: number;
-}
-
 interface editDocumentCrudActions {
     countersCount: KnockoutComputed<number>;
     setCounter(counter: counterItem): void;
@@ -576,6 +582,9 @@ interface editDocumentCrudActions {
     attachmentsCount: KnockoutComputed<number>;
     fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>>;
     deleteAttachment(file: attachmentItem): void;
+    
+    timeSeriesCount: KnockoutComputed<number>;
+    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>>;
     
     revisionsCount: KnockoutObservable<number>;
     fetchRevisionsCount(docId: string, db: database): void;
