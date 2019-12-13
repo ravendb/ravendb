@@ -235,6 +235,13 @@
                             <div class="badge" data-bind="text: $root.crudActionsProvider().countersCount() || ''"></div>
                         </button>
                     </div>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-xs btn-default doc-time-series" data-bind="css: { active: isTimeSeriesActive() }, click: activateTimeSeries, disable: !$root.canViewTimeSeries()">
+                            <div class="icon-new-time-series"></div>
+                            Time Series
+                            <div class="badge" data-bind="text: $root.crudActionsProvider().timeSeriesCount() || ''"></div>
+                        </button>
+                    </div>
                     <div class="btn-group" id="revisions_pane" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: _.partial(activateRevisions, false), disable: !$root.canViewRevisions()">
                             <div class="icon-revisions"></div>
@@ -266,6 +273,14 @@
                             <i class="icon-new-counter"></i>
                             <span>Add Counter</span>
                         </button>
+                    </div>
+                </div>
+                <div class="flex-window-head" data-bind="visible: isTimeSeriesActive() && $root.canViewTimeSeries() && !$root.inReadOnlyMode()">
+                    <div class="padding padding-xs margin-top margin-top-sm">
+                        <a class="btn btn-sm btn-primary btn-block" data-bind="attr: { href: $root.createTimeSeriesUrl() }">
+                            <i class="icon-new-time-series"></i>
+                            <span>Add Time Series</span>
+                        </a>
                     </div>
                 </div>
                 <div class="flex-window-head" data-bind="visible: isRevisionsActive() && $root.canViewRevisions() && !$root.inReadOnlyMode(),

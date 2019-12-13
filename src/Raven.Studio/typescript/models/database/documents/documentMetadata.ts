@@ -30,6 +30,7 @@ class documentMetadata {
     
     attachments = ko.observableArray<documentAttachmentDto>();
     counters = ko.observableArray<string>();
+    timeSeries = ko.observableArray<string>();
     revisionCounters = ko.observableArray<revisionCounter>();
     
     changeVector = ko.observable<string>();
@@ -102,6 +103,7 @@ class documentMetadata {
             this.attachments(dto['@attachments']);
             
             this.counters(dto['@counters']);
+            this.timeSeries(dto['@timeseries']);
             
             const revisionCounter = dto['@counters-snapshot'];
             this.revisionCounters(revisionCounter ? _.map(revisionCounter, (v, k) => ({ name: k, value: v })): []);
@@ -119,6 +121,7 @@ class documentMetadata {
                     property.toUpperCase() !== '@attachments'.toUpperCase() &&
                     property.toUpperCase() !== '@counters'.toUpperCase() &&
                     property.toUpperCase() !== '@counters-snapshot'.toUpperCase() &&
+                    property.toUpperCase() !== '@timeseries'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase() &&
                     property.toUpperCase() !== '@change-vector'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
@@ -144,6 +147,7 @@ class documentMetadata {
             '@last-modified': this.lastModified(),
             '@attachments': this.attachments(),
             '@counters': this.counters(),
+            '@timeseries': this.timeSeries(),
             '@change-vector': this.changeVector()
         };
 
@@ -157,7 +161,7 @@ class documentMetadata {
     static filterMetadata(metaDto: documentMetadataDto, removedProps: any[] = null, isClonedDocument: boolean = false) {
         // We don't want to show certain reserved properties in the metadata text area.
         // Remove them from the DTO, restore them on save.
-        const metaPropsToRemove = ["@id", "@change-vector", "@last-modified", "@attachments", "@counters"];
+        const metaPropsToRemove = ["@id", "@change-vector", "@last-modified", "@attachments", "@counters", "@timeseries"];
 
         if (isClonedDocument) {
             metaPropsToRemove.push("@flags");

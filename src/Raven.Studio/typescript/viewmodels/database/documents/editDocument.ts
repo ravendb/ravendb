@@ -42,6 +42,8 @@ import getDocumentRevisionsCommand = require("commands/database/documents/getDoc
 import getDocumentRevisionsCountCommand = require("commands/database/documents/getDocumentRevisionsCountCommand");
 import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
 import forceRevisionCreationCommand = require("commands/database/documents/forceRevisionCreationCommand");
+import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
+import createTimeSeries = require("viewmodels/database/timeSeries/createTimeSeries");
 
 interface revisionToCompare {
     date: string;
@@ -79,6 +81,8 @@ class editDocument extends viewModelBase {
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
     isDeleteRevision: KnockoutComputed<boolean>;
+
+    createTimeSeriesUrl: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
     isClone = ko.observable(false);
@@ -140,6 +144,7 @@ class editDocument extends viewModelBase {
 
     canViewAttachments: KnockoutComputed<boolean>;
     canViewCounters: KnockoutComputed<boolean>;
+    canViewTimeSeries: KnockoutComputed<boolean>;
     canViewRevisions:  KnockoutComputed<boolean>;
     canViewRelated: KnockoutComputed<boolean>;
     
@@ -461,6 +466,11 @@ class editDocument extends viewModelBase {
             const id = this.document().getId();
             return appUrl.forEditDoc(id, this.activeDatabase());
         });
+        
+        this.createTimeSeriesUrl = ko.pureComputed(() => {
+            const id = this.document().getId();
+            return appUrl.forCreateTimeSeries(id, this.activeDatabase());
+        });
 
         this.canViewAttachments = ko.pureComputed(() => {
             if (this.isClone()) {
@@ -470,6 +480,13 @@ class editDocument extends viewModelBase {
         });
 
         this.canViewCounters = ko.pureComputed(() => {
+            if (this.isClone()) {
+                return true;
+            }
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+        });
+
+        this.canViewTimeSeries = ko.pureComputed(() => {
             if (this.isClone()) {
                 return true;
             }
@@ -1102,6 +1119,7 @@ class normalCrudActions implements editDocumentCrudActions {
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
     revisionsCount = ko.observable<number>();
+    timeSeriesCount: KnockoutComputed<number>;
 
     constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (id: string) => JQueryPromise<document>,
                 onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any, forcedRevisionCreation: boolean) => void | JQueryPromise<void>) {
@@ -1119,6 +1137,15 @@ class normalCrudActions implements editDocumentCrudActions {
             }
 
             return doc.__metadata.attachments().length;
+        });
+        
+        this.timeSeriesCount = ko.pureComputed(() => {
+            const doc = this.document();
+            if (!doc || !doc.__metadata || !doc.__metadata.timeSeries()) {
+                return 0;
+            }
+
+            return doc.__metadata.timeSeries().length;
         });
 
         this.countersCount = ko.pureComputed(() => {
@@ -1267,6 +1294,32 @@ class normalCrudActions implements editDocumentCrudActions {
 
         return fetchTask.promise();
     }
+    
+    fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
+        const doc = this.document();
+        
+        const fetchTask = $.Deferred<pagedResult<timeSeriesItem>>();
+        new getTimeSeriesStatsCommand(doc.getId(), this.db())
+            .execute()
+            .done(result => {
+                if (nameFilter) {
+                    result.TimeSeries = result.TimeSeries
+                        .filter(x => x.Name.toLocaleLowerCase().includes(nameFilter));
+                }
+
+                const mappedResults = result.TimeSeries
+                    .map(x => normalCrudActions.resultItemToTimeSeriesItem(x));
+
+                fetchTask.resolve({
+                    items: mappedResults,
+                    totalResultCount: result.TimeSeries.length
+                });
+            })
+            .fail(xhr => fetchTask.reject(xhr));
+        
+        
+        return fetchTask.promise();
+    }
 
     private static resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
         const counter = counterDetail;
@@ -1288,6 +1341,13 @@ class normalCrudActions implements editDocumentCrudActions {
             counterValuesPerNode: valuesPerNode
         };
     }
+    
+    private static resultItemToTimeSeriesItem(timeSeriesDetail: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesItemDetail): timeSeriesItem {
+        return {
+            numberOfEntries: timeSeriesDetail.NumberOfEntries,
+            name: timeSeriesDetail.Name
+        }
+    }
 
     fetchRevisionsCount(docId: string, db: database): void {
         new getDocumentRevisionsCountCommand(docId, db)
@@ -1296,7 +1356,7 @@ class normalCrudActions implements editDocumentCrudActions {
                 this.revisionsCount(result.RevisionsCount);
             });
     }
-    
+
     saveRelatedItems(targetDocumentId: string) {
         // no action required
         return $.when<void>(null);
@@ -1310,10 +1370,12 @@ class normalCrudActions implements editDocumentCrudActions {
 class clonedDocumentCrudActions implements editDocumentCrudActions {
     counters = ko.observableArray<counterItem>();
     attachments = ko.observableArray<attachmentItem>();
+    timeSeries = ko.observableArray<timeSeriesItem>();
     
     attachmentsCount: KnockoutComputed<number>;
     countersCount: KnockoutComputed<number>;
     revisionsCount = ko.observable<number>(0);
+    timeSeriesCount: KnockoutComputed<number>;
     
     private readonly parentView: editDocument;
     private readonly sourceDocumentId: string;
@@ -1341,6 +1403,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         
         this.attachmentsCount = ko.pureComputed(() => this.attachments().length);
         this.countersCount = ko.pureComputed(() => this.counters().length);
+        this.timeSeriesCount = ko.pureComputed(() => this.timeSeries().length);
     }
     
     setCounter(counter: counterItem) {
