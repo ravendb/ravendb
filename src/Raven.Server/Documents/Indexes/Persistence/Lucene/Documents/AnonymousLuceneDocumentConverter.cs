@@ -13,8 +13,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly bool _isMultiMap;
         private IPropertyAccessor _propertyAccessor;
 
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-            : base(fields, indexImplicitNull, indexEmptyEntries, storeValue, storeValueFieldName)
+        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+            : base(fields, indexImplicitNull, indexEmptyEntries, keyFieldName, storeValue, storeValueFieldName)
         {
             _isMultiMap = isMultiMap;
         }
