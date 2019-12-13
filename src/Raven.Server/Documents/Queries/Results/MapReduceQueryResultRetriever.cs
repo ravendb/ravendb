@@ -68,14 +68,14 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
         {
-            var reduceValue = input.GetField(_storedValueFieldName).GetBinaryValue(state);
+            var storedValue = input.GetField(_storedValueFieldName).GetBinaryValue(state);
 
-            var allocation = _context.GetMemory(reduceValue.Length);
+            var allocation = _context.GetMemory(storedValue.Length);
 
             UnmanagedWriteBuffer buffer = new UnmanagedWriteBuffer(_context, allocation);
-            buffer.Write(reduceValue, 0, reduceValue.Length);
+            buffer.Write(storedValue, 0, storedValue.Length);
 
-            var result = new BlittableJsonReaderObject(allocation.Address, reduceValue.Length, _context, buffer);
+            var result = new BlittableJsonReaderObject(allocation.Address, storedValue.Length, _context, buffer);
 
             return new Document
             {

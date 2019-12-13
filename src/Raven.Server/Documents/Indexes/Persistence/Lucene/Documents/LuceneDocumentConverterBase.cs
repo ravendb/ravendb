@@ -73,6 +73,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected readonly Dictionary<string, IndexField> _fields;
         private readonly bool _indexImplicitNull;
         private readonly bool _indexEmptyEntries;
+        private readonly string _keyFieldName;
         protected readonly bool _storeValue;
 
         private byte[] _storeValueBuffer;
@@ -86,7 +87,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        protected LuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull, bool indexEmptyEntries, bool storeValue, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+        protected LuceneDocumentConverterBase(
+            ICollection<IndexField> fields,
+            bool indexImplicitNull,
+            bool indexEmptyEntries,
+            string keyFieldName = null,
+            bool storeValue = false,
+            string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
         {
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
@@ -98,6 +105,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
+            _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             _storeValue = storeValue;
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
@@ -509,10 +517,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
         {
-            if (_storeValue == false)
-                return GetOrCreateField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
-
-            return GetOrCreateField(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            return GetOrCreateField(_keyFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
         protected Field GetOrCreateSourceDocumentIdField(LazyStringValue key)
