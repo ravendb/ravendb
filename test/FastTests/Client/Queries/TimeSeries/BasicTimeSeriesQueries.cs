@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
-using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -128,7 +124,6 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                return;
                 // delete time series
 
                 using (var session = store.OpenSession())
@@ -139,21 +134,35 @@ namespace FastTests.Client.Queries.TimeSeries
                     session.SaveChanges();
                 }
 
-                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(2, results.Count);
+                    Assert.Contains(7, results.Select(x => x.HeartBeat));
+                    Assert.Contains(now1.Date, results.Select(x => x.Date));
+                    Assert.Contains(3, results.Select(x => x.HeartBeat));
+                    Assert.Contains(now2.Date, results.Select(x => x.Date));
+                }
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                        .Statistics(out var stats)
+                        .ToList();
 
-                var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("7", terms);
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Contains(7, results.Select(x => x.HeartBeat));
+                    Assert.Contains(now1.Date, results.Select(x => x.Date));
+                }
 
                 // delete document
 
@@ -165,21 +174,31 @@ namespace FastTests.Client.Queries.TimeSeries
                     session.SaveChanges();
                 }
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.True(staleness.IsStale);
-                Assert.Equal(1, staleness.StalenessReasons.Count);
-                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Contains(7, results.Select(x => x.HeartBeat));
+                    Assert.Contains(now1.Date, results.Select(x => x.Date));
+                }
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                        .Statistics(out var stats)
+                        .ToList();
 
-                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
-                Assert.Equal(0, terms.Length);
-
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(0, results.Count);
+                }
 
                 // delete document - this time don't stop indexing to make sure doc deletion will be noticed by the index
 
@@ -192,12 +211,19 @@ namespace FastTests.Client.Queries.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                        .Statistics(out var stats)
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
 
-                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
-                Assert.Equal(1, terms.Length);
-                Assert.Contains("9", terms);
-
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Contains(9, results.Select(x => x.HeartBeat));
+                    Assert.Contains(now1.Date, results.Select(x => x.Date));
+                    Assert.Contains("companies/2", results.Select(x => x.User));
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -205,13 +231,16 @@ namespace FastTests.Client.Queries.TimeSeries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                        .Statistics(out var stats)
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
 
-                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
-                Assert.False(staleness.IsStale);
-
-                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
-                Assert.Equal(0, terms.Length);
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(0, results.Count);
+                }
             }
         }
     }
