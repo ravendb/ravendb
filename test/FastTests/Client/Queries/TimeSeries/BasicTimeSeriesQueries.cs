@@ -15,11 +15,16 @@ namespace FastTests.Client.Queries.TimeSeries
         {
         }
 
-        private class TsIndexResult
+        private class TsMapIndexResult
         {
-            public long HeartBeat { get; set; }
+            public double HeartBeat { get; set; }
             public DateTime Date { get; set; }
             public string User { get; set; }
+        }
+
+        private class TsMapReduceIndexResult : TsMapIndexResult
+        {
+            public long Count { get; set; }
         }
 
         [Fact]
@@ -56,7 +61,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -70,7 +75,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -93,7 +98,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -110,7 +115,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -136,7 +141,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -154,7 +159,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -176,7 +181,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -192,7 +197,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .ToList();
 
@@ -213,7 +218,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
@@ -233,7 +238,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Query<TsIndexResult>("MyTsIndex")
+                    var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
@@ -243,5 +248,235 @@ namespace FastTests.Client.Queries.TimeSeries
                 }
             }
         }
+
+        [Fact]
+        public void BasicMapReduceIndex_Query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var today = DateTime.Today;
+                var tomorrow = today.AddDays(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User();
+                    session.Store(user, "users/1");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.TimeSeriesFor(user).Append("HeartRate", today.AddHours(i), "abc", new double[] { 180 + i });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                string indexName = "AverageHeartRateDaily/ByDateAndUser";
+
+                var result = store.Maintenance.Send(new PutIndexesOperation(new TimeSeriesIndexDefinition
+                {
+                    Name = indexName,
+                    Maps = {
+                    "from ts in timeSeries.Users.HeartRate " +
+                    "from entry in ts.Entries " +
+                    "select new { " +
+                    "   HeartBeat = entry.Value, " +
+                    "   Date = new DateTime(entry.TimeStamp.Date.Year, entry.TimeStamp.Date.Month, entry.TimeStamp.Date.Day), " +
+                    "   User = ts.DocumentId.ToString(), " + // TODO arek RavenDB-14322
+                    "   Count = 1" +
+                    "}" },
+                    Reduce = "from r in results " +
+                             "group r by new { r.Date, r.User } into g " +
+                             "let sumHeartBeat = g.Sum(x => x.HeartBeat) " +
+                             "let sumCount = g.Sum(x => x.Count) " +
+                             "select new {" +
+                             "  HeartBeat = sumHeartBeat / sumCount, " +
+                             "  Date = g.Key.Date," +
+                             "  User = g.Key.User, " +
+                             "  Count = sumCount" +
+                             "}"
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(0, results.Count);
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Contains(184.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(today.Date, results.Select(x => x.Date));
+                    Assert.Contains("users/1", results.Select(x => x.User));
+                    Assert.Contains(10, results.Select(x => x.Count));
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add more heart rates
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    for (int i = 0; i < 20; i++)
+                    {
+                        session.TimeSeriesFor(user).Append("HeartRate", tomorrow.AddHours(i), "abc", new double[] { 200 + i });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+                    Assert.Contains(184.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(today.Date, results.Select(x => x.Date));
+                    Assert.Contains("users/1", results.Select(x => x.User));
+                    Assert.Contains(10, results.Select(x => x.Count));
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(2, results.Count);
+
+                    Assert.Contains(184.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(today.Date, results.Select(x => x.Date));
+                    Assert.Contains(10, results.Select(x => x.Count));
+
+                    Assert.Contains(209.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(tomorrow.Date, results.Select(x => x.Date));
+                    Assert.Contains(20, results.Select(x => x.Count));
+
+                    Assert.Equal(2, results.Select(x => x.User == "users/1").Count());
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                //// delete some time series
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.TimeSeriesFor(user).Remove("HeartRate", today.AddHours(i));
+                        session.TimeSeriesFor(user).Remove("HeartRate", tomorrow.AddHours(i));
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(2, results.Count);
+
+                    Assert.Contains(184.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(today.Date, results.Select(x => x.Date));
+                    Assert.Contains(10, results.Select(x => x.Count));
+
+                    Assert.Contains(209.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(tomorrow.Date, results.Select(x => x.Date));
+                    Assert.Contains(20, results.Select(x => x.Count));
+
+                    Assert.Equal(2, results.Select(x => x.User == "users/1").Count());
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Contains(214.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(tomorrow.Date, results.Select(x => x.Date));
+                    Assert.Contains(10, results.Select(x => x.Count));
+
+                    Assert.Equal(1, results.Select(x => x.User == "users/1").Count());
+                }
+
+                //// delete document
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.True(stats.IsStale);
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Contains(214.5, results.Select(x => x.HeartBeat));
+                    Assert.Contains(tomorrow.Date, results.Select(x => x.Date));
+                    Assert.Contains(10, results.Select(x => x.Count));
+
+                    Assert.Equal(1, results.Select(x => x.User == "users/1").Count());
+                }
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<TsMapReduceIndexResult>(indexName)
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.False(stats.IsStale);
+                    Assert.Equal(0, results.Count);
+                }
+            }
+        }
+
     }
 }
