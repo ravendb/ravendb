@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (Constants.Documents.Metadata.Id == property)
                 {
-                    GetCsvWriter().WriteField(res.Id);
+                    GetCsvWriter().WriteField(res.Id.ToString());
                 }
                 else
                 {

@@ -39,7 +39,7 @@ namespace SlowTests.Cluster
         }
 
 
-        [Fact]
+        [Fact64Bit]
         public async Task RavenDB_14044()
         {
             DoNotReuseServer();
@@ -65,14 +65,15 @@ namespace SlowTests.Cluster
                         lock (sb)
                         {
                             sb.AppendLine(value);
+
+                            const string expectedValue = "Exception occurred while reading the report from the connection";
+                            if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
+                                throw new InvalidOperationException($"Exception occurred while reading the report from the connection. Buffer: {sb}");
                         }
-                        const string expectedValue = "Exception occurred while reading the report from the connection";
-                        if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
-                            throw new InvalidOperationException("Exception occurred while reading the report from the connection");
                     }
                 });
 
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 25; i++)
                 {
                     if (task.IsFaulted)
                         await task;
@@ -80,7 +81,7 @@ namespace SlowTests.Cluster
                     try
                     {
                         var name = GetDatabaseName(new string('a', i));
-                        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name),2));
+                        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name), 2));
                         //     await store.Maintenance.ForDatabase(name).SendAsync(new CreateSampleDataOperation());
                     }
                     catch (ConcurrencyException)

@@ -65,7 +65,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AcquirePathCache(out Dictionary<StringSegment, object> pathCache, out Dictionary<int, object> pathCacheByIndex)
         {
-            // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing.
+            // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing. 
             if (_numberOfAllocatedPathCaches >= 0)
             {
                 var cache = _allocatePathCaches[_numberOfAllocatedPathCaches--];
@@ -78,7 +78,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance);
+            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance); 
             pathCacheByIndex = new Dictionary<int, object>(NumericEqualityComparer.BoxedInstanceInt32);
         }
 
@@ -151,6 +151,7 @@ namespace Sparrow.Json
                 }
 
                 _pinnedBufferPool.Free(this);
+                
             }
 
             ~ManagedPinnedBuffer()
@@ -177,7 +178,7 @@ namespace Sparrow.Json
 
                     return (clean, buffer);
                 }
-                catch
+                catch 
                 {
                     clean.Dispose();
                     throw;
@@ -285,7 +286,7 @@ namespace Sparrow.Json
             {
                 return AllocateInstance(_smallBufferSegments);
             }
-        }
+        }       
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
@@ -304,7 +305,7 @@ namespace Sparrow.Json
         public static JsonOperationContext ShortTermSingleUse()
         {
             return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.None);
-        }
+        }       
 
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
@@ -402,7 +403,7 @@ namespace Sparrow.Json
             {
                 _buffer = buffer;
                 _parent = parent;
-            }
+            }  
 
             public void Dispose()
             {
@@ -416,7 +417,7 @@ namespace Sparrow.Json
 
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
-            }
+            }         
 
             private static void ThrowParentWasDisposed()
             {
@@ -493,7 +494,7 @@ namespace Sparrow.Json
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
             EnsureNotDisposed();
-
+                                  
             if (_fieldNames.TryGetValue(key, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
@@ -959,7 +960,7 @@ namespace Sparrow.Json
             // if the generation has changed, that means that we had reset the context
             // this can happen if we were waiting on an async call for a while, got timed out / error / something
             // and the context was reset before we got back from the async call
-            // since the full context was reset, there is no point in trying to dispose things, they were already
+            // since the full context was reset, there is no point in trying to dispose things, they were already 
             // taken care of
             if (generation == _generation)
             {
@@ -1012,8 +1013,8 @@ namespace Sparrow.Json
 
                 _arenaAllocatorForLongLivedValues = null;
                 // at this point, the long lived section is far too large, this is something that can happen
-                // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K
-                // property names before this kicks in, which is a true abuse of the system. In this case,
+                // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
+                // property names before this kicks in, which is a true abuse of the system. In this case, 
                 // in order to avoid unlimited growth, we'll reset the long lived section
                 allocatorForLongLivedValues.Dispose();
 
@@ -1037,7 +1038,7 @@ namespace Sparrow.Json
 
                 _pooledArrays = null;
             }
-
+            
             ClearUnreturnedPathCache();
         }
 
@@ -1179,7 +1180,7 @@ namespace Sparrow.Json
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
-            }
+            }            
         }
 
         public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
@@ -1240,7 +1241,7 @@ namespace Sparrow.Json
             }
 
             EnsureNotDisposed();
-
+            
             stream.SetLength(0);
             _cachedMemoryStreams.Push(stream);
             _sizeOfMemoryStreamCache += stream.Capacity;
@@ -1293,8 +1294,8 @@ namespace Sparrow.Json
         {
             if (_pooledArrays == null)
                 _pooledArrays = new Dictionary<Type, (Action<Array> Releaser, List<Array> Array)>();
-
-
+            
+            
 
             if (_pooledArrays.TryGetValue(typeof(T), out var allocationsArray) == false)
             {

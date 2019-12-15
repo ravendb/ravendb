@@ -1495,9 +1495,6 @@ namespace Raven.Server.Documents.Indexes
 
             stats.AddWriteError(iwe);
 
-            if (iwe.InnerException is SystemException) // Don't count transient errors
-                return;
-
             var writeErrors = Interlocked.Increment(ref _writeErrors);
 
             if (State == IndexState.Error || writeErrors < WriteErrorsLimit)

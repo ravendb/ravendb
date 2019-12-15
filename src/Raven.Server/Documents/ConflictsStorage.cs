@@ -872,6 +872,8 @@ namespace Raven.Server.Documents
             else
                 return ConflictStatus.Update; //document with 'id' doesn't exist locally, so just do PUT
 
+            context.SkipChangeVectorValidation = context.DocumentDatabase.DocumentsStorage.TryRemoveUnusedIds(ref local);
+
             status = ChangeVectorUtils.GetConflictStatus(changeVector, local);
             if (status == ConflictStatus.Conflict)
             {

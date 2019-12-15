@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 entryStream.Flush();
                             }
                         }
-                        var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext).ToList();
+                        var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext);
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
 
                         //this means no databases are defined in the cluster

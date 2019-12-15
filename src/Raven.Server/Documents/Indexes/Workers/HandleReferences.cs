@@ -7,8 +7,10 @@ using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -176,19 +178,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     batchCount++;
 
-                                    var documents = new List<Document>();
-                                    foreach (var key in _indexStorage
-                                        .GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
-                                    {
-                                        using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
-                                        {
-                                            // when there is conflict, we need to apply same behavior as if the document would not exist
-                                            var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
-
-                                            if (doc != null && doc.Etag <= lastIndexedEtag)
-                                                documents.Add(doc);
-                                        }
-                                    }
+                                    var documents = GetDocumentFromCollectionThatReference(databaseContext, indexContext, collection, referencedDocument, lastIndexedEtag);
 
                                     using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats, _index.Type))
                                     {
@@ -210,10 +200,17 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 _index.MapsPerSec.MarkSingleThreaded(numberOfResults);
                                             }
-                                            catch (Exception e)
+                                            catch (Exception e) when (e.IsIndexError())
                                             {
+                                                docsEnumerator.OnError();
+                                                _index.ErrorIndexIfCriticalException(e);
+
+                                                collectionStats.RecordMapError();
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
+
+                                                collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
+                                                                                        $"Exception: {e}");
                                             }
 
                                             _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
@@ -259,6 +256,34 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
+        }
+
+        private IEnumerable<Document> GetDocumentFromCollectionThatReference(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, string collection, Reference referencedDocument, long lastIndexedEtag)
+        {
+            foreach (var key in _indexStorage.GetDocumentKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
+            {
+                using (GetLower(out Slice loweredKey))
+                {
+                    // when there is conflict, we need to apply same behavior as if the document would not exist
+                    var doc = _documentsStorage.Get(databaseContext, loweredKey, throwOnConflict: false);
+
+                    if (doc == null)
+                        continue;
+
+                    if (doc.Etag > lastIndexedEtag)
+                    {
+                        doc.Dispose();
+                        continue;
+                    }
+
+                    yield return doc;
+                }
+
+                unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetLower(out Slice loweredKey)
+                {
+                    return DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out loweredKey);
+                }
+            }
         }
 
         public unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

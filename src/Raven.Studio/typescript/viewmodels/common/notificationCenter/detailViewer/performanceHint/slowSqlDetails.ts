@@ -64,7 +64,7 @@ class slowSqlDetails extends abstractPerformanceHintDetails {
                     } else {
                         const value = column.getCellValue(details);
                         if (value) {
-                            onValue(generalUtils.escapeHtml(value));
+                            onValue(generalUtils.escapeHtml(value), value);
                         }
                     }
                 }

@@ -5,6 +5,7 @@ using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -36,6 +37,8 @@ namespace Raven.Server.Documents.Indexes
         public const int MaxNumberOfKeptErrors = 500;
 
         internal bool SimulateCorruption = false;
+
+        internal Exception SimulateIndexWriteException = null;
 
         public IndexStorage(Index index, TransactionContextPool contextPool, DocumentDatabase database)
         {
@@ -328,6 +331,9 @@ namespace Raven.Server.Documents.Indexes
             if (SimulateCorruption)
                 SimulateCorruptionError();
 
+            if (SimulateIndexWriteException != null)
+                SimulateIndexWriteError(SimulateIndexWriteException);
+
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Writing last etag for '{_index.Name}'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
@@ -347,6 +353,11 @@ namespace Raven.Server.Documents.Indexes
                 _environment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
                 throw;
             }
+        }
+
+        private void SimulateIndexWriteError(Exception inner)
+        {
+            throw new IndexWriteException(inner);
         }
 
         public class SimulatedVoronUnrecoverableErrorException : VoronUnrecoverableErrorException
