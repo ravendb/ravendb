@@ -137,31 +137,19 @@ where Tag = 'watches/fitbit'
 
                     var values = result[0].Results;
 
-                    Assert.Equal(6, values.Length);
+                    Assert.Equal(3, values.Length);
 
                     Assert.Equal(new[] { 59d }, values[0].Values);
                     Assert.Equal("watches/fitbit", values[0].Tag);
                     Assert.Equal(baseline.AddMinutes(61), values[0].Timestamp);
 
-                    Assert.Equal(new[] { 79d }, values[1].Values);
-                    Assert.Equal("watches/apple", values[1].Tag);
-                    Assert.Equal(baseline.AddMinutes(62), values[1].Timestamp);
+                    Assert.Equal(new[] { 69d }, values[1].Values);
+                    Assert.Equal("watches/fitbit", values[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(63), values[1].Timestamp);
 
-                    Assert.Equal(new[] { 69d }, values[2].Values);
+                    Assert.Equal(new[] { 169d }, values[2].Values);
                     Assert.Equal("watches/fitbit", values[2].Tag);
-                    Assert.Equal(baseline.AddMinutes(63), values[2].Timestamp);
-
-                    Assert.Equal(new[] { 159d }, values[3].Values);
-                    Assert.Equal("watches/apple", values[3].Tag);
-                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), values[3].Timestamp);
-
-                    Assert.Equal(new[] { 179d }, values[4].Values);
-                    Assert.Equal("watches/apple", values[4].Tag);
-                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), values[4].Timestamp);
-
-                    Assert.Equal(new[] { 169d }, values[5].Values);
-                    Assert.Equal("watches/fitbit", values[5].Tag);
-                    Assert.Equal(baseline.AddMonths(1).AddMinutes(61), values[5].Timestamp);
+                    Assert.Equal(baseline.AddMonths(1).AddMinutes(63), values[2].Timestamp);
 
                 }
             }
