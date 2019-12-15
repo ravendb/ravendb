@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class NextIdentityForCommand : RavenCommand<long>, IRaftCommand
+    public class NextIdentityForCommand : RavenCommand<long>, IRaftCommand, IBroadcast
     {
         private readonly string _id;
 
@@ -38,10 +39,19 @@ namespace Raven.Client.Documents.Commands
                 return; // never hit
             }
 
-
             Result = results;
         }
 
         public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+        public IBroadcast PrepareToBroadcast(JsonOperationContext context, DocumentConventions conventions)
+        {
+            return new NextIdentityForCommand(this);
+        }
+
+        private NextIdentityForCommand(NextIdentityForCommand copy) : base(copy)
+        {
+            RaftUniqueRequestId = copy.RaftUniqueRequestId;
+            _id = copy._id;
+        }
     }
 }
