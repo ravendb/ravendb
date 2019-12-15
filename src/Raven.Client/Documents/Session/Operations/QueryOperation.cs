@@ -201,7 +201,7 @@ namespace Raven.Client.Documents.Session.Operations
                         : value;
                 }
 
-                var isTimeSeriesField = fieldsToFetch.Projections[0].StartsWith(Constants.TimeSeries.AggregationFunction);
+                var isTimeSeriesField = fieldsToFetch.Projections[0].StartsWith(Constants.TimeSeries.QueryFunction);
 
                 if (isProjectInto == false || isTimeSeriesField)
                 {

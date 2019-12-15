@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (DeclaredFunctions == null)
                 DeclaredFunctions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase);
 
-            func.Name = Constants.TimeSeries.AggregationFunction + DeclaredFunctions.Count;
+            func.Name = Constants.TimeSeries.QueryFunction + DeclaredFunctions.Count;
 
             return DeclaredFunctions.TryAdd(func.Name, func);
         }

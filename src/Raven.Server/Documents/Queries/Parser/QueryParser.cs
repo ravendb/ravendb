@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Esprima;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Extensions;
 using Sparrow;
-using static Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -28,6 +26,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         private bool _insideTimeSeriesBody;
+        public const string TimeSeries = "timeseries";
 
         public QueryScanner Scanner = new QueryScanner();
         private Dictionary<StringSegment, SynteticWithQuery> _synteticWithQueries;
@@ -1265,7 +1264,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (isFunc == false)
             {
-                if (Scanner.TryScan(Constants.TimeSeries.AggregationFunction) == false)
+                if (Scanner.TryScan(TimeSeries) == false)
                     ThrowParseException("DECLARE clause found but missing 'function' keyword");
             }
 
@@ -1555,7 +1554,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryExpression expr;
                 if (Field(out var field))
                 {
-                    if (field.FieldValue == Constants.TimeSeries.SelectFieldName)
+                    if (field.FieldValue == TimeSeries)
                     {
                         expr = GetTimeSeriesExpression(query);
                     }

@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Session
             timeSeriesQuery.Invoke(builder);
 
             var fields = new[] { $"{Constants.TimeSeries.SelectFieldName}({builder.Query})" };
-            var projections = new[] { Constants.TimeSeries.AggregationFunction };
+            var projections = new[] { Constants.TimeSeries.QueryFunction };
 
             return SelectFields<TTs>(new QueryData(fields, projections));
         }
