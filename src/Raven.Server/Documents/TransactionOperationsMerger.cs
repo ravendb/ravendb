@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Json;
+using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -61,7 +62,8 @@ namespace Raven.Server.Documents
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
             _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
-            _timeToCheckHighDirtyMemory = TimeSpan.FromSeconds(_parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod);
+            _timeToCheckHighDirtyMemory = _parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriodInSec;
+            _lastHighDirtyMemCheck = _parent.Time.GetUtcNow();
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(DatabasePerformanceMetrics.MetricType.GeneralWait, 256, 1);
@@ -809,7 +811,7 @@ namespace Raven.Server.Documents
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
-                    var percentageFromPhysicalMem = _parent.Configuration.Memory.PercentageOfTemporaryDirtyMemoryAllowed;
+                    var percentageFromPhysicalMem = _parent.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
             context.TransactionMarkerOffset = 1;  // ensure that we are consistent here and don't use old values
             var sp = Stopwatch.StartNew();
             do
@@ -829,8 +831,8 @@ namespace Raven.Server.Documents
 
                 if (_parent.Configuration.Memory.EnableHighTemporaryDirtyMemoryUse)
                 {
-                    var now = DateTime.UtcNow;
-                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory) // we do not need to test scratch dirty mem every write
+                    var now = _parent.Time.GetUtcNow();
+                    if (now - _lastHighDirtyMemCheck > _timeToCheckHighDirtyMemory.AsTimeSpan) // we do not need to test scratch dirty mem every write
                     {
                         if (MemoryInformation.IsHighDirtyMemory(percentageFromPhysicalMem, out var details))
                         {
@@ -1116,8 +1118,8 @@ namespace Raven.Server.Documents
         }
 
         private RecordingTx _recording = default;
-        private DateTime _lastHighDirtyMemCheck = DateTime.UtcNow;
-        private readonly TimeSpan _timeToCheckHighDirtyMemory;
+        private DateTime _lastHighDirtyMemCheck;
+        private readonly TimeSetting _timeToCheckHighDirtyMemory;
 
         private struct RecordingTx
         {
