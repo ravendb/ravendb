@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -73,7 +74,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
+                using (var session = (DocumentSession)store.OpenSession())
                 {
                     var results = session.Query<TsMapIndexResult>("MyTsIndex")
                         .Statistics(out var stats)
@@ -84,6 +85,10 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Equal(7, results[0].HeartBeat);
                     Assert.Equal(now1.Date, results[0].Date);
                     Assert.Equal("companies/1", results[0].User);
+
+                    // check if we are tracking the results
+                    Assert.Equal(0, session.DocumentsById.Count);
+                    Assert.Equal(0, session.DocumentsByEntity.Count);
                 }
 
                 store.Maintenance.Send(new StopIndexingOperation());
@@ -312,7 +317,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
+                using (var session = (DocumentSession)store.OpenSession())
                 {
                     var results = session.Query<TsMapReduceIndexResult>(indexName)
                         .Statistics(out var stats)
@@ -324,6 +329,10 @@ namespace FastTests.Client.Queries.TimeSeries
                     Assert.Contains(today.Date, results.Select(x => x.Date));
                     Assert.Contains("users/1", results.Select(x => x.User));
                     Assert.Contains(10, results.Select(x => x.Count));
+
+                    // check if we are tracking the results
+                    Assert.Equal(0, session.DocumentsById.Count);
+                    Assert.Equal(0, session.DocumentsByEntity.Count);
                 }
 
                 store.Maintenance.Send(new StopIndexingOperation());
