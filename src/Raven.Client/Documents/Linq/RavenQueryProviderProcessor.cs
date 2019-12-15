@@ -2187,10 +2187,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
-                        if (newExpression.Arguments[index] is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
+                        if (newExpression.Arguments[index] is MethodCallExpression mce)
                         {
-                            HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);
-                            continue;
+                            if (LinqPathProvider.IsCounterCall(mce))
+                            {
+                                HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);
+                                continue;
+                            }
+
+                            if (LinqPathProvider.IsTimeSeriesCall(mce))
+                            {
+                                HandleSelectTimeSeries(mce, newExpression.Members[index]);
+                                continue;
+                            }
                         }
 
                         //lambda 2 js
@@ -2249,10 +2258,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             continue;
                         }
 
-                        if (field.Expression is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
+                        if (field.Expression is MethodCallExpression mce)
                         {
-                            HandleSelectCounter(mce, lambdaExpression, field.Member);
-                            continue;
+                            if (LinqPathProvider.IsCounterCall(mce))
+                            {
+                                HandleSelectCounter(mce, lambdaExpression, field.Member);
+                                continue;
+                            }
+
+                            if (LinqPathProvider.IsTimeSeriesCall(mce))
+                            {
+                                HandleSelectTimeSeries(mce, field.Member);
+                                continue;
+                            }
                         }
 
                         //lambda 2 js
@@ -2279,7 +2297,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         if (expressionInfo.Type == typeof(ITimeSeriesQueryable))
                         {
-                            CreateTimeSeriesPath(expressionInfo, ref path, out alias);
+                            CreateTimeSeriesPath(expressionInfo.Args, ref path, out alias);
                         }
 
                         else
@@ -2296,13 +2314,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private void CreateTimeSeriesPath(ExpressionInfo expressionInfo, ref string path, out string alias)
+        private void CreateTimeSeriesPath(string[] args, ref string path, out string alias)
         {
-            if (expressionInfo.Args.Length == 2)
+            if (args.Length == 2)
             {
                 if (_fromAlias == null)
                 {
-                    AddFromAlias(expressionInfo.Args[0]);
+                    AddFromAlias(args[0]);
                 }
                 else
                 {
@@ -2313,7 +2331,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             alias = Constants.TimeSeries.QueryFunction + FieldsToFetch.Count;
 
-            path = $"{path}({expressionInfo.Args[expressionInfo.Args.Length - 1]})";
+            path = $"{path}({args[args.Length - 1]})";
         }
 
         private void AddFromAliasOrRenameArgument(ref string arg)
@@ -2353,6 +2371,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             path = $"{path}({args})";
         }
+
+        private void HandleSelectTimeSeries(MethodCallExpression methodCallExpression, MemberInfo member)
+        {
+            var tsResult = _linqPathProvider.CreateTimeSeriesResult(methodCallExpression);
+            CreateTimeSeriesPath(tsResult.Args, ref tsResult.Path, out _);
+            AddToFieldsToFetch(tsResult.Path, GetSelectPath(member));
+        }
+
 
         private string GetSelectPathOrConstantValue(MemberExpression member)
         {

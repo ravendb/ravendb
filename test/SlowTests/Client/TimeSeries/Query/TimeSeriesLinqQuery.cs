@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,6 +41,15 @@ namespace SlowTests.Client.TimeSeries.Query
 
             public DateTime EndOfWarranty { get; set; }
 
+        }
+
+        private class QueryResult
+        {
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+
+            public TimeSeriesAggregation HeartRate { get; set; }
         }
 
         [Fact]
@@ -517,6 +527,159 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(179, agg[1].Max[0]);
                     Assert.Equal(169, agg[1].Avg[0]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_SimpleProjectionToAnonymousClass()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "ayende",
+                        Age = 30
+                    }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Age > 21)
+                        .Select(u => new
+                        {
+                            u.Name,
+                            Heartrate = RavenQuery.TimeSeries(u, "Heartrate")
+                                .Where(ts => ts.Tag == "watches/fitbit")
+                                .GroupBy("1 month")
+                                .Select(g => new
+                                {
+                                    Avg = g.Average(),
+                                    Max = g.Max(),
+                                    Min = g.Min()
+                                })
+                                .ToList()
+                        });
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("ayende", result[0].Name);
+
+                    Assert.Equal(4, result[0].Heartrate.Count);
+
+                    var agg = result[0].Heartrate.Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(69, agg[0].Max[0]);
+                    Assert.Equal(59, agg[0].Min[0]);
+                    Assert.Equal(64, agg[0].Avg[0]);
+
+                    Assert.Equal(179, agg[1].Max[0]);
+                    Assert.Equal(169, agg[1].Min[0]);
+                    Assert.Equal(174, agg[1].Avg[0]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_SimpleMemberInitProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "ayende",
+                        Age = 30
+                    }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+
+                    session.TimeSeriesFor("users/ayende")
+                        .Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Age > 21)
+                        .Select(u => new QueryResult
+                        {
+                            Id = u.Id,
+                            Name = u.Name,
+                            HeartRate = RavenQuery.TimeSeries(u, "Heartrate")
+                                .Where(ts => ts.Tag == "watches/fitbit")
+                                .GroupBy("1 month")
+                                .Select(g => new
+                                {
+                                    Avg = g.Average(),
+                                    Max = g.Max(),
+                                    Min = g.Min()
+                                })
+                                .ToList()
+                        });
+
+                    var result = query.First();
+
+                    Assert.Equal("ayende", result.Name);
+                    Assert.Equal("users/ayende", result.Id);
+
+                    Assert.Equal(4, result.HeartRate.Count);
+
+                    var aggregation = result.HeartRate.Results;
+
+                    Assert.Equal(2, aggregation.Length);
+
+                    Assert.Equal(69, aggregation[0].Max[0]);
+                    Assert.Equal(59, aggregation[0].Min[0]);
+                    Assert.Equal(64, aggregation[0].Avg[0]);
+
+                    Assert.Equal(179, aggregation[1].Max[0]);
+                    Assert.Equal(169, aggregation[1].Min[0]);
+                    Assert.Equal(174, aggregation[1].Avg[0]);
 
                 }
             }
