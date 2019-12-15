@@ -67,7 +67,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
                     } else {
                         const value = column.getCellValue(details);
                         if (value) {
-                            onValue(generalUtils.escapeHtml(value));
+                            onValue(generalUtils.escapeHtml(value), value);
                         }
                     }
                 }

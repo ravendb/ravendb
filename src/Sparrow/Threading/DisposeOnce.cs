@@ -38,7 +38,7 @@ namespace Sparrow.Threading
         }
     }
 
-    public sealed class DisposeOnce<TOperationMode>
+    public sealed class DisposeOnce<TOperationMode>:IDisposable
         where TOperationMode : struct, IDisposeOnceOperationMode
     {
         private readonly Action _action;

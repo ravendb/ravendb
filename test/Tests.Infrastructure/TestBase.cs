@@ -28,6 +28,7 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -113,6 +114,7 @@ namespace FastTests
 
         protected TestBase(ITestOutputHelper output) : base(output)
         {
+            TestResourcesAnalyzer.Start(Context);
         }
 
         protected string GetDatabaseName([CallerMemberName] string caller = null)
@@ -389,6 +391,10 @@ namespace FastTests
             {
                 Console.WriteLine(e);
             }
+            finally
+            {
+                TestResourcesAnalyzer.Complete();
+            }
         }
 
         public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool runInMemory = true, string customConfigPath = null)
@@ -653,6 +659,8 @@ namespace FastTests
             ServersForDisposal = null;
 
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+
+            TestResourcesAnalyzer.End(Context);
 
             exceptionAggregator.ThrowIfNeeded();
         }

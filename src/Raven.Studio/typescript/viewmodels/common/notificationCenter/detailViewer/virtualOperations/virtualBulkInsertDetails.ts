@@ -53,7 +53,7 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
                     } else {
                         const value = column.getCellValue(details);
                         if (value) {
-                            onValue(generalUtils.escapeHtml(value));
+                            onValue(generalUtils.escapeHtml(value), value);
                         }
                     }
                 }

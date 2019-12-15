@@ -12,7 +12,18 @@ namespace Raven.Server.ServerWide.Context
 
         internal string LastDatabaseChangeVector;
         internal Dictionary<string, long> LastReplicationEtagFrom;
-        internal bool SkipChangeVectorValidation;
+        private bool _skipChangeVectorValidation;
+
+        internal bool SkipChangeVectorValidation
+        {
+            get => _skipChangeVectorValidation;
+            set
+            {
+                if (_skipChangeVectorValidation == false)
+                    _skipChangeVectorValidation = value;
+            }
+        }
+
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
             base.Reset(forceResetLongLivedAllocator);
@@ -23,6 +34,7 @@ namespace Raven.Server.ServerWide.Context
             // we always create a new instance
             LastDatabaseChangeVector = null;
             LastReplicationEtagFrom = null;
+            _skipChangeVectorValidation = false;
         }
 
         public static DocumentsOperationContext ShortTermSingleUse(DocumentDatabase documentDatabase)

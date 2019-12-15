@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -49,6 +50,20 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 Assert.Equal(expected, stringResult);
                 Assert.Equal(expected, readerResult.ReadToEnd());
             }
+        }
+
+        [Theory]
+        [InlineData(10)]
+        [InlineData(1500)]
+        [InlineData(2048)]
+        [InlineData(3000)]
+        public void First_on_very_long_text(int length)
+        {
+            var expected = new string('a', length);
+            using var lazyString = _ctx.GetLazyString(expected);
+            var stringResult = lazyString.First();
+
+            Assert.Equal(expected.First(), stringResult);
         }
 
         [Fact]

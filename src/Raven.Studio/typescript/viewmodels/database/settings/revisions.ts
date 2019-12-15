@@ -57,10 +57,10 @@ class revisions extends viewModelBase {
         });
         
         this.enforceButtonTitle = ko.pureComputed(() => {
-            if (this.perCollectionConfigurations().length !== 0 || this.defaultConfiguration()) {
-                return this.isSaveEnabled() ? "Save current configuration before enforcing" : "Enforce the defined revisions configuration on all documents per collection";
+            if (this.isSaveEnabled()) {
+                return "Save current configuration before enforcing";
             }
-            return "No configuration has been created yet";
+            return "Enforce the defined revisions configuration on all documents per collection";
         });
     }
 

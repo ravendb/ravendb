@@ -26,6 +26,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public SubscriptionWorkerOptions Options => _options;
 
-        public IDisposable DisposeOnDisconnect;
+        public DisposeOnce<SingleAttempt> DisposeOnDisconnect;
 
         public SubscriptionException ConnectionException;
 
@@ -148,6 +149,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
             bool shouldRetry;
 
+            var random = new Random();
+
             do
             {
                 try
@@ -162,7 +165,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         _logger.Info(
                             $"Subscription Id {SubscriptionId} from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} starts to wait until previous connection from {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} is released");
                     }
-                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2));
+                  
+                    timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15,50));
                     await SendHeartBeat($"Client from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} waiting for subscription that is serving IP {_connectionState.Connection?.TcpConnection.TcpClient.Client.RemoteEndPoint} to be released");
                     shouldRetry = true;
                 }
@@ -189,6 +193,7 @@ namespace Raven.Server.Documents.TcpHandlers
             catch
             {
                 DisposeOnDisconnect.Dispose();
+                throw;
             }
         }
 
@@ -359,7 +364,13 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode
+                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
+                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] = 
+                                new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
+                                {
+                                    [item.Key]=item.Value
+                                }))
+                            
                         }
                     });
                 }
