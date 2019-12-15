@@ -57,13 +57,13 @@ namespace Raven.Server.Config.Categories
 
         [Description("Threshold percentage of memory for activating 'High Dirty Memory' mechanism (server will return 'Service Unavailable' for writes when scratch files dirty memory exeeds this threshold). Default: 25%")]
         [DefaultValue(0.25d)]
-        [ConfigurationEntry("Memory.PercentageOfTemporaryDirtyMemoryAllowed", ConfigurationEntryScope.ServerWideOnly)]
-        public double PercentageOfTemporaryDirtyMemoryAllowed { get; set; }
+        [ConfigurationEntry("Memory.TemporaryDirtyMemoryAllowedPercentage", ConfigurationEntryScope.ServerWideOnly)]
+        public double TemporaryDirtyMemoryAllowedPercentage { get; set; }
 
         [Description("Period in seconds between 'High Dirty Memory' checks. Default: 30 Seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Memory.TemporaryDirtyMemoryChecksPeriod", ConfigurationEntryScope.ServerWideOnly)]
-        public int TemporaryDirtyMemoryChecksPeriod { get; set; }
+        [ConfigurationEntry("Memory.TemporaryDirtyMemoryChecksPeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting TemporaryDirtyMemoryChecksPeriodInSec { get; set; }
     }
 }
