@@ -5103,6 +5103,96 @@ select out(doc, c)
         }
 
         [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereLoadedTagNotNull()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    var id = $"people/1";
+
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, id);
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 2.5
+                    }, "watches/fitbit");
+                    session.Store(new Watch
+                    {
+                        Accuracy = 1.8
+                    }, "watches/apple");
+
+                    var tsf = session.TimeSeriesFor(id);
+
+                    tsf.Append("HeartRate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("HeartRate", baseline.AddMinutes(63), null, new[] { 69d });
+
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("HeartRate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregation>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate between $start and $end
+        load Tag as src
+        where src != null and src.Accuracy > 2
+    group by '1 month' 
+    select min(), max(), avg()
+}
+from People as p
+select out(p)
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(2));
+
+
+                    var agg = query.First();
+
+                    Assert.Equal(2, agg.Count);
+
+                    Assert.Equal(2, agg.Results.Length);
+
+                    var val = agg.Results[0];
+
+                    Assert.Equal(59, val.Min[0]);
+                    Assert.Equal(59, val.Max[0]);
+                    Assert.Equal(59, val.Avg[0]);
+
+                    var expectedFrom = new DateTime(baseline.Year, baseline.Month, 1, 0, 0, 0);
+                    var expectedTo = expectedFrom.AddMonths(1);
+
+                    Assert.Equal(expectedFrom, val.From);
+                    Assert.Equal(expectedTo, val.To);
+
+                    val = agg.Results[1];
+
+                    Assert.Equal(169, val.Min[0]);
+                    Assert.Equal(169, val.Max[0]);
+                    Assert.Equal(169, val.Avg[0]);
+
+                    expectedFrom = expectedTo;
+                    expectedTo = expectedFrom.AddMonths(1);
+
+                    Assert.Equal(expectedFrom, val.From);
+                    Assert.Equal(expectedTo, val.To);
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldThrowOnInvalidOperationInsideWhere()
         {
             using (var store = GetDocumentStore())

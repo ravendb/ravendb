@@ -720,18 +720,13 @@ namespace Raven.Server.Documents.Queries.Results
 
             var tag = singleResult.Tag?.ToString();
             if (tag == null)
-                throw new InvalidQueryException("Unable to load document from 'Tag' property of time series entry. 'Tag' is null. " +
-                                                $"Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
+                return null;
 
             if (_loadedDocuments.TryGetValue(tag, out var document) == false)
                 _loadedDocuments[tag] = document = _database.DocumentsStorage.Get(_context, tag);
-
+            
             if (fe.Compound.Count == 1)
                 return document;
-
-            if (document == null)
-                throw new InvalidQueryException($"Unable to load document '{tag}' from 'Tag' property of time series entry. " +
-                                                $"Document '{tag}' does not exist. Timestamp: '{singleResult.TimeStamp.GetDefaultRavenFormat()}'");
 
             return GetFieldFromDocument(fe, document);
         }
