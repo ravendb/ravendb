@@ -10,22 +10,24 @@
             <p data-bind="html: subTitleHtml"></p>
             <ul data-bind="foreach: indexesInfoForDelete()" style="max-height: 200px; overflow-y: auto;">
                 <li class="padding padding-xs">
-                    <strong data-bind="text: $data.indexName"></strong>
-                    <small data-bind="if: $data.reduceOutputCollection">
-                         <!-- The span code below is formatted like this becuase otherwise we get extra spaces in ui -->
-                        <span class="margin-left margin-left-sm">(</span><span 
-                            data-bind="text: $data.ReferenceCollection ? 'Reduce Results Collections:' : 'Reduce Results Collection:'"></span>
-                            <span data-bind="text: $data.reduceOutputCollection"></span><span data-bind="if: $data.ReferenceCollection"><span 
-                            data-bind="text: ', ' + $data.ReferenceCollection"></span></span><span>)</span>
+                    <strong data-bind="text: indexName"></strong>
+                    <small data-bind="if: reduceOutputCollection">
+                       <span data-bind="visible: referenceCollection, text: '('.concat('Reduce Results Collections: ',reduceOutputCollection, ', ', referenceCollection, ')')"></span>
+                       <span data-bind="visible: !referenceCollection, text: '('.concat('Reduce Results Collection: ', reduceOutputCollection, ')')"></span>
                     </small>
                 </li>
             </ul>
-            <div data-bind="if: warning" class="flex-horizontal text-warning bg-warning margin margin-top-lg">
-                <small class="flex-start padding padding-xs">
+            <hr data-bind="visible: showWarning">
+            <div data-bind="if: showWarning" class="flex-horizontal text-warning bg-warning margin margin-top-lg">
+                <span class="flex-start padding padding-xs">
                     <i class="icon-warning"></i>
-                </small>
-                <small data-bind="html: warning" class="padding padding-xs">
-                </small>
+                </span>
+                <span class="padding padding-xs">
+                     Note: <br>  
+                    'Reduce Results Collections' were created by above index(es).<br>  
+                     Clicking 'Delete' will delete the index(es) but Not the Results Collection(s).<br>
+                     Go to the collection itself to manually remove documents.                    
+                </span>
             </div>
         </div>
         <div class="modal-footer">

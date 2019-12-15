@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Indexes
         public string ReduceOutputCollection { get; set; }
         
         /// <summary>
-        /// Indicates how many reducing attempts failed.
+        /// Pattern for creating IDs for the reduce output reference-collection 
         /// </summary>
         public string ReduceOutputReferencePattern { get; set; }
 
