@@ -18,13 +18,14 @@ interface analyzerName {
 class indexFieldOptions {
 
     static readonly analyzersNamesDictionary: analyzerName[] = [
-        { shortName: "KeywordAnalyzer", fullName: "KeywordAnalyzer" },
-        { shortName: "LowerCaseKeywordAnalyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
-        { shortName: "LowerCaseWhitespaceAnalyzer", fullName: "LowerCaseWhitespaceAnalyzer" },
-        { shortName: "SimpleAnalyzer", fullName: "SimpleAnalyzer" },
-        { shortName: "StandardAnalyzer", fullName: null }, // default option
-        { shortName: "StopAnalyzer", fullName: "StopAnalyzer" },
-        { shortName: "WhitespaceAnalyzer", fullName:"WhitespaceAnalyzer" }
+        { shortName: "Keyword Analyzer", fullName: "KeywordAnalyzer" },
+        { shortName: "LowerCase Keyword Analyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
+        { shortName: "LowerCase Whitespace Analyzer", fullName: "LowerCaseWhitespaceAnalyzer" },
+        { shortName: "NGram Analyzer", fullName:"NGramAnalyzer" },
+        { shortName: "Simple Analyzer", fullName: "SimpleAnalyzer" },
+        { shortName: "Standard Analyzer", fullName: null }, // default option
+        { shortName: "Stop Analyzer", fullName: "StopAnalyzer" },
+        { shortName: "Whitespace Analyzer", fullName:"WhitespaceAnalyzer" }       
     ];
 
     static readonly analyzersNames =  indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName);
