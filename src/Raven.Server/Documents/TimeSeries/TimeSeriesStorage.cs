@@ -707,6 +707,7 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly List<ByteStringContext.ExternalScope> _externalScopesToDispose = new List<ByteStringContext.ExternalScope>();
             public ByteString Buffer, TimeSeriesKeyBuffer;
             public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, TagSlice, TimeSeriesName;
+            private string _docId;
 
             public TimeSeriesSlicer(DocumentsOperationContext context, string documentId, string name, DateTime timestamp, LazyStringValue tag = null)
             {
@@ -720,23 +721,24 @@ namespace Raven.Server.Documents.TimeSeries
 
                 Memory.Set(Buffer.Ptr, 0, MaxSegmentSize);
 
-                if (tag != null)
-                {
-                    _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, tag, out TagSlice));
+                _docId = documentId;
 
-                    if (TagSlice.Size > byte.MaxValue)
-                        throw new ArgumentOutOfRangeException(nameof(tag),
-                            $"Tag '{tag}' is too big (max 255 bytes) for document '{documentId}' in time series: {name}");
-                }
-                else
-                {
-                    TagSlice = Slices.Empty;
-                }
+                UpdateTagSlice(context, tag);
             }
 
             public void UpdateTagSlice(DocumentsOperationContext context, LazyStringValue tag)
             {
+                if (tag == null)
+                {
+                    TagSlice = Slices.Empty;
+                    return;
+                }
+
                 _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(context, tag, out TagSlice));
+
+                if (TagSlice.Size > byte.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(tag),
+                        $"Tag '{tag}' is too big (max 255 bytes) for document '{_docId}' in time series: {TimeSeriesName}");
             }
 
             public void Dispose()
