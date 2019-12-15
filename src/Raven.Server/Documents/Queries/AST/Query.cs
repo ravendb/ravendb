@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Queries.AST
         private static void AssertValidDurationInMonths(long duration)
         {
             if (duration > 120_000)
-                throw new ArgumentException("The specified range results in invalid range, cannoot have: " + duration + " months");
+                throw new ArgumentException("The specified range results in invalid range, cannot have: " + duration + " months");
         }
 
         private static bool TryConsumeMatch(string source, ref int offset, string additionalMatch)
