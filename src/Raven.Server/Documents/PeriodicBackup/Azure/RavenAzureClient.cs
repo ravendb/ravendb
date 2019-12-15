@@ -425,74 +425,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
         {
-            var url = GetBaseServerUrl() + $"/{_containerName}?restype=container&comp=list";
-            if (prefix != null)
-                url += $"&prefix={Uri.EscapeDataString(prefix)}";
-
-            if (delimiter != null)
-                url += $"&delimiter={delimiter}";
-
-            if (maxResult != null)
-                url += $"&maxresults={maxResult}";
-
-            if (marker != null)
-                url += $"&marker={marker}";
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
-            {
-                Headers =
-                {
-                    {"x-ms-date", SystemTime.UtcNow.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return new ListBlobResult
-                {
-                    ListBlob = new List<BlobProperties>()
-                };
-
-            if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
-
-            var responseStream = response.Content.ReadAsStreamAsync().Result;
-            var listBlobsResult = XDocument.Load(responseStream);
-            var result = GetResult();
-
-            var nextMarker = listBlobsResult.Root.Element("NextMarker")?.Value;
-
-            return new ListBlobResult
-            {
-                ListBlob = result,
-                NextMarker = nextMarker == "true" ? listBlobsResult.Root.Element("NextMarker")?.Value : null
-            };
-
-            IEnumerable<BlobProperties> GetResult()
-            {
-                if (listFolders)
-                {
-                    return listBlobsResult
-                        .Descendants("Blobs")
-                        .Descendants("Name")
-                        .Select(x => RestorePointsBase.GetDirectoryName(x.Value))
-                        .Distinct()
-                        .Select(x => new BlobProperties
-                        {
-                            Name = x
-                        });
-                }
-
-                return listBlobsResult
-                    .Descendants("Blob")
-                    .Select(x => new BlobProperties
-                    {
-                        Name = x.Element("Name")?.Value,
-                    });
-            }
+            return ListBlobsAsync(prefix, delimiter, listFolders, maxResult, marker).Result;
         }
 
         public async Task<ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, int? maxResult = null, string marker = null)
