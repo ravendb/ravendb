@@ -74,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new StreamDocumentActions(_writer, _context, _source, "Docs", new SmugglerMetadataModifier(_options.OperateOnTypes));
+            return new StreamDocumentActions(_writer, _context, _source, "Docs");
         }
 
         public IDocumentActions RevisionDocuments()
@@ -658,14 +658,12 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
             private HashSet<string> _attachmentStreamsAlreadyExported;
-            private readonly IMetadataModifier _modifier;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName, IMetadataModifier modifier = null)
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
                 : base(writer, propertyName)
             {
                 _context = context;
                 _source = source;
-                _modifier = modifier;
             }
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -683,13 +681,23 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    document.EnsureMetadata(_modifier);
+                    Writer.WriteStartObject();
+                    Writer.WriteDocumentPropertiesWithoutMetadata(_context, document, out BlittableJsonReaderObject metadata);
 
-                    using (var old = document.Data)
-                    using (var data = _context.ReadObject(document.Data, document.Id))
+                    if (metadata != null)
                     {
-                        _context.Write(Writer, data);
+                        Writer.WriteComma();
+                        Writer.WriteMetadata(document, metadata, s =>
+                        {
+                            if ((s == Constants.Documents.Metadata.Counters && _options.OperateOnTypes.HasFlag(DatabaseItemType.CounterGroups) == false) ||
+                                (s == Constants.Documents.Metadata.Attachments && _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false))
+                                return true;
+
+                            return false;
+                        });
                     }
+
+                    Writer.WriteEndObject();
                 }
             }
 

@@ -1497,7 +1497,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
+        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<string, bool> method = null)
         {
             writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
@@ -1509,12 +1509,16 @@ namespace Raven.Server.Json
 
                 for (int i = 0; i < size; i++)
                 {
+                    metadata.GetPropertyByIndex(i, ref prop);
+
+                    if (method != null && method(prop.Name))
+                        continue;
+
                     if (first == false)
                     {
                         writer.WriteComma();
                     }
                     first = false;
-                    metadata.GetPropertyByIndex(i, ref prop);
                     writer.WritePropertyName(prop.Name);
                     writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 }
@@ -1613,10 +1617,11 @@ namespace Raven.Server.Json
             WriteMetadata(writer, document, metadata);
         }
 
-        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, out BlittableJsonReaderObject metadata)
         {
+            metadata = null;
             var first = true;
-
+            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             using (var buffers = document.Data.GetPropertiesByInsertionOrder())
@@ -1624,6 +1629,13 @@ namespace Raven.Server.Json
                 for (var i = 0; i < buffers.Properties.Count; i++)
                 {
                     document.Data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+
+                    if (metadataField.Equals(prop.Name))
+                    {
+                        metadata = (BlittableJsonReaderObject)prop.Value;
+                        continue;
+                    }
+
                     if (first == false)
                     {
                         writer.WriteComma();
