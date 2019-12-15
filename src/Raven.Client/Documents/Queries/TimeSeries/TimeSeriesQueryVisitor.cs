@@ -75,10 +75,29 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void GroupBy(Expression expression)
         {
+            string timePeriod;
+
             if (expression is ConstantExpression constantExpression)
-                _groupBy = $" group by '{constantExpression.Value}'";
-            else 
-                _groupBy = $" group by '{expression}'";
+            {
+                timePeriod = constantExpression.Value.ToString();
+            }
+
+            else if (expression is LambdaExpression lambda)
+            {
+                if (!(lambda.Body is MethodCallExpression mce) ||
+                    mce.Method.DeclaringType != typeof(ITimeSeriesGroupByBuilder))
+                    throw new InvalidOperationException("Cannot understand how to translate " + _expression);
+
+                var duration = ((ConstantExpression)mce.Arguments[0]).Value;
+                timePeriod = $"{duration} {mce.Method.Name}";
+            }
+
+            else
+            {
+                timePeriod = expression.ToString();
+            }
+
+            _groupBy = $" group by '{timePeriod}'";
         }
 
         private void WhereMethod(MethodCallExpression call)
