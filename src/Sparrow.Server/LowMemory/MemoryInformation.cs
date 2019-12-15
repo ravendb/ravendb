@@ -330,7 +330,7 @@ namespace Sparrow.LowMemory
 
                 var totalScratchAllocated = GetTotalScratchAllocatedMemory();
 
-                result.AvailableMemory -= new Size(totalScratchAllocated, SizeUnit.Bytes);
+                result.AvailableMemory.Add(-totalScratchAllocated, SizeUnit.Bytes);
                 return result;
 
             }
@@ -660,7 +660,7 @@ namespace Sparrow.LowMemory
         {
             details = null;
             var totalScratchMemory = GetTotalScratchAllocatedMemory();
-            
+
             if (totalScratchMemory <= TotalPhysicalMemory.GetValue(SizeUnit.Bytes) * percentageFromPhysicalMem)
                 return false;
 
