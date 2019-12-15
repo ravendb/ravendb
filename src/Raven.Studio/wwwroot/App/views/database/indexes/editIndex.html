@@ -163,7 +163,7 @@
                                     <div class="form-group">
                                         <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
                                         <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
-                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }">
+                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" autocomplete="off">
                                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                                 <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
                                                     <a role="menuitem" tabindex="-1" href="#">
