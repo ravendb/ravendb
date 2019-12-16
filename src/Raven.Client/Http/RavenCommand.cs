@@ -193,8 +193,7 @@ namespace Raven.Client.Http
         {
             
         }
-
-        public void SetTimeout(TimeSpan timeout)
+        internal void SetTimeout(TimeSpan timeout)
         {
             Timeout = timeout;
         }
