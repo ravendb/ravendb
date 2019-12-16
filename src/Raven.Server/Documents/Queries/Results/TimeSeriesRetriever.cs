@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
@@ -466,25 +467,53 @@ namespace Raven.Server.Documents.Queries.Results
                                                         "Operator 'ALL IN' is not supported for time series functions");
                     try
                     {
-                        if (src is LazyNumberValue lnv)
+                        if (inExpression.Values.Count == 1 &&
+                            inExpression.Values[0] is ValueExpression valueExpression &&
+                            valueExpression.Value == ValueTokenType.Parameter)
                         {
-                            for (int i = 0; i < inExpression.Values.Count; i++)
-                            {
-                                val = GetValue(inExpression.Values[i], singleResult);
+                            var values = (IEnumerable)GetValue(valueExpression, singleResult);
 
-                                if (lnv.CompareTo(val) == 0)
+                            foreach (var v in values)
+                            {
+                                if (src is LazyNumberValue lnv)
+                                {
+                                    if (lnv.CompareTo(v) == 0)
+                                    {
+                                        result = true;
+                                        break;
+                                    }
+                                }
+                                else if (v is LazyStringValue lsv)
+                                {
+                                    if (lsv.Equals(src))
+                                    {
+                                        result = true;
+                                        break;
+                                    }
+                                }
+                                else if (src == v)
                                 {
                                     result = true;
                                     break;
                                 }
                             }
                         }
+
                         else
                         {
                             for (int i = 0; i < inExpression.Values.Count; i++)
                             {
                                 val = GetValue(inExpression.Values[i], singleResult);
-                                if (src == val)
+
+                                if (src is LazyNumberValue lnv)
+                                {
+                                    if (lnv.CompareTo(val) == 0)
+                                    {
+                                        result = true;
+                                        break;
+                                    }
+                                }
+                                else if (src == val)
                                 {
                                     result = true;
                                     break;
@@ -805,6 +834,5 @@ namespace Raven.Server.Documents.Queries.Results
                 return dt;
             }
         }
-
     }
 }
