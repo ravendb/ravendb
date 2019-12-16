@@ -139,16 +139,21 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
         {
-            var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
-            int numberOfUtilizedCores = licenseLimits != null && 
-                                        licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
-                ? detailsPerNode.UtilizedCores
-                : ProcessorInfo.ProcessorCount;
+            var numberOfUtilizedCores = GetNumberOfUtilizedCores();
 
             Parallel.ForEach(indexes, new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Math.Max(1, numberOfUtilizedCores / 2)
-                }, action);
+            {
+                MaxDegreeOfParallelism = Math.Max(1, numberOfUtilizedCores / 2)
+            }, action);
+        }
+
+        private int GetNumberOfUtilizedCores()
+        {
+            var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
+
+            return licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
+                ? detailsPerNode.UtilizedCores
+                : ProcessorInfo.ProcessorCount;
         }
 
         private void HandleSorters(DatabaseRecord record, long index)
@@ -377,11 +382,11 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     // original index needs to delete docs created by side-by-side indexing
 
-                                    currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> {prefix});
+                                    currentMapReduceIndex.OutputReduceToCollection?.AddPrefixesOfDocumentsToDelete(new HashSet<string> { prefix });
                                 }
                             }
                         }
-                        
+
                         DeleteIndexInternal(replacementIndex);
                     }
 
@@ -413,7 +418,7 @@ namespace Raven.Server.Documents.Indexes
                     if (currentIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.OutputReduceToCollection != null)
                     {
                         // we need to delete reduce output docs of existing index
-                        
+
                         CollectPrefixesOfDocumentsToDelete(oldMapReduceIndex, ref prefixesOfDocumentsToDelete);
                     }
 
@@ -434,7 +439,7 @@ namespace Raven.Server.Documents.Indexes
                         if (replacementIndex is MapReduceIndex oldReplacementMapReduceIndex && oldReplacementMapReduceIndex.OutputReduceToCollection != null)
                         {
                             // existing replacement index could already produce some reduce output documents, new replacement index needs to delete them
-                            
+
                             CollectPrefixesOfDocumentsToDelete(oldReplacementMapReduceIndex, ref prefixesOfDocumentsToDelete);
                         }
 
@@ -469,7 +474,7 @@ namespace Raven.Server.Documents.Indexes
         private static void CollectPrefixesOfDocumentsToDelete(MapReduceIndex mapReduceIndex, ref HashSet<string> prefixesOfDocumentsToDelete)
         {
             var definition = mapReduceIndex.Definition;
-            
+
             if (definition.ReduceOutputIndex != null)
             {
                 var prefix = OutputReduceToCollectionCommand.GetOutputDocumentPrefix(
@@ -619,7 +624,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexBatchScope CreateIndexBatch()
         {
-            return new IndexBatchScope(this);
+            return new IndexBatchScope(this, GetNumberOfUtilizedCores());
         }
 
         public async Task<Index> CreateIndex(IndexDefinitionBase definition, string raftRequestId)
@@ -917,7 +922,7 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name,raftRequestId));
+            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
@@ -1465,7 +1470,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     await CreateIndex(definition, $"{raftRequestId}/{definition.Name}");
-                    await TryDeleteIndexIfExists(kvp.Key,$"{raftRequestId}/{kvp.Key}");
+                    await TryDeleteIndexIfExists(kvp.Key, $"{raftRequestId}/{kvp.Key}");
 
                     moreWork = true;
                     break; // extending only one auto-index at a time
@@ -1765,12 +1770,14 @@ namespace Raven.Server.Documents.Indexes
         public class IndexBatchScope
         {
             private readonly IndexStore _store;
+            private readonly int _numberOfUtilizedCores;
 
             private PutIndexesCommand _command;
 
-            public IndexBatchScope(IndexStore store)
+            public IndexBatchScope(IndexStore store, int numberOfUtilizedCores)
             {
                 _store = store;
+                _numberOfUtilizedCores = numberOfUtilizedCores;
             }
 
             public void AddIndex(IndexDefinitionBase definition, string source, DateTime createdAt, string raftRequestId)
@@ -1824,7 +1831,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var indexCount = _command.Static.Count + _command.Auto.Count;
                     var operationTimeout = _store._serverStore.Engine.OperationTimeout;
-                    var timeout = TimeSpan.FromSeconds((indexCount / 10.0) * operationTimeout.TotalSeconds);
+                    var timeout = TimeSpan.FromSeconds(((double)indexCount / _numberOfUtilizedCores) * operationTimeout.TotalSeconds);
                     if (operationTimeout > timeout)
                         timeout = operationTimeout;
 
