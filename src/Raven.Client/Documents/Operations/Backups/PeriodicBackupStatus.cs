@@ -36,6 +36,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public long? LastEtag { get; set; }
 
+        public string LastDatabaseChangeVector { get; set; }
+
         public LastRaftIndex LastRaftIndex { get; set; }
 
         public string FolderName { get; set; }
@@ -77,6 +79,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(Version)] = Version;
             json[nameof(Error)] = Error?.ToJson();
             json[nameof(LastOperationId)] = LastOperationId;
+            json[nameof(LastDatabaseChangeVector)] = LastDatabaseChangeVector;
         }
 
         public static string Prefix => "periodic-backups/";

@@ -326,7 +326,7 @@ class editIndex extends viewModelBase {
     createConfigurationOptionAutocompleter(item: configurationItem) {
         return ko.pureComputed(() => {
             const key = item.key();
-            const options = configurationItem.ConfigurationOptions;
+            const options = configurationItem.PerDatabaseIndexingConfigurationOptions;
             const usedOptions = this.editedIndex().configuration().filter(f => f !== item).map(x => x.key());
 
             const filteredOptions = _.difference(options, usedOptions);

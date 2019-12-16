@@ -3,13 +3,16 @@ import jsonUtil = require("common/jsonUtil");
 import configuration = require("configuration");
 
 class configurationItem {
-    static readonly ConfigurationOptions = [
-        configuration.indexing.maxTimeForDocumentTransactionToRemainOpen,
-        configuration.indexing.minNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory,
-        configuration.indexing.mapTimeout,
-        configuration.indexing.mapTimeoutAfterEtagReached
+
+    static readonly ServerWideIndexingConfigurationOptions = [        
+        configuration.indexing.size,
+        configuration.indexing.cleanupInterval,
+        configuration.indexing.maxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit
     ];
 
+    static readonly PerDatabaseIndexingConfigurationOptions: Array<string> = _.sortBy(_.pullAll(_.values<string>(configuration.indexing), 
+                                                                                                 configurationItem.ServerWideIndexingConfigurationOptions));       
+    
     key = ko.observable<string>();
     value = ko.observable<string>();
 

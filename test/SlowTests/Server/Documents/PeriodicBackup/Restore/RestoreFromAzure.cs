@@ -6,11 +6,11 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Raven.Server.Documents.PeriodicBackup.Azure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
@@ -21,9 +21,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        private const string AzureAccountName = "devstoreaccount1";
-        private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
-        private AzureSettings _azureSettings = GenerateAzureSettings();
+        private readonly AzureSettings _azureSettings = GenerateAzureSettings();
 
         [Fact, Trait("Category", "Smuggler")]
         public void restore_azure_cloud_settings_tests()
@@ -162,8 +160,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
             return new AzureSettings
             {
-                AccountName = AzureAccountName,
-                AccountKey = AzureAccountKey,
+                AccountName = Azure.AzureAccountName,
+                AccountKey = Azure.AzureAccountKey,
                 StorageContainer = containerName,
                 RemoteFolderName = ""
             };
