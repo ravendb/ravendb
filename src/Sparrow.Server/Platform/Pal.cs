@@ -5,14 +5,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
-using Microsoft.Win32.SafeHandles;
 
 namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
         public static PalDefinitions.SystemInformation SysInfo;
-        public const int PAL_VER = 42013; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 42012; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -345,27 +344,6 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern Int64 rvn_get_current_thread_id();
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_spawn_process(
-            string filename,
-            string cmdline,
-            out IntPtr pid,
-            out SafeFileHandle stdin,
-            out SafeFileHandle stdout, // stdout includes redirection of stderr
-            out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_wait_for_close_process(
-            IntPtr pid,
-            Int32 closeWaitTimeoutInSeconds,
-            out Int32 exitCode,
-            out Int32 errorCode);
-
-        [DllImport(LIBRVNPAL, SetLastError = true)]
-        public static extern PalFlags.FailCodes rvn_kill_process(
-            IntPtr pid,
-            out Int32 errorCode);
 
         private struct Converter : IDisposable
         {

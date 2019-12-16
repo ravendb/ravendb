@@ -1,30 +1,26 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading;
-using Raven.Server.ServerWide;
 using Sparrow.Platform;
-using Sparrow.Server.Platform;
 
 namespace Raven.Server.Utils.Cli
 {
     public static class BrowserHelper
     {
-        public static bool OpenStudioInBrowser(ServerStore serverStore, Action<object> onError = null)
+        public static bool OpenStudioInBrowser(string url, Action<object> onError = null)
         {
-            var url = serverStore.GetNodeHttpServerUrl();
             try
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    RavenProcess.Start("cmd", $"/c start {url}", null);
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
                 }
                 else if (PlatformDetails.RunningOnMacOsx)
                 {
-                    RavenProcess.Start("open", url, null);
+                    Process.Start("open", url);
                 }
                 else
                 {
-                    RavenProcess.Start("xdg-open", url, null);
+                    Process.Start("xdg-open", url);
                 }
 
                 return true;

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Platform;
-using Sparrow.Server.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
@@ -192,7 +191,7 @@ namespace Voron.Debugging
 
             if (PlatformDetails.RunningOnPosix == false)
             {
-                using (var process = new RavenProcess
+                var process = new Process
                 {
                     StartInfo =
                     {
@@ -202,21 +201,18 @@ namespace Voron.Debugging
                         CreateNoWindow = true,
                         RedirectStandardError = true,
                     }
-                })
-                {
-                    process.Start();
-                }
-
+                };
+                process.Start();
                 return;
             }
 
             if (PlatformDetails.RunningOnMacOsx)
             {
-                RavenProcess.Start("open", output, null);
+                Process.Start("open", output);
             }
             else
             {
-                RavenProcess.Start("xdg-open", output,null);
+                Process.Start("xdg-open", output);
             }
 
         }

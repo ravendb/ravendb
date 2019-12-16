@@ -1,31 +1,36 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Server.Platform;
 
 namespace Raven.Server.Utils.Cpu
 {
-    public class CpuUsageExtensionPoint
+    public class CpuUsageExtensionPoint : IDisposable
     {
         private readonly JsonContextPool _contextPool;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private readonly ProcessStartInfo _startInfo;
+        private readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
+
+        private Process _process;
+        private DateTime _lastRestart;
 
         private ExtensionPointData _data;
-
-        private static readonly ExtensionPointData BadData = new ExtensionPointData
+        public ExtensionPointData BadData = new ExtensionPointData
         {
             ProcessCpuUsage = -1,
             MachineCpuUsage = -1
         };
 
-        public ExtensionPointData Data => _data;
+        public ExtensionPointData Data => IsDisposed ? BadData : _data;
+
+        public bool IsDisposed { get; private set; }
+
 
         public CpuUsageExtensionPoint(
             JsonContextPool contextPool,
@@ -38,91 +43,124 @@ namespace Raven.Server.Utils.Cpu
             _startInfo = new ProcessStartInfo
             {
                 FileName = exec,
-                Arguments = args
+                Arguments = args,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
             };
         }
 
-        public void Start(CancellationToken serverShutdown)
+        public void Start()
         {
-            Task.Run(() =>
+            _process = new Process
             {
-                StartInternal(serverShutdown);
-            }, serverShutdown);
-        }
+                StartInfo = _startInfo,
+                EnableRaisingEvents = true
+            };
 
-
-        private void StartInternal(CancellationToken ctk)
-        {
             try
             {
-                var retry = 2;
-                const int maxMinutesBetweenIssues = 15;
-                var lastRestart = DateTime.UtcNow;
-                while (retry-- > 0)
-                {
-                    using (var cts = new CancellationTokenSource())
-                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, ctk))
-                    {
-                        var lineOutHandler = new Action<object, (string Line, bool IsTimedOut)>((p, l) =>
-                        {
-                            if (l.IsTimedOut)
-                            {
-                                _data = BadData;
-                                NotifyWarning("Cpu usage process hanged (no output for 60 seconds), killing the process",
-                                    new TimeoutException("no output from process for 60 seconds"));
-                                cts.Cancel();
-                                return;
-                            }
-
-                            if (l.Line == null)
-                                return;
-
-                            var errString = TryHandleInfoReceived(l.Line);
-                            if (errString != null)
-                            {
-                                _data = BadData;
-                                NotifyWarning(errString);
-                                cts.Cancel();
-                            }
-                        });
-
-                        RavenProcess.Execute(
-                            _startInfo.FileName,
-                            _startInfo.Arguments,
-                            60,
-                            null,
-                            lineOutHandler,
-                            60_000,
-                            linkedCts.Token);
-
-                        if (ctk.IsCancellationRequested)
-                            return;
-
-                        if (DateTime.UtcNow - lastRestart > TimeSpan.FromMinutes(maxMinutesBetweenIssues))
-                        {
-                            retry = 2;
-                            lastRestart = DateTime.UtcNow;
-                            NotifyWarning($"'Restarting '{_startInfo.FileName} {_startInfo.Arguments}'.", new TimeoutException("Cpu usage process restart"));
-                        }
-                    }
-                }
-
-                NotifyWarning(
-                        $"Failed twice in {maxMinutesBetweenIssues} minutes to get cpu usage vi extension point process withing and therefore the process will terminate.",
-                        new TimeoutException("Cpu usage process terminate"));
+                _process.Start();
             }
             catch (Exception e)
             {
                 NotifyWarning("Could not start cpu usage extension point process", e);
-                // ignore
+
+                Dispose();
+
+                return;
+            }
+
+            var _ = ReadProcess(); // explicitly starting async task without waiting for it
+            _ = ReadErrors();
+        }
+
+        private async Task ReadErrors()
+        {
+            try
+            {
+                var errors = await _process.StandardError.ReadLineAsync();
+                if (errors == null)
+                {
+                    return;
+                }
+                try
+                {
+                    if (_process.HasExited == false)
+                    {
+                        _process.Kill();
+                    }
+                }
+                catch (Exception)
+                {
+                    // When the process terminating, killed or exited
+                }
+                errors = errors + Environment.NewLine + await _process.StandardError.ReadToEndAsync();
+                NotifyWarning($"Extension point process send an error: {errors}");
+            }
+            catch (Exception e)
+            {
+                NotifyWarning("Could not read errors from cpu usage extension point process", e);
             }
         }
 
-        private string TryHandleInfoReceived(string data)
+        public void Dispose()
+        {
+            IsDisposed = true;
+            using (_process)
+            {
+                try
+                {
+                    if (_process.HasExited == false)
+                    {
+                        _process.Kill();
+                    }
+                }
+                catch (Exception)
+                {
+                    // When the process terminating, killed or exited
+                }
+
+                _process = null;
+            }
+        }
+
+
+        private async Task ReadProcess()
+        {
+            try
+            {
+                while (IsDisposed == false)
+                {
+                    var nextLine = _process.StandardOutput.ReadLineAsync();
+
+                    if (await nextLine.WaitWithTimeout(_timeout) == false)
+                    {
+                        // here we missed an update, restart the process once
+                        HandleError($"The process didn't send information for {_timeout.TotalSeconds} seconds.");
+                        break;
+                    }
+
+                    var line = await nextLine;
+                    if (HandleInfoReceived(line) == false)
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                HandleError(e.Message, e);
+            }
+        }
+
+        private bool HandleInfoReceived(string data)
         {
             if (data == null)
             {
-                return "The output stream of the process has closed.";
+                HandleError("The output stream of the process has closed.");
+                return false;
             }
             using (_contextPool.AllocateOperationContext(out var context))
             {
@@ -135,32 +173,68 @@ namespace Raven.Server.Utils.Cpu
                         {
                             _data.MachineCpuUsage = machineCpuUsage;
                             _data.ProcessCpuUsage = processCpuUsage;
-                            return null; // success
+                            return true;
                         }
-                        else
-                        {
-                            return $"Failed to TryGetCpuUsage for MachineCpuUsage or ProcessCpuUsage items from cpuUsageExtensionPointData. Data:'{data}'";
-                        }
+                        // TryGetCpuUsage call HandleError when it failed
                     }
                 }
                 catch (Exception e)
                 {
-                    return $"Unable to parse \"{data}\" to json. Exception:" + e;
+                    HandleError($"Unable to parse \"{data}\" to json", e);
                 }
             }
+
+            return false;
         }
 
         private bool TryGetCpuUsage(BlittableJsonReaderObject blittable, string propertyName, out double cpuUsage)
         {
             if (blittable.TryGet(propertyName, out cpuUsage) == false)
+            {
+                HandleError($"Can't read {propertyName} property from : {Environment.NewLine + blittable}.");
                 return false;
+            }
             if (cpuUsage < 0)
+            {
+                HandleError($"{nameof(ExtensionPointData.MachineCpuUsage)} can't be negative : {Environment.NewLine + blittable}.");
                 return false;
+            }
 
             if (cpuUsage > 100)
                 cpuUsage = 100;
 
             return true;
+        }
+
+        private void HandleError(string msg, Exception e = null)
+        {
+            try
+            {
+                if (_process.HasExited == false)
+                {
+                    _process.Kill();
+                }
+            }
+            catch (Exception)
+            {
+                // When the process terminating, killed or exited
+            }
+            finally
+            {
+                const int maxMinutesBetweenIssues = 15;
+                if (DateTime.UtcNow - _lastRestart > TimeSpan.FromMinutes(maxMinutesBetweenIssues))
+                {
+                    _lastRestart = DateTime.Now;
+                    NotifyWarning($"{msg} {Environment.NewLine}Therefore the process will restart.", e);
+
+                    Start();
+                }
+                else
+                {
+                    NotifyWarning($"{msg} {Environment.NewLine}This is the second issue in cpu usage extension point process withing {maxMinutesBetweenIssues} minutes and therefore the process will terminate.", e);
+                    Dispose();
+                }
+            }
         }
 
         private void NotifyWarning(string warningMsg, Exception e = null)
