@@ -98,7 +98,7 @@ namespace Raven.Server.Web.System
                         writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
                         {
                             Data = dbDoc
-                        }, out _);
+                        }, out _, out _);
                         writer.WriteComma();
                         writer.WritePropertyName("Etag");
                         writer.WriteInteger(etag);

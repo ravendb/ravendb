@@ -1497,7 +1497,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<string, bool> method = null)
+        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<string, bool> filterMetadataProperty = null)
         {
             writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
@@ -1511,7 +1511,7 @@ namespace Raven.Server.Json
                 {
                     metadata.GetPropertyByIndex(i, ref prop);
 
-                    if (method != null && method(prop.Name))
+                    if (filterMetadataProperty != null && filterMetadataProperty(prop.Name))
                         continue;
 
                     if (first == false)
@@ -1617,10 +1617,10 @@ namespace Raven.Server.Json
             WriteMetadata(writer, document, metadata);
         }
 
-        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, out BlittableJsonReaderObject metadata)
+        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, out BlittableJsonReaderObject metadata, out bool first)
         {
             metadata = null;
-            var first = true;
+            first = true;
             var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
