@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return default;
         }
 
-        public string Query => _query;
+        public string QueryText => _query;
     }
 
 }

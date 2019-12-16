@@ -46,13 +46,8 @@ namespace Raven.Client.Documents.Session
 
         public IDocumentQuery<TTs> SelectTimeSeries<TTs>(Func<ITimeSeriesQueryBuilder, TTs> timeSeriesQuery)
         {
-            var builder = new TimeSeriesQueryBuilder();
-            timeSeriesQuery.Invoke(builder);
-
-            var fields = new[] { $"{Constants.TimeSeries.SelectFieldName}({builder.Query})" };
-            var projections = new[] { Constants.TimeSeries.QueryFunction };
-
-            return SelectFields<TTs>(new QueryData(fields, projections));
+            var queryData = CreateTimeSeriesQueryData(timeSeriesQuery);
+            return SelectFields<TTs>(queryData);
         }
 
         /// <inheritdoc />
