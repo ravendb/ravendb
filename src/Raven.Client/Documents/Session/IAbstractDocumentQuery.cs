@@ -336,7 +336,7 @@ namespace Raven.Client.Documents.Session
 
         string AddAliasToIncludesTokens(string fromAlias);
 
-        string ProjectionParameter(object id);
+        string ProjectionParameter(object value);
 
         void SuggestUsing(SuggestionBase suggestion);
 
