@@ -1098,16 +1098,6 @@ namespace Raven.Client.Util
                 _projectionParameters = projectionParameters;
             }
 
-            private static bool IsWrappedConstantExpression(Expression expression)
-            {
-                while (expression is MemberExpression memberExpression)
-                {
-                    expression = memberExpression.Expression;
-                }
-
-                return expression is ConstantExpression;
-            }
-
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is MemberExpression memberExpression) ||
@@ -2457,6 +2447,16 @@ namespace Raven.Client.Util
 
                 context.Visitor.Visit(arguments[i]);
             }
+        }
+
+        internal static bool IsWrappedConstantExpression(Expression expression)
+        {
+            while (expression is MemberExpression memberExpression)
+            {
+                expression = memberExpression.Expression;
+            }
+
+            return expression is ConstantExpression;
         }
     }
 }

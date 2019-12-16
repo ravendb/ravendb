@@ -1875,9 +1875,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return new QueryData(fields, projections);
         }
 
-        public string ProjectionParameter(object id)
+        public string ProjectionParameter(object value)
         {
-            return "$" + AddQueryParameter(id);
+            return "$" + AddQueryParameter(value);
         }
     }
 }

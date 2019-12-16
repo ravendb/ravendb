@@ -100,7 +100,12 @@ namespace Raven.Client.Documents.Linq
 
                 if (IsTimeSeriesCall(callExpression))
                 {
-                    return CreateTimeSeriesResult(callExpression);
+                    return new Result
+                    {
+                        MemberType = typeof(ITimeSeriesQueryable),
+                        IsNestedPath = false,
+                        Path = Constants.TimeSeries.SelectFieldName
+                    };
                 }
 
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
@@ -164,44 +169,6 @@ namespace Raven.Client.Documents.Linq
                 Args = args
             };
         }
-
-        internal class TimeSeriesWhereClauseModifier : ExpressionVisitor
-        {
-            private string _parameter;
-
-            public TimeSeriesWhereClauseModifier(string parameter)
-            {
-                _parameter = parameter;
-            }
-
-            public Expression Modify(Expression expression)
-            {
-                return Visit(expression);
-            }
-
-            protected override Expression VisitMember(MemberExpression node)
-            {
-                if (node.Expression is ParameterExpression p && p.Name == _parameter)
-                    return Expression.Parameter(node.Type, node.Member.Name);
-
-                return base.VisitMember(node);
-            }
-        }
-
-        internal Result CreateTimeSeriesResult(MethodCallExpression callExpression)
-        {
-            var visitor = new TimeSeriesQueryVisitor(callExpression, this);
-            var args = visitor.VisitExpression();
-
-            return new Result
-            {
-                MemberType = typeof(ITimeSeriesQueryable),
-                IsNestedPath = false,
-                Path = Constants.TimeSeries.SelectFieldName,
-                Args = args
-            };
-        }
-
 
         private static string HandleMemberExpressionPropertyRenames(MemberExpression memberExpression, string name)
         {

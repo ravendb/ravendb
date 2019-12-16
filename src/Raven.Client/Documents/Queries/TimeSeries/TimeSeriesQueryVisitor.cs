@@ -8,18 +8,18 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    internal class TimeSeriesQueryVisitor
+    internal class TimeSeriesQueryVisitor<T>
     {
         private readonly MethodCallExpression _expression;
-        private readonly LinqPathProvider _provider;
-        private LinqPathProvider.TimeSeriesWhereClauseModifier _modifier;
+        private readonly RavenQueryProviderProcessor<T> _processor;
+        private TimeSeriesWhereClauseModifier _modifier;
         private StringBuilder _selectFields;
-        private string _name, _between, _where, _groupBy, _srcAlias, _loadTag;
+        private string _name, _between, _where, _groupBy, _loadTag;
 
-        public TimeSeriesQueryVisitor(MethodCallExpression expression, LinqPathProvider provider)
+        public TimeSeriesQueryVisitor(MethodCallExpression expression, RavenQueryProviderProcessor<T> processor)
         {
             _expression = expression;
-            _provider = provider;
+            _processor = processor;
         }
 
         private void VisitMethod(MethodCallExpression mce)
@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             // removes the lambda parameter
             // from filter expression, e.g. : 'x.Tag' => 'Tag'
-            _modifier = new LinqPathProvider.TimeSeriesWhereClauseModifier(lambda.Parameters[0].Name);
+            _modifier = new TimeSeriesWhereClauseModifier(lambda.Parameters[0].Name);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
                 LoadTag(lambda.Parameters[1].Name);
@@ -172,8 +172,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                _srcAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
-                _name = $"{_srcAlias}.{constantExpression.Value}";
+                var srcAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+
+                if (_processor.FromAlias == null)
+                    _processor.AddFromAlias(srcAlias);
+                
+                _name = $"{srcAlias}.{constantExpression.Value}";
             }
         }
 
@@ -209,13 +213,16 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                var result = _provider.GetPath(_modifier.Modify(mce.Arguments[0]));
+                var result = _processor.LinqPathProvider.GetPath(_modifier.Modify(mce.Arguments[0]));
                 path = result.Path;
                 type = result.MemberType;
             }
 
-            var objects = (IEnumerable)_provider.GetValueFromExpression(_modifier.Modify(mce.Arguments[1]), type);
+            var objects = (IEnumerable)_processor.LinqPathProvider.GetValueFromExpression(_modifier.Modify(mce.Arguments[1]), type);
 
+            var parameter = _processor.DocumentQuery.ProjectionParameter(objects);
+
+/*
             StringBuilder values = new StringBuilder();
             bool first = true;
             foreach (var v in objects)
@@ -230,11 +237,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 else
                     values.Append(v);
             }
+*/
 
-            _where = $" where {path} in ({values})";
+            _where = $" where {path} in ({parameter})";
         }
 
-        public string[] VisitExpression()
+        public string VisitExpression()
         {
             var callExpression = _expression;
             while (callExpression != null)
@@ -260,7 +268,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return BuildQuery();
         }
 
-        private string[] BuildQuery()
+        private string BuildQuery()
         {
             var queryBuilder = new StringBuilder();
 
@@ -277,11 +285,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_selectFields != null)
                 queryBuilder.Append(" select ").Append(_selectFields);
 
-            var queryString = queryBuilder.ToString();
+            return queryBuilder.ToString();
 
-            return _srcAlias != null 
+/*            return _srcAlias != null 
                 ? new[] {_srcAlias, queryString} 
-                : new[] {queryString};
+                : new[] {queryString};*/
         }
 
         private void AddSelectField(string name)
