@@ -66,6 +66,7 @@ namespace SlowTests.Issues
             }
         }
 
+        [Theory]
         [InlineData(4)]
         [InlineData(8)]
         [InlineData(16)]
@@ -115,6 +116,7 @@ namespace SlowTests.Issues
             }
         }
 
+        [Theory]
         [InlineData(4)]
         [InlineData(8)]
         [InlineData(16)]
