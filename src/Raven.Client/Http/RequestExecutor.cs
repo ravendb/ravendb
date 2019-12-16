@@ -332,8 +332,8 @@ namespace Raven.Client.Http
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
-            SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout ?? TimeSpan.FromSeconds(30);
-            FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout ?? TimeSpan.FromSeconds(5);
+            SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
+            FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
@@ -1459,6 +1459,14 @@ namespace Raven.Client.Http
             return true;
         }
 
+        private class BroadcastState<TResult>
+        {
+            public RavenCommand<TResult> Command;
+            public int Index;
+            public ServerNode Node;
+            public IDisposable ReturnContext;
+        }
+
         private async Task<TResult> Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)
         {
             var broadcastCommand = command as IBroadcast;
@@ -1469,13 +1477,26 @@ namespace Raven.Client.Http
 
             using (var broadcastCts = CancellationTokenSource.CreateLinkedTokenSource(token))
             {
-                var tasks = SendToAllNodes<TResult>(sessionInfo, broadcastCommand, broadcastCts.Token);
+                var broadcastTasks = new Dictionary<Task, BroadcastState<TResult>>();
 
-                return await WaitForResult(command, tasks, broadcastCts).ConfigureAwait(false);
+                try
+                {
+                    SendToAllNodes(broadcastTasks, sessionInfo, broadcastCommand, broadcastCts.Token);
+
+                    return await WaitForBroadcastResult(command, broadcastTasks, broadcastCts).ConfigureAwait(false);
+                }
+                finally
+                {
+                    foreach (var broadcastState in broadcastTasks)
+                    {
+                        // we can't dispose it right away, we need for the task to be completed in order not to have a concurrent usage of the context.
+                        broadcastState.Key?.ContinueWith(_=> broadcastState.Value.ReturnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                    }
+                }
             }
         }
 
-        private async Task<TResult> WaitForResult<TResult>(RavenCommand<TResult> command, Dictionary<Task, (RavenCommand<TResult> Command, int Index)> tasks, CancellationTokenSource broadcastCts)
+        private async Task<TResult> WaitForBroadcastResult<TResult>(RavenCommand<TResult> command, Dictionary<Task, BroadcastState<TResult>> tasks, CancellationTokenSource broadcastCts)
         {
             while (tasks.Count > 0)
             {
@@ -1484,7 +1505,9 @@ namespace Raven.Client.Http
                 {
                     var failed = tasks[completed];
                     var node = _nodeSelector.Topology.Nodes[failed.Index];
-                    command.FailedNodes[node] = completed.Exception.ExtractSingleInnerException();
+
+                    command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
+                    
                     _nodeSelector.OnFailedRequest(failed.Index);
 
                     tasks.Remove(completed);
@@ -1501,27 +1524,23 @@ namespace Raven.Client.Http
             throw new AllTopologyNodesDownException($"Broadcasting {command.GetType()} failed.", ae);
         }
 
-        private Dictionary<Task, (RavenCommand<TResult> Command, int Index)> SendToAllNodes<TResult>(SessionInfo sessionInfo, IBroadcast command, CancellationToken token)
+        private void SendToAllNodes<TResult>(Dictionary<Task, BroadcastState<TResult>> tasks, SessionInfo sessionInfo, IBroadcast command, CancellationToken token)
         {
-            var tasks = new Dictionary<Task, (RavenCommand<TResult> Command, int Index)>();
             for (var index = 0; index < _nodeSelector.Topology.Nodes.Count; index++)
             {
-                var node = _nodeSelector.Topology.Nodes[index];
+                var state = new BroadcastState<TResult>
+                {
+                    ReturnContext = ContextPool.AllocateOperationContext(out JsonOperationContext ctx),
+                    Index = index,
+                    Node = _nodeSelector.Topology.Nodes[index],
+                    Command = (RavenCommand<TResult>)command.PrepareToBroadcast(ctx, Conventions)
+                };
 
-                var returnContext = ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
+                state.Command.SetTimeout(_secondBroadcastAttemptTimeout);
 
-                var clone = (RavenCommand<TResult>)command.PrepareToBroadcast(ctx, Conventions);
-                clone.SetTimeout(_secondBroadcastAttemptTimeout);
-
-                var task = ExecuteAsync(node, null, ctx, clone, shouldRetry: false, sessionInfo, token);
-#pragma warning disable 4014
-                task.ContinueWith(_ => returnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
-#pragma warning restore 4014
-
-                tasks.Add(task, (clone, index));
+                var task = ExecuteAsync(state.Node, null, ctx, state.Command, shouldRetry: false, sessionInfo, token);
+                tasks.Add(task, state);
             }
-
-            return tasks;
         }
 
         public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
