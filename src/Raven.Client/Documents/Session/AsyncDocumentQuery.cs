@@ -11,6 +11,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.Highlighting;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
@@ -633,6 +634,12 @@ namespace Raven.Client.Documents.Session
         {
             queryData.IsProjectInto = true;
             return CreateDocumentQueryInternal<TProjection>(queryData);
+        }
+
+        public IAsyncDocumentQuery<TTs> SelectTimeSeries<TTs>(Func<ITimeSeriesQueryBuilder, TTs> timeSeriesQuery)
+        {
+            var queryData = CreateTimeSeriesQueryData(timeSeriesQuery);
+            return SelectFields<TTs>(queryData);
         }
 
         /// <inheritdoc />

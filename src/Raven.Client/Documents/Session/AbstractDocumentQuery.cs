@@ -18,6 +18,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
@@ -1862,6 +1863,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
 
             sourceAlias = possibleAlias;
+        }
+
+        protected QueryData CreateTimeSeriesQueryData<TTs>(Func<ITimeSeriesQueryBuilder, TTs> timeSeriesQuery)
+        {
+            var builder = new TimeSeriesQueryBuilder();
+            timeSeriesQuery.Invoke(builder);
+
+            var fields = new[] { $"{Constants.TimeSeries.SelectFieldName}({builder.QueryText})" };
+            var projections = new[] { Constants.TimeSeries.QueryFunction };
+            return new QueryData(fields, projections);
         }
 
         public string ProjectionParameter(object id)
