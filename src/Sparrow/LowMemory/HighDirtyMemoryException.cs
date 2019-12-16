@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Sparrow.LowMemory
 {
     public class HighDirtyMemoryException : Exception
     {
-
         public HighDirtyMemoryException()
         {
         }

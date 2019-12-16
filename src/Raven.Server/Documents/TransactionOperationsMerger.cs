@@ -62,7 +62,7 @@ namespace Raven.Server.Documents
             _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
             _is32Bits = _parent.Configuration.Storage.ForceUsing32BitsPager || PlatformDetails.Is32Bits;
-            _timeToCheckHighDirtyMemory = _parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriodInSec;
+            _timeToCheckHighDirtyMemory = _parent.Configuration.Memory.TemporaryDirtyMemoryChecksPeriod;
             _lastHighDirtyMemCheck = _parent.Time.GetUtcNow();
         }
 

@@ -10,12 +10,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
-using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.Paging;
+using Sparrow.Server.Utils;
 
 namespace Voron.Impl.Scratch
 {
@@ -49,7 +48,7 @@ namespace Voron.Impl.Scratch
             _allocatedPagesCount = 0;
 
             scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
-            _strongRefToAllocateInBytesFunc = new StrongReference<Func<long>> {Value = scratchPager.AllocatedInBytesFunc};
+            _strongRefToAllocateInBytesFunc = new StrongReference<Func<long>> { Value = scratchPager.AllocatedInBytesFunc };
             MemoryInformation.DirtyMemoryObjects.TryAdd(_strongRefToAllocateInBytesFunc);
 
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
@@ -160,7 +159,7 @@ namespace Voron.Impl.Scratch
                 _scratchPager.UnprotectPageRange(freeAndAvailablePagePointer, freeAndAvailablePageSize, true);
 #endif
 
-                result = new PageFromScratchBuffer (_scratchNumber, freeAndAvailablePageNumber, size, numberOfPages);
+                result = new PageFromScratchBuffer(_scratchNumber, freeAndAvailablePageNumber, size, numberOfPages);
 
                 _allocatedPagesCount += numberOfPages;
                 _allocatedPages.Add(freeAndAvailablePageNumber, result);
@@ -187,7 +186,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer ( _scratchNumber, val.Page, size, numberOfPages );
+            result = new PageFromScratchBuffer(_scratchNumber, val.Page, size, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(val.Page, result);
