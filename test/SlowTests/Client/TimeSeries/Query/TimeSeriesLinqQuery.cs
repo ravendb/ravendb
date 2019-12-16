@@ -18,6 +18,8 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private class Person
         {
+            public string Id { get; set; }
+
             public string Name { get; set; }
 
             public int Age { get; set; }
@@ -50,6 +52,8 @@ namespace SlowTests.Client.TimeSeries.Query
             public string Name { get; set; }
 
             public TimeSeriesAggregation HeartRate { get; set; }
+
+            public TimeSeriesAggregation BloodPressure { get; set; }
         }
 
         [Fact]
@@ -652,7 +656,7 @@ namespace SlowTests.Client.TimeSeries.Query
                             Name = u.Name,
                             HeartRate = RavenQuery.TimeSeries(u, "Heartrate")
                                 .Where(ts => ts.Tag == "watches/fitbit")
-                                .GroupBy("1 month")
+                                .GroupBy(g => g.Months(1))
                                 .Select(g => new
                                 {
                                     Avg = g.Average(),
@@ -680,6 +684,295 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(179, aggregation[1].Max[0]);
                     Assert.Equal(169, aggregation[1].Min[0]);
                     Assert.Equal(174, aggregation[1].Avg[0]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_MultipleSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "ayende"
+                    }, "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    tsf.Append("BloodPressure", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("BloodPressure", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("BloodPressure", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    tsf.Append("BloodPressure", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("BloodPressure", baseline.AddMonths(1).AddMinutes(62), "watches/fitbit", new[] { 179d });
+                    tsf.Append("BloodPressure", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => new QueryResult
+                        {
+                            Id = p.Id,
+                            Name = p.Name,
+                            HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
+                                .Where(ts => ts.Tag == "watches/fitbit")
+                                .GroupBy(g => g.Months(1))
+                                .Select(g => new
+                                {
+                                    Avg = g.Average(),
+                                    Max = g.Max()
+                                })
+                                .ToList(),
+                            BloodPressure = RavenQuery.TimeSeries(p, "BloodPressure")
+                                .Where(ts => ts.Tag == "watches/apple")
+                                .GroupBy(g => g.Months(1))
+                                .Select(g => new
+                                {
+                                    Avg = g.Average(),
+                                    Max = g.Max()
+                                })
+                                .ToList(),
+                            
+                        });
+
+                    var result = query.First();
+
+                    Assert.Equal("ayende", result.Name);
+                    Assert.Equal("people/1", result.Id);
+
+                    Assert.Equal(4, result.HeartRate.Count);
+
+                    var aggregation = result.HeartRate.Results;
+
+                    Assert.Equal(2, aggregation.Length);
+
+                    Assert.Equal(69, aggregation[0].Max[0]);
+                    Assert.Equal(64, aggregation[0].Avg[0]);
+
+                    Assert.Equal(179, aggregation[1].Max[0]);
+                    Assert.Equal(174, aggregation[1].Avg[0]);
+
+                    Assert.Equal(2, result.BloodPressure.Count);
+
+                    aggregation = result.BloodPressure.Results;
+
+                    Assert.Equal(2, aggregation.Length);
+
+                    Assert.Equal(79, aggregation[0].Max[0]);
+                    Assert.Equal(79, aggregation[0].Avg[0]);
+
+                    Assert.Equal(159, aggregation[1].Max[0]);
+                    Assert.Equal(159, aggregation[1].Avg[0]);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereOnVariable()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    double val = 70;
+
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                            .Where(ts => ts.Values[0] > val)
+                            .GroupBy(g => g.Months(1))
+                            .Select(g => new
+                            {
+                                Avg = g.Average(),
+                                Max = g.Max(),
+                                Min = g.Min()
+                            })
+                            .ToList());
+
+                    // should add 'val' as query parameter  
+                    Assert.Contains("Values[0] > $p0", query.ToString());
+
+                    var result = query.First();
+
+                    Assert.Equal(4, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(79, agg[0].Max[0]);
+                    Assert.Equal(79, agg[0].Avg[0]);
+                    Assert.Equal(79, agg[0].Min[0]);
+
+                    Assert.Equal(179, agg[1].Max[0]);
+                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(159, agg[1].Min[0]);
+
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereOr()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), "watches/fitbit", new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), "watches/apple", new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                            .Where(ts => ts.Values[0] < 70 || ts.Tag == "watches/apple")
+                            .GroupBy(g => g.Months(1))
+                            .Select(g => new
+                            {
+                                Avg = g.Average(),
+                                Max = g.Max(),
+                                Min = g.Min()
+                            })
+                            .ToList());
+
+
+                    var result = query.First();
+
+                    Assert.Equal(4, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(79, agg[0].Max[0]);
+                    Assert.Equal(69, agg[0].Avg[0]);
+                    Assert.Equal(59, agg[0].Min[0]);
+
+                    Assert.Equal(159, agg[1].Max[0]);
+                    Assert.Equal(159, agg[1].Avg[0]);
+                    Assert.Equal(159, agg[1].Min[0]);
+
+
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WhereAnd()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 2.5
+                    }, "watches/fitbit");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 1.8
+                    }, "watches/apple");
+
+                    var tsf = session.TimeSeriesFor("people/1");
+
+                    tsf.Append("Heartrate", baseline.AddMinutes(61), "watches/fitbit", new[] { 59d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(62), "watches/apple", new[] { 79d });
+                    tsf.Append("Heartrate", baseline.AddMinutes(63), null, new[] { 69d });
+
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(61), null, new[] { 159d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(62), "watches/sony", new[] { 179d });
+                    tsf.Append("Heartrate", baseline.AddMonths(1).AddMinutes(63), "watches/fitbit", new[] { 169d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                            .LoadTag<Watch>()
+                            .Where((ts, src) => src != null && src.Accuracy > 2.2)
+                            .GroupBy(g => g.Months(1))
+                            .Select(g => new
+                            {
+                                Avg = g.Average(),
+                                Max = g.Max(),
+                                Min = g.Min()
+                            })
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(2, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(2, agg.Length);
+
+                    Assert.Equal(59, agg[0].Max[0]);
+                    Assert.Equal(59, agg[0].Avg[0]);
+                    Assert.Equal(59, agg[0].Min[0]);
+
+                    Assert.Equal(169, agg[1].Max[0]);
+                    Assert.Equal(169, agg[1].Avg[0]);
+                    Assert.Equal(169, agg[1].Min[0]);
+
 
                 }
             }

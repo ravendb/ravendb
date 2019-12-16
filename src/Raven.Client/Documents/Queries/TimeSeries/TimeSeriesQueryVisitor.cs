@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     {
         private readonly MethodCallExpression _expression;
         private readonly RavenQueryProviderProcessor<T> _processor;
-        private TimeSeriesWhereClauseModifier _modifier;
+        private TimeSeriesWhereClauseModifier<T> _modifier;
         private StringBuilder _selectFields;
         private string _name, _between, _where, _groupBy, _loadTag;
 
@@ -53,9 +53,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                   unary.Operand is LambdaExpression lambda))
                 throw new InvalidOperationException("Cannot understand how to translate " + _expression);
 
-            // removes the lambda parameter
-            // from filter expression, e.g. : 'x.Tag' => 'Tag'
-            _modifier = new TimeSeriesWhereClauseModifier(lambda.Parameters[0].Name);
+            _modifier = new TimeSeriesWhereClauseModifier<T>(lambda.Parameters[0].Name, _processor.DocumentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
                 LoadTag(lambda.Parameters[1].Name);
@@ -192,9 +190,24 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private void WhereBinary(BinaryExpression expression)
         {
             Debug.Assert(_modifier != null);
-            var filterExpression = _modifier.Modify(expression);
+
+            var filterExpression = ModifyExpression(expression);
 
             _where = $" where {filterExpression}";
+        }
+
+        private string ModifyExpression(Expression expression)
+        {
+            if (expression is BinaryExpression be && 
+                (be.NodeType == ExpressionType.OrElse || be.NodeType == ExpressionType.AndAlso))
+            {
+                var left = ModifyExpression(be.Left);
+                var right = ModifyExpression(be.Right);
+                var op = expression.NodeType == ExpressionType.OrElse ? "or" : "and";
+                return $"{left} {op} {right}";
+            }
+
+            return _modifier.Modify(expression).ToString();
         }
 
         private void WhereIn(MethodCallExpression mce)
