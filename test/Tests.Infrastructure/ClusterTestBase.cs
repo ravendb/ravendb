@@ -283,15 +283,17 @@ namespace Tests.Infrastructure
 
         protected bool WaitForDocument(IDocumentStore store,
             string docId,
-            int timeout = 10000)
+            int timeout = 10000,
+            string database = null)
         {
-            return WaitForDocument<dynamic>(store, docId, predicate: null, timeout: timeout);
+            return WaitForDocument<dynamic>(store, docId, predicate: null, timeout: timeout, database);
         }
 
         protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
-            int timeout = 10000)
+            int timeout = 10000,
+            string database = null)
         {
             if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
                 Debugger.IsAttached)
@@ -301,7 +303,7 @@ namespace Tests.Infrastructure
             Exception ex = null;
             while (sw.ElapsedMilliseconds < timeout)
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenSession(database ?? store.Database))
                 {
                     try
                     {
@@ -322,7 +324,7 @@ namespace Tests.Infrastructure
                 Thread.Sleep(100);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenSession(database ?? store.Database))
             {
                 //one last try, and throw if there is still a conflict
                 var doc = session.Load<T>(docId);
