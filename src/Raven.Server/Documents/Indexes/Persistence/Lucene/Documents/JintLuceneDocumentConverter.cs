@@ -14,9 +14,17 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
-    public class JintLuceneDocumentConverter : LuceneDocumentConverterBase
+    public sealed class JintLuceneDocumentConverter : JintLuceneDocumentConverterBase
     {
-        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+        public JintLuceneDocumentConverter(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false) 
+            : base(fields, indexImplicitNull, indexEmptyEntries, storeValue: storeValue)
+        {
+        }
+    }
+
+    public abstract class JintLuceneDocumentConverterBase : LuceneDocumentConverterBase
+    {
+        protected JintLuceneDocumentConverterBase(ICollection<IndexField> fields, bool indexImplicitNull = false, bool indexEmptyEntries = false, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : base(fields, indexImplicitNull, indexEmptyEntries, keyFieldName, storeValue, storeValueFieldName)
         {
         }
