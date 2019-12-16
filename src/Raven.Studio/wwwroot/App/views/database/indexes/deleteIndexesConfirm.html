@@ -12,8 +12,8 @@
                 <li class="padding padding-xs">
                     <strong data-bind="text: indexName"></strong>
                     <small data-bind="if: reduceOutputCollection">
-                       <span data-bind="visible: referenceCollection, text: '('.concat('Reduce Results Collections: ',reduceOutputCollection, ', ', referenceCollection, ')')"></span>
-                       <span data-bind="visible: !referenceCollection, text: '('.concat('Reduce Results Collection: ', reduceOutputCollection, ')')"></span>
+                        <span data-bind="visible: referenceCollection, text: '(Reduce Results Collections: ' + reduceOutputCollection + ', ' + referenceCollection + ')'" class="margin-left margin-left-sm"></span>
+                        <span data-bind="visible: !referenceCollection, text: '(Reduce Results Collection: ' + reduceOutputCollection + ')'" class="margin-left margin-left-sm"></span>
                     </small>
                 </li>
             </ul>
