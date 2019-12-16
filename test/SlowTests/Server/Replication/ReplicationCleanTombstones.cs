@@ -8,6 +8,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -49,9 +50,11 @@ namespace SlowTests.Server.Replication
 
                 Assert.Equal(1, WaitUntilHasTombstones(store2).Count);
                 //Assert.Equal(4, WaitForValue(() => storage1.ReplicationLoader.MinimalEtagForReplication, 4));
-
+                
+                EnsureReplicating(store1, store2);
+                
                 await storage1.TombstoneCleaner.ExecuteCleanup();
-
+                
                 Assert.Equal(0, WaitForValue(() => WaitUntilHasTombstones(store1, 0).Count, 0));
             }
         }
@@ -210,6 +213,88 @@ namespace SlowTests.Server.Replication
                     }
                 }
 
+                Assert.Equal(0, total);
+            }
+        }
+
+        [Fact]
+        public async Task CleanTombstonesInTheClusterWithExternalReplication()
+        {
+            var cluster = await CreateRaftCluster(3);
+            var database = GetDatabaseName();
+            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+            var external = GetDatabaseName();
+            using (var store = GetDocumentStore(new Options
+            {
+                CreateDatabase = false,
+                Server = cluster.Leader,
+                ModifyDatabaseName = _ => database
+            }))
+            {
+                var replication = new ExternalReplication(external, "Connection");
+                await AddWatcherToReplicationTopology(store, replication);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Delete("foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Store(new User { Name = "Karmel" }, "marker");
+                    session.SaveChanges();
+
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                }
+
+                var total = 0L;
+                foreach (var server in cluster.Nodes)
+                {
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    await storage.TombstoneCleaner.ExecuteCleanup();
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                    }
+                }
+
+                Assert.Equal(3, total);
+
+                await CreateDatabaseInCluster(external, 3, cluster.Leader.WebUrl);
+
+                WaitForDocument(store, "marker", database: external);
+                WaitForDocumentDeletion(store, "foo/bar", database: external);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    session.Store(new User (), "marker2");
+                    session.SaveChanges();
+                }
+
+                WaitForDocument(store, "marker2", database: external);
+
+                total = 0L;
+                foreach (var server in cluster.Nodes)
+                {
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    await storage.TombstoneCleaner.ExecuteCleanup();
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                    }
+                }
                 Assert.Equal(0, total);
             }
         }
