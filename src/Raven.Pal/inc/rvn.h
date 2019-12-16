@@ -100,6 +100,15 @@ rvn_test_storage_durability(const char *temp_file_name, int32_t *detailed_error_
 EXPORT int32_t
 rvn_get_path_disk_space(const char * path, uint64_t* total_free_bytes, uint64_t* total_size_bytes, int32_t* detailed_error_code);
 
+EXPORT int32_t
+rvn_spawn_process(const char* filename, char* cmdline, void** pid, void** stdin, void** stdout, int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_wait_for_close_process(void* pid, int32_t closewait_timeout_seconds, int32_t* exit_code, int32_t* detailed_error_code);
+
+EXPORT int32_t
+rvn_kill_process(void* pid, int32_t* detailed_error_code);
+
 /* For internal use: */
 PRIVATE int64_t
 _nearest_size_to_page_size(int64_t orig_size, int64_t sys_page_size);
