@@ -15,6 +15,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -634,13 +635,41 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var statusBlittable = _serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(_database.Name, taskId));
+                return GetBackupStatusFromCluster(context, taskId);
+            }
+        }
 
-                if (statusBlittable == null)
-                    return null;
+        private PeriodicBackupStatus GetBackupStatusFromCluster(TransactionOperationContext context, long taskId)
+        {
+            var statusBlittable = _serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(_database.Name, taskId));
 
-                var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
-                return periodicBackupStatusJson;
+            if (statusBlittable == null)
+                return null;
+
+            var periodicBackupStatusJson = JsonDeserializationClient.PeriodicBackupStatus(statusBlittable);
+            return periodicBackupStatusJson;
+        }
+
+        private long GetMinLastEtag()
+        {
+            var min = long.MaxValue;
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name);
+                foreach (var taskId in record.GetPeriodicBackupsTaskIds())
+                {
+                    var config = record.GetPeriodicBackupConfiguration(taskId);
+                    if (config.IncrementalBackupFrequency == null)
+                        continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
+
+                    var status = GetBackupStatusFromCluster(context, taskId);
+                    var etag = ChangeVectorUtils.GetEtagById(status.LastDatabaseChangeVector, _database.DbBase64Id);
+                    min = Math.Min(etag, min);
+                }
+
+                return min;
             }
         }
 
@@ -902,27 +931,15 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
-            if (_periodicBackups.Count == 0)
-                return EmptyDictionary;
-
-            var processedTombstonesPerCollection = new Dictionary<string, long>();
-
-            var minLastEtag = long.MaxValue;
-            foreach (var periodicBackup in _periodicBackups.Values)
-            {
-                if (periodicBackup.BackupStatus?.LastEtag != null &&
-                    minLastEtag > periodicBackup.BackupStatus?.LastEtag)
-                {
-                    minLastEtag = periodicBackup.BackupStatus.LastEtag.Value;
-                }
-            }
+            var minLastEtag = GetMinLastEtag();
 
             if (minLastEtag == long.MaxValue)
-                minLastEtag = 0;
+                return EmptyDictionary;
 
-            processedTombstonesPerCollection[Constants.Documents.Collections.AllDocumentsCollection] = minLastEtag;
-
-            return processedTombstonesPerCollection;
+            return new Dictionary<string, long>
+            {
+                [Constants.Documents.Collections.AllDocumentsCollection] = minLastEtag
+            };
         }
     }
 }

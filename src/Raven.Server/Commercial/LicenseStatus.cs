@@ -74,7 +74,7 @@ namespace Raven.Server.Commercial
 
         public int MaxMemory => GetValue<int?>("memory") ?? 6;
 
-        public int Ratio => Math.Max(MaxMemory / MaxCores, 1);
+        public double Ratio => Math.Max((double)MaxMemory / MaxCores, 1);
 
         public int MaxClusterSize
         {

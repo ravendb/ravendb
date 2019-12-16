@@ -363,20 +363,17 @@ namespace SlowTests.Server.Replication
             var sinkDB = GetDatabaseName();
             var pullReplicationName = $"{hubDB}-pull";
 
-            var hubServer = GetNewServer(new ServerCreationOptions{CustomSettings = hubSettings});
-            var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings});
+            var hubServer = GetNewServer(new ServerCreationOptions{CustomSettings = hubSettings, RegisterForDisposal = true});
+            var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = sinkSettings, RegisterForDisposal = true});
 
             var dummy = GenerateAndSaveSelfSignedCertificate(true);
             var pullReplicationCertificate = new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable);
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
-            await PutCertificateInHub(pullReplicationName, hubServer, hubCerts.ServerCertificate.Value, hubDB, pullReplicationCertificate);
-
             using (var hubStore = GetDocumentStore(new Options
             {
                 ClientCertificate = hubCerts.ServerCertificate.Value,
                 Server = hubServer,
-                CreateDatabase = false,
                 ModifyDatabaseName = _ => hubDB
             }))
             using (var sinkStore = GetDocumentStore(new Options
@@ -386,6 +383,14 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _ => sinkDB
             }))
             {
+                await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)
+                {
+                    Certificates = new Dictionary<string, string>
+                    {
+                        [pullReplicationCertificate.Thumbprint] = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
+                    }
+                }));
+
                 var configurationResult = await SetupPullReplicationAsync(pullReplicationName, sinkStore, pullReplicationCertificate, hubStore);
                 var sinkTaskId = configurationResult[0].TaskId;
                 using (var hubSession = hubStore.OpenSession())
@@ -415,26 +420,6 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument(sinkStore, "foo/bar2", timeout), sinkStore.Identifier);
                 
-            }
-        }
-        
-        private async Task PutCertificateInHub(string pullReplicationName, RavenServer server, X509Certificate2 hubAdminCert, string hubDB,
-            X509Certificate2 certificate)
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                ClientCertificate = hubAdminCert,
-                Server = server,
-                ModifyDatabaseName = _=> hubDB
-            }))
-            {
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)
-                {
-                    Certificates = new Dictionary<string, string>
-                    {
-                        [certificate.Thumbprint] = Convert.ToBase64String(certificate.Export(X509ContentType.Cert))
-                    }
-                }));
             }
         }
 

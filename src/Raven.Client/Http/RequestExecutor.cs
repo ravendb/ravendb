@@ -16,6 +16,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
@@ -136,6 +137,34 @@ namespace Raven.Client.Http
                     throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
 
                 _defaultTimeout = value;
+            }
+        }
+
+        private TimeSpan _secondBroadcastAttemptTimeout;
+
+        public TimeSpan SecondBroadcastAttemptTimeout
+        {
+            get => _secondBroadcastAttemptTimeout;
+            set
+            {
+                if (value > GlobalHttpClientTimeout)
+                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+
+                _secondBroadcastAttemptTimeout = value;
+            }
+        }
+
+        private TimeSpan _firstBroadcastAttemptTimeout;
+
+        public TimeSpan FirstBroadcastAttemptTimeout
+        {
+            get => _firstBroadcastAttemptTimeout;
+            set
+            {
+                if (value > GlobalHttpClientTimeout)
+                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+
+                _firstBroadcastAttemptTimeout = value;
             }
         }
 
@@ -303,6 +332,8 @@ namespace Raven.Client.Http
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
             DefaultTimeout = Conventions.RequestTimeout;
+            SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
+            FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout;
 
             TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
 
@@ -772,9 +803,8 @@ namespace Raven.Client.Http
             CancellationToken token = default)
         {
             if (command.FailoverTopologyEtag == InitialTopologyEtag)
-            {
                 command.FailoverTopologyEtag = _nodeSelector?.Topology?.Etag ?? InitialTopologyEtag;
-            }
+
             var request = CreateRequest(context, chosenNode, command, out string url);
             var noCaching = sessionInfo?.NoCaching ?? false;
 
@@ -782,167 +812,23 @@ namespace Raven.Client.Http
             {
                 if (cachedChangeVector != null)
                 {
-                    var aggressiveCacheOptions = AggressiveCaching.Value;
-                    if (aggressiveCacheOptions != null &&
-                        cachedItem.Age < aggressiveCacheOptions.Duration &&
-                        (cachedItem.MightHaveBeenModified == false || aggressiveCacheOptions.Mode != AggressiveCacheMode.TrackChanges) &&
-                        command.CanCacheAggressively)
-                    {
-                        if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
-                        {
-                            // if this is a cached delete, we only respect it if it _came_ from an aggressively cached
-                            // block, otherwise, we'll run the request again
-                            if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggressivelyCached) == HttpCache.ItemFlags.AggressivelyCached)
-                            {
-                                command.SetResponse(context, cachedValue, fromCache: true);
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            command.SetResponse(context, cachedValue, fromCache: true);
-                            return;
-                        }
-                    }
-
-                    request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
+                    if (TryGetFromCache(context, command, cachedItem, cachedValue)) 
+                        return;
                 }
 
                 if (sessionInfo?.AsyncCommandRunning ?? false)
                     ThrowInvalidConcurrentSessionUsage(command.GetType().Name, sessionInfo);
 
-                if (_disableClientConfigurationUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
+                SetRequestHeaders(sessionInfo, cachedChangeVector, request);
 
-                if (sessionInfo?.LastClusterTransactionIndex != null)
-                {
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransactionIndex.ToString());
-                }
-
-                if (_disableTopologyUpdates == false)
-                    request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
-
-                HttpResponseMessage response = null;
-                var responseDispose = ResponseDisposeHandling.Automatic;
-                try
-                {
-                    if (sessionInfo != null)
-                    {
-                        sessionInfo.AsyncCommandRunning = true;
-                    }
-                    Interlocked.Increment(ref NumberOfServerRequests);
-                    var timeout = command.Timeout ?? _defaultTimeout;
-                    if (timeout.HasValue)
-                    {
-                        if (timeout > GlobalHttpClientTimeout)
-                            ThrowTimeoutTooLarge(timeout);
-
-                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
-                        {
-                            cts.CancelAfter(timeout.Value);
-                            try
-                            {
-                                var preferredTask = command.SendAsync(HttpClient, request, cts.Token);
-                                if (ShouldExecuteOnAll(chosenNode, command))
-                                {
-                                    await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token).ConfigureAwait(false);
-                                }
-
-                                response = await preferredTask.ConfigureAwait(false);
-
-                                if (TryGetServerVersion(response, out var serverVersion))
-                                    LastServerVersion = serverVersion;
-
-                                if (sessionInfo?.LastClusterTransactionIndex != null)
-                                {
-                                    // if we reach here it means that sometime a cluster transaction has occurred against this database.
-                                    // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
-                                    // But we can't do that if the server is an old one.
-                                    if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
-                                        throw new ClientVersionMismatchException(
-                                            $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
-                                            "since this command dependent on a cluster transaction which this node doesn't support");
-                                }
-                            }
-                            catch (OperationCanceledException e)
-                            {
-                                if (cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
-                                {
-                                    var timeoutException = new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
-                                    if (shouldRetry == false)
-                                        throw timeoutException;
-
-                                    if (sessionInfo != null)
-                                        sessionInfo.AsyncCommandRunning = false;
-
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo, shouldRetry, requestContext: null, token: token).ConfigureAwait(false) == false)
-                                        ThrowFailedToContactAllNodes(command, request);
-
-                                    return;
-                                }
-
-                                throw;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var preferredTask = command.SendAsync(HttpClient, request, token);
-                        if (ShouldExecuteOnAll(chosenNode, command))
-                        {
-                            await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
-                        }
-
-                        response = await preferredTask.ConfigureAwait(false);
-
-                        if (TryGetServerVersion(response, out var serverVersion))
-                            LastServerVersion = serverVersion;
-                    }
-                }
-                catch (HttpRequestException e) // server down, network down
-                {
-                    using (GetContext(out var requestContext))
-                    {
-                        if (e.InnerException is SocketException se && ShouldRemoveHttpClient(se))
-                        {
-                            if (requestContext.HttpClientRemoved == false)
-                            {
-                                RemoveHttpClient();
-                                requestContext.HttpClientRemoved = true;
-                            }
-                            else
-                            {
-                                requestContext.HttpClientRemoved = false;
-                            }
-                        }
-
-                    if (shouldRetry == false)
-                        throw;
-
-                    if (sessionInfo != null)
-                        sessionInfo.AsyncCommandRunning = false;
-
-                        if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo, shouldRetry, requestContext, token)
-                                .ConfigureAwait(false) == false)
-                    {
-                        ThrowIfClientException(response, e);
-                        ThrowFailedToContactAllNodes(command, request);
-                    }
-
+                var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
+                if (response == null) // the fail-over mechanism took care of this
                     return;
-                }
-                }
-                finally
-                {
-                    if (sessionInfo != null)
-                        sessionInfo.AsyncCommandRunning = false;
-                }
 
+                var refreshTask = RefreshIfNeeded(chosenNode, response);
                 command.StatusCode = response.StatusCode;
 
-                var refreshTopology = response.GetBoolHeader(Constants.Headers.RefreshTopology) ?? false;
-                var refreshClientConfiguration = response.GetBoolHeader(Constants.Headers.RefreshClientConfiguration) ?? false;
-
+                var responseDispose = ResponseDisposeHandling.Automatic;
                 try
                 {
                     if (response.StatusCode == HttpStatusCode.NotModified)
@@ -981,26 +867,230 @@ namespace Raven.Client.Http
                     {
                         response.Dispose();
                     }
-                    if (refreshTopology || refreshClientConfiguration)
-                    {
-                        var tasks = new Task[2];
 
-                        tasks[0] = refreshTopology
-                            ? UpdateTopologyAsync(new ServerNode
-                            {
-                                Url = chosenNode.Url,
-                                Database = _databaseName
-                            }, 0, debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
-                            : Task.CompletedTask;
-
-                        tasks[1] = refreshClientConfiguration
-                            ? UpdateClientConfigurationAsync()
-                            : Task.CompletedTask;
-
-                        await Task.WhenAll(tasks).ConfigureAwait(false);
-                    }
+                    await refreshTask.ConfigureAwait(false);
                 }
             }
+        }
+
+        private Task RefreshIfNeeded(ServerNode chosenNode, HttpResponseMessage response)
+        {
+            var refreshTopology = response.GetBoolHeader(Constants.Headers.RefreshTopology) ?? false;
+            var refreshClientConfiguration = response.GetBoolHeader(Constants.Headers.RefreshClientConfiguration) ?? false;
+
+            if (refreshTopology || refreshClientConfiguration)
+            {
+                var tasks = new Task[2];
+
+                tasks[0] = refreshTopology
+                    ? UpdateTopologyAsync(new ServerNode
+                        {
+                            Url = chosenNode.Url, 
+                            Database = _databaseName
+                        }, 0,
+                        debugTag: refreshTopology ? "refresh-topology-header" : refreshClientConfiguration ? "refresh-client-configuration-header" : null)
+                    : Task.CompletedTask;
+
+                tasks[1] = refreshClientConfiguration
+                    ? UpdateClientConfigurationAsync()
+                    : Task.CompletedTask;
+
+                return Task.WhenAll(tasks);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private async Task<HttpResponseMessage> SendRequestToServer<TResult>(
+            ServerNode chosenNode, 
+            int? nodeIndex, 
+            JsonOperationContext context, 
+            RavenCommand<TResult> command, 
+            bool shouldRetry, 
+            SessionInfo sessionInfo, 
+            HttpRequestMessage request, 
+            string url, 
+            CancellationToken token)
+        {
+            try
+            {
+                if (sessionInfo != null)
+                {
+                    sessionInfo.AsyncCommandRunning = true;
+                }
+
+                Interlocked.Increment(ref NumberOfServerRequests);
+                var timeout = command.Timeout ?? _defaultTimeout;
+                if (timeout.HasValue)
+                {
+                    if (timeout > GlobalHttpClientTimeout)
+                        ThrowTimeoutTooLarge(timeout);
+
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
+                    {
+                        cts.CancelAfter(timeout.Value);
+                        try
+                        {
+                            return await SendAsync(chosenNode, command, sessionInfo, request, cts.Token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException e)
+                        {
+                            if (cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
+                            {
+                                var timeoutException = new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
+                                if (shouldRetry == false)
+                                {
+                                    if (command.FailedNodes == null)
+                                        command.FailedNodes = new Dictionary<ServerNode, Exception>();
+
+                                    command.FailedNodes[chosenNode] = timeoutException;
+                                    throw timeoutException;
+                                }
+
+                                if (sessionInfo != null)
+                                    sessionInfo.AsyncCommandRunning = false;
+
+                                if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, null, timeoutException, sessionInfo, shouldRetry,
+                                        requestContext: null, token: token).ConfigureAwait(false) == false)
+                                    ThrowFailedToContactAllNodes(command, request);
+
+                                return null;
+                            }
+
+                            throw;
+                        }
+                    }
+                }
+                else
+                {
+                    return await SendAsync(chosenNode, command, sessionInfo, request, token).ConfigureAwait(false);
+                }
+            }
+            catch (HttpRequestException e) // server down, network down
+            {
+                using (GetContext(out var requestContext))
+                {
+                    if (e.InnerException is SocketException se && ShouldRemoveHttpClient(se))
+                    {
+                        if (requestContext.HttpClientRemoved == false)
+                        {
+                            RemoveHttpClient();
+                            requestContext.HttpClientRemoved = true;
+                        }
+                        else
+                        {
+                            requestContext.HttpClientRemoved = false;
+                        }
+                    }
+
+                    if (shouldRetry == false)
+                        throw;
+
+                    if (sessionInfo != null)
+                        sessionInfo.AsyncCommandRunning = false;
+
+                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, null, e, sessionInfo, shouldRetry, requestContext, token)
+                            .ConfigureAwait(false) == false)
+                    {
+                        ThrowIfClientException(e);
+                        ThrowFailedToContactAllNodes(command, request);
+                    }
+
+                    return null;
+                }
+            }
+            finally
+            {
+                if (sessionInfo != null)
+                    sessionInfo.AsyncCommandRunning = false;
+            }
+        }
+
+        private async Task<HttpResponseMessage> SendAsync<TResult>(
+            ServerNode chosenNode, 
+            RavenCommand<TResult> command, 
+            SessionInfo sessionInfo, 
+            HttpRequestMessage request, 
+            CancellationToken token)
+        {
+            var preferredTask = command.SendAsync(HttpClient, request, token);
+            if (ShouldExecuteOnAll(chosenNode, command))
+            {
+                await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
+            }
+
+            var response = await preferredTask.ConfigureAwait(false);
+
+            if (TryGetServerVersion(response, out var serverVersion))
+                LastServerVersion = serverVersion;
+
+            if (sessionInfo?.LastClusterTransactionIndex != null)
+            {
+                // if we reach here it means that sometime a cluster transaction has occurred against this database.
+                // Since the current executed command can be dependent on that, we have to wait for the cluster transaction.
+                // But we can't do that if the server is an old one.
+
+                if (serverVersion == null || string.Compare(serverVersion, "4.1", StringComparison.Ordinal) < 0)
+                {
+                    using (response)
+                    {
+                        throw new ClientVersionMismatchException(
+                            $"The server on {chosenNode.Url} has an old version and can't perform the command '{command.GetType()}', " +
+                            "since this command dependent on a cluster transaction which this node doesn't support");
+                    }
+                }
+                    
+            }
+
+            return response;
+        }
+
+        private void SetRequestHeaders(SessionInfo sessionInfo, string cachedChangeVector, HttpRequestMessage request)
+        {
+            if (cachedChangeVector != null)
+                request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{cachedChangeVector}\"");
+
+            if (_disableClientConfigurationUpdates == false)
+                request.Headers.TryAddWithoutValidation(Constants.Headers.ClientConfigurationEtag, $"\"{ClientConfigurationEtag.ToInvariantString()}\"");
+
+            if (sessionInfo?.LastClusterTransactionIndex != null)
+            {
+                request.Headers.TryAddWithoutValidation(Constants.Headers.LastKnownClusterTransactionIndex, sessionInfo.LastClusterTransactionIndex.ToString());
+            }
+
+            if (_disableTopologyUpdates == false)
+                request.Headers.TryAddWithoutValidation(Constants.Headers.TopologyEtag, $"\"{TopologyEtag.ToInvariantString()}\"");
+
+            if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
+                request.Headers.Add(Constants.Headers.ClientVersion, _localClientVersion ?? ClientVersion);
+        }
+
+        private bool TryGetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpCache.ReleaseCacheItem cachedItem, BlittableJsonReaderObject cachedValue)
+        {
+            var aggressiveCacheOptions = AggressiveCaching.Value;
+            if (aggressiveCacheOptions != null &&
+                cachedItem.Age < aggressiveCacheOptions.Duration &&
+                (cachedItem.MightHaveBeenModified == false || aggressiveCacheOptions.Mode != AggressiveCacheMode.TrackChanges) &&
+                command.CanCacheAggressively)
+            {
+                if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
+                {
+                    // if this is a cached delete, we only respect it if it _came_ from an aggressively cached
+                    // block, otherwise, we'll run the request again
+                    if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggressivelyCached) == HttpCache.ItemFlags.AggressivelyCached)
+                    {
+                        command.SetResponse(context, cachedValue, fromCache: true);
+                        return true;
+                    }
+                }
+                else
+                {
+                    command.SetResponse(context, cachedValue, fromCache: true);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private IDisposable GetContext(out RequestContext context)
@@ -1082,7 +1172,8 @@ namespace Raven.Client.Http
                    selector.Topology?.Nodes?.Count > 1 &&
                    command.IsReadRequest &&
                    command.ResponseType == RavenCommandResponseType.Object &&
-                   chosenNode != null;
+                   chosenNode != null && 
+                   command is IBroadcast == false;
         }
 
         private static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>(TaskCreationOptions.RunContinuationsAsynchronously).Task;
@@ -1108,6 +1199,8 @@ namespace Raven.Client.Http
                 {
                     disposable = ContextPool.AllocateOperationContext(out var tmpCtx);
                     var request = CreateRequest(tmpCtx, nodes[i], command, out _);
+                    SetRequestHeaders(null, null, request);
+                    
                     Interlocked.Increment(ref NumberOfServerRequests);
 
                     var copy = disposable;
@@ -1202,11 +1295,13 @@ namespace Raven.Client.Http
                 builder.Query = builder.Query?.Length > 1 ? $"{builder.Query.Substring(1)}&{raftRequestString}" : raftRequestString;
             }
 
+            if (ShouldBroadcast(command))
+            {
+                command.SetTimeout(command.Timeout ?? _firstBroadcastAttemptTimeout);
+            }
+            
             request.RequestUri = builder.Uri;
 
-            if (request.Headers.Contains(Constants.Headers.ClientVersion) == false)
-                request.Headers.Add(Constants.Headers.ClientVersion, _localClientVersion ?? ClientVersion);
-            
             return request;
         }
 
@@ -1312,10 +1407,11 @@ namespace Raven.Client.Http
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
         {
+
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
 
-            await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
+            command.FailedNodes[chosenNode] = await ReadExceptionFromServer(context, request, response, e).ConfigureAwait(false);
 
             if (nodeIndex.HasValue == false)
             {
@@ -1323,12 +1419,21 @@ namespace Raven.Client.Http
                 return false;
             }
 
-            SpawnHealthChecks(chosenNode, nodeIndex.Value);
-
             if (_nodeSelector == null)
+            {
+                SpawnHealthChecks(chosenNode, nodeIndex.Value);
                 return false;
+            }
 
             _nodeSelector.OnFailedRequest(nodeIndex.Value);
+
+            if (ShouldBroadcast(command))
+            {
+                command.Result = await Broadcast(command, sessionInfo, token).ConfigureAwait(false);
+                return true;
+            }
+
+            SpawnHealthChecks(chosenNode, nodeIndex.Value);
 
             var (currentIndex, currentNode, topologyEtag) = _nodeSelector.GetPreferredNodeWithTopology();
 
@@ -1349,6 +1454,102 @@ namespace Raven.Client.Http
             await ExecuteAsync(currentNode, currentIndex, context, command, shouldRetry, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
 
             return true;
+        }
+
+        private bool ShouldBroadcast<TResult>(RavenCommand<TResult> command)
+        {
+            if (command is IBroadcast == false)
+                return false;
+
+            if (TopologyNodes == null || 
+                TopologyNodes.Count < 2)
+                return false;
+
+            return true;
+        }
+
+        private class BroadcastState<TResult>
+        {
+            public RavenCommand<TResult> Command;
+            public int Index;
+            public ServerNode Node;
+            public IDisposable ReturnContext;
+        }
+
+        private async Task<TResult> Broadcast<TResult>(RavenCommand<TResult> command, SessionInfo sessionInfo, CancellationToken token)
+        {
+            var broadcastCommand = command as IBroadcast;
+            if (broadcastCommand == null)
+                throw new InvalidOperationException("You can broadcast only commands that implement 'IBroadcast'.");
+
+            command.FailedNodes = new Dictionary<ServerNode, Exception>(); // clear the current failures
+
+            using (var broadcastCts = CancellationTokenSource.CreateLinkedTokenSource(token))
+            {
+                var broadcastTasks = new Dictionary<Task, BroadcastState<TResult>>();
+
+                try
+                {
+                    SendToAllNodes(broadcastTasks, sessionInfo, broadcastCommand, broadcastCts.Token);
+
+                    return await WaitForBroadcastResult(command, broadcastTasks, broadcastCts).ConfigureAwait(false);
+                }
+                finally
+                {
+                    foreach (var broadcastState in broadcastTasks)
+                    {
+                        // we can't dispose it right away, we need for the task to be completed in order not to have a concurrent usage of the context.
+                        broadcastState.Key?.ContinueWith(_=> broadcastState.Value.ReturnContext.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                    }
+                }
+            }
+        }
+
+        private async Task<TResult> WaitForBroadcastResult<TResult>(RavenCommand<TResult> command, Dictionary<Task, BroadcastState<TResult>> tasks, CancellationTokenSource broadcastCts)
+        {
+            while (tasks.Count > 0)
+            {
+                var completed = await Task.WhenAny(tasks.Keys).ConfigureAwait(false);
+                if (completed.IsCanceled || completed.IsFaulted)
+                {
+                    var failed = tasks[completed];
+                    var node = _nodeSelector.Topology.Nodes[failed.Index];
+
+                    command.FailedNodes[node] = completed.Exception?.ExtractSingleInnerException() ?? new UnsuccessfulRequestException(failed.Node.Url);
+                    
+                    _nodeSelector.OnFailedRequest(failed.Index);
+
+                    tasks.Remove(completed);
+                    continue;
+                }
+
+                broadcastCts.Cancel(throwOnFirstException: false);
+
+                _nodeSelector.RestoreNodeIndex(tasks[completed].Index);
+                return tasks[completed].Command.Result;
+            }
+
+            var ae = new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value)));
+            throw new AllTopologyNodesDownException($"Broadcasting {command.GetType()} failed.", ae);
+        }
+
+        private void SendToAllNodes<TResult>(Dictionary<Task, BroadcastState<TResult>> tasks, SessionInfo sessionInfo, IBroadcast command, CancellationToken token)
+        {
+            for (var index = 0; index < _nodeSelector.Topology.Nodes.Count; index++)
+            {
+                var state = new BroadcastState<TResult>
+                {
+                    ReturnContext = ContextPool.AllocateOperationContext(out JsonOperationContext ctx),
+                    Index = index,
+                    Node = _nodeSelector.Topology.Nodes[index],
+                    Command = (RavenCommand<TResult>)command.PrepareToBroadcast(ctx, Conventions)
+                };
+
+                state.Command.SetTimeout(_secondBroadcastAttemptTimeout);
+
+                var task = ExecuteAsync(state.Node, null, ctx, state.Command, shouldRetry: false, sessionInfo, token);
+                tasks.Add(task, state);
+            }
         }
 
         public async Task<ServerNode> HandleServerNotResponsive(string url, ServerNode chosenNode, int nodeIndex, Exception e)
@@ -1447,8 +1648,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
         }
 
-        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command,
-            HttpRequestMessage request, HttpResponseMessage response, Exception e)
+        private static async Task<Exception> ReadExceptionFromServer(JsonOperationContext context, HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (response != null)
             {
@@ -1460,14 +1660,14 @@ namespace Raven.Client.Http
                     ms.Position = 0;
                     using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
                     {
-                        command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
+                        return ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode, e);
                     }
                 }
                 catch
                 {
                     // we failed to parse the error
                     ms.Position = 0;
-                    command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
+                    return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
                     {
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
@@ -1475,10 +1675,9 @@ namespace Raven.Client.Http
                         Type = "Unparseable Server Response"
                     }, response.StatusCode, e);
                 }
-                return;
             }
             //this would be connections that didn't have response, such as "couldn't connect to remote server"
-            command.FailedNodes[chosenNode] = ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
+            return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {
                 Url = request.RequestUri.ToString(),
                 Message = e.Message,
@@ -1806,7 +2005,7 @@ namespace Raven.Client.Http
             TopologyUpdated?.Invoke(newTopology);
         }
 
-        private static void ThrowIfClientException(HttpResponseMessage response, Exception e)
+        private static void ThrowIfClientException(Exception e)
         {
             switch (e.InnerException)
             {

@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var db = GetDatabase(src.Database).Result;
 
-                var etlProcess = db.EtlLoader.Processes[0];
+                var etlProcess = db.EtlLoader;
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -98,7 +98,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 var db = GetDatabase(src.Database).Result;
 
-                var etlProcess = db.EtlLoader.Processes[0];
+                var etlProcess = db.EtlLoader;
 
                 DocumentsOperationContext context;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out context))

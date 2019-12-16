@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -20,6 +22,8 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Raven.Client.Documents.Operations.Identities;
+using Raven.Server.Utils;
+using Sparrow.Server;
 using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
@@ -99,6 +103,85 @@ namespace SlowTests.Cluster
                     var id = session.Advanced.GetDocumentId(user);
                     Assert.Equal("users/1991", id);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task NextIdentityForOperationShouldBroadcast()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var database = GetDatabaseName();
+            var numberOfNodes = 3;
+            var cluster = await CreateRaftCluster(numberOfNodes);
+            var createResult = await CreateDatabaseInClusterInner(new DatabaseRecord(database), numberOfNodes, cluster.Leader.WebUrl, null);
+
+            using (var store = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Leader.WebUrl }
+            }.Initialize())
+            {
+
+                var re = store.GetRequestExecutor(database);
+                var result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                Assert.Equal(1, result);
+
+                var preferred = await re.GetPreferredNode();
+                var tag = preferred.Item2.ClusterTag;
+                var server = createResult.Servers.Single(s => s.ServerStore.NodeTag == tag);
+                server.ServerStore.InitializationCompleted.Reset(true);
+                server.ServerStore.Initialized = false;
+                server.ServerStore.Engine.CurrentLeader?.StepDown();
+
+                var sp = Stopwatch.StartNew();
+                result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                Assert.True(sp.Elapsed < TimeSpan.FromSeconds(10));
+                var newPreferred = await re.GetPreferredNode();
+                
+                Assert.NotEqual(tag, newPreferred.Item2.ClusterTag);
+                Assert.Equal(2, result);
+            }
+        }
+
+        [Fact]
+        public async Task NextIdentityForOperationShouldBroadcastAndFail()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var database = GetDatabaseName();
+            var numberOfNodes = 3;
+            var cluster = await CreateRaftCluster(numberOfNodes);
+            var createResult = await CreateDatabaseInClusterInner(new DatabaseRecord(database), numberOfNodes, cluster.Leader.WebUrl, null);
+
+            using (var store = new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { cluster.Leader.WebUrl }
+            }.Initialize())
+            {
+                var result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|"));
+                Assert.Equal(1, result);
+
+                var node = createResult.Servers.First(n => n != cluster.Leader);
+                node.ServerStore.InitializationCompleted.Reset(true);
+                node.ServerStore.Initialized = false;
+
+                await ActionWithLeader((l) => DisposeServerAndWaitForFinishOfDisposalAsync(l));
+
+                using (var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+                {
+                    await Task.WhenAll(createResult.Servers.Where(s => s.Disposed == false).Select(s => s.ServerStore.WaitForState(RachisState.Candidate, cancel.Token)));
+                }
+
+                var sp = Stopwatch.StartNew();
+                var ex = Assert.Throws<AllTopologyNodesDownException>(() => result = store.Maintenance.ForDatabase(database).Send(new NextIdentityForOperation("person|")));
+                Assert.True(sp.Elapsed < TimeSpan.FromSeconds(45));
+
+                var exText = ex.ToString();
+                Assert.Contains("Request to a server has failed. Reason: No connection could be made because the target machine actively refused it", exText); // the disposed node
+                Assert.Contains("there is no leader, and we timed out waiting for one", exText); // the last active one
+                Assert.Contains("failed with timeout after 00:00:30", exText); // the hang node
             }
         }
 

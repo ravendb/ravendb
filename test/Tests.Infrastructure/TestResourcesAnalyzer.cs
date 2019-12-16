@@ -74,7 +74,7 @@ namespace Tests.Infrastructure
             {
                 if (_csvWriter == null)
                 {
-                    var file = File.OpenWrite("TestResources.csv");
+                    var file = File.OpenWrite($"TestResources_{DateTime.Now.ToString("dd_MM_yyyy_HH_mm_ss")}.csv");
                     file.Position = 0;
                     file.SetLength(0);
 

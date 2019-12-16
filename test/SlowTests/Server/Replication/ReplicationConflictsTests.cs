@@ -1336,7 +1336,8 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
-                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                
+                var database = await GetDatabase(store1.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
@@ -1388,7 +1389,8 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Grisha"));
-                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
+                
+                var database = await GetDatabase(store1.Database);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())

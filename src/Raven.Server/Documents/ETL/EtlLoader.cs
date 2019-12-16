@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -11,6 +13,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -19,7 +22,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class EtlLoader : IDisposable
+    public class EtlLoader : IDisposable, ITombstoneAware
     {
         private const string AlertTitle = "ETL loader";
 
@@ -49,6 +52,8 @@ namespace Raven.Server.Documents.ETL
 
             _database = database;
             _serverStore = serverStore;
+
+            database.TombstoneCleaner.Subscribe(this);
         }
 
         public EtlProcess[] Processes => _processes;
@@ -115,7 +120,6 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var process in newProcesses)
                 {
-                    _database.TombstoneCleaner.Subscribe(process);
                     process.Start();
 
                     OnProcessAdded(process);
@@ -349,6 +353,8 @@ namespace Raven.Server.Documents.ETL
 
             Parallel.ForEach(_processes, x => ea.Execute(x.Dispose));
 
+            ea.Execute(() => _database.TombstoneCleaner.Unsubscribe(this));
+
             ea.ThrowIfNeeded();
         }
 
@@ -452,13 +458,6 @@ namespace Raven.Server.Documents.ETL
 
             LoadProcesses(record, myRavenEtl, mySqlEtl, toRemove.SelectMany(x => x.Value).ToList());
 
-            // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
-            // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
-
-            foreach (var processesPerConfig in toRemove)
-            foreach (var process in processesPerConfig.Value)
-                _database.TombstoneCleaner.Unsubscribe(process);
-
             Parallel.ForEach(toRemove, x =>
             {
                 foreach (var process in x.Value)
@@ -491,6 +490,61 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
             }
+        }
+
+        public string TombstoneCleanerIdentifier => $"ETL loader for {_database.Name}";
+
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        {
+            var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+            var ravenEtls = _databaseRecord.RavenEtls;
+            var sqlEtls = _databaseRecord.SqlEtls;
+
+            foreach (var config in ravenEtls) 
+                MarkTombstonesForDeletion(config, lastProcessedTombstones);
+
+            foreach (var config in sqlEtls)
+                MarkTombstonesForDeletion(config, lastProcessedTombstones);
+
+            return lastProcessedTombstones;
+        }
+
+        private void MarkTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        {
+            foreach (var transform in config.Transforms)
+            {
+                var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
+                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+
+                // the default in this case is '0', which means that nothing of this node was consumed and therefore we cannot delete anything
+                if (transform.ApplyToAllDocuments)
+                {
+                    AddOrUpdate(lastProcessedTombstones, Constants.Documents.Collections.AllDocumentsCollection, etag);
+                    continue;
+                }
+
+                foreach (var collection in transform.Collections)
+                    AddOrUpdate(lastProcessedTombstones, collection, etag);
+
+                if (typeof(T) == typeof(RavenConnectionString))
+                {
+                    if (RavenEtl.ShouldTrackAttachmentTombstones(transform))
+                        AddOrUpdate(lastProcessedTombstones, AttachmentsStorage.AttachmentsTombstones, etag);
+                }
+            }
+        }
+
+        private void AddOrUpdate(Dictionary<string, long> dic, string key, long value)
+        {
+            if (dic.TryGetValue(key, out var old) == false)
+            {
+                dic[key] = value;
+                return;
+            }
+
+            var min = Math.Min(value, old);
+            dic[key] = min;
         }
     }
 }
